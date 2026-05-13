@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-probe:
+  bazel-diagnostics:
     runs-on: macos-14
 
     steps:
@@ -16,20 +16,39 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Probe Bazel targets
+      - name: Diagnose Bazel module issue
         run: |
           set -e
           cd work/swiftgram-src
 
           echo "== tools =="
-          xcodebuild -version
-          bazel --version
+          xcodebuild -version || true
+          bazel --version || true
 
-          echo "== swiftgram target query =="
-          bazel query //Telegram:Swiftgram
+          echo
+          echo "== root bazel files =="
+          ls -la | grep -E "bazel|MODULE|WORKSPACE|BUILD" || true
 
-          echo "== target kind =="
-          bazel query --output=label_kind //Telegram:Swiftgram
+          echo
+          echo "== .bazelversion =="
+          cat .bazelversion 2>/dev/null || true
 
-          echo "== package targets =="
-          bazel query 'kind(rule, //Telegram:*)' | head -120
+          echo
+          echo "== .bazelrc sourcekit/bzlmod refs =="
+          grep -nEi "sourcekit|bsp|bzlmod|module|registry" .bazelrc 2>/dev/null || true
+
+          echo
+          echo "== MODULE sourcekit/bsp refs =="
+          grep -nEi "sourcekit|bsp|bazel_dep|dev_dependency" MODULE.bazel 2>/dev/null || true
+
+          echo
+          echo "== try normal query =="
+          bazel query //Telegram:Swiftgram || true
+
+          echo
+          echo "== try ignore dev dependency =="
+          bazel query --ignore_dev_dependency //Telegram:Swiftgram || true
+
+          echo
+          echo "== try no bzlmod =="
+          bazel query --noenable_bzlmod //Telegram:Swiftgram || true
