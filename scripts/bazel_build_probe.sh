@@ -145,6 +145,14 @@ if grep -RInE 'guard let baseAppBundle|let baseAppBundle[A-Za-z0-9_]*[[:space:]]
 fi
 
 
+echo "== fast Swift patch compile probes =="
+"$BAZEL_BIN" build \
+  --check_direct_dependencies=off \
+  //Swiftgram/SGLogging:SGLogging \
+  //Swiftgram/SGDebugUI:SGDebugUI \
+  //Swiftgram/SGConfig:SGConfig \
+  //Swiftgram/SGRecentSessionApiId:SGRecentSessionApiId
+
 echo "== real build probe =="
 "$BAZEL_BIN" build \
   --check_direct_dependencies=off \
