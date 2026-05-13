@@ -1,54 +1,113 @@
 from pathlib import Path
 import re, sys
 
-p = Path("Swiftgram/SGLogging/Sources/SGLogger.swift")
-s = p.read_text()
-
+APP_BUNDLE = "app.pumpkin6584.lion7414"
 APP_GROUP = "group.4a348a9b186b700c.1"
 
-start = 'print("SGLogger setup...")'
-end = 'let maybeAppGroupUrl = FileManager.default.containerURL'
+def kill_guard_block(s: str) -> str:
+    lines = s.splitlines()
+    out = []
+    i = 0
 
-if start not in s or end not in s:
-    print("SGLogger structure not found")
-    print("matches:")
+    while i < len(lines):
+        line = lines[i]
+
+        if re.search(r"\bguard\s+let\s+baseAppBundle\w*", line):
+            indent = line[:len(line) - len(line.lstrip())]
+            m = re.search(r"guard\s+let\s+(baseAppBundle\w*)", line)
+            var = m.group(1) if m else "baseAppBundleId"
+
+            out.append(f'{indent}let {var} = "{APP_BUNDLE}"')
+
+            head = line
+            i += 1
+            while "else" not in head and i < len(lines):
+                head += lines[i]
+                i += 1
+
+            depth = head.count("{") - head.count("}")
+            while i < len(lines) and depth > 0:
+                depth += lines[i].count("{") - lines[i].count("}")
+                i += 1
+            continue
+
+        out.append(line)
+        i += 1
+
+    return "\n".join(out) + "\n"
+
+changed = []
+
+for p in Path("Swiftgram").rglob("*.swift"):
+    s = p.read_text(errors="ignore")
+    old = s
+
+    s = kill_guard_block(s)
+
+    s = re.sub(
+        r"^(\s*)let\s+(baseAppBundle\w*)\s*=\s*$",
+        rf'\1let \2 = "{APP_BUNDLE}"',
+        s,
+        flags=re.M,
+    )
+
+    s = re.sub(
+        r'let\s+appGroupName\s*=\s*"group\.[^"]*"',
+        f'let appGroupName = "{APP_GROUP}"',
+        s,
+    )
+
+    s = re.sub(
+        r'let\s+appGroupName\s*=\s*"group\.\\\([^)]*\)"',
+        f'let appGroupName = "{APP_GROUP}"',
+        s,
+    )
+
+    s = re.sub(
+        r'containerURL\(forSecurityApplicationGroupIdentifier:\s*"group\.[^"]*"\)',
+        f'containerURL(forSecurityApplicationGroupIdentifier: "{APP_GROUP}")',
+        s,
+    )
+
+    if "func sgBaseBundleIdentifier()" in s:
+        s = re.sub(
+            r"func sgBaseBundleIdentifier\(\)\s*->\s*String\s*\{.*?\n\}",
+            f'func sgBaseBundleIdentifier() -> String {{\n    return "{APP_BUNDLE}"\n}}',
+            s,
+            flags=re.S,
+        )
+
+    if "func sgAppGroupIdentifier()" in s:
+        s = re.sub(
+            r"func sgAppGroupIdentifier\(\)\s*->\s*String\s*\{.*?\n\}",
+            f'func sgAppGroupIdentifier() -> String {{\n    return "{APP_GROUP}"\n}}',
+            s,
+            flags=re.S,
+        )
+
+    if s != old:
+        p.write_text(s)
+        changed.append(str(p))
+
+bad = []
+for p in Path("Swiftgram").rglob("*.swift"):
+    s = p.read_text(errors="ignore")
     for n, l in enumerate(s.splitlines(), 1):
-        if "SGLogger setup" in l or "baseAppBundle" in l or "appGroupName" in l or "maybeAppGroupUrl" in l:
-            print(f"{n}: {l}")
+        if re.search(r"let\s+baseAppBundle\w*\s*=\s*$", l):
+            bad.append(f"{p}:{n}: empty baseAppBundle: {l}")
+        if re.search(r"guard\s+let\s+baseAppBundle", l):
+            bad.append(f"{p}:{n}: guard baseAppBundle remains: {l}")
+        if 'let appGroupName = "group.' in l and APP_GROUP not in l:
+            bad.append(f"{p}:{n}: wrong appGroupName: {l}")
+
+print("Swift AppGroup changed files:")
+for x in changed:
+    print(x)
+
+if bad:
+    print("Swift AppGroup patch FAILED:")
+    for x in bad[:100]:
+        print(x)
     sys.exit(1)
 
-pattern = re.compile(
-    r'(print\("SGLogger setup\.\.\."\)\s*)'
-    r'.*?'
-    r'(let maybeAppGroupUrl = FileManager\.default\.containerURL)',
-    re.S
-)
-
-s2, count = pattern.subn(
-    r'\1let appGroupName = "' + APP_GROUP + r'"\n            \2',
-    s,
-    count=1
-)
-
-p.write_text(s2)
-
-bad = False
-for n, l in enumerate(s2.splitlines(), 1):
-    if "baseAppBundle" in l:
-        print(f"BAD baseAppBundle remains at {n}: {l}")
-        bad = True
-    if re.search(r"let\s+\w+\s*=\s*$", l):
-        print(f"BAD empty assignment at {n}: {l}")
-        bad = True
-
-if count != 1 or bad or APP_GROUP not in s2:
-    print("SGLogger patch failed")
-    for n, l in enumerate(s2.splitlines(), 1):
-        if 34 <= n <= 48:
-            print(f"{n}: {l}")
-    sys.exit(1)
-
-print("SGLogger patched OK")
-for n, l in enumerate(s2.splitlines(), 1):
-    if 34 <= n <= 48:
-        print(f"{n}: {l}")
+print("Swift AppGroup patch OK")
