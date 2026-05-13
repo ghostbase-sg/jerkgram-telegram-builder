@@ -5,7 +5,7 @@ OUT="$GITHUB_WORKSPACE/artifacts"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
-cd work/swiftgram-src
+if [ -d work/swiftgram-src ]; then cd work/swiftgram-src; fi
 
 echo "== bazel output dirs =="
 bazelisk info bazel-bin | tee "$OUT/bazel-bin-path.txt"
