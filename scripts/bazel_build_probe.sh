@@ -102,33 +102,32 @@ echo "== identities =="
 security find-identity -v -p codesigning "$KEYCHAIN"
 
 echo
-echo "== patch cxxopts to copts =="
+echo
+echo "== patch AsyncDisplayKit cxxopts safely =="
 python3 - <<'PY2'
 from pathlib import Path
+import re
 
-changed = []
-for p in Path(".").rglob("*"):
-    if p.is_dir():
-        continue
-    if ".git" in p.parts or "bazel-" in p.parts:
-        continue
-    if p.name not in ("BUILD", "BUILD.bazel") and not p.name.endswith(".bzl"):
-        continue
+p = Path("submodules/AsyncDisplayKit/BUILD")
+s = p.read_text()
 
-    text = p.read_text(errors="ignore")
-    new = text.replace("cxxopts =", "copts =")
-    if new != text:
-        p.write_text(new)
-        changed.append(str(p))
+# Если уже есть copts, удалить весь cxxopts-блок.
+if "copts =" in s and "cxxopts =" in s:
+    s = re.sub(
+        r'\n\s*cxxopts\s*=\s*\[[\s\S]*?\],',
+        '',
+        s,
+        count=1
+    )
+else:
+    s = s.replace("cxxopts =", "copts =")
 
-print("\n".join(changed) if changed else "no cxxopts found")
+p.write_text(s)
+
+print("== AsyncDisplayKit BUILD head ==")
+print("\n".join(s.splitlines()[:35]))
 PY2
 
-echo
-echo "== cxxopts check after patch =="
-grep -RIn "cxxopts[[:space:]]*=" submodules Telegram third-party 2>/dev/null || true
-
-echo
 echo "== build analysis probe =="
 "$BAZEL_BIN" build --nobuild //Telegram:Swiftgram
 
