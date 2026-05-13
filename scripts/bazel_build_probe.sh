@@ -116,4 +116,8 @@ grep -RIn "cxxopts[[:space:]]*=" Telegram submodules third-party Tests 2>/dev/nu
 echo "== real build probe =="
 
 echo
+echo
+ echo "== collect build outputs =="
+../../scripts/collect_outputs.sh
+
 echo "== real build probe OK =="
