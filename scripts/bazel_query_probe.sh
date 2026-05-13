@@ -15,14 +15,18 @@ echo "== create build configuration repo =="
 rm -rf build-input/configuration-repository
 mkdir -p build-input
 cp -R build-system/example-configuration build-input/configuration-repository
+
 printf '%s\n' 'module(name = "build_configuration", version = "0.0.0")' > build-input/configuration-repository/MODULE.bazel
 
 cat >> build-input/configuration-repository/variables.bzl <<'EOF'
 
-# Added by GhostBase builder for Bazel MODULE/Telegram BUILD compatibility
+# Added by GhostBase builder for Bazel compatibility
 telegram_bazel_path = "."
 telegram_use_xcode_managed_codesigning = False
 EOF
+
+echo "== variables after patch =="
+grep -nE "telegram_bazel_path|telegram_use_xcode_managed_codesigning|telegram_bundle_id|telegram_team_id" build-input/configuration-repository/variables.bzl
 
 echo "== patch MODULE.bazel with rules_shell =="
 python3 - <<'PY'
