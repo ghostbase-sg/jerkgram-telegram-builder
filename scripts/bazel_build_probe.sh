@@ -145,6 +145,10 @@ if grep -RInE 'guard let baseAppBundle|let baseAppBundle[A-Za-z0-9_]*[[:space:]]
 fi
 
 
+echo
+echo "== patch unsupported entitlements =="
+python3 ../../scripts/gb_patch_entitlements.py
+
 echo "== fast Swift patch compile probes =="
 "$BAZEL_BIN" build \
   --apple_platform_type=ios \
