@@ -7,7 +7,7 @@ name: GhostBase Swiftgram Builder
 
 jobs:
   build-probe:
-    runs-on: macos-14
+    runs-on: macos-26
 
     env:
       USE_BAZEL_VERSION: 7.6.1
