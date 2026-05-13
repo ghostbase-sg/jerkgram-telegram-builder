@@ -9,6 +9,17 @@ mkdir -p "$SIGN_DIR"
 
 cd work/swiftgram-src
 
+echo "== verify required signing secrets =="
+for v in CERT_B64 PROF_B64 P12_PASSWORD KEYCHAIN_PASSWORD; do
+  eval "x=\${$v:-}"
+  if [ -z "$x" ]; then
+    echo "::error::$v is empty or missing"
+    exit 1
+  fi
+done
+echo "CERT_B64 length: ${#CERT_B64}"
+echo "PROF_B64 length: ${#PROF_B64}"
+
 echo "== bazelisk / bazel =="
 which "$BAZEL_BIN"
 "$BAZEL_BIN" --version || true
