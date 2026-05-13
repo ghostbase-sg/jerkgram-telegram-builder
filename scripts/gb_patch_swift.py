@@ -13,13 +13,13 @@ for p in root.rglob("*.swift"):
 
     s = re.sub(
         r'(?m)^(\s*)guard\s+let\s+baseAppBundleId\s*=.*?else\s*\{\s*$',
-        rf'\1let baseAppBundleId = "{BASE}"\n\1if false {{',
+        rf'\1if false {{',
         s
     )
 
     s = re.sub(
         r'(?m)^(\s*)guard\s+let\s+baseAppBundleIdentifier\s*=.*?else\s*\{\s*$',
-        rf'\1let baseAppBundleIdentifier = "{BASE}"\n\1if false {{',
+        rf'\1if false {{',
         s
     )
 
@@ -67,6 +67,8 @@ for p in root.rglob("*.swift"):
     if re.search(r'let\s+baseAppBundle(Id|Identifier)\s*=\s*"\s*$', s, re.M):
         bad.append(str(p))
     if "guard let baseAppBundle" in s:
+        bad.append(str(p))
+    if re.search(r'let\s+baseAppBundle(Id|Identifier)\s*=', s):
         bad.append(str(p))
 
 if bad:
