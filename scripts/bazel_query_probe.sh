@@ -18,7 +18,7 @@ cp -R build-system/example-configuration build-input/configuration-repository
 printf '%s\n' 'module(name = "build_configuration", version = "0.0.0")' > build-input/configuration-repository/MODULE.bazel
 
 echo "== patch sh_binary load =="
-SH_LOAD='load("@bazel_tools//tools/build_defs/shell:shell.bzl", "sh_binary")'
+SH_LOAD='load("@bazel_tools//tools/build_defs:shell/shell.bzl", "sh_binary")'
 if ! grep -q 'tools/build_defs/shell:shell.bzl' Telegram/BUILD; then
   tmp="$(mktemp)"
   printf '%s\n' "$SH_LOAD" > "$tmp"
