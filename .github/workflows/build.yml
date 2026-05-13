@@ -1,6 +1,9 @@
 name: GhostBase Swiftgram Builder
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
