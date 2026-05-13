@@ -24,6 +24,17 @@ git submodule update --init --recursive --depth 1 \
   build-system/bazel-rules/sourcekit-bazel-bsp
 
 echo
+echo "== init source submodules =="
+git submodule update --init --recursive --depth 1 \
+  submodules/LottieCpp/lottiecpp \
+  submodules/TgVoipWebrtc/tgcalls \
+  submodules/rlottie/rlottie \
+  third-party/dav1d/dav1d \
+  third-party/libvpx/libvpx \
+  third-party/td/td \
+  third-party/webrtc/webrtc
+
+echo
 echo "== create build configuration repo =="
 rm -rf build-input/configuration-repository
 mkdir -p build-input
