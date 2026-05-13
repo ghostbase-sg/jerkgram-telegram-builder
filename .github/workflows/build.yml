@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  bazel-submodules-probe:
+  bazel-config-probe:
     runs-on: macos-14
 
     steps:
@@ -16,14 +16,13 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Init Bazel rule submodules and query target
+      - name: Init submodules config and query
         run: |
           set -e
           cd work/swiftgram-src
 
-          echo "== init bazel submodules =="
+          echo "== init bazel rule submodules =="
           git submodule sync --recursive
-
           git submodule update --init --recursive --depth 1 \
             build-system/bazel-rules/apple_support \
             build-system/bazel-rules/rules_apple \
@@ -31,19 +30,18 @@ jobs:
             build-system/bazel-rules/rules_xcodeproj \
             build-system/bazel-rules/sourcekit-bazel-bsp
 
-          echo "== submodules status =="
-          git submodule status build-system/bazel-rules/*
+          echo "== create build-input configuration repo =="
+          rm -rf build-input/configuration-repository
+          mkdir -p build-input
+          cp -R build-system/example-configuration build-input/configuration-repository
 
-          echo "== bazel-rules module files =="
-          find build-system/bazel-rules -maxdepth 3 -type f \( \
-            -name "MODULE.bazel" -o \
-            -name "REPO.bazel" -o \
-            -name "WORKSPACE" -o \
-            -name "BUILD" -o \
-            -name "BUILD.bazel" \
-          \) | sort
+          echo "== config repo files =="
+          find build-input/configuration-repository -maxdepth 3 -type f | sort | head -120
 
-          echo "== bazel query =="
+          echo "== variables =="
+          cat build-input/configuration-repository/variables.bzl
+
+          echo "== query target =="
           bazel query //Telegram:Swiftgram
 
           echo "== target kind =="
