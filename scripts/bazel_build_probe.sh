@@ -124,6 +124,10 @@ echo
 echo "== cxxopts after global patch =="
 grep -RIn "cxxopts[[:space:]]*=" Telegram submodules third-party Tests 2>/dev/null || true
 
+echo
+ echo "== patch Swift compatibility =="
+python3 ../../scripts/gb_patch_swift.py
+
 echo "== real build probe =="
 "$BAZEL_BIN" build \
   --check_direct_dependencies=off \
