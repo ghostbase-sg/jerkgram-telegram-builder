@@ -12,6 +12,18 @@ for p in root.rglob("*.swift"):
     old = s
 
     s = re.sub(
+        r'(?m)^(\s*)guard\s+let\s+baseAppBundleId\s*=.*?else\s*\{\s*$',
+        rf'\1let baseAppBundleId = "{BASE}"\n\1if false {{',
+        s
+    )
+
+    s = re.sub(
+        r'(?m)^(\s*)guard\s+let\s+baseAppBundleIdentifier\s*=.*?else\s*\{\s*$',
+        rf'\1let baseAppBundleIdentifier = "{BASE}"\n\1if false {{',
+        s
+    )
+
+    s = re.sub(
         r'(?m)^(\s*)let\s+baseAppBundleId\s*=.*$',
         rf'\1let baseAppBundleId = "{BASE}"',
         s
