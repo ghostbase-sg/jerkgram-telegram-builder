@@ -6,12 +6,16 @@ name: GhostBase Swiftgram Builder
   workflow_dispatch:
 
 jobs:
-  bazel-query:
+  build-probe:
     runs-on: macos-14
 
     env:
       USE_BAZEL_VERSION: 7.6.1
       BAZEL_BIN: bazelisk
+      CERT_B64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      PROF_B64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
 
     steps:
       - name: Checkout builder
@@ -31,8 +35,8 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Run Bazel query probe
+      - name: Run build analysis probe
         run: |
           set -e
-          chmod +x scripts/bazel_query_probe.sh
-          scripts/bazel_query_probe.sh
+          chmod +x scripts/bazel_build_probe.sh
+          scripts/bazel_build_probe.sh
