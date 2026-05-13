@@ -31,6 +31,8 @@ for root in roots:
         continue
     files = list(rp.rglob("BUILD")) + list(rp.rglob("BUILD.bazel"))
     for p in files:
+        if not p.is_file():
+            continue
         old = p.read_text(errors="ignore")
         new = patch(old)
         if new != old:
