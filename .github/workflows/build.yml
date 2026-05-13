@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  bazel-config-probe:
+  bazel-config-module-probe:
     runs-on: macos-14
 
     steps:
@@ -16,7 +16,7 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Init submodules config and query
+      - name: Init submodules config module and query
         run: |
           set -e
           cd work/swiftgram-src
@@ -35,10 +35,13 @@ jobs:
           mkdir -p build-input
           cp -R build-system/example-configuration build-input/configuration-repository
 
-          echo "== config repo files =="
-          find build-input/configuration-repository -maxdepth 3 -type f | sort | head -120
+          cat > build-input/configuration-repository/MODULE.bazel <<'EOF'
+module(name = "build_configuration", version = "0.0.0")
+EOF
 
-          echo "== variables =="
+          echo "== config repo files =="
+          ls -la build-input/configuration-repository
+          cat build-input/configuration-repository/MODULE.bazel
           cat build-input/configuration-repository/variables.bzl
 
           echo "== query target =="
@@ -46,3 +49,6 @@ jobs:
 
           echo "== target kind =="
           bazel query --output=label_kind //Telegram:Swiftgram
+
+          echo "== package targets =="
+          bazel query 'kind(rule, //Telegram:*)' | head -80
