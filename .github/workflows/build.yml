@@ -1,0 +1,23 @@
+name: GhostBase Swiftgram Builder
+
+on:
+  workflow_dispatch:
+
+jobs:
+  prepare:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout builder repo
+        uses: actions/checkout@v4
+
+      - name: Prepare Swiftgram source
+        run: |
+          chmod +x scripts/prepare_source.sh
+          scripts/prepare_source.sh
+
+      - name: Show patched files
+        run: |
+          cd work/swiftgram-src
+          git diff --stat || true
+          git status --short || true
