@@ -6,11 +6,12 @@ name: GhostBase Swiftgram Builder
   workflow_dispatch:
 
 jobs:
-  bazel-sh-binary-probe:
+  bazel-query:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout builder
+        uses: actions/checkout@v4
 
       - name: Prepare source
         run: |
@@ -18,44 +19,8 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Setup Bazel env
+      - name: Run Bazel query probe
         run: |
           set -e
-          cd work/swiftgram-src
-
-          git submodule sync --recursive
-          git submodule update --init --recursive --depth 1 build-system/bazel-rules/apple_support
-          git submodule update --init --recursive --depth 1 build-system/bazel-rules/rules_apple
-          git submodule update --init --recursive --depth 1 build-system/bazel-rules/rules_swift
-          git submodule update --init --recursive --depth 1 build-system/bazel-rules/rules_xcodeproj
-          git submodule update --init --recursive --depth 1 build-system/bazel-rules/sourcekit-bazel-bsp
-
-          rm -rf build-input/configuration-repository
-          mkdir -p build-input
-          cp -R build-system/example-configuration build-input/configuration-repository
-          printf '%s\n' 'module(name = "build_configuration", version = "0.0.0")' > build-input/configuration-repository/MODULE.bazel
-
-      - name: Inspect and patch sh_binary
-        run: |
-          set -e
-          cd work/swiftgram-src
-
-          echo "== Telegram BUILD around 980-1010 =="
-          sed -n '980,1010p' Telegram/BUILD
-
-          echo "== prepend sh_binary load =="
-          python3 - <<'PY'
-from pathlib import Path
-p = Path("Telegram/BUILD")
-s = p.read_text()
-line = 'load("@bazel_tools//tools/build_defs/shell:shell.bzl", "sh_binary")\n'
-if line not in s:
-    p.write_text(line + s)
-print(p.read_text().splitlines()[0])
-PY
-
-          echo "== query target =="
-          bazel query //Telegram:Swiftgram
-
-          echo "== target kind =="
-          bazel query --output=label_kind //Telegram:Swiftgram
+          chmod +x scripts/bazel_query_probe.sh
+          scripts/bazel_query_probe.sh
