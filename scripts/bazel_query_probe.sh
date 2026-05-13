@@ -17,9 +17,30 @@ mkdir -p build-input
 cp -R build-system/example-configuration build-input/configuration-repository
 printf '%s\n' 'module(name = "build_configuration", version = "0.0.0")' > build-input/configuration-repository/MODULE.bazel
 
+echo "== patch MODULE.bazel with rules_shell =="
+python3 - <<'PY'
+from pathlib import Path
+
+p = Path("MODULE.bazel")
+s = p.read_text()
+
+line = 'bazel_dep(name = "rules_shell", version = "0.5.0")\n'
+
+if 'bazel_dep(name = "rules_shell"' not in s:
+    marker = 'bazel_dep(name = "platforms", version = "0.0.11")\n'
+    if marker in s:
+        s = s.replace(marker, marker + line)
+    else:
+        s = line + s
+
+p.write_text(s)
+PY
+
+grep -n 'rules_shell' MODULE.bazel
+
 echo "== patch sh_binary load =="
-SH_LOAD='load("@bazel_tools//tools/build_defs:shell/shell.bzl", "sh_binary")'
-if ! grep -q 'tools/build_defs/shell:shell.bzl' Telegram/BUILD; then
+SH_LOAD='load("@rules_shell//shell:sh_binary.bzl", "sh_binary")'
+if ! grep -q '@rules_shell//shell:sh_binary.bzl' Telegram/BUILD; then
   tmp="$(mktemp)"
   printf '%s\n' "$SH_LOAD" > "$tmp"
   cat Telegram/BUILD >> "$tmp"
@@ -33,7 +54,7 @@ echo "== bazel version =="
 bazel --version
 
 echo "== query target =="
-bazel query //Telegram:Swiftgram
+bazel query --check_direct_dependencies=off //Telegram:Swiftgram
 
 echo "== target kind =="
-bazel query --output=label_kind //Telegram:Swiftgram
+bazel query --check_direct_dependencies=off --output=label_kind //Telegram:Swiftgram
