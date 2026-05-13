@@ -106,30 +106,12 @@ security find-identity -v -p codesigning "$KEYCHAIN"
 
 echo
 echo
-echo "== patch AsyncDisplayKit cxxopts safely =="
-python3 - <<'PY2'
-from pathlib import Path
-import re
+echo "== patch BUILD compatibility globally =="
+python3 ../../scripts/gb_patch_build.py
 
-p = Path("submodules/AsyncDisplayKit/BUILD")
-s = p.read_text()
-
-# Если уже есть copts, удалить весь cxxopts-блок.
-if "copts =" in s and "cxxopts =" in s:
-    s = re.sub(
-        r'\n\s*cxxopts\s*=\s*\[[\s\S]*?\],',
-        '',
-        s,
-        count=1
-    )
-else:
-    s = s.replace("cxxopts =", "copts =")
-
-p.write_text(s)
-
-print("== AsyncDisplayKit BUILD head ==")
-print("\n".join(s.splitlines()[:35]))
-PY2
+echo
+echo "== cxxopts after global patch =="
+grep -RIn "cxxopts[[:space:]]*=" Telegram submodules third-party Tests 2>/dev/null || true
 
 echo "== build analysis probe =="
 "$BAZEL_BIN" build --nobuild //Telegram:Swiftgram
