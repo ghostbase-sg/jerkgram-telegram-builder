@@ -4,126 +4,32 @@ on:
   workflow_dispatch:
 
 jobs:
-  prepare-signing-diagnostics:
+  build-probe:
     runs-on: macos-14
 
     steps:
-      - name: Checkout builder repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Prepare Swiftgram source
+      - name: Prepare source
         run: |
           set -e
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Decode provisioning profile
-        env:
-          PROF_B64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
+      - name: Probe Bazel targets
         run: |
           set -e
-          mkdir -p "$RUNNER_TEMP/signing"
-
-          PROFILE="$RUNNER_TEMP/signing/Telegram.mobileprovision"
-          PROFILE_PLIST="$RUNNER_TEMP/signing/profile.plist"
-
-          printf "%s" "$PROF_B64" | base64 -D > "$PROFILE"
-          security cms -D -i "$PROFILE" > "$PROFILE_PLIST"
-
-          echo "== mobileprovision =="
-          wc -c "$PROFILE"
-          shasum -a 256 "$PROFILE"
-
-          echo "== profile info =="
-          /usr/libexec/PlistBuddy -c "Print Name" "$PROFILE_PLIST"
-          /usr/libexec/PlistBuddy -c "Print UUID" "$PROFILE_PLIST"
-          /usr/libexec/PlistBuddy -c "Print TeamIdentifier:0" "$PROFILE_PLIST"
-          /usr/libexec/PlistBuddy -c "Print Entitlements:application-identifier" "$PROFILE_PLIST"
-          /usr/libexec/PlistBuddy -c "Print Entitlements:aps-environment" "$PROFILE_PLIST"
-          /usr/libexec/PlistBuddy -c "Print Entitlements:com.apple.security.application-groups:0" "$PROFILE_PLIST"
-
-      - name: Decode repack and import p12
-        env:
-          CERT_B64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          set -e
-          mkdir -p "$RUNNER_TEMP/signing"
-
-          ORIG="$RUNNER_TEMP/signing/original.p12"
-          PEM="$RUNNER_TEMP/signing/exported.pem"
-          APPLE_P12="$RUNNER_TEMP/signing/apple-compatible.p12"
-          KEYCHAIN="$RUNNER_TEMP/gb.keychain-db"
-
-          printf "%s" "$CERT_B64" | base64 -D > "$ORIG"
-
-          echo "== original p12 =="
-          wc -c "$ORIG"
-          shasum -a 256 "$ORIG"
-
-          openssl pkcs12 -in "$ORIG" -nodes -passin pass:"$P12_PASSWORD" -out "$PEM"
-
-          openssl pkcs12 -export \
-            -in "$PEM" \
-            -out "$APPLE_P12" \
-            -passout pass:"$P12_PASSWORD" \
-            -certpbe PBE-SHA1-3DES \
-            -keypbe PBE-SHA1-3DES \
-            -macalg sha1
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-
-          security import "$APPLE_P12" \
-            -k "$KEYCHAIN" \
-            -P "$P12_PASSWORD" \
-            -A \
-            -f pkcs12
-
-          security list-keychains -d user -s "$KEYCHAIN"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-
-          echo "== identities =="
-          security find-identity -v -p codesigning "$KEYCHAIN"
-
-      - name: Install profile and inspect build system
-        run: |
-          set -e
-
-          PROFILE="$RUNNER_TEMP/signing/Telegram.mobileprovision"
-          PROFILE_PLIST="$RUNNER_TEMP/signing/profile.plist"
-          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" "$PROFILE_PLIST")
-
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$PROFILE" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
-
-          mkdir -p work/swiftgram-src/build-system/example-configuration/provisioning
-          cp "$PROFILE" work/swiftgram-src/build-system/example-configuration/provisioning/Telegram.mobileprovision
-
           cd work/swiftgram-src
 
-          echo "== variables =="
-          cat build-system/example-configuration/variables.bzl
-
-          echo "== app group =="
-          grep -RIn "group.4a348a9b186b700c.1" \
-            Swiftgram/SGAppGroupIdentifier \
-            Swiftgram/SGLogging \
-            Swiftgram/SGDebugUI \
-            Telegram/BUILD
-
-          echo "== extensions flag =="
-          grep -nA3 -B2 'name = "disableExtensions"' Telegram/BUILD
-
           echo "== tools =="
-          xcodebuild -version || true
-          which bazel || true
-          bazel --version || true
+          xcodebuild -version
+          bazel --version
 
-          echo "== root files =="
-          ls -la | head -80
+          echo "== swiftgram target query =="
+          bazel query //Telegram:Swiftgram
 
-          echo "== Telegram target hints =="
-          grep -nE 'name = "Swiftgram"|ios_application|disableExtensions|TelegramEntitlements|provisioning_profile' Telegram/BUILD | head -120
+          echo "== target kind =="
+          bazel query --output=label_kind //Telegram:Swiftgram
+
+          echo "== package targets =="
+          bazel query 'kind(rule, //Telegram:*)' | head -120
