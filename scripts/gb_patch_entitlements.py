@@ -65,6 +65,8 @@ for root in roots:
     for p in root.rglob("*"):
         if not p.is_file():
             continue
+        if p.suffix in [".mobileprovision", ".provisionprofile"]:
+            continue
         try:
             if KEY in p.read_text(errors="ignore"):
                 left.append(str(p))
