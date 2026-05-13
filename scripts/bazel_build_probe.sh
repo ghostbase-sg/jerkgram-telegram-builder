@@ -37,6 +37,9 @@ cat >> build-input/configuration-repository/variables.bzl <<'EOF'
 # Added by GhostBase builder
 telegram_bazel_path = "."
 telegram_use_xcode_managed_codesigning = False
+
+# Swiftgram config placeholder for BuildConfig
+sg_config = {}
 EOF
 
 echo
