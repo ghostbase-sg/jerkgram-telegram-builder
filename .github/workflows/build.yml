@@ -12,8 +12,8 @@ jobs:
     env:
       USE_BAZEL_VERSION: 7.6.1
       BAZEL_BIN: bazelisk
-      CERT_B64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-      PROF_B64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
+      CERT_B64: ${{ secrets.CERT_B64 }}
+      PROF_B64: ${{ secrets.PROF_B64 }}
       P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
       KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
 
