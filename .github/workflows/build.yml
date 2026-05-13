@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  inspect-bazel-overrides:
+  bazel-submodules-probe:
     runs-on: macos-14
 
     steps:
@@ -16,24 +16,25 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Inspect Bazel module and local rules
+      - name: Init Bazel rule submodules and query target
         run: |
           set -e
           cd work/swiftgram-src
 
-          echo "== bazel version =="
-          bazel --version
+          echo "== init bazel submodules =="
+          git submodule sync --recursive
 
-          echo
-          echo "== MODULE full =="
-          sed -n '1,140p' MODULE.bazel
+          git submodule update --init --recursive --depth 1 \
+            build-system/bazel-rules/apple_support \
+            build-system/bazel-rules/rules_apple \
+            build-system/bazel-rules/rules_swift \
+            build-system/bazel-rules/rules_xcodeproj \
+            build-system/bazel-rules/sourcekit-bazel-bsp
 
-          echo
-          echo "== .bazelrc full =="
-          sed -n '1,120p' .bazelrc
+          echo "== submodules status =="
+          git submodule status build-system/bazel-rules/*
 
-          echo
-          echo "== build-system/bazel-rules tree =="
+          echo "== bazel-rules module files =="
           find build-system/bazel-rules -maxdepth 3 -type f \( \
             -name "MODULE.bazel" -o \
             -name "REPO.bazel" -o \
@@ -42,14 +43,8 @@ jobs:
             -name "BUILD.bazel" \
           \) | sort
 
-          echo
-          echo "== local override dirs =="
-          find build-system/bazel-rules -maxdepth 2 -type d | sort | head -120
+          echo "== bazel query =="
+          bazel query //Telegram:Swiftgram
 
-          echo
-          echo "== submodules status =="
-          git submodule status || true
-
-          echo
-          echo "== git sparse =="
-          git sparse-checkout list || true
+          echo "== target kind =="
+          bazel query --output=label_kind //Telegram:Swiftgram
