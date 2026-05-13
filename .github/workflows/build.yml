@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  bazel-diagnostics:
+  inspect-bazel-overrides:
     runs-on: macos-14
 
     steps:
@@ -16,39 +16,40 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Diagnose Bazel module issue
+      - name: Inspect Bazel module and local rules
         run: |
           set -e
           cd work/swiftgram-src
 
-          echo "== tools =="
-          xcodebuild -version || true
-          bazel --version || true
+          echo "== bazel version =="
+          bazel --version
 
           echo
-          echo "== root bazel files =="
-          ls -la | grep -E "bazel|MODULE|WORKSPACE|BUILD" || true
+          echo "== MODULE full =="
+          sed -n '1,140p' MODULE.bazel
 
           echo
-          echo "== .bazelversion =="
-          cat .bazelversion 2>/dev/null || true
+          echo "== .bazelrc full =="
+          sed -n '1,120p' .bazelrc
 
           echo
-          echo "== .bazelrc sourcekit/bzlmod refs =="
-          grep -nEi "sourcekit|bsp|bzlmod|module|registry" .bazelrc 2>/dev/null || true
+          echo "== build-system/bazel-rules tree =="
+          find build-system/bazel-rules -maxdepth 3 -type f \( \
+            -name "MODULE.bazel" -o \
+            -name "REPO.bazel" -o \
+            -name "WORKSPACE" -o \
+            -name "BUILD" -o \
+            -name "BUILD.bazel" \
+          \) | sort
 
           echo
-          echo "== MODULE sourcekit/bsp refs =="
-          grep -nEi "sourcekit|bsp|bazel_dep|dev_dependency" MODULE.bazel 2>/dev/null || true
+          echo "== local override dirs =="
+          find build-system/bazel-rules -maxdepth 2 -type d | sort | head -120
 
           echo
-          echo "== try normal query =="
-          bazel query //Telegram:Swiftgram || true
+          echo "== submodules status =="
+          git submodule status || true
 
           echo
-          echo "== try ignore dev dependency =="
-          bazel query --ignore_dev_dependency //Telegram:Swiftgram || true
-
-          echo
-          echo "== try no bzlmod =="
-          bazel query --noenable_bzlmod //Telegram:Swiftgram || true
+          echo "== git sparse =="
+          git sparse-checkout list || true
