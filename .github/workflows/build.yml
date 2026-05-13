@@ -18,13 +18,16 @@ jobs:
       - name: Decode profile and certificate
         env:
           CERT_B64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          PROF_B64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
+          PROF_B64_0: ${{ secrets.PROVISION_PROFILE_BASE64_0 }}
+          PROF_B64_1: ${{ secrets.PROVISION_PROFILE_BASE64_1 }}
+          PROF_B64_2: ${{ secrets.PROVISION_PROFILE_BASE64_2 }}
+          PROF_B64_3: ${{ secrets.PROVISION_PROFILE_BASE64_3 }}
         run: |
           set -e
           mkdir -p "$RUNNER_TEMP/signing"
 
           printf "%s" "$CERT_B64" | base64 -D > "$RUNNER_TEMP/signing/cert.p12"
-          printf "%s" "$PROF_B64" | base64 -D > "$RUNNER_TEMP/signing/Telegram.mobileprovision"
+          printf "%s%s%s%s" "$PROF_B64_0" "$PROF_B64_1" "$PROF_B64_2" "$PROF_B64_3" | base64 -D > "$RUNNER_TEMP/signing/Telegram.mobileprovision"
 
           security cms -D -i "$RUNNER_TEMP/signing/Telegram.mobileprovision" > "$RUNNER_TEMP/signing/profile.plist"
 
