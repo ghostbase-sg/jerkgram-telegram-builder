@@ -12,33 +12,20 @@ jobs:
 
       - name: Decode profile debug only
         env:
-          PROF_B64_0: ${{ secrets.PROVISION_PROFILE_BASE64_0 }}
-          PROF_B64_1: ${{ secrets.PROVISION_PROFILE_BASE64_1 }}
-          PROF_B64_2: ${{ secrets.PROVISION_PROFILE_BASE64_2 }}
-          PROF_B64_3: ${{ secrets.PROVISION_PROFILE_BASE64_3 }}
+          PROF_B64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
         run: |
           set -e
           mkdir -p "$RUNNER_TEMP/signing"
 
-          echo "== chunk lengths =="
-          printf "%s" "$PROF_B64_0" | wc -c
-          printf "%s" "$PROF_B64_1" | wc -c
-          printf "%s" "$PROF_B64_2" | wc -c
-          printf "%s" "$PROF_B64_3" | wc -c
+          echo "== b64 length =="
+          printf "%s" "$PROF_B64" | wc -c
 
-          echo "== total b64 length =="
-          printf "%s%s%s%s" "$PROF_B64_0" "$PROF_B64_1" "$PROF_B64_2" "$PROF_B64_3" | wc -c
-
-          printf "%s%s%s%s" "$PROF_B64_0" "$PROF_B64_1" "$PROF_B64_2" "$PROF_B64_3" | base64 -D > "$RUNNER_TEMP/signing/Telegram.mobileprovision"
+          printf "%s" "$PROF_B64" | base64 -D > "$RUNNER_TEMP/signing/Telegram.mobileprovision"
 
           echo "== decoded file =="
-          ls -lh "$RUNNER_TEMP/signing/Telegram.mobileprovision"
           wc -c "$RUNNER_TEMP/signing/Telegram.mobileprovision"
           shasum -a 256 "$RUNNER_TEMP/signing/Telegram.mobileprovision"
           file "$RUNNER_TEMP/signing/Telegram.mobileprovision"
-
-          echo "== first bytes =="
-          xxd -l 32 "$RUNNER_TEMP/signing/Telegram.mobileprovision"
 
           echo "== cms decode =="
           security cms -D -i "$RUNNER_TEMP/signing/Telegram.mobileprovision" > "$RUNNER_TEMP/signing/profile.plist"
