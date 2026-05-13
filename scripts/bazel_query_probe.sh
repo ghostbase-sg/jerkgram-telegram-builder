@@ -17,6 +17,13 @@ mkdir -p build-input
 cp -R build-system/example-configuration build-input/configuration-repository
 printf '%s\n' 'module(name = "build_configuration", version = "0.0.0")' > build-input/configuration-repository/MODULE.bazel
 
+cat >> build-input/configuration-repository/variables.bzl <<'EOF'
+
+# Added by GhostBase builder for Bazel MODULE/Telegram BUILD compatibility
+telegram_bazel_path = "."
+telegram_use_xcode_managed_codesigning = False
+EOF
+
 echo "== patch MODULE.bazel with rules_shell =="
 python3 - <<'PY'
 from pathlib import Path
