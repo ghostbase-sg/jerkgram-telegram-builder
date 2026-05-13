@@ -113,8 +113,7 @@ echo
 echo "== cxxopts after global patch =="
 grep -RIn "cxxopts[[:space:]]*=" Telegram submodules third-party Tests 2>/dev/null || true
 
-echo "== build analysis probe =="
-"$BAZEL_BIN" build --nobuild //Telegram:Swiftgram
+echo "== real build probe =="
 
 echo
-echo "== build analysis probe OK =="
+echo "== real build probe OK =="

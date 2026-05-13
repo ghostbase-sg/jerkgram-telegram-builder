@@ -40,3 +40,15 @@ jobs:
           set -e
           chmod +x scripts/bazel_build_probe.sh
           scripts/bazel_build_probe.sh
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostbase-swiftgram-build
+          path: |
+            work/swiftgram-src/bazel-bin/**/*.ipa
+            work/swiftgram-src/bazel-bin/**/*.app
+            work/swiftgram-src/bazel-bin/**/*.zip
+            work/swiftgram-src/bazel-bin/**/Swiftgram*
+          if-no-files-found: warn
