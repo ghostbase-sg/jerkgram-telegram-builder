@@ -9,9 +9,21 @@ jobs:
   bazel-query:
     runs-on: macos-14
 
+    env:
+      USE_BAZEL_VERSION: 7.6.1
+      BAZEL_BIN: bazelisk
+
     steps:
       - name: Checkout builder
         uses: actions/checkout@v4
+
+      - name: Install Bazelisk
+        run: |
+          set -e
+          if ! command -v bazelisk >/dev/null 2>&1; then
+            brew install bazelisk
+          fi
+          bazelisk --version || true
 
       - name: Prepare source
         run: |
