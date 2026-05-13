@@ -147,17 +147,25 @@ fi
 
 echo "== fast Swift patch compile probes =="
 "$BAZEL_BIN" build \
+  --apple_platform_type=ios \
+  --ios_multi_cpus=arm64 \
   --check_direct_dependencies=off \
   //Swiftgram/SGLogging:SGLogging
 
 echo "== real build probe =="
 "$BAZEL_BIN" build \
+  --apple_platform_type=ios \
+  --ios_multi_cpus=arm64 \
   --check_direct_dependencies=off \
   //Telegram:Swiftgram
 
 echo
 echo
- echo "== collect build outputs =="
+ echo
+echo "== verify IPA is device arm64 =="
+python3 ../../scripts/gb_verify_device_ipa.py
+
+echo "== collect build outputs =="
 ../../scripts/collect_outputs.sh
 
 echo "== real build probe OK =="

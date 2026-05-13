@@ -45,10 +45,7 @@ jobs:
         with:
           name: ghostbase-swiftgram-build
           path: |
-            work/swiftgram-src/bazel-bin/**/*.ipa
-            work/swiftgram-src/bazel-bin/**/*.app
-            work/swiftgram-src/bazel-bin/**/*.zip
-            work/swiftgram-src/bazel-bin/**/Swiftgram*
+            work/swiftgram-src/ghostbase-final/**
           if-no-files-found: warn
 
       - name: Upload collected outputs
