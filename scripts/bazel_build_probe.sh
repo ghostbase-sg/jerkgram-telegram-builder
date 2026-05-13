@@ -127,6 +127,12 @@ grep -RIn "cxxopts[[:space:]]*=" Telegram submodules third-party Tests 2>/dev/nu
 echo
  echo "== patch Swift compatibility =="
 python3 ../../scripts/gb_patch_swift.py
+sed -n '32,48p' Swiftgram/SGLogging/Sources/SGLogger.swift
+if grep -nE 'guard let baseAppBundle|let baseAppBundle.*=[[:space:]]*$' Swiftgram/SGLogging/Sources/SGLogger.swift; then
+  echo "SGLogger patch verification failed"
+  exit 1
+fi
+
 echo "== real build probe =="
 "$BAZEL_BIN" build \
   --check_direct_dependencies=off \
