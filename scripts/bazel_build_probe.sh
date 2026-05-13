@@ -102,6 +102,33 @@ echo "== identities =="
 security find-identity -v -p codesigning "$KEYCHAIN"
 
 echo
+echo "== patch cxxopts to copts =="
+python3 - <<'PY2'
+from pathlib import Path
+
+changed = []
+for p in Path(".").rglob("*"):
+    if p.is_dir():
+        continue
+    if ".git" in p.parts or "bazel-" in p.parts:
+        continue
+    if p.name not in ("BUILD", "BUILD.bazel") and not p.name.endswith(".bzl"):
+        continue
+
+    text = p.read_text(errors="ignore")
+    new = text.replace("cxxopts =", "copts =")
+    if new != text:
+        p.write_text(new)
+        changed.append(str(p))
+
+print("\n".join(changed) if changed else "no cxxopts found")
+PY2
+
+echo
+echo "== cxxopts check after patch =="
+grep -RIn "cxxopts[[:space:]]*=" submodules Telegram third-party 2>/dev/null || true
+
+echo
 echo "== build analysis probe =="
 "$BAZEL_BIN" build --nobuild //Telegram:Swiftgram
 
