@@ -2,8 +2,7 @@ name: GhostBase Swiftgram Builder
 
 "on":
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -11,7 +10,8 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout builder
+        uses: actions/checkout@v4
 
       - name: Prepare source
         run: |
@@ -19,42 +19,39 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
-      - name: Init Bazel env and query Swiftgram target
+      - name: Init Bazel submodules
         run: |
           set -e
           cd work/swiftgram-src
-
-          echo "== init bazel rule submodules =="
           git submodule sync --recursive
-          git submodule update --init --recursive --depth 1 \
-            build-system/bazel-rules/apple_support \
-            build-system/bazel-rules/rules_apple \
-            build-system/bazel-rules/rules_swift \
-            build-system/bazel-rules/rules_xcodeproj \
-            build-system/bazel-rules/sourcekit-bazel-bsp
+          git submodule update --init --recursive --depth 1 build-system/bazel-rules/apple_support
+          git submodule update --init --recursive --depth 1 build-system/bazel-rules/rules_apple
+          git submodule update --init --recursive --depth 1 build-system/bazel-rules/rules_swift
+          git submodule update --init --recursive --depth 1 build-system/bazel-rules/rules_xcodeproj
+          git submodule update --init --recursive --depth 1 build-system/bazel-rules/sourcekit-bazel-bsp
 
-          echo "== create build configuration repo =="
+      - name: Create build configuration repo
+        run: |
+          set -e
+          cd work/swiftgram-src
           rm -rf build-input/configuration-repository
           mkdir -p build-input
           cp -R build-system/example-configuration build-input/configuration-repository
-
-          cat > build-input/configuration-repository/MODULE.bazel <<'EOF'
-module(name = "build_configuration", version = "0.0.0")
-EOF
-
-          echo "== config check =="
+          printf '%s\n' 'module(name = "build_configuration", version = "0.0.0")' > build-input/configuration-repository/MODULE.bazel
+          echo "== config repo =="
           ls -la build-input/configuration-repository
+          echo "== module =="
           cat build-input/configuration-repository/MODULE.bazel
+          echo "== variables =="
           cat build-input/configuration-repository/variables.bzl
 
+      - name: Query Swiftgram target
+        run: |
+          set -e
+          cd work/swiftgram-src
           echo "== bazel version =="
           bazel --version
-
           echo "== query target =="
           bazel query //Telegram:Swiftgram
-
           echo "== target kind =="
           bazel query --output=label_kind //Telegram:Swiftgram
-
-          echo "== package targets =="
-          bazel query 'kind(rule, //Telegram:*)' | head -80
