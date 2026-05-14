@@ -8,7 +8,7 @@ NAV="$SRC/submodules/TelegramUI/Sources/NavigateToChatController.swift"
 MH="$SRC/submodules/Postbox/Sources/MessageHistoryViewState.swift"
 CL="$SRC/submodules/Postbox/Sources/ChatListViewState.swift"
 
-echo "== GhostBase v0.8B Postbox Duplicate Index Assert Fix =="
+echo "== GhostBase v0.8C Postbox DEBUG Invariant Assert Fix =="
 
 test -f "$CHATLIST"
 test -f "$NAV"
@@ -57,6 +57,27 @@ for p in targets:
 if total != 4:
     raise SystemExit(f"Expected 4 duplicate-index assertions, got {total}")
 
+mh = Path("work/swiftgram-src/submodules/Postbox/Sources/MessageHistoryViewState.swift")
+s = mh.read_text()
+
+start = s.index("struct OrderedHistoryViewEntries")
+try:
+    end = s.index("final class HistoryViewLoadedState", start)
+except ValueError:
+    end = s.index("class HistoryViewLoadedState", start)
+
+chunk = s[start:end]
+debug_count = chunk.count("#if DEBUG && os(iOS)")
+print("OrderedHistoryViewEntries DEBUG blocks:", debug_count)
+
+if debug_count != 8:
+    raise SystemExit(f"Expected 8 OrderedHistoryViewEntries DEBUG blocks, got {debug_count}")
+
+chunk = chunk.replace("#if DEBUG && os(iOS)", "#if false && DEBUG && os(iOS)")
+s = s[:start] + chunk + s[end:]
+
+mh.write_text(s)
+
 nav = Path("work/swiftgram-src/submodules/TelegramUI/Sources/NavigateToChatController.swift")
 nav_s = nav.read_text()
 if "force simple push route" in nav_s:
@@ -65,6 +86,9 @@ PY
 
 echo "-- verify ChatListController --"
 grep -n "#if false && DEBUG\|ChatControllerCount" "$CHATLIST" | head
+
+echo "-- verify OrderedHistoryViewEntries DEBUG blocks disabled --"
+grep -n "#if false && DEBUG && os(iOS)" "$MH" | head -20
 
 echo "-- verify Postbox duplicate-index assertions --"
 grep -n "duplicate-index recovery path" "$MH" "$CL"
@@ -80,4 +104,4 @@ if grep -n "force simple push route" "$NAV"; then
   exit 1
 fi
 
-echo "== v0.8B patch OK =="
+echo "== v0.8C patch OK =="
