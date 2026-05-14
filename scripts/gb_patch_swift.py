@@ -5,7 +5,13 @@ BASE = "app.pumpkin6584.lion7414"
 GROUP = "group.4a348a9b186b700c.1"
 BAD_GROUP_10 = "group.4a348a9b186b700c.10"
 
-roots = [Path("Swiftgram"), Path("Telegram"), Path("build-system/example-configuration")]
+roots = [
+    Path("Swiftgram"),
+    Path("Telegram"),
+    Path("submodules/TelegramUI"),
+    Path("submodules/WidgetItems"),
+    Path("build-system/example-configuration"),
+]
 changed = []
 
 def is_text_candidate(p: Path) -> bool:
