@@ -33,6 +33,12 @@ jobs:
           chmod +x scripts/prepare_source.sh
           scripts/prepare_source.sh
 
+      - name: Apply GhostBase v0.8A chat open fix
+        run: |
+          set -e
+          chmod +x scripts/apply_v08a_chatopen_fix.sh
+          scripts/apply_v08a_chatopen_fix.sh
+
       - name: Run build analysis probe
         run: |
           set -e
