@@ -71,6 +71,14 @@ for root in roots:
             s
         )
 
+        # Silence Swift strict no-usage after forced constants.
+        for name in ("baseAppBundleId", "baseAppBundleIdentifier", "appGroupName"):
+            s = re.sub(
+                rf'(?m)^(\s*)let {name} = "([^"]+)"\n(?!\1_ = {name}\n)',
+                rf'\1let {name} = "\2"\n\1_ = {name}\n',
+                s
+            )
+
         if s != old:
             p.write_text(s)
             changed.append(str(p))
