@@ -1,106 +1,106 @@
 from pathlib import Path
-import zipfile, plistlib, struct, shutil, sys
+import plistlib, struct, sys, zipfile
 
-BUNDLE = "app.pumpkin6584.lion7414"
-out = Path("ghostbase-final")
-out.mkdir(exist_ok=True)
+EXPECTED = "app.pumpkin6584.lion7414"
 
-ipas = sorted(Path("bazel-bin").rglob("Swiftgram.ipa"))
-if not ipas:
-    print("ERROR: Swiftgram.ipa not found")
+ipa = None
+for p in [
+    Path("ghostbase-final/GhostBase.ipa"),
+    Path("bazel-bin/Telegram/Swiftgram.ipa"),
+    Path("Telegram/Swiftgram.ipa"),
+]:
+    if p.exists():
+        ipa = p
+        break
+
+if ipa is None:
+    print("ERROR: IPA not found")
     sys.exit(1)
 
-ipa = ipas[0]
-print("IPA:", ipa)
+print("IPA =", ipa)
 
 with zipfile.ZipFile(ipa) as z:
     names = z.namelist()
-    plist_name = next((n for n in names if n.startswith("Payload/") and n.endswith(".app/Info.plist")), None)
-    exe_name = next((n for n in names if n.startswith("Payload/") and n.endswith(".app/Swiftgram")), None)
-    profile_name = next((n for n in names if n.startswith("Payload/") and n.endswith(".app/embedded.mobileprovision")), None)
-
-    if not plist_name or not exe_name:
-        print("ERROR: IPA missing Info.plist or executable")
+    apps = sorted({n.split("/", 2)[1] for n in names if n.startswith("Payload/") and n.count("/") >= 2})
+    if not apps:
+        print("ERROR: no Payload app")
         sys.exit(1)
 
-    info = plistlib.loads(z.read(plist_name))
+    root = "Payload/" + apps[0] + "/"
+    info = plistlib.loads(z.read(root + "Info.plist"))
+
     bid = info.get("CFBundleIdentifier")
-    name = info.get("CFBundleDisplayName")
+    exe_name = info.get("CFBundleExecutable")
 
     print("CFBundleIdentifier =", bid)
-    print("CFBundleDisplayName =", name)
+    print("CFBundleDisplayName =", info.get("CFBundleDisplayName"))
+    print("CFBundleName =", info.get("CFBundleName"))
+    print("CFBundleExecutable =", exe_name)
 
-    if bid != BUNDLE:
+    if bid != EXPECTED:
         print("ERROR: wrong bundle id")
         sys.exit(1)
 
-    if not profile_name:
+    if root + "embedded.mobileprovision" not in names:
         print("ERROR: embedded.mobileprovision missing")
         sys.exit(1)
 
-    b = z.read(exe_name)
+    exe = z.read(root + exe_name)
 
-magic = struct.unpack("<I", b[:4])[0]
-if magic != 0xfeedfacf:
-    print("ERROR: not 64-bit little-endian Mach-O")
-    sys.exit(1)
+    magic = struct.unpack("<I", exe[:4])[0]
+    cputype = struct.unpack("<I", exe[4:8])[0]
 
-_, cputype, _, _, ncmds, _, _, _ = struct.unpack("<IiiIIIII", b[:32])
-print("cputype =", hex(cputype))
+    print("magic_le =", hex(magic))
+    print("cputype =", hex(cputype))
 
-if cputype != 0x0100000c:
-    print("ERROR: not arm64")
-    sys.exit(1)
+    if magic != 0xFEEDFACF:
+        print("ERROR: not 64-bit Mach-O")
+        sys.exit(1)
 
-off = 32
-platform = None
-for _ in range(ncmds):
-    cmd, cmdsize = struct.unpack("<II", b[off:off+8])
-    if cmd == 0x32:
-        platform = struct.unpack("<I", b[off+8:off+12])[0]
-        print("LC_BUILD_VERSION platform =", platform)
-    off += cmdsize
+    if cputype != 0x0100000C:
+        print("ERROR: not arm64")
+        sys.exit(1)
 
-if platform != 2:
-    print("ERROR: not iOS device build")
-    sys.exit(1)
+    ncmds = struct.unpack("<I", exe[16:20])[0]
+    off = 32
+    platform = None
 
-final_ipa = out / "GhostBase.ipa"
-shutil.copy2(ipa, final_ipa)
+    for _ in range(ncmds):
+        if off + 8 > len(exe):
+            break
+        cmd, size = struct.unpack("<II", exe[off:off+8])
+        if cmd == 0x32 and size >= 24:
+            platform = struct.unpack("<I", exe[off+8:off+12])[0]
+            print("LC_BUILD_VERSION platform =", platform)
+        if size <= 0:
+            break
+        off += size
 
-(out / "info.txt").write_text(
-    f"IPA={ipa}\n"
-    f"Final={final_ipa}\n"
-    f"CFBundleIdentifier={bid}\n"
-    f"CFBundleDisplayName={name}\n"
-    f"cputype={hex(cputype)}\n"
-    f"platform={platform}\n"
-)
+    if platform != 2:
+        print("ERROR: expected iOS device platform=2, got:", platform)
+        sys.exit(1)
 
-
-    bad_needles = [
+    bads = [
         b"app.swiftgram.ios",
-        b"group.4a348a9b186b700c.10",
         b"group.app.swiftgram.ios",
+        b"group.4a348a9b186b700c.10",
+        b"group.\\(baseAppBundle",
     ]
 
-    for bad in bad_needles:
+    for bad in bads:
         hits = []
         for n in names:
             if n.startswith("Payload/") and not n.endswith("/"):
                 try:
-                    data = z.read(n)
+                    if bad in z.read(n):
+                        hits.append(n)
                 except Exception:
-                    continue
-                if bad in data:
-                    hits.append(n)
+                    pass
         if hits:
             print("ERROR: forbidden leftover found:", bad.decode("utf-8", "ignore"))
-            for h in hits[:30]:
+            for h in hits[:20]:
                 print(h)
             sys.exit(1)
 
-    print("No forbidden Swiftgram/AppGroup leftovers")
-
+print("No forbidden Swiftgram/AppGroup leftovers")
 print("Device IPA verification OK")
-print("Final IPA:", final_ipa)

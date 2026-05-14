@@ -185,6 +185,12 @@ echo "== fast Swift patch compile probes =="
   --check_direct_dependencies=off \
   //Swiftgram/SGLogging:SGLogging
 
+echo
+echo "== verify helper scripts syntax =="
+python3 -m py_compile ../../scripts/gb_patch_swift.py
+python3 -m py_compile ../../scripts/gb_patch_entitlements.py
+python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
+
 echo "== real build probe =="
 "$BAZEL_BIN" build \
   --apple_platform_type=ios \
@@ -195,6 +201,19 @@ echo "== real build probe =="
 echo
 echo
  echo
+echo
+echo "== save IPA before verifier =="
+mkdir -p ghostbase-final
+if [ -f bazel-bin/Telegram/Swiftgram.ipa ]; then
+  cp -f bazel-bin/Telegram/Swiftgram.ipa ghostbase-final/GhostBase.ipa
+  echo "IPA=bazel-bin/Telegram/Swiftgram.ipa" > ghostbase-final/info.txt
+  echo "Final=ghostbase-final/GhostBase.ipa" >> ghostbase-final/info.txt
+  ls -lh ghostbase-final/GhostBase.ipa
+else
+  echo "ERROR: bazel-bin/Telegram/Swiftgram.ipa missing"
+  exit 1
+fi
+
 echo "== verify IPA is device arm64 =="
 python3 ../../scripts/gb_verify_device_ipa.py
 
