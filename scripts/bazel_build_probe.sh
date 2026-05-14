@@ -138,6 +138,35 @@ grep -RIn "cxxopts[[:space:]]*=" Telegram submodules third-party Tests 2>/dev/nu
 echo
  echo "== patch Swift compatibility =="
 python3 ../../scripts/gb_patch_swift.py
+
+echo
+echo "== global forbidden source grep =="
+BAD="$(
+find . -type f \( \
+  -name "*.swift" -o \
+  -name "*.m" -o \
+  -name "*.mm" -o \
+  -name "*.h" -o \
+  -name "*.plist" -o \
+  -name "*.entitlements" -o \
+  -name "*.bzl" -o \
+  -name "BUILD" -o \
+  -name "BUILD.bazel" -o \
+  -name "*.json" \
+\) \
+-not -path "*/.git/*" \
+-not -path "*/bazel-*/*" \
+-print0 | xargs -0 grep -InE 'app\.swiftgram\.ios|group\.app\.swiftgram\.ios|group\.4a348a9b186b700c\.10|group\.\\\(baseAppBundle' || true
+)"
+
+if [ -n "$BAD" ]; then
+  echo "$BAD"
+  echo "ERROR: forbidden Swiftgram/AppGroup source leftovers"
+  exit 1
+fi
+
+echo "global forbidden source grep OK"
+
 echo "== verify global Swift AppGroup patch =="
 if grep -RInE 'guard let baseAppBundle|let baseAppBundle[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*$' Swiftgram 2>/dev/null; then
   echo "Global Swift AppGroup verification failed"
