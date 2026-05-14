@@ -5,11 +5,20 @@ SRC="work/swiftgram-src"
 
 CHATLIST="$SRC/submodules/ChatListUI/Sources/ChatListController.swift"
 NAV="$SRC/submodules/TelegramUI/Sources/NavigateToChatController.swift"
+MH="$SRC/submodules/Postbox/Sources/MessageHistoryViewState.swift"
+CL="$SRC/submodules/Postbox/Sources/ChatListViewState.swift"
 
-echo "== GhostBase v0.8A.1 ChatOpen Route Fix =="
+echo "== GhostBase v0.8B Postbox Duplicate Index Assert Fix =="
 
 test -f "$CHATLIST"
 test -f "$NAV"
+test -f "$MH"
+test -f "$CL"
+
+# Restore files that v0.8A.1 may have modified locally.
+git -C "$SRC/submodules/TelegramUI" checkout -- Sources/NavigateToChatController.swift 2>/dev/null || true
+git -C "$SRC/submodules/ChatListUI" checkout -- Sources/ChatListController.swift 2>/dev/null || true
+git -C "$SRC/submodules/Postbox" checkout -- Sources/MessageHistoryViewState.swift Sources/ChatListViewState.swift 2>/dev/null || true
 
 python3 - <<'PY'
 from pathlib import Path
@@ -26,63 +35,49 @@ else:
 
 chatlist.write_text(s)
 
+targets = [
+    Path("work/swiftgram-src/submodules/Postbox/Sources/MessageHistoryViewState.swift"),
+    Path("work/swiftgram-src/submodules/Postbox/Sources/ChatListViewState.swift"),
+]
+
+old = 'assertionFailure("Inserting an existing index is not allowed")'
+new = '// GhostBase v0.8B: duplicate-index recovery path; assertion trap disabled'
+
+total = 0
+for p in targets:
+    s = p.read_text()
+    count = s.count(old)
+    print(f"{p}: duplicate-index assertions = {count}")
+    if count != 2:
+        raise SystemExit(f"Unexpected duplicate-index assertion count in {p}: {count}")
+    s = s.replace(old, new)
+    p.write_text(s)
+    total += count
+
+if total != 4:
+    raise SystemExit(f"Expected 4 duplicate-index assertions, got {total}")
+
 nav = Path("work/swiftgram-src/submodules/TelegramUI/Sources/NavigateToChatController.swift")
-s = nav.read_text()
-
-start_markers = [
-    "            // GhostBase v0.8A: force simple push route for chat open test",
-    "            // GhostBase v0.8A.1: force simple push route for chat open test",
-    "            let resolvedKeepStack: Bool\n            switch params.keepStack {"
-]
-
-start = None
-for marker in start_markers:
-    if marker in s:
-        start = s.index(marker)
-        break
-
-if start is None:
-    raise SystemExit("NavigateToChatController: keepStack block start not found")
-
-end_marker = "            if let activateInput = params.activateInput {"
-end = s.index(end_marker, start)
-
-replacement = """            // GhostBase v0.8A.1: force simple push route for chat open test
-            if let pushController = params.pushController {
-                pushController(controller, params.animated, {
-                    params.completion(controller)
-                })
-            } else {
-                params.navigationController.pushViewController(controller, animated: params.animated, completion: {
-                    params.completion(controller)
-                })
-            }
-"""
-
-s = s[:start] + replacement + s[end:]
-
-bad_patterns = [
-    "let resolvedKeepStack: Bool = true",
-    "if resolvedKeepStack",
-    "switch params.keepStack"
-]
-
-for bad in bad_patterns:
-    if bad in s:
-        raise SystemExit(f"BAD PATCH: still contains {bad}")
-
-nav.write_text(s)
+nav_s = nav.read_text()
+if "force simple push route" in nav_s:
+    raise SystemExit("BAD PATCH: route-force is still present in NavigateToChatController.swift")
 PY
 
 echo "-- verify ChatListController --"
 grep -n "#if false && DEBUG\|ChatControllerCount" "$CHATLIST" | head
 
-echo "-- verify NavigateToChatController --"
-grep -n "GhostBase v0.8A.1" "$NAV" | head
+echo "-- verify Postbox duplicate-index assertions --"
+grep -n "duplicate-index recovery path" "$MH" "$CL"
 
-if grep -n "let resolvedKeepStack: Bool = true\|if resolvedKeepStack\|switch params.keepStack" "$NAV"; then
-  echo "BAD PATCH: unsafe keepStack code still present"
+if grep -n 'assertionFailure("Inserting an existing index is not allowed")' "$MH" "$CL"; then
+  echo "BAD: duplicate-index assertion trap still present"
   exit 1
 fi
 
-echo "== v0.8A.1 patch OK =="
+echo "-- verify no v0.8A route-force --"
+if grep -n "force simple push route" "$NAV"; then
+  echo "BAD: route-force still present"
+  exit 1
+fi
+
+echo "== v0.8B patch OK =="
