@@ -73,6 +73,35 @@ for root in roots:
 
         # Silence Swift strict no-usage after forced constants.
 
+
+        # Silence strict Swift no-usage for all lastDotRange guard-let blocks.
+        lines = s.splitlines(True)
+        out = []
+        i = 0
+        while i < len(lines):
+            out.append(lines[i])
+
+            if 'guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {' in lines[i]:
+                indent = lines[i].split('g')[0]
+                depth = lines[i].count("{") - lines[i].count("}")
+                j = i + 1
+
+                while j < len(lines):
+                    out.append(lines[j])
+                    depth += lines[j].count("{") - lines[j].count("}")
+                    if depth <= 0:
+                        next_line = lines[j + 1] if j + 1 < len(lines) else ""
+                        if "_ = lastDotRange" not in next_line:
+                            out.append(indent + "_ = lastDotRange\n")
+                        i = j
+                        break
+                    j += 1
+
+            i += 1
+
+        s = "".join(out)
+
+
         # Silence strict Swift no-usage for WidgetItems guard-let.
         s = re.sub(
             r'(?m)^(\s*)guard let lastDotRange = appBundleIdentifier\.range\(of: "\.", options: \[\.backwards\]\) else \{\n(\s*)return WidgetPresentationData\.default\n\1\}\n(?!\1_ = lastDotRange\n)',
