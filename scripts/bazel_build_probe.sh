@@ -180,6 +180,7 @@ python3 ../../scripts/gb_patch_entitlements.py
 
 echo "== fast Swift patch compile probes =="
 "$BAZEL_BIN" build \
+  -c opt \
   --apple_platform_type=ios \
   --ios_multi_cpus=arm64 \
   --check_direct_dependencies=off \
@@ -193,6 +194,7 @@ python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 
 echo "== real build probe =="
 "$BAZEL_BIN" build \
+  -c opt \
   --apple_platform_type=ios \
   --ios_multi_cpus=arm64 \
   --check_direct_dependencies=off \
