@@ -77,5 +77,30 @@ shutil.copy2(ipa, final_ipa)
     f"platform={platform}\n"
 )
 
+
+    bad_needles = [
+        b"app.swiftgram.ios",
+        b"group.4a348a9b186b700c.10",
+        b"group.app.swiftgram.ios",
+    ]
+
+    for bad in bad_needles:
+        hits = []
+        for n in names:
+            if n.startswith("Payload/") and not n.endswith("/"):
+                try:
+                    data = z.read(n)
+                except Exception:
+                    continue
+                if bad in data:
+                    hits.append(n)
+        if hits:
+            print("ERROR: forbidden leftover found:", bad.decode("utf-8", "ignore"))
+            for h in hits[:30]:
+                print(h)
+            sys.exit(1)
+
+    print("No forbidden Swiftgram/AppGroup leftovers")
+
 print("Device IPA verification OK")
 print("Final IPA:", final_ipa)
