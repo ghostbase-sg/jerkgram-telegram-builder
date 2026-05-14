@@ -72,6 +72,15 @@ for root in roots:
         )
 
         # Silence Swift strict no-usage after forced constants.
+
+        # Silence strict Swift no-usage for WidgetItems guard-let.
+        s = re.sub(
+            r'(?m)^(\s*)guard let lastDotRange = appBundleIdentifier\.range\(of: "\.", options: \[\.backwards\]\) else \{\n(\s*)return WidgetPresentationData\.default\n\1\}\n(?!\1_ = lastDotRange\n)',
+            r'\1guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {\n\2return WidgetPresentationData.default\n\1}\n\1_ = lastDotRange\n',
+            s
+        )
+
+
         for name in ("baseAppBundleId", "baseAppBundleIdentifier", "appGroupName"):
             s = re.sub(
                 rf'(?m)^(\s*)let {name} = "([^"]+)"\n(?!\1_ = {name}\n)',
