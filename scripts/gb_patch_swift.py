@@ -41,6 +41,14 @@ for root in roots:
         s = s.replace("ph.telegra.Telegraph", BASE)
         s = s.replace("C67CF9S4VU", TEAM)
 
+        if p.name in ["BUILD", "BUILD.bazel"]:
+            s = re.sub(
+                r'available_appcenter_targets\s*=\s*\[\s*.*?\s*\]',
+                'available_appcenter_targets = []',
+                s,
+                flags=re.S
+            )
+
         s = s.replace(r"group.\(baseAppBundleId)0", GROUP)
         s = s.replace(r"group.\(baseAppBundleId)", GROUP)
         s = s.replace(r"group.\(baseAppBundleIdentifier)0", GROUP)
