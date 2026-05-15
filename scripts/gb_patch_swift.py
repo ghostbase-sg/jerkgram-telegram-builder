@@ -35,6 +35,8 @@ for root in roots:
         s = s.replace("group.app.swiftgram.ios", GROUP)
         s = s.replace("group.org.telegram.Telegram-iOS", GROUP)
         s = s.replace("org.telegram.Telegram-iOS", BASE)
+        s = s.replace("group.ph.telegra.Telegraph", GROUP)
+        s = s.replace("ph.telegra.Telegraph", BASE)
 
         s = s.replace(r"group.\(baseAppBundleId)0", GROUP)
         s = s.replace(r"group.\(baseAppBundleId)", GROUP)
