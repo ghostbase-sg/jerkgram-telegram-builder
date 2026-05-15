@@ -105,9 +105,3 @@ if grep -n "force simple push route" "$NAV"; then
 fi
 
 echo "== v0.8C patch OK =="
-echo "== GhostBase v0.9B ChatList Navigation Fallback =="
-python3 scripts/gb_patch_nav_fallback.py
-echo "-- verify v0.9B nav fallback --"
-grep -n "gbNavigationController" work/swiftgram-src/submodules/ChatListUI/Sources/ChatListController.swift | head -40
-echo "== v0.9B nav fallback patch OK =="
-
