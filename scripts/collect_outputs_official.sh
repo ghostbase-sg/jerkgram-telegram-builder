@@ -12,7 +12,7 @@ bazelisk info bazel-bin | tee "$OUT/bazel-bin-path.txt"
 BIN="$(bazelisk info bazel-bin)"
 
 echo "== cquery files =="
-bazelisk cquery --enable_workspace //Telegram:Telegram --output=files \
+bazelisk cquery --enable_workspace --//Telegram:disableExtensions=true //Telegram:Telegram --output=files \
   > "$OUT/cquery_files.txt" || true
 
 echo "== find possible outputs =="

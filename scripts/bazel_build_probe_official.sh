@@ -209,6 +209,7 @@ echo "== real build probe =="
   --apple_platform_type=ios \
   --ios_multi_cpus=arm64 \
   --check_direct_dependencies=off \
+  --//Telegram:disableExtensions=true \
   //Telegram:Telegram
 
 echo
