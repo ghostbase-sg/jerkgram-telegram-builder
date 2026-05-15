@@ -4,6 +4,7 @@ import re
 BASE = "app.pumpkin6584.lion7414"
 GROUP = "group.4a348a9b186b700c.1"
 BAD_GROUP_10 = "group.4a348a9b186b700c.10"
+TEAM = "5VZ6BJLW8Q"
 
 roots = [
     Path("Swiftgram"),
@@ -38,6 +39,7 @@ for root in roots:
         s = s.replace("org.telegram.Telegram-iOS", BASE)
         s = s.replace("group.ph.telegra.Telegraph", GROUP)
         s = s.replace("ph.telegra.Telegraph", BASE)
+        s = s.replace("C67CF9S4VU", TEAM)
 
         s = s.replace(r"group.\(baseAppBundleId)0", GROUP)
         s = s.replace(r"group.\(baseAppBundleId)", GROUP)

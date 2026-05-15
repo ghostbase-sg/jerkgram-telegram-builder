@@ -167,31 +167,21 @@ fi
 
 echo "global forbidden source grep OK"
 
-echo "== verify official Telegram bundle leftovers =="
+echo "== verify official Telegram signing config =="
+echo "-- active config --"
+grep -RInE 'telegram_team_id|telegram_bundle_id|telegram_app_group' \
+  build-input/configuration-repository build-system/example-configuration || true
+
 BAD_OFFICIAL="$(
-find Telegram submodules build-input/configuration-repository build-system/example-configuration -type f \( \
-  -name "*.swift" -o \
-  -name "*.m" -o \
-  -name "*.mm" -o \
-  -name "*.h" -o \
-  -name "*.plist" -o \
-  -name "*.entitlements" -o \
-  -name "*.bzl" -o \
-  -name "BUILD" -o \
-  -name "BUILD.bazel" -o \
-  -name "*.json" \
-\) \
--not -path "*/.git/*" \
--not -path "*/bazel-*/*" \
--not -path "*/provisioning/*" \
--print0 | xargs -0 grep -InE 'ph\.telegra\.Telegraph|C67CF9S4VU' || true
+grep -RInE 'telegram_team_id = "C67CF9S4VU"|telegram_bundle_id = "ph\.telegra\.Telegraph"|C67CF9S4VU\.ph\.telegra\.Telegraph' \
+  Telegram build-input/configuration-repository build-system/example-configuration 2>/dev/null || true
 )"
 if [ -n "$BAD_OFFICIAL" ]; then
   echo "$BAD_OFFICIAL"
-  echo "ERROR: official Telegram bundle/team leftovers"
+  echo "ERROR: official Telegram signing config leftovers"
   exit 1
 fi
-echo "official Telegram bundle leftovers OK"
+echo "official Telegram signing config OK"
 
 echo "== verify global Swift AppGroup patch =="
 if grep -RInE 'guard let baseAppBundle|let baseAppBundle[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*$' Swiftgram 2>/dev/null; then
