@@ -204,6 +204,7 @@ python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 
 echo "== real build probe =="
 "$BAZEL_BIN" build \
+  --enable_workspace \
   -c opt \
   --apple_platform_type=ios \
   --ios_multi_cpus=arm64 \
