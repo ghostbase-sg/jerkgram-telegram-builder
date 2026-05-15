@@ -11,6 +11,7 @@ roots = [
     Path("submodules/TelegramUI"),
     Path("submodules/WidgetItems"),
     Path("build-system/example-configuration"),
+    Path("build-input/configuration-repository"),
 ]
 changed = []
 

@@ -167,6 +167,32 @@ fi
 
 echo "global forbidden source grep OK"
 
+echo "== verify official Telegram bundle leftovers =="
+BAD_OFFICIAL="$(
+find Telegram submodules build-input/configuration-repository build-system/example-configuration -type f \( \
+  -name "*.swift" -o \
+  -name "*.m" -o \
+  -name "*.mm" -o \
+  -name "*.h" -o \
+  -name "*.plist" -o \
+  -name "*.entitlements" -o \
+  -name "*.bzl" -o \
+  -name "BUILD" -o \
+  -name "BUILD.bazel" -o \
+  -name "*.json" \
+\) \
+-not -path "*/.git/*" \
+-not -path "*/bazel-*/*" \
+-not -path "*/provisioning/*" \
+-print0 | xargs -0 grep -InE 'ph\.telegra\.Telegraph|C67CF9S4VU' || true
+)"
+if [ -n "$BAD_OFFICIAL" ]; then
+  echo "$BAD_OFFICIAL"
+  echo "ERROR: official Telegram bundle/team leftovers"
+  exit 1
+fi
+echo "official Telegram bundle leftovers OK"
+
 echo "== verify global Swift AppGroup patch =="
 if grep -RInE 'guard let baseAppBundle|let baseAppBundle[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*$' Swiftgram 2>/dev/null; then
   echo "Global Swift AppGroup verification failed"
