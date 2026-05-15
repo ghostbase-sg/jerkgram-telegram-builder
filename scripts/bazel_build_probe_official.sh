@@ -240,8 +240,8 @@ else
   exit 1
 fi
 
-echo "== skip Swiftgram-only final .10 IPA patch for official Telegram =="
-echo "Official baseline relies on source-level AppGroup patch + verifier."
+echo "== patch final IPA AppGroup .10 before verifier =="
+../../scripts/patch_final_ipa_appgroup10.sh ghostbase-final/GhostBase.ipa
 
 echo "== verify IPA is device arm64 =="
 python3 ../../scripts/gb_verify_device_ipa.py

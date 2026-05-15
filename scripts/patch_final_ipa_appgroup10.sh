@@ -20,10 +20,15 @@ test -f "$IPA"
 T="$(mktemp -d)"
 unzip -q "$IPA" -d "$T"
 
-APP="$T/Payload/Swiftgram.app"
-BIN="$APP/Swiftgram"
+APP="$(find "$T/Payload" -maxdepth 1 -type d -name "*.app" | head -n 1)"
+test -d "$APP"
+
+EXE="$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$APP/Info.plist")"
+BIN="$APP/$EXE"
 
 test -f "$BIN"
+echo "APP=$APP"
+echo "BIN=$BIN"
 
 python3 - <<PY
 from pathlib import Path
@@ -35,7 +40,7 @@ old = b"group.4a348a9b186b700c.10"
 new = b"group.4a348a9b186b700c.1\\x00"
 
 count = data.count(old)
-print("found .10 occurrences in Swiftgram:", count)
+print("found .10 occurrences in main binary:", count)
 
 if count == 0:
     raise SystemExit("BAD: .10 not found in Swiftgram binary, nothing patched")
