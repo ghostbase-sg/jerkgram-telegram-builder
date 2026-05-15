@@ -40,6 +40,8 @@ for root in roots:
         s = s.replace("group.ph.telegra.Telegraph", GROUP)
         s = s.replace("ph.telegra.Telegraph", BASE)
         s = s.replace("C67CF9S4VU", TEAM)
+        s = s.replace("group.{telegram_bundle_id}", GROUP)
+        s = s.replace(f"group.{BASE}", GROUP)
 
         if p.name in ["BUILD", "BUILD.bazel"]:
             s = re.sub(

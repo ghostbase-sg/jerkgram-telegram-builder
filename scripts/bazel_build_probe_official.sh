@@ -183,6 +183,18 @@ if [ -n "$BAD_OFFICIAL" ]; then
 fi
 echo "official Telegram signing config OK"
 
+echo "== verify official AppGroup entitlements =="
+BAD_APPGROUP="$(
+grep -RInE 'group\.app\.pumpkin6584\.lion7414|group\.\{telegram_bundle_id\}' \
+  Telegram build-input/configuration-repository build-system/example-configuration 2>/dev/null || true
+)"
+if [ -n "$BAD_APPGROUP" ]; then
+  echo "$BAD_APPGROUP"
+  echo "ERROR: official AppGroup entitlement leftovers"
+  exit 1
+fi
+echo "official AppGroup entitlements OK"
+
 echo "== verify global Swift AppGroup patch =="
 if grep -RInE 'guard let baseAppBundle|let baseAppBundle[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*$' Swiftgram 2>/dev/null; then
   echo "Global Swift AppGroup verification failed"
