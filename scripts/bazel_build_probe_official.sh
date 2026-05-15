@@ -246,6 +246,19 @@ echo "== patch final IPA AppGroup .10 before verifier =="
 echo "== verify IPA is device arm64 =="
 python3 ../../scripts/gb_verify_device_ipa.py
 
+echo "== verify GhostBase Settings patch in final IPA =="
+TMP_GB_CHECK="$(mktemp -d)"
+unzip -q ghostbase-final/GhostBase.ipa -d "$TMP_GB_CHECK"
+
+if ! LC_ALL=C grep -Rao "GhostBase" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "ERROR: GhostBase Settings patch missing in final IPA"
+  rm -rf "$TMP_GB_CHECK"
+  exit 1
+fi
+
+rm -rf "$TMP_GB_CHECK"
+echo "GhostBase Settings patch found in final IPA"
+
 echo "== collect build outputs =="
 ../../scripts/collect_outputs_official.sh
 
