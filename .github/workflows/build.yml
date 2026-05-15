@@ -1,4 +1,4 @@
-name: GhostBase Swiftgram Builder
+name: GhostBase Official Telegram Baseline
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-26
 
     env:
-      USE_BAZEL_VERSION: 7.6.1
+      USE_BAZEL_VERSION: 8.4.2
       BAZEL_BIN: bazelisk
       CERT_B64: ${{ secrets.CERT_B64 }}
       PROF_B64: ${{ secrets.PROF_B64 }}
@@ -30,26 +30,25 @@ jobs:
       - name: Prepare source
         run: |
           set -e
-          chmod +x scripts/prepare_source.sh
-          scripts/prepare_source.sh
+          chmod +x scripts/prepare_source_official.sh
+          scripts/prepare_source_official.sh
 
-      - name: Apply GhostBase v0.8A chat open fix
+      - name: Skip Swiftgram GhostBase patches
         run: |
           set -e
-          chmod +x scripts/apply_v08a_chatopen_fix.sh
-          scripts/apply_v08a_chatopen_fix.sh
+          echo "Official Telegram baseline: skip Swiftgram-specific patches"
 
       - name: Run build analysis probe
         run: |
           set -e
-          chmod +x scripts/bazel_build_probe.sh
-          scripts/bazel_build_probe.sh
+          chmod +x scripts/bazel_build_probe_official.sh
+          scripts/bazel_build_probe_official.sh
 
       - name: Upload build artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ghostbase-swiftgram-build
+          name: ghostbase-official-telegram-build
           path: |
             work/swiftgram-src/ghostbase-final/**
           if-no-files-found: warn
