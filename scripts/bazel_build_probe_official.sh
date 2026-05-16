@@ -12,8 +12,8 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply GhostBase PeerInfo ID Card v0.3B patch =="
-python3 ../../scripts/apply_ghostbase_peerid_v03b.py
+echo "== apply GhostBase Settings v0.3A patch =="
+python3 ../../scripts/apply_ghostbase_settings_v03a.py
 
 echo "== verify GhostBase source patch =="
 grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \
