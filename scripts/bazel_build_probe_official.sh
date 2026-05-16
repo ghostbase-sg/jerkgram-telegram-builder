@@ -16,8 +16,8 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply GhostBase Settings v0.2A patch =="
-python3 ../../scripts/apply_ghostbase_settings_v02a.py
+echo "== apply GhostBase Settings v0.2B patch =="
+python3 ../../scripts/apply_ghostbase_settings_v02b.py
 
 echo "== verify GhostBase source patch =="
 grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \
@@ -230,14 +230,6 @@ echo "== verify helper scripts syntax =="
 python3 -m py_compile ../../scripts/gb_patch_swift.py
 python3 -m py_compile ../../scripts/gb_patch_entitlements.py
 python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
-
-echo
-echo "== apply GhostBase Appearance smoke patch RIGHT BEFORE BUILD =="
-python3 ../../scripts/apply_ghostbase_appearance_smoke.py
-
-echo "== verify GhostBase Appearance smoke source patch =="
-grep -RInE 'GhostBase Appearance Smoke Test|Telegram ID:|KeychainFix: sideloadKeychainFix' \
-  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift
 
 echo "== real build probe =="
 "$BAZEL_BIN" build "${BAZEL_ARGS[@]}" \
