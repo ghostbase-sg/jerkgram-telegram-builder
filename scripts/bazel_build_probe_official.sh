@@ -4,11 +4,6 @@ set -euo pipefail
 export USE_BAZEL_VERSION="${USE_BAZEL_VERSION:-8.4.2}"
 BAZEL_BIN="${BAZEL_BIN:-bazelisk}"
 
-BAZEL_ARGS=()
-if [ -n "${BAZEL_EXTRA_ARGS:-}" ]; then
-  # shellcheck disable=SC2206
-  BAZEL_ARGS=(${BAZEL_EXTRA_ARGS})
-fi
 
 SIGN_DIR="$RUNNER_TEMP/signing"
 mkdir -p "$SIGN_DIR"
@@ -232,7 +227,7 @@ python3 -m py_compile ../../scripts/gb_patch_entitlements.py
 python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 
 echo "== real build probe =="
-"$BAZEL_BIN" build "${BAZEL_ARGS[@]}" \
+"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
   --apple_platform_type=ios \

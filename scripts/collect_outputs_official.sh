@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BAZEL_ARGS=()
-if [ -n "${BAZEL_EXTRA_ARGS:-}" ]; then
-  # shellcheck disable=SC2206
-  BAZEL_ARGS=(${BAZEL_EXTRA_ARGS})
-fi
 
 OUT="$GITHUB_WORKSPACE/artifacts"
 rm -rf "$OUT"
@@ -18,7 +13,7 @@ bazelisk info bazel-bin | tee "$OUT/bazel-bin-path.txt"
 BIN="$(bazelisk info bazel-bin)"
 
 echo "== cquery files =="
-bazelisk cquery "${BAZEL_ARGS[@]}" --enable_workspace --//Telegram:disableExtensions=true //Telegram:Telegram --output=files \
+bazelisk cquery ${BAZEL_EXTRA_ARGS:-} --enable_workspace --//Telegram:disableExtensions=true //Telegram:Telegram --output=files \
   > "$OUT/cquery_files.txt" || true
 
 echo "== find possible outputs =="
