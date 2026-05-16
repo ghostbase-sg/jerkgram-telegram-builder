@@ -49,10 +49,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific v0.8/v0.9 patches"
 
-      - name: Apply GhostBase PeerInfo Metrics Card v0.3C
+      - name: Apply GhostBase Settings Toggles v0.4A
         run: |
           set -e
-          python3 scripts/apply_ghostbase_peer_metrics_v03c.py
+          python3 scripts/apply_ghostbase_settings_toggles_v04a.py
 
       - name: Run build analysis probe
         run: |
