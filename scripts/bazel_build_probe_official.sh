@@ -225,6 +225,14 @@ python3 -m py_compile ../../scripts/gb_patch_swift.py
 python3 -m py_compile ../../scripts/gb_patch_entitlements.py
 python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 
+echo
+echo "== apply GhostBase Appearance smoke patch RIGHT BEFORE BUILD =="
+python3 ../../scripts/apply_ghostbase_appearance_smoke.py
+
+echo "== verify GhostBase Appearance smoke source patch =="
+grep -RInE 'GhostBase Appearance Smoke Test|Telegram ID:|KeychainFix: sideloadKeychainFix' \
+  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift
+
 echo "== real build probe =="
 "$BAZEL_BIN" build \
   --enable_workspace \
