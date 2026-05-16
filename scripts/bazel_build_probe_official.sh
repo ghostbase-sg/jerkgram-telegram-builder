@@ -3,7 +3,8 @@ set -euo pipefail
 
 export USE_BAZEL_VERSION="${USE_BAZEL_VERSION:-8.4.2}"
 BAZEL_BIN="${BAZEL_BIN:-bazelisk}"
-GHOSTBASE_BAZEL_TARGET="${GHOSTBASE_BAZEL_TARGET:-//Telegram:Telegram}"
+GHOSTBASE_BAZEL_TARGET="${GHOSTBASE_BAZEL_TARGET:-//submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen:PeerInfoScreen}"
+GHOSTBASE_PROBE_ONLY="${GHOSTBASE_PROBE_ONLY:-1}"
 
 
 SIGN_DIR="$RUNNER_TEMP/signing"
@@ -228,6 +229,8 @@ python3 -m py_compile ../../scripts/gb_patch_entitlements.py
 python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 
 echo "== real build probe =="
+echo "GHOSTBASE_PROBE_ONLY=$GHOSTBASE_PROBE_ONLY"
+echo "GHOSTBASE_BAZEL_TARGET=$GHOSTBASE_BAZEL_TARGET"
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
