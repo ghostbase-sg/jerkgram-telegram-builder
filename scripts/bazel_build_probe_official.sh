@@ -9,6 +9,17 @@ mkdir -p "$SIGN_DIR"
 
 cd work/swiftgram-src
 
+echo
+echo "== apply GhostBase Settings v0.2A patch =="
+python3 ../../scripts/apply_ghostbase_settings_v02a.py
+
+echo "== verify GhostBase source patch =="
+grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \
+  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift \
+  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift \
+  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift
+
+
 echo "== verify required signing secrets =="
 for v in CERT_B64 PROF_B64 P12_PASSWORD KEYCHAIN_PASSWORD; do
   eval "x=\${$v:-}"

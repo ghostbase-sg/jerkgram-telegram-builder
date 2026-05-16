@@ -1,6 +1,19 @@
 from pathlib import Path
 
-BASE = Path("work/swiftgram-src")
+def find_base() -> Path:
+    cwd = Path.cwd()
+    candidates = [
+        cwd / "work/swiftgram-src",
+        cwd,
+        cwd.parent / "swiftgram-src",
+    ]
+    for c in candidates:
+        if (c / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources").exists():
+            return c
+    raise SystemExit(f"cannot find swiftgram-src base from cwd={cwd}")
+
+BASE = find_base()
+
 items_p = BASE / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift"
 actions_p = BASE / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift"
 screen_p = BASE / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift"
@@ -9,7 +22,8 @@ for p in [items_p, actions_p, screen_p]:
     if not p.exists():
         raise SystemExit(f"missing file: {p}")
 
-# 1. Add enum case .ghostbase
+print(f"GhostBase patch BASE={BASE}")
+
 s = screen_p.read_text()
 if "case ghostbase" not in s:
     needle = "    case appearance\n"
@@ -17,10 +31,10 @@ if "case ghostbase" not in s:
         raise SystemExit("PeerInfoSettingsSection insertion point not found")
     s = s.replace(needle, needle + "    case ghostbase\n")
     screen_p.write_text(s)
+    print("patched enum case")
 
-# 2. Add GhostBase row in Settings advanced section
 s = items_p.read_text()
-if "GhostBase" not in s:
+if "interaction.openSettings(.ghostbase)" not in s:
     needle = '''    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 3, text: presentationData.strings.Settings_Appearance, icon: PresentationResourcesSettings.appearance, action: {
         interaction.openSettings(.appearance)
     }))
@@ -33,8 +47,8 @@ if "GhostBase" not in s:
         raise SystemExit("advanced settings insertion point not found")
     s = s.replace(needle, insert)
     items_p.write_text(s)
+    print("patched settings row")
 
-# 3. Add action for .ghostbase
 s = actions_p.read_text()
 if "case .ghostbase:" not in s:
     needle = '''        case .appearance:
@@ -53,5 +67,19 @@ if "case .ghostbase:" not in s:
         raise SystemExit("settings action insertion point not found")
     s = s.replace(needle, insert)
     actions_p.write_text(s)
+    print("patched settings action")
+
+checks = [
+    (screen_p, "case ghostbase"),
+    (items_p, "interaction.openSettings(.ghostbase)"),
+    (items_p, '"GhostBase"'),
+    (actions_p, "case .ghostbase:"),
+    (actions_p, "Telegram ID:"),
+    (actions_p, "KeychainFix: sideloadKeychainFix.dylib"),
+]
+
+for p, needle in checks:
+    if needle not in p.read_text():
+        raise SystemExit(f"verification failed: {needle} missing in {p}")
 
 print("GhostBase Settings v0.2A patch OK")
