@@ -3,6 +3,7 @@ set -euo pipefail
 
 export USE_BAZEL_VERSION="${USE_BAZEL_VERSION:-8.4.2}"
 BAZEL_BIN="${BAZEL_BIN:-bazelisk}"
+GHOSTBASE_BAZEL_TARGET="${GHOSTBASE_BAZEL_TARGET:-//Telegram:Telegram}"
 
 
 SIGN_DIR="$RUNNER_TEMP/signing"
@@ -234,11 +235,16 @@ echo "== real build probe =="
   --ios_multi_cpus=arm64 \
   --check_direct_dependencies=off \
   --//Telegram:disableExtensions=true \
-  //Telegram:Telegram
+  "$GHOSTBASE_BAZEL_TARGET"
 
 echo
 echo
- echo
+
+if [ "${GHOSTBASE_PROBE_ONLY:-0}" = "1" ]; then
+  echo "== probe-only build OK =="
+  exit 0
+fi
+
 echo
 echo "== save IPA before verifier =="
 mkdir -p ghostbase-final

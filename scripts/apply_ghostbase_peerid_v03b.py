@@ -6,7 +6,11 @@ runpy.run_path(str(Path(__file__).with_name("apply_ghostbase_settings_v03a.py"))
 
 def find_base() -> Path:
     cwd = Path.cwd()
-    candidates = [cwd / "work/swiftgram-src", cwd, cwd.parent / "swiftgram-src"]
+    candidates = [
+        cwd / "work/swiftgram-src",
+        cwd,
+        cwd.parent / "swiftgram-src",
+    ]
     for c in candidates:
         if (c / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources").exists():
             return c
@@ -34,6 +38,7 @@ print("patched", gb_screen_p)
 
 s = profile_p.read_text()
 
+# Add a separate GhostBase card section.
 if "case ghostbase" not in s:
     s = re.sub(
         r"(enum InfoSection: Int, CaseIterable \{\n)",
@@ -45,38 +50,20 @@ if "case ghostbase" not in s:
 if "case ghostbase" not in s:
     raise SystemExit("failed to add InfoSection.ghostbase")
 
+# Remove old broken GhostBase block if it exists.
+marker = "    // MARK: GhostBase v0.3B peer id card\n"
+if marker in s:
+    block_start = s.index(marker)
+    block_end_marker = "    let bioContextAction:"
+    block_end = s.index(block_end_marker, block_start)
+    s = s[:block_start] + s[block_end:]
+
 block = '''
     // MARK: GhostBase v0.3B peer id card
     do {
-        var ghostBasePeerIdText = ""
-
-        if let user = data.peer as? TelegramUser {
-            ghostBasePeerIdText = String(user.id.id._internalGetInt64Value())
-        } else if let channel = data.peer as? TelegramChannel {
-            ghostBasePeerIdText = "-100" + String(channel.id.id._internalGetInt64Value())
-        } else if let group = data.peer as? TelegramGroup {
-            ghostBasePeerIdText = String(group.id.id._internalGetInt64Value())
-        } else if let peer = data.peer {
-            ghostBasePeerIdText = String(peer.id.id._internalGetInt64Value())
-        }
-
-        if !ghostBasePeerIdText.isEmpty {
-            items[.ghostbase]!.append(PeerInfoScreenLabeledValueItem(id: 990000, label: "id: \\(ghostBasePeerIdText)", text: "", textColor: .primary, action: nil, longTapAction: { sourceNode in
-                interaction.openPeerInfoContextMenu(.copy(ghostBasePeerIdText), sourceNode, nil)
-            }, requestLayout: { _ in
-                interaction.requestLayout(false)
-            }))
-        }
-
-        var ghostBaseDcText = ""
-        if let peer = data.peer, let smallProfileImage = peer.smallProfileImage, let cloudResource = smallProfileImage.resource as? CloudPeerPhotoSizeMediaResource {
-            ghostBaseDcText = String(cloudResource.datacenterId)
-        }
-
-        if !ghostBaseDcText.isEmpty {
-            items[.ghostbase]!.append(PeerInfoScreenLabeledValueItem(id: 990001, label: "dc: \\(ghostBaseDcText)", text: "", textColor: .primary, action: nil, longTapAction: { sourceNode in
-                interaction.openPeerInfoContextMenu(.copy(ghostBaseDcText), sourceNode, nil)
-            }, requestLayout: { _ in
+        if let peer = data.peer {
+            let ghostBasePeerIdText = String(peer.id.id._internalGetInt64Value())
+            items[.ghostbase]!.append(PeerInfoScreenLabeledValueItem(id: 990000, label: "id: \\(ghostBasePeerIdText)", text: "", textColor: .primary, action: nil, longTapAction: nil, requestLayout: { _ in
                 interaction.requestLayout(false)
             }))
         }
@@ -84,13 +71,15 @@ block = '''
 
 '''
 
-if "GhostBase v0.3B peer id card" not in s:
-    needle = '''    for section in InfoSection.allCases {
+needle = '''    for section in InfoSection.allCases {
         items[section] = []
     }
 '''
-    if needle not in s:
-        raise SystemExit("items init insertion point not found")
+
+if needle not in s:
+    raise SystemExit("items init insertion point not found")
+
+if "GhostBase v0.3B peer id card" not in s:
     s = s.replace(needle, needle + block, 1)
 
 profile_p.write_text(s)
@@ -99,11 +88,22 @@ print("patched", profile_p)
 profile = profile_p.read_text()
 gb = gb_screen_p.read_text()
 
+marker = "    // MARK: GhostBase v0.3B peer id card\n"
+end_marker = "    let bioContextAction:"
+if marker not in profile:
+    raise SystemExit("GhostBase block marker missing")
+block_start = profile.index(marker)
+block_end = profile.index(end_marker, block_start)
+ghostbase_block = profile[block_start:block_end]
+
 checks = [
     ("ghostbase section", "case ghostbase" in profile),
-    ("ghostbase card block", "GhostBase v0.3B peer id card" in profile),
-    ("id card", 'label: "id: \\(ghostBasePeerIdText)"' in profile),
-    ("dc card", 'label: "dc: \\(ghostBaseDcText)"' in profile),
+    ("ghostbase id block", "GhostBase v0.3B peer id card" in ghostbase_block),
+    ("id card", 'label: "id: \\(ghostBasePeerIdText)"' in ghostbase_block),
+    ("no invalid TelegramUser cast in GhostBase block", "data.peer as? TelegramUser" not in ghostbase_block),
+    ("no invalid TelegramChannel cast in GhostBase block", "data.peer as? TelegramChannel" not in ghostbase_block),
+    ("no invalid TelegramGroup cast in GhostBase block", "data.peer as? TelegramGroup" not in ghostbase_block),
+    ("no unavailable copy context in GhostBase block", "openPeerInfoContextMenu(.copy" not in ghostbase_block),
     ("screen v0.3B", "Version: v0.3B" in gb),
     ("screen note", "PeerInfo ID card is enabled in v0.3B" in gb),
 ]
