@@ -6,12 +6,7 @@ runpy.run_path(str(Path(__file__).with_name("apply_ghostbase_peerid_v03b.py")))
 
 def find_base() -> Path:
     cwd = Path.cwd()
-    candidates = [
-        cwd / "work/swiftgram-src",
-        cwd,
-        cwd.parent / "swiftgram-src",
-    ]
-    for c in candidates:
+    for c in [cwd / "work/swiftgram-src", cwd, cwd.parent / "swiftgram-src"]:
         if (c / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources").exists():
             return c
     raise SystemExit(f"cannot find source base from cwd={cwd}")
@@ -90,14 +85,6 @@ block = '''
             ghostBaseItemId += 1
         }
 
-        if let channelCreationTimestamp = data.channelCreationTimestamp {
-            let creationDateString = stringForDate(timestamp: channelCreationTimestamp, strings: presentationData.strings)
-            items[.ghostbase]!.append(PeerInfoScreenLabeledValueItem(id: ghostBaseItemId, label: "created:", text: creationDateString, textColor: .primary, action: nil, longTapAction: nil, requestLayout: { _ in
-                interaction.requestLayout(false)
-            }))
-            ghostBaseItemId += 1
-        }
-
         var ghostBaseRegDateString = ""
         if let cachedData = data.cachedData as? CachedUserData, let registrationDate = cachedData.peerStatusSettings?.registrationDate {
             let components = registrationDate.components(separatedBy: ".")
@@ -107,10 +94,7 @@ block = '''
                 ghostBaseRegDateString = stringForMonth(strings: presentationData.strings, month: month, ofYear: year)
             }
         }
-        if let regDate = data.regDate, ghostBaseRegDateString.isEmpty {
-            let regTimestamp = Int32((regDate.from + regDate.to) / 2)
-            ghostBaseRegDateString = stringForDate(timestamp: regTimestamp, strings: presentationData.strings)
-        }
+
         if !ghostBaseRegDateString.isEmpty {
             items[.ghostbase]!.append(PeerInfoScreenLabeledValueItem(id: ghostBaseItemId, label: "registered:", text: ghostBaseRegDateString, textColor: .primary, action: nil, longTapAction: nil, requestLayout: { _ in
                 interaction.requestLayout(false)
@@ -130,7 +114,6 @@ if needle not in s:
     raise SystemExit("items init insertion point not found")
 
 s = s.replace(needle, needle + block, 1)
-
 profile_p.write_text(s)
 print("patched", profile_p)
 
@@ -147,19 +130,25 @@ start = profile.index(marker)
 end = profile.index(end_marker, start)
 block = profile[start:end]
 
+for forbidden in [
+    "data.channelCreationTimestamp",
+    "data.regDate",
+    "data.peer as? TelegramUser",
+    "data.peer as? TelegramChannel",
+    "data.peer as? TelegramGroup",
+    "openPeerInfoContextMenu(.copy",
+]:
+    if forbidden in block:
+        raise SystemExit("FORBIDDEN in GhostBase block: " + forbidden)
+
 checks = [
     ("ghostbase section", "case ghostbase" in profile),
     ("v0.3C block", "GhostBase v0.3C peer metrics card" in block),
-    ("channel pattern", "case let .channel(channel) = peer" in block),
-    ("channel -100 format", '"-100" + String(channel.id.id._internalGetInt64Value())' in block),
+    ("channel -100", '"-100" + String(channel.id.id._internalGetInt64Value())' in block),
     ("id row", 'label: "id: \\(ghostBasePeerIdText)"' in block),
     ("dc row", 'label: "dc: \\(ghostBaseDcText)"' in block),
-    ("created row", 'label: "created:"' in block),
     ("registered row", 'label: "registered:"' in block),
-    ("no invalid TelegramUser cast", "data.peer as? TelegramUser" not in block),
-    ("no invalid TelegramChannel cast", "data.peer as? TelegramChannel" not in block),
-    ("no invalid TelegramGroup cast", "data.peer as? TelegramGroup" not in block),
-    ("no unavailable copy context", "openPeerInfoContextMenu(.copy" not in block),
+    ("no created row", 'label: "created:"' not in block),
     ("screen v0.3C", "Version: v0.3C" in gb),
     ("screen note", "PeerInfo Metrics Card is enabled in v0.3C" in gb),
 ]
