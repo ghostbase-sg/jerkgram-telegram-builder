@@ -4,6 +4,12 @@ set -euo pipefail
 export USE_BAZEL_VERSION="${USE_BAZEL_VERSION:-8.4.2}"
 BAZEL_BIN="${BAZEL_BIN:-bazelisk}"
 
+BAZEL_ARGS=()
+if [ -n "${BAZEL_EXTRA_ARGS:-}" ]; then
+  # shellcheck disable=SC2206
+  BAZEL_ARGS=(${BAZEL_EXTRA_ARGS})
+fi
+
 SIGN_DIR="$RUNNER_TEMP/signing"
 mkdir -p "$SIGN_DIR"
 
@@ -234,7 +240,7 @@ grep -RInE 'GhostBase Appearance Smoke Test|Telegram ID:|KeychainFix: sideloadKe
   submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift
 
 echo "== real build probe =="
-"$BAZEL_BIN" build \
+"$BAZEL_BIN" build "${BAZEL_ARGS[@]}" \
   --enable_workspace \
   -c opt \
   --apple_platform_type=ios \
