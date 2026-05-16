@@ -5,6 +5,10 @@ export USE_BAZEL_VERSION="${USE_BAZEL_VERSION:-8.4.2}"
 BAZEL_BIN="${BAZEL_BIN:-bazelisk}"
 GHOSTBASE_BAZEL_TARGET="${GHOSTBASE_BAZEL_TARGET:-//submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen:PeerInfoScreen}"
 GHOSTBASE_PROBE_ONLY="${GHOSTBASE_PROBE_ONLY:-1}"
+BAZEL_PROBE_CPU_ARG=""
+if [ "${GHOSTBASE_PROBE_ONLY:-0}" = "1" ]; then
+  BAZEL_PROBE_CPU_ARG="--cpu=ios_arm64"
+fi
 
 
 SIGN_DIR="$RUNNER_TEMP/signing"
@@ -231,7 +235,8 @@ python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 echo "== real build probe =="
 echo "GHOSTBASE_PROBE_ONLY=$GHOSTBASE_PROBE_ONLY"
 echo "GHOSTBASE_BAZEL_TARGET=$GHOSTBASE_BAZEL_TARGET"
-"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
+echo "BAZEL_PROBE_CPU_ARG=$BAZEL_PROBE_CPU_ARG"
+"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} ${BAZEL_PROBE_CPU_ARG:-} \
   --enable_workspace \
   -c opt \
   --apple_platform_type=ios \
