@@ -12,8 +12,8 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply GhostBase Hide Typing v0.5A patch =="
-python3 ../../scripts/apply_ghostbase_hide_typing_v05a.py
+echo "== apply GhostBase Activity Ghost v0.5B patch =="
+python3 ../../scripts/apply_ghostbase_activity_ghost_v05b.py
 
 echo "== verify GhostBase source patch =="
 grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \

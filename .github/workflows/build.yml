@@ -38,10 +38,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific patches"
 
-      - name: Apply GhostBase Hide Typing v0.5A
+      - name: Apply GhostBase Activity Ghost v0.5B
         run: |
           set -e
-          python3 scripts/apply_ghostbase_hide_typing_v05a.py
+          python3 scripts/apply_ghostbase_activity_ghost_v05b.py
 
       - name: Run build analysis probe
         run: |
