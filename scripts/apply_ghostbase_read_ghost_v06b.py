@@ -34,40 +34,73 @@ controller = controller.replace(
 controller_p.write_text(controller)
 print("patched", controller_p)
 
-old_apply = '''    } else if index.id.peerId.namespace == Namespaces.Peer.CloudUser || index.id.peerId.namespace == Namespaces.Peer.CloudGroup || index.id.peerId.namespace == Namespaces.Peer.CloudChannel {
-        stateManager.notifyAppliedIncomingReadMessages([index.id])
-    }
-'''
+def ensure_foundation_import(text: str) -> str:
+    head = "\n".join(text.splitlines()[:20])
+    if "import Foundation" not in head:
+        return "import Foundation\n" + text
+    return text
 
-new_apply = '''    } else if index.id.peerId.namespace == Namespaces.Peer.CloudUser || index.id.peerId.namespace == Namespaces.Peer.CloudGroup || index.id.peerId.namespace == Namespaces.Peer.CloudChannel {
-        // MARK: GhostBase v0.6B Read Ghost local read without remote notify
-        let ghostBaseReadGhost = (UserDefaults.standard.object(forKey: "GhostBase.GhostMode.ReadMessages") as? Bool) ?? false
-        if !ghostBaseReadGhost {
-            stateManager.notifyAppliedIncomingReadMessages([index.id])
-        }
-    }
-'''
+# MARK: GhostBase v0.6B robust ApplyMaxReadIndexInteractively patch
+if "GhostBase v0.6B Read Ghost local read without remote notify" not in apply_s:
+    needle = "stateManager.notifyAppliedIncomingReadMessages([index.id])"
+    if needle not in apply_s:
+        raise SystemExit("missing replacement point: notifyAppliedIncomingReadMessages call")
 
-apply_s = must_replace(apply_s, old_apply, new_apply, "ApplyMaxReadIndexInteractively read notify")
+    lines = apply_s.splitlines(True)
+    out = []
+    replaced = False
+
+    for line in lines:
+        if not replaced and needle in line:
+            indent = line[:len(line) - len(line.lstrip())]
+            out.append(f"{indent}// MARK: GhostBase v0.6B Read Ghost local read without remote notify\n")
+            out.append(f"{indent}let ghostBaseReadGhost = (UserDefaults.standard.object(forKey: \"GhostBase.GhostMode.ReadMessages\") as? Bool) ?? false\n")
+            out.append(f"{indent}if !ghostBaseReadGhost {{\n")
+            out.append(f"{indent}    {needle}\n")
+            out.append(f"{indent}}}\n")
+            replaced = True
+        else:
+            out.append(line)
+
+    if not replaced:
+        raise SystemExit("failed to patch notifyAppliedIncomingReadMessages call")
+
+    apply_s = "".join(out)
+
+apply_s = ensure_foundation_import(apply_s)
 apply_p.write_text(apply_s)
 print("patched", apply_p)
 
-function_marker = "private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, PeerReadStateValidationError> {\n"
-
-guard_block = '''    // MARK: GhostBase v0.6B Read Ghost remote readHistory guard
-    let ghostBaseReadGhost = (UserDefaults.standard.object(forKey: "GhostBase.GhostMode.ReadMessages") as? Bool) ?? false
-    if ghostBaseReadGhost && peerId.namespace != Namespaces.Peer.SecretChat {
-        return .single(readState)
-    }
-
-'''
-
-if function_marker not in sync_s:
-    raise SystemExit("missing replacement point: pushPeerReadState function")
-
+# MARK: GhostBase v0.6B robust SynchronizePeerReadState patch
 if "GhostBase v0.6B Read Ghost remote readHistory guard" not in sync_s:
-    sync_s = sync_s.replace(function_marker, function_marker + guard_block, 1)
+    lines = sync_s.splitlines(True)
+    out = []
+    function_seen = False
+    inserted = False
 
+    for line in lines:
+        out.append(line)
+
+        if not function_seen and "private func pushPeerReadState(" in line:
+            function_seen = True
+
+        if function_seen and not inserted and "{" in line:
+            indent = "    "
+            out.append(f"{indent}// MARK: GhostBase v0.6B Read Ghost remote readHistory guard\n")
+            out.append(f"{indent}let ghostBaseReadGhost = (UserDefaults.standard.object(forKey: \"GhostBase.GhostMode.ReadMessages\") as? Bool) ?? false\n")
+            out.append(f"{indent}if ghostBaseReadGhost && peerId.namespace != Namespaces.Peer.SecretChat {{\n")
+            out.append(f"{indent}    return .single(readState)\n")
+            out.append(f"{indent}}}\n\n")
+            inserted = True
+
+    if not function_seen:
+        raise SystemExit("missing replacement point: pushPeerReadState function")
+    if not inserted:
+        raise SystemExit("failed to insert pushPeerReadState guard")
+
+    sync_s = "".join(out)
+
+sync_s = ensure_foundation_import(sync_s)
 sync_p.write_text(sync_s)
 print("patched", sync_p)
 
