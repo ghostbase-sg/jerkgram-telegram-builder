@@ -49,10 +49,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific v0.8/v0.9 patches"
 
-      - name: Apply GhostBase Scheduled Send v0.7B
+      - name: Apply GhostBase Scheduled Send v0.7C
         run: |
           set -e
-          python3 scripts/apply_ghostbase_scheduled_send_fix_v07b.py
+          python3 scripts/apply_ghostbase_scheduled_send_fix_v07c.py
 
       - name: Run build analysis probe
         run: |
