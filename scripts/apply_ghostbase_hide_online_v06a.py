@@ -47,21 +47,30 @@ controller = must_replace(controller, old_presence_case, new_presence_case, "pre
 controller_p.write_text(controller)
 print("patched", controller_p)
 
-old_presence_func_start = '''    private func updatePresence(_ isOnline: Bool) {
-        let request: Signal<Api.Bool, MTRpcError>
-        if isOnline {
-'''
+if "GhostBase v0.6A Hide Online runtime" not in presence:
+    function_marker = "    private func updatePresence(_ isOnline: Bool) {"
+    if function_marker not in presence:
+        raise SystemExit("missing replacement point: updatePresence function")
 
-new_presence_func_start = '''    private func updatePresence(_ isOnline: Bool) {
+    request_marker = "        let request: Signal<Api.Bool, MTRpcError>\n        if isOnline {"
+    if request_marker not in presence:
+        raise SystemExit("missing replacement point: updatePresence request branch")
+
+    presence = presence.replace(
+        function_marker,
+        function_marker + """
         // MARK: GhostBase v0.6A Hide Online runtime
         let ghostBaseHideOnline = (UserDefaults.standard.object(forKey: "GhostBase.GhostMode.Presence") as? Bool) ?? false
         let effectiveIsOnline = ghostBaseHideOnline ? false : isOnline
+""",
+        1
+    )
+    presence = presence.replace(
+        request_marker,
+        "        let request: Signal<Api.Bool, MTRpcError>\n        if effectiveIsOnline {",
+        1
+    )
 
-        let request: Signal<Api.Bool, MTRpcError>
-        if effectiveIsOnline {
-'''
-
-presence = must_replace(presence, old_presence_func_start, new_presence_func_start, "updatePresence guard")
 presence_p.write_text(presence)
 print("patched", presence_p)
 
