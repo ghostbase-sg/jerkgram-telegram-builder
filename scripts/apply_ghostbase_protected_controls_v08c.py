@@ -373,7 +373,8 @@ share = replace_after(
 ''',
     '''            func transformMessages(_ messages: [EnqueueMessage], showNames: Bool, silently: Bool, sendPaidMessageStars: StarsAmount?) -> [EnqueueMessage] {
                 // MARK: GhostBase v0.8C Internal ShareController Scheduled Send bridge
-                let ghostBaseShareScheduleTime: Int32? = (((UserDefaults.standard.object(forKey: "GhostBase.GhostMode.ScheduledSend") as? Bool) ?? false) ? Int32(Date().timeIntervalSince1970) + 12 : nil
+                let ghostBaseScheduledSendEnabled = ((UserDefaults.standard.object(forKey: "GhostBase.GhostMode.ScheduledSend") as? Bool) ?? false)
+                let ghostBaseShareScheduleTime: Int32? = ghostBaseScheduledSendEnabled ? Int32(Date().timeIntervalSince1970) + 12 : nil
 
                 return messages.map { message in
                     return message.withUpdatedAttributes({ attributes in
@@ -412,6 +413,11 @@ image = image_p.read_text()
 share = share_p.read_text()
 
 bad = []
+
+if "ghostBaseShareScheduleTime: Int32? = (((" in share:
+    bad.append("broken ShareController schedule Swift syntax")
+if "let ghostBaseScheduledSendEnabled =" not in share:
+    bad.append("ShareController schedule enabled line missing")
 
 checks = [
     ("settings version", "Version: v0.8C" in settings),
