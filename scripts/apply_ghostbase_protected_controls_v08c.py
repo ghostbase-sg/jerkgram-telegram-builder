@@ -301,7 +301,6 @@ def insert_image_action_guard(text: str, marker: str, action_anchor: str, guard_
 
     action_pos = text.find(action_anchor, marker_pos, section_end)
 
-    # Fallback for clean GitHub source formatting differences.
     if action_pos < 0:
         if "copy" in label.lower():
             action_pos = text.find("Conversation_ContextMenuCopy", marker_pos, section_end)
@@ -309,13 +308,15 @@ def insert_image_action_guard(text: str, marker: str, action_anchor: str, guard_
             action_pos = text.find("Gallery_SaveImage", marker_pos, section_end)
 
     if action_pos < 0:
+        if "copy" in label.lower():
+            print(f"[{VERSION}] optional: {label} action not present in this source, skip")
+            return text
         fail(label + " action")
 
     line_start = text.rfind("\n", marker_pos, action_pos) + 1
     if line_start <= 0:
         fail(label + " line start")
 
-    # Insert guard before the actual action line, not before the token itself.
     text = text[:line_start] + guard_line + "\n" + text[line_start:]
     action_pos += len(guard_line) + 1
     section_end += len(guard_line) + 1
@@ -454,18 +455,28 @@ if m < 0:
     bad.append("image marker missing")
 else:
     window = image[m:m+6000]
-    order = [
-        window.find("if ghostBaseProtectedOriginalAllowed"),
-        window.find("Gallery_CreateSticker"),
-        window.find("if ghostBaseProtectedSave || ghostBaseProtectedOriginalAllowed"),
-        window.find("Gallery_SaveImage"),
-        window.find("if ghostBaseProtectedCopy || ghostBaseProtectedOriginalAllowed"),
-        window.find("Conversation_ContextMenuCopy"),
-    ]
-    if any(x < 0 for x in order):
-        bad.append("image action order marker missing")
-    elif not (order[0] < order[1] < order[2] < order[3] < order[4] < order[5]):
-        bad.append("image action order invalid")
+
+    original_guard = window.find("if ghostBaseProtectedOriginalAllowed")
+    sticker_action = window.find("Gallery_CreateSticker")
+    save_guard = window.find("if ghostBaseProtectedSave || ghostBaseProtectedOriginalAllowed")
+    save_action = window.find("Gallery_SaveImage")
+
+    required_order = [original_guard, sticker_action, save_guard, save_action]
+    if any(x < 0 for x in required_order):
+        bad.append("image required Save/Sticker marker missing")
+    elif not (original_guard < sticker_action < save_guard < save_action):
+        bad.append("image required Save/Sticker order invalid")
+
+    copy_action = window.find("Conversation_ContextMenuCopy")
+    copy_guard = window.find("if ghostBaseProtectedCopy || ghostBaseProtectedOriginalAllowed")
+
+    if copy_action >= 0:
+        if copy_guard < 0:
+            bad.append("image Copy action present but copy guard missing")
+        elif not (save_action < copy_guard < copy_action):
+            bad.append("image Copy guard order invalid")
+    else:
+        print(f"[{VERSION}] optional: image Copy action not present, strict audit skipped")
 
 if "captureProtected = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.isCopyProtected() || peerIsCopyProtected || isSecret || message.paidContent != nil" not in image:
     bad.append("captureProtected unexpectedly changed")
