@@ -20,13 +20,29 @@ def write(path: Path, text: str) -> None:
     path.write_text(text)
     print(f"[v0.7D] patched: {path.relative_to(ROOT)}")
 
+def _strip_trailing_ws(text: str) -> str:
+    return "\n".join(line.rstrip() for line in text.splitlines())
+
 def replace_once(text: str, old: str, new: str, label: str) -> str:
     if new in text:
         print(f"[v0.7D] already patched: {label}")
         return text
-    if old not in text:
+
+    if old in text:
+        return text.replace(old, new, 1)
+
+    text_clean = _strip_trailing_ws(text)
+    old_clean = _strip_trailing_ws(old)
+    new_clean = _strip_trailing_ws(new)
+
+    if new_clean in text_clean:
+        print(f"[v0.7D] already patched: {label}")
+        return text_clean + "\n"
+
+    if old_clean not in text_clean:
         fail(f"pattern not found: {label}")
-    return text.replace(old, new, 1)
+
+    return text_clean.replace(old_clean, new_clean, 1) + "\n"
 
 def patch_settings() -> None:
     path = SRC / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
