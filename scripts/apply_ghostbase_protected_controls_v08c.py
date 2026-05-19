@@ -292,7 +292,7 @@ def insert_image_action_guard(text: str, marker: str, action_anchor: str, guard_
 
     section_end = text.find("            if let peer, let message = self.message", marker_pos)
     if section_end < 0:
-        section_end = marker_pos + 8000
+        section_end = marker_pos + 10000
 
     guard_line = f"                    if {guard_expr} {{"
     if guard_line in text[marker_pos:section_end]:
@@ -300,10 +300,23 @@ def insert_image_action_guard(text: str, marker: str, action_anchor: str, guard_
         return text
 
     action_pos = text.find(action_anchor, marker_pos, section_end)
+
+    # Fallback for clean GitHub source formatting differences.
+    if action_pos < 0:
+        if "copy" in label.lower():
+            action_pos = text.find("Conversation_ContextMenuCopy", marker_pos, section_end)
+        elif "save" in label.lower():
+            action_pos = text.find("Gallery_SaveImage", marker_pos, section_end)
+
     if action_pos < 0:
         fail(label + " action")
 
-    text = text[:action_pos] + guard_line + "\n" + text[action_pos:]
+    line_start = text.rfind("\n", marker_pos, action_pos) + 1
+    if line_start <= 0:
+        fail(label + " line start")
+
+    # Insert guard before the actual action line, not before the token itself.
+    text = text[:line_start] + guard_line + "\n" + text[line_start:]
     action_pos += len(guard_line) + 1
     section_end += len(guard_line) + 1
 
@@ -315,6 +328,7 @@ def insert_image_action_guard(text: str, marker: str, action_anchor: str, guard_
     close_pos += len(close_anchor)
     text = text[:close_pos] + "\n                    }" + text[close_pos:]
     return text
+
 
 image_marker = "GhostBase v0.8C Protected Content image save/copy toggles"
 
