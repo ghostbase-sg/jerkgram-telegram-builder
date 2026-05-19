@@ -12,8 +12,8 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply GhostBase Scheduled Send v0.7C patch =="
-python3 ../../scripts/apply_ghostbase_scheduled_send_fix_v07c.py
+echo "== apply GhostBase Scheduled Send v0.7D Stabilizer patch =="
+python3 ../../scripts/apply_ghostbase_scheduled_send_stabilizer_v07d.py
 
 echo "== verify GhostBase source patch =="
 grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \
