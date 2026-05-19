@@ -363,6 +363,37 @@ story = story.replace(
     1
 )
 
+# MARK: GhostBase v0.7D Swift compile guard
+# Prevent already-seen StoryContainerScreen Swift failures.
+
+dup_direct = """            let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)
+            // MARK: GhostBase v0.7D Scheduled Send story context direct stabilizer
+            let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)
+"""
+fixed_direct = """            // MARK: GhostBase v0.7D Scheduled Send story context direct stabilizer
+            let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)
+"""
+story = story.replace(dup_direct, fixed_direct)
+
+inline_marker = "private func enqueueChatContextResult"
+inline_start = story.find(inline_marker)
+if inline_start < 0:
+    fail("Story inline compile guard marker")
+
+inline_end = story.find("    private func ", inline_start + len(inline_marker))
+if inline_end < 0:
+    inline_end = len(story)
+
+inline_section = story[inline_start:inline_end]
+if "let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(scheduleTime)" in inline_section:
+    if "scheduleTime: ghostBaseEffectiveScheduleTime," not in inline_section:
+        old_arg = "                scheduleTime: scheduleTime,\n"
+        new_arg = "                scheduleTime: ghostBaseEffectiveScheduleTime,\n"
+        arg_pos = story.find(old_arg, inline_start, inline_end)
+        if arg_pos < 0:
+            fail("Story inline scheduleTime compile guard")
+        story = story[:arg_pos] + new_arg + story[arg_pos + len(old_arg):]
+
 settings_p.write_text(clean(settings))
 node_p.write_text(clean(node))
 chat_p.write_text(clean(chat))
@@ -392,6 +423,38 @@ checks = [
 ]
 
 bad = [name for name, ok in checks if not ok]
+if bad:
+    print(f"[{VERSION}] FAILED:")
+    for name in bad:
+        print("-", name)
+    raise SystemExit(1)
+
+# MARK: GhostBase v0.7D final strict Story check
+context_marker = "func performSendContextResultAction"
+context_start = story.find(context_marker)
+context_end = story.find("    func ", context_start + len(context_marker))
+if context_end < 0:
+    context_end = story.find("    private func ", context_start + len(context_marker))
+if context_end < 0:
+    context_end = len(story)
+
+context_section = story[context_start:context_end]
+
+if context_section.count("let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)") > 1:
+    bad.append("story direct duplicate ghostBaseEffectiveScheduleTime")
+
+inline_marker = "private func enqueueChatContextResult"
+inline_start = story.find(inline_marker)
+inline_end = story.find("    private func ", inline_start + len(inline_marker))
+if inline_end < 0:
+    inline_end = len(story)
+
+inline_section = story[inline_start:inline_end]
+
+if "let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(scheduleTime)" in inline_section:
+    if "scheduleTime: ghostBaseEffectiveScheduleTime," not in inline_section:
+        bad.append("story inline effective schedule variable unused")
+
 if bad:
     print(f"[{VERSION}] FAILED:")
     for name in bad:
