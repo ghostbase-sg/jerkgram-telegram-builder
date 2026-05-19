@@ -263,13 +263,40 @@ story = replace_after(
     "Story context direct effective schedule"
 )
 
-story = replace_after(
-    story,
-    "func performSendContextResultAction",
-    "                content: .contextResult(results, result),\n                sendPaidMessageStars:",
-    "                content: .contextResult(results, result),\n                silentPosting: false,\n                scheduleTime: ghostBaseEffectiveScheduleTime,\n                sendPaidMessageStars:",
-    "Story context direct schedule args"
-)
+# Story context result direct reply schedule args.
+# Robust section-based patch because clean GitHub source may differ in nearby argument formatting.
+context_marker = "func performSendContextResultAction"
+context_start = story.find(context_marker)
+if context_start < 0:
+    fail("Story context direct function marker")
+
+context_end = story.find("    func ", context_start + len(context_marker))
+if context_end < 0:
+    context_end = story.find("    private func ", context_start + len(context_marker))
+if context_end < 0:
+    context_end = len(story)
+
+context_section = story[context_start:context_end]
+
+if "let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)" not in context_section:
+    old_call = "            let _ = (component.context.engine.messages.enqueueOutgoingMessage(\n"
+    new_call = """            let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)
+            let _ = (component.context.engine.messages.enqueueOutgoingMessage(
+"""
+    call_pos = story.find(old_call, context_start, context_end)
+    if call_pos < 0:
+        fail("Story context direct effective schedule")
+    story = story[:call_pos] + new_call + story[call_pos + len(old_call):]
+    context_end += len(new_call) - len(old_call)
+
+context_section = story[context_start:context_end]
+if "content: .contextResult(results, result),\n                silentPosting: false,\n                scheduleTime: ghostBaseEffectiveScheduleTime," not in context_section:
+    old_paid = "                sendPaidMessageStars:"
+    new_paid = "                silentPosting: false,\n                scheduleTime: ghostBaseEffectiveScheduleTime,\n                sendPaidMessageStars:"
+    paid_pos = story.find(old_paid, context_start, context_end)
+    if paid_pos < 0:
+        fail("Story context direct schedule args")
+    story = story[:paid_pos] + new_paid + story[paid_pos + len(old_paid):]
 
 story = replace_after(
     story,
