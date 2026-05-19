@@ -38,10 +38,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific patches"
 
-      - name: Apply GhostBase Protected Content v0.8B
+      - name: Apply GhostBase Protected Controls v0.8C
         run: |
           set -e
-          python3 scripts/apply_ghostbase_protected_content_v08b.py
+          python3 scripts/apply_ghostbase_protected_controls_v08c.py
 
       - name: Run build analysis probe
         run: |
