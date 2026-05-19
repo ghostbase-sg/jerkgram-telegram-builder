@@ -281,49 +281,59 @@ image = replace_once(
     "image protected toggle locals"
 )
 
-image = replace_after(
+
+
+
+
+def insert_image_action_guard(text: str, marker: str, action_anchor: str, guard_expr: str, label: str) -> str:
+    marker_pos = text.find(marker)
+    if marker_pos < 0:
+        fail(label + " marker")
+
+    section_end = text.find("            if let peer, let message = self.message", marker_pos)
+    if section_end < 0:
+        section_end = marker_pos + 8000
+
+    guard_line = f"                    if {guard_expr} {{"
+    if guard_line in text[marker_pos:section_end]:
+        print(f"[{VERSION}] already patched: {label}")
+        return text
+
+    action_pos = text.find(action_anchor, marker_pos, section_end)
+    if action_pos < 0:
+        fail(label + " action")
+
+    text = text[:action_pos] + guard_line + "\n" + text[action_pos:]
+    action_pos += len(guard_line) + 1
+    section_end += len(guard_line) + 1
+
+    close_anchor = "\n                    })))"
+    close_pos = text.find(close_anchor, action_pos, section_end)
+    if close_pos < 0:
+        fail(label + " close")
+
+    close_pos += len(close_anchor)
+    text = text[:close_pos] + "\n                    }" + text[close_pos:]
+    return text
+
+image_marker = "GhostBase v0.8C Protected Content image save/copy toggles"
+
+image = insert_image_action_guard(
     image,
-    "GhostBase v0.8C Protected Content image save/copy toggles",
+    image_marker,
     '                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage,',
-    '                    if ghostBaseProtectedSave || ghostBaseProtectedOriginalAllowed {\n                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage,',
-    "image save toggle open"
+    "ghostBaseProtectedSave || ghostBaseProtectedOriginalAllowed",
+    "image save toggle"
 )
 
-image = replace_after(
+image = insert_image_action_guard(
     image,
-    "Gallery_SaveImage",
-    '''                    })))
-                    // MARK: Swiftgram
-''',
-    '''                    })))
-                    }
-                    // MARK: Swiftgram
-''',
-    "image save toggle close"
-)
-
-image = replace_after(
-    image,
-    "// MARK: Swiftgram",
+    image_marker,
     '                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopy,',
-    '                    if ghostBaseProtectedCopy || ghostBaseProtectedOriginalAllowed {\n                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopy,',
-    "image copy toggle open"
+    "ghostBaseProtectedCopy || ghostBaseProtectedOriginalAllowed",
+    "image copy toggle"
 )
 
-image = replace_after(
-    image,
-    "Conversation_ContextMenuCopy",
-    '''                    })))
-                }
-            }
-''',
-    '''                    })))
-                    }
-                }
-            }
-''',
-    "image copy toggle close"
-)
 
 share = replace_after(
     share,
