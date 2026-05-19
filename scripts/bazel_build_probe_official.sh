@@ -12,11 +12,11 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply/verify GhostBase Scheduled Send v0.7D Stabilizer patch =="
-if grep -q "GhostBase v0.7D Scheduled Send story context direct stabilizer" submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/StoryItemSetContainerViewSendMessage.swift 2>/dev/null && grep -q "Version: v0.7D" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null; then
-  echo "GhostBase v0.7D already applied; skip duplicate patch"
+echo "== apply/verify GhostBase Protected Content v0.8B patch =="
+if grep -q "GhostBase v0.8B Protected Content gallery save/share" submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/StoryItemSetContainerViewSendMessage.swift 2>/dev/null && grep -q "Version: v0.8B" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null; then
+  echo "GhostBase v0.8B already applied; skip duplicate patch"
 else
-  python3 ../../scripts/apply_ghostbase_scheduled_send_stabilizer_v07d.py
+  python3 ../../scripts/apply_ghostbase_protected_content_v08b.py
 fi
 
 echo "== verify GhostBase source patch =="
