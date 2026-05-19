@@ -3,7 +3,36 @@ import runpy
 
 VERSION = "v0.8B"
 
-runpy.run_path(str(Path(__file__).with_name("apply_ghostbase_scheduled_send_stabilizer_v07d.py")))
+def find_prereq_base():
+    cwd = Path.cwd()
+    for c in [cwd / "work/swiftgram-src", cwd, cwd.parent / "swiftgram-src"]:
+        if (c / "submodules/TelegramUI/Sources/ChatControllerNode.swift").exists():
+            return c
+    return None
+
+_prereq_base = find_prereq_base()
+_v07d_ready = False
+
+if _prereq_base is not None:
+    _story_p = _prereq_base / "submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/StoryItemSetContainerViewSendMessage.swift"
+    _node_p = _prereq_base / "submodules/TelegramUI/Sources/ChatControllerNode.swift"
+    _settings_p = _prereq_base / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
+
+    if _story_p.exists() and _node_p.exists() and _settings_p.exists():
+        _story = _story_p.read_text()
+        _node = _node_p.read_text()
+        _settings = _settings_p.read_text()
+
+        _v07d_ready = (
+            "GhostBase v0.7D Scheduled Send story context direct stabilizer" in _story
+            and "GhostBase v0.7D Scheduled Send input state stabilizer" in _node
+            and ("Version: v0.7D" in _settings or "Version: v0.8B" in _settings)
+        )
+
+if _v07d_ready:
+    print(f"[{VERSION}] v0.7D chain already applied; skip prerequisite replay")
+else:
+    runpy.run_path(str(Path(__file__).with_name("apply_ghostbase_scheduled_send_stabilizer_v07d.py")))
 
 def find_base() -> Path:
     cwd = Path.cwd()
@@ -103,18 +132,30 @@ image = replace_once(
     "image save/copy outer gate"
 )
 
-image = replace_after(
-    image,
-    "GhostBase v0.8B Protected Content image save/copy",
-    '''                    })))
-                    
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage,''',
-    '''                    })))
-                    }
-                    
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage,''',
-    "image create sticker close gate"
-)
+# Close the nested Create Sticker gate before Save Image.
+# Robust marker-based insertion: do not depend on exact blank-line whitespace.
+image_marker = "GhostBase v0.8B Protected Content image save/copy"
+image_marker_pos = image.find(image_marker)
+if image_marker_pos < 0:
+    fail("image create sticker close marker")
+
+save_marker = "                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage,"
+save_pos = image.find(save_marker, image_marker_pos)
+if save_pos < 0:
+    fail("image save marker after create sticker")
+
+prefix = image[:save_pos]
+last_non_empty = ""
+for line in reversed(prefix.splitlines()):
+    if line.strip():
+        last_non_empty = line.strip()
+        break
+
+if last_non_empty == "}":
+    print(f"[{VERSION}] already patched: image create sticker close gate")
+else:
+    image = image[:save_pos] + "                    }\n                    \n" + image[save_pos:]
+
 
 settings_p.write_text(clean(settings))
 footer_p.write_text(clean(footer))
