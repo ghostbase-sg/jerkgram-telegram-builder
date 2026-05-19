@@ -263,8 +263,9 @@ story = replace_after(
     "Story context direct effective schedule"
 )
 
-# Story context result direct reply schedule args.
-# Robust section-based patch because clean GitHub source may differ in nearby argument formatting.
+# Story direct context result scheduled send.
+# Use the real context-result API, not enqueueOutgoingMessage(content: .contextResult),
+# because clean Swift rejects added schedule args on that direct wrapper.
 context_marker = "func performSendContextResultAction"
 context_start = story.find(context_marker)
 if context_start < 0:
@@ -278,25 +279,41 @@ if context_end < 0:
 
 context_section = story[context_start:context_end]
 
-if "let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)" not in context_section:
-    old_call = "            let _ = (component.context.engine.messages.enqueueOutgoingMessage(\n"
-    new_call = """            let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)
-            let _ = (component.context.engine.messages.enqueueOutgoingMessage(
-"""
-    call_pos = story.find(old_call, context_start, context_end)
-    if call_pos < 0:
-        fail("Story context direct effective schedule")
-    story = story[:call_pos] + new_call + story[call_pos + len(old_call):]
-    context_end += len(new_call) - len(old_call)
+if "GhostBase v0.7D Scheduled Send story context direct stabilizer" not in context_section:
+    old_start = "            let _ = (component.context.engine.messages.enqueueOutgoingMessage(\n"
+    old_end = "            self.currentInputMode = .text"
 
-context_section = story[context_start:context_end]
-if "content: .contextResult(results, result),\n                silentPosting: false,\n                scheduleTime: ghostBaseEffectiveScheduleTime," not in context_section:
-    old_paid = "                sendPaidMessageStars:"
-    new_paid = "                silentPosting: false,\n                scheduleTime: ghostBaseEffectiveScheduleTime,\n                sendPaidMessageStars:"
-    paid_pos = story.find(old_paid, context_start, context_end)
-    if paid_pos < 0:
-        fail("Story context direct schedule args")
-    story = story[:paid_pos] + new_paid + story[paid_pos + len(old_paid):]
+    call_start = story.find(old_start, context_start, context_end)
+    if call_start < 0:
+        fail("Story context direct old call start")
+
+    call_end = story.find(old_end, call_start, context_end)
+    if call_end < 0:
+        fail("Story context direct old call end")
+
+    new_call = """            // MARK: GhostBase v0.7D Scheduled Send story context direct stabilizer
+            let ghostBaseEffectiveScheduleTime = self.ghostBaseStoryEffectiveScheduleTime(nil)
+            if component.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(
+                to: peerId,
+                threadId: nil,
+                botId: results.botId,
+                result: result,
+                replyToMessageId: nil,
+                replyToStoryId: focusedStoryId,
+                hideVia: true,
+                silentPosting: false,
+                scheduleTime: ghostBaseEffectiveScheduleTime,
+                sendPaidMessageStars: component.slice.additionalPeerData.sendPaidMessageStars,
+                postpone: false
+            ) {
+                Queue.mainQueue().after(0.3) {
+                    self.presentMessageSentTooltip(view: view, peer: peer, messageId: nil, isScheduled: ghostBaseEffectiveScheduleTime != nil)
+                }
+            }
+
+"""
+
+    story = story[:call_start] + new_call + story[call_end:]
 
 story = replace_after(
     story,
