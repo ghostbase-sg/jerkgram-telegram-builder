@@ -12,11 +12,11 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply/verify GhostBase Safe Login + Stars v0.8H patch =="
-if grep -q "Version: v0.8H" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null && grep -q "GhostBase v0.8H Safe Login layout" submodules/AuthorizationUI/Sources/AuthorizationSequencePhoneEntryControllerNode.swift 2>/dev/null; then
-  echo "GhostBase v0.8H already applied; skip duplicate patch"
+echo "== apply/verify GhostBase Safe Login Polish v0.8H.1 patch =="
+if grep -q "Version: v0.8H.1" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null && grep -q "GhostBase v0.8H.1 one-time visual bypass" submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift 2>/dev/null; then
+  echo "GhostBase v0.8H.1 already applied; skip duplicate patch"
 else
-  python3 ../../scripts/apply_ghostbase_safe_login_stars_v08h.py
+  python3 ../../scripts/apply_ghostbase_safe_login_polish_v08h1.py
 fi
 
 echo "== verify GhostBase source patch =="

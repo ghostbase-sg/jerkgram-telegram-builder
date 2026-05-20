@@ -38,10 +38,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific patches"
 
-      - name: Apply GhostBase Safe Login + Stars v0.8H
+      - name: Apply GhostBase Safe Login Polish v0.8H.1
         run: |
           set -e
-          python3 scripts/apply_ghostbase_safe_login_stars_v08h.py
+          python3 scripts/apply_ghostbase_safe_login_polish_v08h1.py
 
       - name: Run build analysis probe
         run: |
