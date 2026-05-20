@@ -1,5 +1,6 @@
 from pathlib import Path
 import runpy
+import re
 
 VERSION = "v0.8F"
 
@@ -100,35 +101,72 @@ settings = settings.replace(
     "Protected Capture bypass is active in v0.8E. v0.8F completes protected capture with owner-enabled channels and stories."
 )
 
+def state_field_for_label(label: str, candidates: list[str]) -> str:
+    pattern = r'GhostBaseKey\.[A-Za-z0-9_]+,\s*"' + re.escape(label) + r'",\s*state\.([A-Za-z_][A-Za-z0-9_]*)'
+    m = re.search(pattern, settings, flags=re.S)
+    if m:
+        return m.group(1)
+    for name in candidates:
+        if f"    var {name}:" in settings:
+            return name
+    fail("settings state field for " + label)
+
+gallery_share_field = state_field_for_label("Gallery Share", ["galleryShare", "protectedGalleryShare", "protectedContentGalleryShare"])
+gallery_save_field = state_field_for_label("Gallery Save", ["gallerySave", "protectedGallerySave", "protectedContentGallerySave"])
+gallery_copy_field = state_field_for_label("Gallery Copy", ["galleryCopy", "protectedGalleryCopy", "protectedContentGalleryCopy"])
+chat_save_field = state_field_for_label("Chat Save", ["chatSave", "protectedChatSave", "protectedContentChatSave"])
+chat_copy_field = state_field_for_label("Chat Copy", ["chatCopy", "protectedChatCopy", "protectedContentChatCopy"])
+chat_forward_field = state_field_for_label("Chat Forward", ["chatForward", "protectedChatForward", "protectedContentChatForward"])
+allow_screenshots_field = state_field_for_label("Allow Screenshots", ["allowScreenshots"])
+allow_screen_recording_field = state_field_for_label("Allow Screen Recording", ["allowScreenRecording"])
+
+protected_child_fields = [
+    gallery_share_field,
+    gallery_save_field,
+    gallery_copy_field,
+    chat_save_field,
+    chat_copy_field,
+    chat_forward_field,
+    allow_screenshots_field,
+    allow_screen_recording_field,
+]
+
+master_lines = [
+    "            case GhostBaseKey.protectedEnabled:",
+    "                // MARK: GhostBase v0.8F protected master cascade",
+    "                updated.protectedEnabled = value",
+]
+for field in protected_child_fields:
+    master_lines.append(f"                updated.{field} = value")
+master_block = "\n".join(master_lines) + "\n"
+
 settings = replace_case_block(
     settings,
     "GhostBaseKey.protectedEnabled",
-    '''            case GhostBaseKey.protectedEnabled:
-                // MARK: GhostBase v0.8F protected master cascade
-                updated.protectedEnabled = value
-                updated.galleryShare = value
-                updated.gallerySave = value
-                updated.galleryCopy = value
-                updated.chatSave = value
-                updated.chatCopy = value
-                updated.chatForward = value
-                updated.allowScreenshots = value
-                updated.allowScreenRecording = value
-''',
+    master_block,
     "GhostBase v0.8F protected master cascade",
     "settings protected master cascade"
 )
 
+all_disabled = " && ".join(f"!updated.{field}" for field in protected_child_fields)
+any_enabled = " || ".join(f"updated.{field}" for field in protected_child_fields)
+
+child_block = (
+    "            // MARK: GhostBase v0.8F protected child consistency\n"
+    f"            if {all_disabled} {{\n"
+    "                updated.protectedEnabled = false\n"
+    f"            }} else if {any_enabled} {{\n"
+    "                updated.protectedEnabled = true\n"
+    "            }"
+)
+
 settings = insert_before_update_return(
     settings,
-    '''            // MARK: GhostBase v0.8F protected child consistency
-            if !updated.galleryShare && !updated.gallerySave && !updated.galleryCopy && !updated.chatSave && !updated.chatCopy && !updated.chatForward && !updated.allowScreenshots && !updated.allowScreenRecording {
-                updated.protectedEnabled = false
-            } else if updated.galleryShare || updated.gallerySave || updated.galleryCopy || updated.chatSave || updated.chatCopy || updated.chatForward || updated.allowScreenshots || updated.allowScreenRecording {
-                updated.protectedEnabled = true
-            }''',
+    child_block,
     "settings protected child consistency"
 )
+
+
 
 chat_controller = replace_once(
     chat_controller,
