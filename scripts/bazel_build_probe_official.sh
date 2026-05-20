@@ -12,11 +12,11 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply/verify GhostBase Protected Capture v0.8E patch =="
-if grep -q "GhostBase v0.8E protected capture pinch bypass" submodules/TelegramUI/Sources/ChatController.swift 2>/dev/null && grep -q "Version: v0.8E" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null; then
-  echo "GhostBase v0.8E already applied; skip duplicate patch"
+echo "== apply/verify GhostBase Protected Capture Complete v0.8F patch =="
+if grep -q "GhostBase v0.8F protected master cascade" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null && grep -q "GhostBase v0.8F owner-enabled protected capture gate" submodules/TelegramUI/Sources/ChatControllerNode.swift 2>/dev/null; then
+  echo "GhostBase v0.8F already applied; skip duplicate patch"
 else
-  python3 ../../scripts/apply_ghostbase_capture_protection_v08e.py
+  python3 ../../scripts/apply_ghostbase_capture_complete_v08f.py
 fi
 
 echo "== verify GhostBase source patch =="
