@@ -8,7 +8,7 @@ ALLOW_ONETIME_CAPTURE_MESSAGE = '(((UserDefaults.standard.object(forKey: "GhostB
 ALLOW_ONETIME_CAPTURE_ITEM = '(((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeScreenshots") as? Bool) ?? false) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeScreenRecording") as? Bool) ?? false) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && item.message.id.peerId.namespace != Namespaces.Peer.SecretChat)'
 ALLOW_ONETIME_SCREEN_RECORDING_MESSAGE = '(((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeScreenRecording") as? Bool) ?? false) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)'
 ALLOW_ONETIME_SCREENSHOTS_STRONGSELF = '(((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeScreenshots") as? Bool) ?? false) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && strongSelf.messageId.peerId.namespace != Namespaces.Peer.SecretChat)'
-ALLOW_ONETIME_SAVE_MESSAGE = '(((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && message.paidContent == nil'
+ALLOW_ONETIME_SAVE_MESSAGE = '(((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && message.paidContent == nil)'
 
 def find_base() -> Path:
     cwd = Path.cwd()
@@ -396,5 +396,65 @@ if bad:
     for name in bad:
         print("-", name)
     raise SystemExit(1)
+
+
+# MARK: GhostBase v0.8G generated Swift syntax guard
+def _paren_balance(text: str) -> int:
+    balance = 0
+    for ch in text:
+        if ch == "(":
+            balance += 1
+        elif ch == ")":
+            balance -= 1
+    return balance
+
+def _require_balanced_line(path, needle: str, label: str) -> None:
+    text = path.read_text()
+    for line in text.splitlines():
+        if needle in line:
+            balance = _paren_balance(line)
+            if balance != 0:
+                raise SystemExit(f"[{VERSION}] FAILED: unbalanced generated Swift line ({label}) in {path}: {line}")
+            return
+    raise SystemExit(f"[{VERSION}] FAILED: generated Swift line not found ({label}) in {path}")
+
+def _require_balanced_capture_segment(path, label: str) -> None:
+    text = path.read_text()
+    for line in text.splitlines():
+        if "captureProtected:" in line and "GhostBase.ProtectedContent.OneTimeScreenshots" in line:
+            segment = line.split("captureProtected:", 1)[1]
+            if ", storeAfterDownload" in segment:
+                segment = segment.split(", storeAfterDownload", 1)[0]
+            balance = _paren_balance(segment)
+            if balance != 0:
+                raise SystemExit(f"[{VERSION}] FAILED: unbalanced captureProtected segment ({label}) in {path}: {segment}")
+            return
+    raise SystemExit(f"[{VERSION}] FAILED: captureProtected segment not found ({label}) in {path}")
+
+_require_balanced_line(secret_preview_p, "let ghostBaseAllowOneTimeSave =", "one-time save")
+_require_balanced_line(open_view_once_p, "let ghostBaseAllowOneTimeScreenRecording =", "one-time screen recording")
+_require_balanced_capture_segment(instant_video_p, "instant video one-time captureProtected")
+
+settings_text = settings_p.read_text()
+good_cases = """case GhostBaseKey.allowScreenRecording:
+                updated.allowScreenRecording = value
+            case GhostBaseKey.oneTimeScreenshots:
+                updated.oneTimeScreenshots = value
+            case GhostBaseKey.oneTimeScreenRecording:
+                updated.oneTimeScreenRecording = value
+            case GhostBaseKey.oneTimeSave:
+                updated.oneTimeSave = value"""
+
+bad_cases_1 = """case GhostBaseKey.allowScreenRecording:
+            case GhostBaseKey.oneTimeScreenshots:"""
+
+bad_cases_2 = """updated.oneTimeSave = value
+                updated.allowScreenRecording = value"""
+
+if good_cases not in settings_text:
+    raise SystemExit(f"[{VERSION}] FAILED: good one-time update cases block not found")
+if bad_cases_1 in settings_text or bad_cases_2 in settings_text:
+    raise SystemExit(f"[{VERSION}] FAILED: malformed one-time update cases")
+
 
 print("GhostBase One-Time Media v0.8G patch OK")
