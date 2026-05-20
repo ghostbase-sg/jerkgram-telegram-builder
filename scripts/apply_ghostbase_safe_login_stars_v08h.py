@@ -503,6 +503,22 @@ if "case GhostBaseKey.oneTimeSave:\n            case GhostBaseKey.localStarsEnab
     fail("hard normalize malformed stars update cases")
 
 
+
+# MARK: GhostBase v0.8H hard normalize Settings helper functions before write
+helper_start = settings.find("private func ghostBaseBool(")
+state_start = settings.find("struct GhostBaseSettingsState", helper_start)
+
+if helper_start < 0 or state_start < 0:
+    fail("settings helper normalization anchors")
+
+clean_helpers = 'private func ghostBaseBool(_ key: String, defaultValue: Bool) -> Bool {\n    if let value = UserDefaults.standard.object(forKey: key) as? Bool {\n        return value\n    }\n    return defaultValue\n}\n\nprivate func ghostBaseString(_ key: String, defaultValue: String) -> String {\n    if let value = UserDefaults.standard.object(forKey: key) as? String {\n        return value\n    }\n    return defaultValue\n}\n\nprivate func ghostBaseSanitizeStarsAmount(_ text: String) -> String {\n    var result = ""\n    for ch in text {\n        if ch == "-" && result.isEmpty {\n            result.append(ch)\n        } else if ch >= "0" && ch <= "9" {\n            result.append(ch)\n        }\n    }\n    if result.count > 20 {\n        result = String(result.prefix(20))\n    }\n    return result\n}\n\n'
+
+settings = settings[:helper_start] + clean_helpers + settings[state_start:]
+
+if "private func ghostBaseBool(_ key: String, defaultValue: Bool) -> Bool {\nprivate func" in settings:
+    fail("nested settings helper functions")
+
+
 settings_p.write_text(clean(settings))
 auth_p.write_text(clean(auth))
 
