@@ -38,10 +38,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific patches"
 
-      - name: Apply GhostBase One-Time Timed Save v0.8I
+      - name: Apply GhostBase One-Time Timed Save Repair v0.8I.1
         run: |
           set -e
-          python3 scripts/apply_ghostbase_onetime_timed_save_v08i.py
+          python3 scripts/apply_ghostbase_onetime_timed_save_repair_v08i1.py
 
       - name: Run build analysis probe
         run: |
