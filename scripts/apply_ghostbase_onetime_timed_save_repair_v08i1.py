@@ -230,7 +230,7 @@ secret = replace_once(
             return
         }
 
-        let _ = (saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: mediaReference)
+        let _ = (saveToCameraRoll(context: self.context, userLocation: .peer(message.id.peerId), mediaReference: mediaReference)
         |> deliverOnMainQueue).startStandalone()
     }
 
