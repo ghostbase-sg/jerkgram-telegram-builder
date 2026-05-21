@@ -109,6 +109,34 @@ img = replace_once(
 )
 
 # MARK: GhostBase v0.8I video preview save for one-view/timed media
+
+def ghostbase_close_nested_video_save_if(text: str, var_name: str, label: str, stop_marker: str) -> str:
+    pos = text.find(var_name)
+    if pos < 0:
+        fail(label + " var")
+
+    end = text.find(stop_marker, pos)
+    if end < 0:
+        end = len(text)
+
+    already = '''                    })))
+                    }
+                }'''
+    target = '''                    })))
+                }'''
+
+    segment = text[pos:end]
+    if already in segment:
+        print(f"[{VERSION}] already patched: {label} flexible close brace")
+        return text
+
+    idx = text.find(target, pos, end)
+    if idx < 0:
+        fail(label + " flexible close brace")
+
+    print(f"[{VERSION}] patch {label} flexible close brace")
+    return text[:idx] + already + text[idx + len(target):]
+
 vid = replace_once(
     vid,
     '''                let ghostBaseProtectedVideoSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.GallerySave") as? Bool) ?? true))
@@ -121,18 +149,11 @@ vid = replace_once(
     "video preview timed save gate"
 )
 
-vid = replace_once(
+vid = ghostbase_close_nested_video_save_if(
     vid,
-    '''                    })))
-                }
-
-                let ghostBaseProtectedVideoImageSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.GallerySave") as? Bool) ?? true))''',
-    '''                    })))
-                    }
-                }
-
-                let ghostBaseProtectedVideoImageSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.GallerySave") as? Bool) ?? true))''',
-    "video preview timed save close brace"
+    "ghostBaseTimedVideoSave",
+    "video preview timed save",
+    "\n\n                let ghostBaseProtectedVideoImageSave"
 )
 
 vid = replace_once(
@@ -146,18 +167,11 @@ vid = replace_once(
     "video image preview timed save gate"
 )
 
-vid = replace_once(
+vid = ghostbase_close_nested_video_save_if(
     vid,
-    '''                    })))
-                }
-
-                // MARK: Swiftgram''',
-    '''                    })))
-                    }
-                }
-
-                // MARK: Swiftgram''',
-    "video image preview timed save close brace"
+    "ghostBaseTimedVideoImageSave",
+    "video image preview timed save",
+    "\n\n                // MARK:"
 )
 
 # MARK: GhostBase v0.8I final write/check
