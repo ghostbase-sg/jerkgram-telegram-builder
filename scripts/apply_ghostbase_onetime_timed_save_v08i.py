@@ -51,17 +51,6 @@ vid = vid_p.read_text()
 # MARK: GhostBase v0.8I version
 settings = settings.replace("Version: v0.8H.1", "Version: v0.8I")
 
-# MARK: GhostBase v0.8I Stars keyboard Done closes keyboard
-settings = replace_once(
-    settings,
-    '''                action: {}
-            )''',
-    '''                action: {},
-                dismissKeyboardOnEnter: true
-            )''',
-    "stars dismiss keyboard on enter"
-)
-
 # MARK: GhostBase v0.8I long press save for one-view/timed media
 ctx = replace_once(
     ctx,
@@ -187,7 +176,7 @@ vid = vid_p.read_text()
 
 checks = [
     ("version", "Version: v0.8I" in settings and "Version: v0.8H.1" not in settings),
-    ("stars dismiss", "dismissKeyboardOnEnter: true" in settings),
+    ("no unsupported stars dismiss arg", "dismissKeyboardOnEnter" not in settings),
     ("long press timed save", "GhostBase v0.8I one-time/timed media long-press save gate" in ctx and "ghostBaseTimedMediaSave" in ctx),
     ("image preview timed save", "GhostBase v0.8I one-time/timed image preview save gate" in img and "ghostBaseTimedImageSave" in img),
     ("video preview timed save", "GhostBase v0.8I one-time/timed video preview save gate" in vid and "ghostBaseTimedVideoSave" in vid),
