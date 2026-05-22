@@ -49,10 +49,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific v0.8/v0.9 patches"
 
-      - name: Apply GhostBase Deleted Messages Alpha v0.9C
+      - name: Apply GhostBase Deleted Stars Recovery v0.9D
         run: |
           set -e
-          python3 scripts/apply_ghostbase_deleted_messages_alpha_v09c.py
+          python3 scripts/apply_ghostbase_deleted_stars_recovery_v09d.py
 
       - name: Run build analysis probe
         run: |
