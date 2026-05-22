@@ -74,8 +74,9 @@ if delete_marker not in state:
                         updatedAttributes.removeAll(where: { $0 is GhostBaseMessageAttribute })
                         updatedAttributes.append(updatedGhostBaseAttribute)
 
-                        transaction.updateMessage(id, update: { message in
-                            return .update(message.withUpdatedAttributes(updatedAttributes))
+                        transaction.updateMessage(id, update: { currentMessage in
+                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                            return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                         })
                     }
                 }'''
@@ -205,7 +206,7 @@ checks = [
     ("delete marker", "GhostBase v0.9C deleted messages alpha MVP" in state),
     ("no physical delete in patched case", "GhostBase v0.9C deleted messages alpha MVP" in state and "_internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids" not in state),
     ("sets deleted attr", "withUpdatedDeleted(isDeleted: true" in state),
-    ("updates message attrs", "message.withUpdatedAttributes(updatedAttributes)" in state),
+    ("updates message attrs via StoreMessage", "StoreMessage(id: currentMessage.id" in state and "attributes: updatedAttributes" in state),
     ("does not append removed ids in patched block", "deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })" not in state),
     ("alpha marker", "GhostBase v0.9C deleted bubble alpha" in bubble),
     ("alpha value", "? 0.55 : 1.0" in bubble),
