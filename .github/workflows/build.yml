@@ -38,10 +38,10 @@ jobs:
           set -e
           echo "Official Telegram baseline: skip Swiftgram-specific patches"
 
-      - name: Apply GhostBase Edit History v0.9A
+      - name: Apply GhostBase Message State Core v0.9B
         run: |
           set -e
-          python3 scripts/apply_ghostbase_edit_history_v09a.py
+          python3 scripts/apply_ghostbase_message_state_core_v09b.py
 
       - name: Run build analysis probe
         run: |
