@@ -34,6 +34,8 @@ if not prev.exists():
 settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 state_p = BASE / "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
 bubble_p = BASE / "submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift"
+stars_balance_p = BASE / "submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsBalanceComponent.swift"
+stars_screen_p = BASE / "submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift"
 
 settings_existing = settings_p.read_text(errors="ignore") if settings_p.exists() else ""
 if "Version: v0.9C" in settings_existing:
@@ -46,6 +48,8 @@ else:
 settings = settings_p.read_text()
 state = state_p.read_text()
 bubble = bubble_p.read_text()
+stars_balance = stars_balance_p.read_text()
+stars_screen = stars_screen_p.read_text()
 
 if "Version: v0.9C" not in settings:
     settings = settings.replace("Version: v0.9B", "Version: v0.9C")
@@ -97,13 +101,104 @@ if alpha_marker not in bubble:
 else:
     print(f"[{VERSION}] already patched: deleted bubble alpha")
 
+
+# MARK: GhostBase v0.9C Stars input polish
+stars_helper_old = """private func ghostBaseLocalStarsAmountForDisplay() -> StarsAmount? {
+    guard ((UserDefaults.standard.object(forKey: "GhostBase.Stars.LocalBalance.Enabled") as? Bool) ?? false) else {
+        return nil
+    }
+    guard let rawValue = UserDefaults.standard.object(forKey: "GhostBase.Stars.LocalBalance.Amount") as? String else {
+        return nil
+    }
+    let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let intValue = Int64(value) else {
+        return nil
+    }
+    return StarsAmount(value: intValue, nanos: 0)
+}
+"""
+
+stars_helper_new = """private func ghostBaseLocalStarsAmountForDisplay() -> StarsAmount? {
+    guard ((UserDefaults.standard.object(forKey: "GhostBase.Stars.LocalBalance.Enabled") as? Bool) ?? false) else {
+        return nil
+    }
+    guard let rawValue = UserDefaults.standard.object(forKey: "GhostBase.Stars.LocalBalance.Amount") as? String else {
+        return nil
+    }
+
+    var value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    value = value.replacingOccurrences(of: " ", with: "")
+    value = value.replacingOccurrences(of: "\\u{00a0}", with: "")
+    value = value.replacingOccurrences(of: ",", with: ".")
+
+    var sign: Int64 = 1
+    if value.hasPrefix("-") {
+        sign = -1
+        value.removeFirst()
+    } else if value.hasPrefix("+") {
+        value.removeFirst()
+    }
+
+    guard !value.isEmpty else {
+        return nil
+    }
+
+    let parts = value.split(separator: ".", omittingEmptySubsequences: false)
+    guard parts.count <= 2 else {
+        return nil
+    }
+
+    let wholeString = parts.first.map(String.init) ?? "0"
+    guard let whole = Int64(wholeString.isEmpty ? "0" : wholeString) else {
+        return nil
+    }
+
+    var nanos: Int32 = 0
+    if parts.count == 2 {
+        var fraction = String(parts[1])
+        if fraction.count > 9 {
+            fraction = String(fraction.prefix(9))
+        }
+        while fraction.count < 9 {
+            fraction.append("0")
+        }
+        guard let fractionValue = Int32(fraction.isEmpty ? "0" : fraction) else {
+            return nil
+        }
+        nanos = fractionValue
+    }
+
+    return StarsAmount(value: whole * sign, nanos: nanos * Int32(sign))
+}
+"""
+
+if "GhostBase v0.9C Stars input polish" not in stars_balance:
+    if stars_helper_old not in stars_balance:
+        fail("StarsBalance old local stars helper")
+    print(f"[{VERSION}] patch StarsBalance comma/dot/nanos parser")
+    stars_balance = stars_balance.replace(stars_helper_old, "// MARK: GhostBase v0.9C Stars input polish\\n" + stars_helper_new, 1)
+else:
+    print(f"[{VERSION}] already patched: StarsBalance Stars input polish")
+
+if "GhostBase v0.9C Stars input polish" not in stars_screen:
+    if stars_helper_old not in stars_screen:
+        fail("StarsTransactions old local stars helper")
+    print(f"[{VERSION}] patch StarsTransactions comma/dot/nanos parser")
+    stars_screen = stars_screen.replace(stars_helper_old, "// MARK: GhostBase v0.9C Stars input polish\\n" + stars_helper_new, 1)
+else:
+    print(f"[{VERSION}] already patched: StarsTransactions Stars input polish")
+
 settings_p.write_text(clean(settings))
 state_p.write_text(clean(state))
 bubble_p.write_text(clean(bubble))
+stars_balance_p.write_text(clean(stars_balance))
+stars_screen_p.write_text(clean(stars_screen))
 
 settings = settings_p.read_text()
 state = state_p.read_text()
 bubble = bubble_p.read_text()
+stars_balance = stars_balance_p.read_text()
+stars_screen = stars_screen_p.read_text()
 
 checks = [
     ("version", "Version: v0.9C" in settings),
@@ -115,6 +210,9 @@ checks = [
     ("alpha marker", "GhostBase v0.9C deleted bubble alpha" in bubble),
     ("alpha value", "? 0.55 : 1.0" in bubble),
     ("no trash marker", "trash" not in bubble.lower() or "GhostBase v0.9C" in bubble),
+    ("stars balance parser", "GhostBase v0.9C Stars input polish" in stars_balance and "replacingOccurrences(of: \",\", with: \".\")" in stars_balance),
+    ("stars screen parser", "GhostBase v0.9C Stars input polish" in stars_screen and "replacingOccurrences(of: \",\", with: \".\")" in stars_screen),
+    ("stars nanos", "StarsAmount(value: whole * sign, nanos: nanos * Int32(sign))" in stars_balance and "StarsAmount(value: whole * sign, nanos: nanos * Int32(sign))" in stars_screen),
 ]
 
 for label, text in [("state", state), ("bubble", bubble)]:
