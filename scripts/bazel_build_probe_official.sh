@@ -12,11 +12,11 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 
 echo
-echo "== apply/verify GhostBase Voice Circle Stars v0.8I.2 patch =="
-if grep -q "Version: v0.8I.2" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null && grep -q "GhostBase v0.8I.2 voice/circle local keep" submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift 2>/dev/null; then
-  echo "GhostBase v0.8I.2 already applied; skip duplicate patch"
+echo "== apply/verify GhostBase Edit History v0.9A patch =="
+if grep -q "Version: v0.9A" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null && grep -q "GhostBase v0.9A edit history context action" submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 2>/dev/null; then
+  echo "GhostBase v0.9A already applied; skip duplicate patch"
 else
-  python3 ../../scripts/apply_ghostbase_voice_circle_stars_v08i2.py
+  python3 ../../scripts/apply_ghostbase_edit_history_v09a.py
 fi
 
 echo "== verify GhostBase source patch =="
