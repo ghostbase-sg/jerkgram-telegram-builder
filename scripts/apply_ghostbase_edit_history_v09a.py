@@ -275,32 +275,11 @@ private func ghostBaseEditHistoryController(context: AccountContext, versions: [
 '''
 
 if "GhostBase v0.9A Edit History UI" not in ctx:
-    ctx = replace_once(
-        ctx,
-        '''private struct MessageContextMenuData {
-    let starStatus: Bool?
-    let canReply: Bool
-    let canPin: Bool
-    let canEdit: Bool
-    let canSelect: Bool
-    let resourceStatus: MediaResourceStatus?
-    let messageActions: ChatAvailableMessageActions
-}
-
-''',
-        '''private struct MessageContextMenuData {
-    let starStatus: Bool?
-    let canReply: Bool
-    let canPin: Bool
-    let canEdit: Bool
-    let canSelect: Bool
-    let resourceStatus: MediaResourceStatus?
-    let messageActions: ChatAvailableMessageActions
-}
-
-''' + ctx_helper,
-        "context menu edit-history helpers"
-    )
+    helper_anchor = "func canEditMessage(context: AccountContext, limitsConfiguration: EngineConfiguration.Limits, message: Message) -> Bool {"
+    if helper_anchor not in ctx:
+        fail("context menu edit-history helpers")
+    print(f"[{VERSION}] patch context menu edit-history helpers")
+    ctx = ctx.replace(helper_anchor, ctx_helper + helper_anchor, 1)
 else:
     print(f"[{VERSION}] already patched: context menu edit-history helpers")
 
