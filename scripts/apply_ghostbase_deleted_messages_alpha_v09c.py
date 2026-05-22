@@ -177,7 +177,7 @@ if "GhostBase v0.9C Stars input polish" not in stars_balance:
     if stars_helper_old not in stars_balance:
         fail("StarsBalance old local stars helper")
     print(f"[{VERSION}] patch StarsBalance comma/dot/nanos parser")
-    stars_balance = stars_balance.replace(stars_helper_old, "// MARK: GhostBase v0.9C Stars input polish\\n" + stars_helper_new, 1)
+    stars_balance = stars_balance.replace(stars_helper_old, "// MARK: GhostBase v0.9C Stars input polish\n" + stars_helper_new, 1)
 else:
     print(f"[{VERSION}] already patched: StarsBalance Stars input polish")
 
@@ -185,7 +185,7 @@ if "GhostBase v0.9C Stars input polish" not in stars_screen:
     if stars_helper_old not in stars_screen:
         fail("StarsTransactions old local stars helper")
     print(f"[{VERSION}] patch StarsTransactions comma/dot/nanos parser")
-    stars_screen = stars_screen.replace(stars_helper_old, "// MARK: GhostBase v0.9C Stars input polish\\n" + stars_helper_new, 1)
+    stars_screen = stars_screen.replace(stars_helper_old, "// MARK: GhostBase v0.9C Stars input polish\n" + stars_helper_new, 1)
 else:
     print(f"[{VERSION}] already patched: StarsTransactions Stars input polish")
 
