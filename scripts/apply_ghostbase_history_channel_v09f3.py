@@ -177,6 +177,28 @@ else:
     validation = replace_once(validation, old_delete_2, new_delete_2, "HistoryValidation thread delete retention")
     print(f"[{VERSION}] HistoryValidation retention patched")
 
+
+# MARK: v0.9F.3 ChatEntityKeyboardInputNode exhaustive switch
+chat_entity_p = BASE / "submodules/TelegramUI/Components/ChatEntityKeyboardInputNode/Sources/ChatEntityKeyboardInputNode.swift"
+chat_entity = chat_entity_p.read_text()
+if "case .ghostBaseEditHistory:" not in chat_entity:
+    chat_entity_old = """            switch customChatContents.kind {
+            case .quickReplyMessageInput:
+                break
+"""
+    chat_entity_new = """            switch customChatContents.kind {
+            case .ghostBaseEditHistory:
+                break
+            case .quickReplyMessageInput:
+                break
+"""
+    if chat_entity_old not in chat_entity:
+        fail("ChatEntityKeyboardInputNode customChatContents.kind switch")
+    chat_entity_p.write_text(chat_entity.replace(chat_entity_old, chat_entity_new, 1))
+    print(f"[{VERSION}] ChatEntityKeyboardInputNode exhaustive switch patched")
+else:
+    print(f"[{VERSION}] ChatEntityKeyboardInputNode exhaustive switch already patched")
+
 kind_p.write_text(kind)
 ctx_p.write_text(ctx)
 settings_p.write_text(settings)
