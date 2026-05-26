@@ -178,6 +178,17 @@ else:
     print(f"[{VERSION}] HistoryValidation retention patched")
 
 
+
+# MARK: v0.9F.3 ChatTextInputPanelNode exhaustive switches
+chat_text_p = BASE / "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift"
+chat_text = chat_text_p.read_text()
+chat_text_count = chat_text.count("case .hashTagSearch:")
+if chat_text_count != 0:
+    chat_text_p.write_text(chat_text.replace("case .hashTagSearch:", "case .hashTagSearch, .ghostBaseEditHistory:"))
+    print(f"[{VERSION}] ChatTextInputPanelNode exhaustive switches patched: {chat_text_count}")
+else:
+    print(f"[{VERSION}] ChatTextInputPanelNode exhaustive switches already patched")
+
 # MARK: v0.9F.3 ChatEntityKeyboardInputNode exhaustive switch
 chat_entity_p = BASE / "submodules/TelegramUI/Components/ChatEntityKeyboardInputNode/Sources/ChatEntityKeyboardInputNode.swift"
 chat_entity = chat_entity_p.read_text()
