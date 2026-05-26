@@ -107,6 +107,12 @@ elif "Version: v0.9F.2" in settings:
 else:
     fail("settings version v0.9F.2")
 
+# MARK: v0.9F.3 write ctx before switch patching
+# Important for clean CI:
+# ChatInterfaceStateContextMenus.swift is also in switch_files.
+# Write history kind / peer-location changes before switch loop reads it.
+ctx_p.write_text(ctx)
+
 for p in switch_files:
     file_text = p.read_text()
     if "case .hashTagSearch, .ghostBaseEditHistory:" in file_text and "case .hashTagSearch:" not in file_text:
