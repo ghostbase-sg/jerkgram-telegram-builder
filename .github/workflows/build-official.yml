@@ -52,7 +52,7 @@ jobs:
       - name: Apply GhostBase Combined v0.9E
         run: |
           set -e
-          python3 scripts/apply_ghostbase_history_channel_v09f3_lite.py
+          python3 scripts/apply_ghostbase_v10a_core_probe.py
 
       - name: Run build analysis probe
         run: |
