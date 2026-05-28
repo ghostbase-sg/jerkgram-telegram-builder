@@ -16,6 +16,15 @@ echo "== apply/verify GhostBase Edit History v0.9A patch =="
 if grep -q "Version: v0.9A" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null && grep -q "GhostBase v0.9A edit history context action" submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 2>/dev/null; then
   echo "GhostBase v0.9A already applied; skip duplicate patch"
 else
+  # MARK: GhostBase clean source before v0.9F.3-lite
+  echo "== clean source before GhostBase patch =="
+  git reset --hard HEAD
+  rm -rf submodules/SettingsUI/Sources/GhostBase
+  rm -f submodules/TelegramCore/Sources/SyncCore/GhostBaseMessageAttribute.swift
+  rm -f .GHOSTBASE_KEEP_DO_NOT_DELETE
+  echo "== source status before GhostBase patch =="
+  git status --short | head -40
+
   python3 ../../scripts/apply_ghostbase_history_channel_v09f3_lite.py
 fi
 
