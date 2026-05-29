@@ -145,7 +145,7 @@ private func ghostBaseV10FRawDeleteHit(messageIds: [MessageId], source: String) 
     }
 }
 
-private func ghostBaseV10FRawDeleteGlobalHit(globalIds: [Int64], source: String) {
+private func ghostBaseV10FRawDeleteGlobalHit(globalIds: [Int32], source: String) {
     ghostBaseV10FRawRecord("deleteGlobalSeen")
     ghostBaseV10FRawRecord("deleteGlobalIds", amount: globalIds.count)
     ghostBaseV10FRawSet("LastDeleteSource", source)
