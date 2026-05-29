@@ -192,6 +192,9 @@ python3 -m py_compile ../../scripts/gb_patch_swift.py
 python3 -m py_compile ../../scripts/gb_patch_entitlements.py
 python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 
+echo "[GhostBase] Fix v1.0E Push/RegisterDevice Swift helper syntax"
+python3 ../../scripts/fix_ghostbase_push_probe_swift_v10e.py
+
 echo "== real build probe =="
 "$BAZEL_BIN" build \
   -c opt \

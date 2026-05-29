@@ -25,7 +25,7 @@ else
   echo "== source status before GhostBase patch =="
   git status --short | head -40
 
-  python3 ../../scripts/apply_ghostbase_v10e_main_push_probe.py
+  python3 ../../scripts/apply_ghostbase_v10e1_split_push_type_probe.py
 fi
 
 echo "== verify GhostBase source patch =="
@@ -239,6 +239,9 @@ echo "== verify helper scripts syntax =="
 python3 -m py_compile ../../scripts/gb_patch_swift.py
 python3 -m py_compile ../../scripts/gb_patch_entitlements.py
 python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
+
+echo "[GhostBase] Fix v1.0E Push/RegisterDevice Swift helper syntax"
+python3 ../../scripts/fix_ghostbase_push_probe_swift_v10e.py
 
 echo "== real build probe =="
 echo "GHOSTBASE_PROBE_ONLY=$GHOSTBASE_PROBE_ONLY"
