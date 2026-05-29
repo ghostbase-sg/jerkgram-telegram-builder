@@ -31,7 +31,22 @@ def ensure(text, needle, label):
         raise SystemExit(f"[v1.0D] ERROR: missing proof: {label}")
 
 # MARK: GhostBase v1.0D source-level AppGroup override
-appgroup_p = SRC / "Swiftgram/SGAppGroupIdentifier/Sources/SGAppGroupIdentifier.swift"
+def find_swift_file_containing(needle, label):
+    matches = []
+    for p in SRC.rglob("*.swift"):
+        try:
+            text = p.read_text(errors="ignore")
+        except Exception:
+            continue
+        if needle in text:
+            matches.append(p)
+    if not matches:
+        raise SystemExit(f"[v1.0D] ERROR: could not find {label}")
+    matches = sorted(matches, key=lambda x: str(x))
+    print(f"[v1.0D] {label}: {matches[0].relative_to(SRC)}")
+    return matches[0]
+
+appgroup_p = find_swift_file_containing("public func sgAppGroupIdentifier()", "SGAppGroupIdentifier source")
 appgroup = read(appgroup_p)
 
 appgroup = replace_once(
