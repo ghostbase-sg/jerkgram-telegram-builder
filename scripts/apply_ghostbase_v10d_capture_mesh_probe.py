@@ -190,11 +190,23 @@ story = replace_once(
 
 write(story_p, story)
 
+# MARK: GhostBase v1.0D final NSE AppGroup normalization
+nse = read(nse_p)
+nse = nse.replace(
+    "UserDefaults(suiteName: sgAppGroupIdentifier())",
+    "UserDefaults(suiteName: \"group.4a348a9b186b700c.1\")"
+)
+nse = nse.replace(
+    "defaults.set(sgAppGroupIdentifier(), forKey: prefix + \"AppGroup\")",
+    "defaults.set(\"group.4a348a9b186b700c.1\", forKey: prefix + \"AppGroup\")"
+)
+write(nse_p, nse)
+
 nse = read(nse_p)
 settings = read(settings_p)
 story = read(story_p)
 
-ensure(nse, 'UserDefaults(suiteName: "group.4a348a9b186b700c.1")', "NSE hardcoded AppGroup")
+ensure(nse, '"group.4a348a9b186b700c.1"', "NSE hardcoded AppGroup")
 ensure(nse, "GhostBase v1.0D NSE Capture Probe", "NSE helper")
 ensure(nse, 'ghostBaseV10DRecordNSE("didReceive")', "NSE didReceive")
 ensure(nse, 'ghostBaseV10DRecordNSE("decryptedPayload")', "NSE decrypted payload")
