@@ -30,33 +30,10 @@ def ensure(text, needle, label):
     if needle not in text:
         raise SystemExit(f"[v1.0D] ERROR: missing proof: {label}")
 
-# MARK: GhostBase v1.0D source-level AppGroup override
-def find_swift_file_containing(needle, label):
-    matches = []
-    for p in SRC.rglob("*.swift"):
-        try:
-            text = p.read_text(errors="ignore")
-        except Exception:
-            continue
-        if needle in text:
-            matches.append(p)
-    if not matches:
-        raise SystemExit(f"[v1.0D] ERROR: could not find {label}")
-    matches = sorted(matches, key=lambda x: str(x))
-    print(f"[v1.0D] {label}: {matches[0].relative_to(SRC)}")
-    return matches[0]
-
-appgroup_p = find_swift_file_containing("public func sgAppGroupIdentifier()", "SGAppGroupIdentifier source")
-appgroup = read(appgroup_p)
-
-appgroup = replace_once(
-    appgroup,
-    '    let result: String = "group.\\(sgBaseBundleIdentifier())"',
-    '    let result: String = "group.4a348a9b186b700c.1"',
-    "SGAppGroupIdentifier fixed provisioning group"
-)
-
-write(appgroup_p, appgroup)
+# MARK: GhostBase v1.0D AppGroup probe
+# Do not patch sgAppGroupIdentifier here: some clean CI sources do not contain this helper.
+# NSE probe writes directly to the provisioned AppGroup.
+GHOSTBASE_APP_GROUP = "group.4a348a9b186b700c.1"
 
 # MARK: GhostBase v1.0D NSE capture probe
 nse_p = SRC / "Telegram/NotificationService/Sources/NotificationService.swift"
@@ -66,7 +43,7 @@ if "// MARK: GhostBase v1.0D NSE Capture Probe" not in nse:
     helper = r'''
 // MARK: GhostBase v1.0D NSE Capture Probe
 private func ghostBaseV10DNSEDefaults() -> UserDefaults? {
-    return UserDefaults(suiteName: sgAppGroupIdentifier())
+    return UserDefaults(suiteName: "group.4a348a9b186b700c.1")
 }
 
 private func ghostBaseV10DRecordNSE(_ name: String, amount: Int = 1) {
@@ -80,7 +57,7 @@ private func ghostBaseV10DRecordNSE(_ name: String, amount: Int = 1) {
     defaults.set(name, forKey: prefix + "Last")
     defaults.set(amount, forKey: prefix + "LastAmount")
     defaults.set(Int(Date().timeIntervalSince1970), forKey: prefix + "LastTime")
-    defaults.set(sgAppGroupIdentifier(), forKey: prefix + "AppGroup")
+    defaults.set("group.4a348a9b186b700c.1", forKey: prefix + "AppGroup")
     defaults.synchronize()
 }
 
@@ -213,12 +190,11 @@ story = replace_once(
 
 write(story_p, story)
 
-appgroup = read(appgroup_p)
 nse = read(nse_p)
 settings = read(settings_p)
 story = read(story_p)
 
-ensure(appgroup, 'let result: String = "group.4a348a9b186b700c.1"', "fixed AppGroup source")
+ensure(nse, 'UserDefaults(suiteName: "group.4a348a9b186b700c.1")', "NSE hardcoded AppGroup")
 ensure(nse, "GhostBase v1.0D NSE Capture Probe", "NSE helper")
 ensure(nse, 'ghostBaseV10DRecordNSE("didReceive")', "NSE didReceive")
 ensure(nse, 'ghostBaseV10DRecordNSE("decryptedPayload")', "NSE decrypted payload")
