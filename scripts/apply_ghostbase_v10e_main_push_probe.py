@@ -508,11 +508,82 @@ reg = reg.replace("ghostBaseV10EPushSet(", "GhostBaseV10EPushProbeCore.set(")
 write(reg_p, reg)
 
 
+
+# MARK: GhostBase v1.0E remove malformed inline helper blocks
+def remove_inline_helper_block(text, marker, last_func_candidates, label):
+    pos = text.find(marker)
+    if pos == -1:
+        return text
+
+    start = text.rfind("\n", 0, pos)
+    if start == -1:
+        start = 0
+    else:
+        start += 1
+
+    func_pos = -1
+    for candidate in last_func_candidates:
+        func_pos = text.find(candidate, pos)
+        if func_pos != -1:
+            break
+
+    if func_pos == -1:
+        raise SystemExit(f"[v1.0E] ERROR: inline helper last function not found: {label}")
+
+    brace = text.find("{", func_pos)
+    if brace == -1:
+        raise SystemExit(f"[v1.0E] ERROR: inline helper brace not found: {label}")
+
+    depth = 0
+    end = -1
+    for i in range(brace, len(text)):
+        ch = text[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+
+    if end == -1:
+        raise SystemExit(f"[v1.0E] ERROR: inline helper end not found: {label}")
+
+    while end < len(text) and text[end] in "\r\n":
+        end += 1
+
+    print(f"[v1.0E] remove inline helper block: {label}")
+    return text[:start] + text[end:]
+
+app = read(app_p)
+app = remove_inline_helper_block(
+    app,
+    "// MARK: GhostBase v1.0E Main Push Probe",
+    [
+        "private func GhostBaseV10EPushProbe.preview(",
+        "private func ghostBaseV10EPushPreview("
+    ],
+    "AppDelegate"
+)
+write(app_p, app)
+
+reg = read(reg_p)
+reg = remove_inline_helper_block(
+    reg,
+    "// MARK: GhostBase v1.0E RegisterDevice Probe",
+    [
+        "private func GhostBaseV10EPushProbeCore.set(",
+        "private func ghostBaseV10EPushSet("
+    ],
+    "RegisterNotificationToken"
+)
+write(reg_p, reg)
+
+
 app = read(app_p)
 reg = read(reg_p)
 settings = read(settings_p)
 
-ensure(app, "GhostBase v1.0E Main Push Probe", "AppDelegate old helper marker")
 ensure(read(SRC / "submodules/TelegramUI/Sources/GhostBaseV10EPushProbe.swift"), "enum GhostBaseV10EPushProbe", "TelegramUI helper file")
 ensure(app, 'GhostBaseV10EPushProbe.record("didRegisterDeviceToken")', "didRegister probe")
 ensure(app, 'GhostBaseV10EPushProbe.record("didFailRegisterDeviceToken")', "didFail probe")
@@ -520,7 +591,6 @@ ensure(app, 'GhostBaseV10EPushProbe.record("didReceiveRemoteNotification")', "di
 ensure(app, '"requestAuthorizationTrue"', "requestAuthorization true probe")
 ensure(app, '"requestAuthorizationFalse"', "requestAuthorization false probe")
 ensure(app, 'GhostBaseV10EPushProbe.record("pushRegistryDecryptedPayload")', "PushRegistry decrypt probe")
-ensure(reg, "GhostBase v1.0E RegisterDevice Probe", "RegisterDevice old helper marker")
 ensure(read(SRC / "submodules/TelegramCore/Sources/TelegramEngine/AccountData/GhostBaseV10EPushProbeCore.swift"), "enum GhostBaseV10EPushProbeCore", "TelegramCore helper file")
 ensure(reg, 'GhostBaseV10EPushProbeCore.record("registerDeviceRequest")', "registerDevice request")
 ensure(reg, 'GhostBaseV10EPushProbeCore.record("registerDeviceSuccess")', "registerDevice success")
