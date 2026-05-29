@@ -101,8 +101,18 @@ private func ghostBaseV10CRecordDifference(kind: String, messages: [Api.Message]
 
 asm = replace_once(
     asm,
-    "    updatedState.mergeChats(chats)",
-    "    ghostBaseV10CRecordDifference(kind: \"finalStateWithDifference\", messages: messages, encryptedMessages: encryptedMessages, updates: updates, chats: chats, users: users)\n\n    updatedState.mergeChats(chats)",
+    """    updatedState.mergeChats(chats)
+    updatedState.mergeUsers(users)
+
+    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+""",
+    """    ghostBaseV10CRecordDifference(kind: "finalStateWithDifference", messages: messages, encryptedMessages: encryptedMessages, updates: updates, chats: chats, users: users)
+
+    updatedState.mergeChats(chats)
+    updatedState.mergeUsers(users)
+
+    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+""",
     "record finalStateWithDifference payload"
 )
 
