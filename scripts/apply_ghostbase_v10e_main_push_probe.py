@@ -439,20 +439,91 @@ settings = re.sub(r"Version: v[0-9A-Za-z.\-]+", "Version: v1.0E", settings, coun
 
 write(settings_p, settings)
 
+
+# MARK: GhostBase v1.0E helper scope fix
+ui_probe_p = SRC / "submodules/TelegramUI/Sources/GhostBaseV10EPushProbe.swift"
+ui_probe_p.write_text("""import Foundation
+
+enum GhostBaseV10EPushProbe {
+    static func record(_ name: String, amount: Int = 1) {
+        guard amount > 0 else {
+            return
+        }
+        let defaults = UserDefaults.standard
+        let prefix = "GhostBase.V10E.Push."
+        let key = prefix + name + ".Count"
+        defaults.set(defaults.integer(forKey: key) + amount, forKey: key)
+        defaults.set(defaults.integer(forKey: prefix + "Total") + amount, forKey: prefix + "Total")
+        defaults.set(name, forKey: prefix + "Last")
+        defaults.set(amount, forKey: prefix + "LastAmount")
+        defaults.set(Int(Date().timeIntervalSince1970), forKey: prefix + "LastTime")
+    }
+
+    static func set(_ key: String, _ value: String) {
+        UserDefaults.standard.set(value, forKey: "GhostBase.V10E.Push." + key)
+    }
+
+    static func preview(_ value: String, limit: Int = 160) -> String {
+        if value.count <= limit {
+            return value
+        }
+        return String(value.prefix(limit))
+    }
+}
+""")
+
+core_probe_p = SRC / "submodules/TelegramCore/Sources/TelegramEngine/AccountData/GhostBaseV10EPushProbeCore.swift"
+core_probe_p.write_text("""import Foundation
+
+enum GhostBaseV10EPushProbeCore {
+    static func record(_ name: String, amount: Int = 1) {
+        guard amount > 0 else {
+            return
+        }
+        let defaults = UserDefaults.standard
+        let prefix = "GhostBase.V10E.Push."
+        let key = prefix + name + ".Count"
+        defaults.set(defaults.integer(forKey: key) + amount, forKey: key)
+        defaults.set(defaults.integer(forKey: prefix + "Total") + amount, forKey: prefix + "Total")
+        defaults.set(name, forKey: prefix + "Last")
+        defaults.set(amount, forKey: prefix + "LastAmount")
+        defaults.set(Int(Date().timeIntervalSince1970), forKey: prefix + "LastTime")
+    }
+
+    static func set(_ key: String, _ value: String) {
+        UserDefaults.standard.set(value, forKey: "GhostBase.V10E.Push." + key)
+    }
+}
+""")
+
+app = read(app_p)
+app = app.replace("ghostBaseV10EPushRecord(", "GhostBaseV10EPushProbe.record(")
+app = app.replace("ghostBaseV10EPushSet(", "GhostBaseV10EPushProbe.set(")
+app = app.replace("ghostBaseV10EPushPreview(", "GhostBaseV10EPushProbe.preview(")
+write(app_p, app)
+
+reg = read(reg_p)
+reg = reg.replace("ghostBaseV10EPushRecord(", "GhostBaseV10EPushProbeCore.record(")
+reg = reg.replace("ghostBaseV10EPushSet(", "GhostBaseV10EPushProbeCore.set(")
+write(reg_p, reg)
+
+
 app = read(app_p)
 reg = read(reg_p)
 settings = read(settings_p)
 
-ensure(app, "GhostBase v1.0E Main Push Probe", "AppDelegate helper")
-ensure(app, 'ghostBaseV10EPushRecord("didRegisterDeviceToken")', "didRegister probe")
-ensure(app, 'ghostBaseV10EPushRecord("didFailRegisterDeviceToken")', "didFail probe")
-ensure(app, 'ghostBaseV10EPushRecord("didReceiveRemoteNotification")', "didReceiveRemote probe")
+ensure(app, "GhostBase v1.0E Main Push Probe", "AppDelegate old helper marker")
+ensure(read(SRC / "submodules/TelegramUI/Sources/GhostBaseV10EPushProbe.swift"), "enum GhostBaseV10EPushProbe", "TelegramUI helper file")
+ensure(app, 'GhostBaseV10EPushProbe.record("didRegisterDeviceToken")', "didRegister probe")
+ensure(app, 'GhostBaseV10EPushProbe.record("didFailRegisterDeviceToken")', "didFail probe")
+ensure(app, 'GhostBaseV10EPushProbe.record("didReceiveRemoteNotification")', "didReceiveRemote probe")
 ensure(app, '"requestAuthorizationTrue"', "requestAuthorization true probe")
 ensure(app, '"requestAuthorizationFalse"', "requestAuthorization false probe")
-ensure(app, 'ghostBaseV10EPushRecord("pushRegistryDecryptedPayload")', "PushRegistry decrypt probe")
-ensure(reg, "GhostBase v1.0E RegisterDevice Probe", "RegisterDevice helper")
-ensure(reg, 'ghostBaseV10EPushRecord("registerDeviceRequest")', "registerDevice request")
-ensure(reg, 'ghostBaseV10EPushRecord("registerDeviceSuccess")', "registerDevice success")
+ensure(app, 'GhostBaseV10EPushProbe.record("pushRegistryDecryptedPayload")', "PushRegistry decrypt probe")
+ensure(reg, "GhostBase v1.0E RegisterDevice Probe", "RegisterDevice old helper marker")
+ensure(read(SRC / "submodules/TelegramCore/Sources/TelegramEngine/AccountData/GhostBaseV10EPushProbeCore.swift"), "enum GhostBaseV10EPushProbeCore", "TelegramCore helper file")
+ensure(reg, 'GhostBaseV10EPushProbeCore.record("registerDeviceRequest")', "registerDevice request")
+ensure(reg, 'GhostBaseV10EPushProbeCore.record("registerDeviceSuccess")', "registerDevice success")
 ensure(settings, "Main Push Registration Probe:", "settings push probe")
 ensure(settings, "Public main-app path: YES", "settings public path")
 ensure(settings, "Version: v1.0E", "settings v1.0E")
