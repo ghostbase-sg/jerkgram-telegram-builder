@@ -213,6 +213,66 @@ nse = read(nse_p)
 settings = read(settings_p)
 story = read(story_p)
 
+
+# MARK: GhostBase v1.0D robust NSE helper fallback
+if "// MARK: GhostBase v1.0D NSE Capture Probe" not in nse:
+    helper = r"""
+// MARK: GhostBase v1.0D NSE Capture Probe
+private func ghostBaseV10DNSEDefaults() -> UserDefaults? {
+    return UserDefaults(suiteName: "group.4a348a9b186b700c.1")
+}
+
+private func ghostBaseV10DRecordNSE(_ name: String, amount: Int = 1) {
+    guard amount > 0, let defaults = ghostBaseV10DNSEDefaults() else {
+        return
+    }
+    let prefix = "GhostBase.V10D.NSE."
+    let key = prefix + name + ".Count"
+    defaults.set(defaults.integer(forKey: key) + amount, forKey: key)
+    defaults.set(defaults.integer(forKey: prefix + "Total") + amount, forKey: prefix + "Total")
+    defaults.set(name, forKey: prefix + "Last")
+    defaults.set(amount, forKey: prefix + "LastAmount")
+    defaults.set(Int(Date().timeIntervalSince1970), forKey: prefix + "LastTime")
+    defaults.set("group.4a348a9b186b700c.1", forKey: prefix + "AppGroup")
+    defaults.synchronize()
+}
+
+private func ghostBaseV10DSetNSE(_ key: String, _ value: String) {
+    guard let defaults = ghostBaseV10DNSEDefaults() else {
+        return
+    }
+    defaults.set(value, forKey: "GhostBase.V10D.NSE." + key)
+    defaults.synchronize()
+}
+
+private func ghostBaseV10DPreview(_ value: String, limit: Int = 180) -> String {
+    if value.count <= limit {
+        return value
+    }
+    return String(value.prefix(limit))
+}
+
+"""
+    lines = nse.splitlines()
+    last_import = -1
+    has_foundation = False
+    for i, line in enumerate(lines[:120]):
+        if line.strip() == "import Foundation":
+            has_foundation = True
+        if line.startswith("import "):
+            last_import = i
+    if last_import < 0:
+        raise SystemExit("[v1.0D] ERROR: NotificationService import block not found")
+    insert_at = last_import + 1
+    if not has_foundation:
+        lines.insert(insert_at, "import Foundation")
+        insert_at += 1
+    lines.insert(insert_at, helper)
+    nse = "\n".join(lines) + "\n"
+    write(nse_p, nse)
+    nse = read(nse_p)
+
+
 ensure(nse, "GhostBase v1.0D NSE Capture Probe", "NSE helper")
 ensure(nse, 'ghostBaseV10DRecordNSE("didReceive")', "NSE didReceive")
 ensure(nse, 'ghostBaseV10DRecordNSE("decryptedPayload")', "NSE decrypted payload")
