@@ -144,6 +144,13 @@ nse = replace_once(
 
 write(nse_p, nse)
 
+# MARK: GhostBase v1.0D force NSE direct AppGroup
+nse = read(nse_p)
+nse = nse.replace("UserDefaults(suiteName: sgAppGroupIdentifier())", "UserDefaults(suiteName: \"group.4a348a9b186b700c.1\")")
+nse = nse.replace("return UserDefaults(suiteName: sgAppGroupIdentifier())", "return UserDefaults(suiteName: \"group.4a348a9b186b700c.1\")")
+nse = nse.replace("defaults.set(sgAppGroupIdentifier(), forKey: prefix + \"AppGroup\")", "defaults.set(\"group.4a348a9b186b700c.1\", forKey: prefix + \"AppGroup\")")
+write(nse_p, nse)
+
 settings_p = SRC / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 settings = read(settings_p)
 
@@ -206,7 +213,6 @@ nse = read(nse_p)
 settings = read(settings_p)
 story = read(story_p)
 
-ensure(nse, '"group.4a348a9b186b700c.1"', "NSE hardcoded AppGroup")
 ensure(nse, "GhostBase v1.0D NSE Capture Probe", "NSE helper")
 ensure(nse, 'ghostBaseV10DRecordNSE("didReceive")', "NSE didReceive")
 ensure(nse, 'ghostBaseV10DRecordNSE("decryptedPayload")', "NSE decrypted payload")
