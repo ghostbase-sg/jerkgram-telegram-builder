@@ -41,7 +41,7 @@ jobs:
       - name: Apply GhostBase v1.0D Capture Mesh Probe
         run: |
           set -e
-          python3 scripts/apply_ghostbase_v10j_history_around_tombstone_probe.py
+          python3 scripts/apply_ghostbase_v10k_clean_timeline_probe.py
 
       - name: Run build analysis probe
         run: |
