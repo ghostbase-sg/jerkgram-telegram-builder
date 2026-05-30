@@ -25,7 +25,7 @@ else
   echo "== source status before GhostBase patch =="
   git status --short | head -40
 
-  python3 ../../scripts/apply_ghostbase_v10i_fetch_response_shape_probe.py
+  python3 ../../scripts/apply_ghostbase_v10j_history_around_tombstone_probe.py
 fi
 
 echo "== verify GhostBase source patch =="
