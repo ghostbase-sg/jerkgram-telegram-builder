@@ -112,7 +112,9 @@ private func ghostBaseV10HFetchRaceProbe(accountPeerId: PeerId, network: Network
                 if !message.text.isEmpty {
                     ghostBaseV10FRawRecord("fetchRaceWithText")
                     ghostBaseV10FRawSet("LastFetchRaceText", ghostBaseV10FRawPreview(message.text))
-                    ghostBaseV10FRawSet("LastFetchRaceMessageKey", ghostBaseV10FRawMessageKey(message.id))
+                    if case let .Id(messageId) = message.id {
+                        ghostBaseV10FRawSet("LastFetchRaceMessageKey", ghostBaseV10FRawMessageKey(messageId))
+                    }
                 } else {
                     ghostBaseV10FRawRecord("fetchRaceEmptyText")
                 }
