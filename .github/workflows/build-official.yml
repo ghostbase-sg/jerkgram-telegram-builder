@@ -61,7 +61,7 @@ jobs:
           scripts/bazel_build_probe_official.sh
 
       - name: Upload build artifacts
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ghostbase-official-telegram-build

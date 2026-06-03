@@ -11,6 +11,10 @@ mkdir -p "$SIGN_DIR"
 
 cd work/swiftgram-src
 
+echo "== clean stale GhostBase final artifacts =="
+rm -rf ghostbase-final
+mkdir -p ghostbase-final
+
 echo
 echo "== apply/verify GhostBase Edit History v0.9A patch =="
 if grep -q "Version: v0.9A" submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift 2>/dev/null && grep -q "GhostBase v0.9A edit history context action" submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 2>/dev/null; then
@@ -278,6 +282,28 @@ fi
 
 echo "== patch final IPA AppGroup .10 before verifier =="
 ../../scripts/patch_final_ipa_appgroup10.sh ghostbase-final/GhostBase.ipa
+
+echo "== strict GhostBase final IPA marker gate =="
+TMP_GB_CHECK="$(mktemp -d)"
+unzip -q ghostbase-final/GhostBase.ipa -d "$TMP_GB_CHECK"
+
+if ! LC_ALL=C grep -Rao "Version: v1.0M" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.0M"
+  echo "Detected markers:"
+  LC_ALL=C grep -RaoE "Version: v1\.0[LKMIJHGF]|v1\.0L Target Verdict|v1\.0M Current Test Verdict" "$TMP_GB_CHECK/Payload" | sort -u | head -80 || true
+  rm -rf "$TMP_GB_CHECK"
+  exit 1
+fi
+
+if ! LC_ALL=C grep -Rao "v1.0M Current Test Verdict" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain v1.0M Current Test Verdict"
+  rm -rf "$TMP_GB_CHECK"
+  exit 1
+fi
+
+echo "OK: final IPA contains v1.0M markers"
+rm -rf "$TMP_GB_CHECK"
+
 
 echo "== verify IPA is device arm64 =="
 python3 ../../scripts/gb_verify_device_ipa.py
