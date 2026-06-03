@@ -29,7 +29,7 @@ else
   echo "== source status before GhostBase patch =="
   git status --short | head -40
 
-  python3 ../../scripts/apply_ghostbase_v10m_current_target_lock_probe.py
+  python3 ../../scripts/apply_ghostbase_v10n_sourcepeer_probe.py
 fi
 
 echo "== verify GhostBase source patch =="
@@ -287,16 +287,16 @@ echo "== strict GhostBase final IPA marker gate =="
 TMP_GB_CHECK="$(mktemp -d)"
 unzip -q ghostbase-final/GhostBase.ipa -d "$TMP_GB_CHECK"
 
-if ! LC_ALL=C grep -Rao "Version: v1.0M" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain Version: v1.0M"
+if ! LC_ALL=C grep -Rao "Version: v1.0N" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.0N"
   echo "Detected markers:"
   LC_ALL=C grep -RaoE "Version: v1\.0[LKMIJHGF]|v1\.0L Target Verdict|v1\.0M Current Test Verdict" "$TMP_GB_CHECK/Payload" | sort -u | head -80 || true
   rm -rf "$TMP_GB_CHECK"
   exit 1
 fi
 
-if ! LC_ALL=C grep -Rao "v1.0M Current Test Verdict" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain v1.0M Current Test Verdict"
+if ! LC_ALL=C grep -Rao "v1.0N SourcePeer Verdict" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain v1.0N SourcePeer Verdict"
   rm -rf "$TMP_GB_CHECK"
   exit 1
 fi
