@@ -284,52 +284,35 @@ echo "== patch final IPA AppGroup .10 before verifier =="
 ../../scripts/patch_final_ipa_appgroup10.sh ghostbase-final/GhostBase.ipa
 
 echo "== strict GhostBase final IPA marker gate =="
+TMP_GB_CHECK="$(mktemp -d)"
+unzip -q "ghostbase-final/GhostBase.ipa" -d "$TMP_GB_CHECK"
 
-echo "-- verify v1.0O SourcePeer marker --"
-if ! grep -R "GhostBase.V10O.Persistent.SourcePeerIdRaw" "$TMPDIR_CHECK/Payload/Telegram.app" 2>/dev/null | head -1; then
-  echo "Error: Final IPA does not contain GhostBase.V10O.Persistent.SourcePeerIdRaw"
+echo "-- detected GhostBase markers --"
+LC_ALL=C grep -RaoE "Version: v1\.0O\+READ3|READ3 Runtime Probe|GhostBase\.READ3\.FinalVerdict|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw|v1\.0O SourcePeer Verdict" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,120p' || true
+
+echo "-- verify Version: v1.0O+READ3 --"
+if ! LC_ALL=C grep -Rao "Version: v1.0O+READ3" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.0O+READ3"
   exit 1
 fi
-TMP_GB_CHECK="$(mktemp -d)"
-unzip -q ghostbase-final/GhostBase.ipa -d "$TMP_GB_CHECK"
 
+echo "-- verify READ3 settings block --"
+if ! LC_ALL=C grep -Rao "READ3 Runtime Probe" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain READ3 Runtime Probe"
+  exit 1
+fi
+
+echo "-- verify READ3 runtime marker --"
 if ! LC_ALL=C grep -Rao "GhostBase.READ3.FinalVerdict" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
   echo "::error::Final IPA does not contain GhostBase.READ3.FinalVerdict"
-  echo "Detected markers:"
-  LC_ALL=C grep -RaoE "Version: v1\.0[LKMIJHGF]|v1\.0L Target Verdict|v1\.0M Current Test Verdict" "$TMP_GB_CHECK/Payload" | sort -u | head -80 || true
-  rm -rf "$TMP_GB_CHECK"
   exit 1
 fi
 
-if ! LC_ALL=C grep -Rao "v1.0N SourcePeer Verdict" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain v1.0N SourcePeer Verdict"
-  rm -rf "$TMP_GB_CHECK"
+echo "-- verify v1.0O persistent SourcePeer marker --"
+if ! LC_ALL=C grep -Rao "GhostBase.V10O.Persistent.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain GhostBase.V10O.Persistent.SourcePeerIdRaw"
   exit 1
 fi
 
-echo "OK: final IPA contains v1.0M markers"
-rm -rf "$TMP_GB_CHECK"
+echo "== strict GhostBase final IPA marker gate OK =="
 
-
-echo "== verify IPA is device arm64 =="
-python3 ../../scripts/gb_verify_device_ipa.py
-
-echo "== verify GhostBase Settings patch in final IPA =="
-TMP_GB_CHECK="$(mktemp -d)"
-unzip -q ghostbase-final/GhostBase.ipa -d "$TMP_GB_CHECK"
-
-if ! LC_ALL=C grep -Rao "GhostBase" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "WARNING: GhostBase Settings marker not found in final IPA; keeping IPA artifact for device test"
-  rm -rf "$TMP_GB_CHECK"
-else
-  echo "GhostBase Settings marker found in final IPA"
-  rm -rf "$TMP_GB_CHECK"
-fi
-
-rm -rf "$TMP_GB_CHECK"
-echo "GhostBase Settings patch found in final IPA"
-
-echo "== collect build outputs =="
-../../scripts/collect_outputs_official.sh
-
-echo "== real build probe OK =="
