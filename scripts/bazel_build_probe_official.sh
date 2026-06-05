@@ -29,7 +29,7 @@ else
   echo "== source status before GhostBase patch =="
   git status --short | head -40
 
-  python3 ../../scripts/apply_ghostbase_v10o_read3_combined_probe.py
+  python3 ../../scripts/apply_ghostbase_v10p_sh1_ot1_combined.py
 fi
 
 echo "== verify GhostBase source patch =="
@@ -288,29 +288,35 @@ TMP_GB_CHECK="$(mktemp -d)"
 unzip -q "ghostbase-final/GhostBase.ipa" -d "$TMP_GB_CHECK"
 
 echo "-- detected GhostBase markers --"
-LC_ALL=C grep -RaoE "Version: v1\.0O\+READ3|READ3 Runtime Probe|GhostBase\.READ3\.FinalVerdict|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw|v1\.0O SourcePeer Verdict" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,120p' || true
+LC_ALL=C grep -RaoE "Version: v1\.0P\+SH1\+OT1|v1\.0P Pre-delete Shadow Trace|GhostBase\.V10P\.Verdict|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
 
-echo "-- verify Version: v1.0O+READ3 --"
-if ! LC_ALL=C grep -Rao "Version: v1.0O+READ3" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain Version: v1.0O+READ3"
+echo "-- verify Version: v1.0P+SH1+OT1 --"
+if ! LC_ALL=C grep -Rao "Version: v1.0P+SH1+OT1" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.0P+SH1+OT1"
   exit 1
 fi
 
-echo "-- verify READ3 settings block --"
-if ! LC_ALL=C grep -Rao "READ3 Runtime Probe" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain READ3 Runtime Probe"
+echo "-- verify v1.0P marker --"
+if ! LC_ALL=C grep -Rao "v1.0P Pre-delete Shadow Trace" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain v1.0P marker"
   exit 1
 fi
 
-echo "-- verify READ3 runtime marker --"
-if ! LC_ALL=C grep -Rao "GhostBase.READ3.FinalVerdict" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain GhostBase.READ3.FinalVerdict"
+echo "-- verify SH1 marker --"
+if ! LC_ALL=C grep -Rao "SH1 Share Scheduled Send" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain SH1 marker"
+  exit 1
+fi
+
+echo "-- verify OT1 marker --"
+if ! LC_ALL=C grep -Rao "OT1 Timer Media Local Keep" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain OT1 marker"
   exit 1
 fi
 
 echo "-- verify v1.0O persistent SourcePeer marker --"
 if ! LC_ALL=C grep -Rao "GhostBase.V10O.Persistent.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain GhostBase.V10O.Persistent.SourcePeerIdRaw"
+  echo "::error::Final IPA does not contain v1.0O SourcePeer marker"
   exit 1
 fi
 
