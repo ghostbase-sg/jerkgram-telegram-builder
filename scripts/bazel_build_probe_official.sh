@@ -29,7 +29,7 @@ else
   echo "== source status before GhostBase patch =="
   git status --short | head -40
 
-  python3 ../../scripts/apply_ghostbase_v10p_sh1_ot1_combined.py
+  python3 ../../scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
 fi
 
 echo "== verify GhostBase source patch =="
@@ -288,6 +288,14 @@ TMP_GB_CHECK="$(mktemp -d)"
 unzip -q "ghostbase-final/GhostBase.ipa" -d "$TMP_GB_CHECK"
 
 echo "-- detected GhostBase markers --"
+
+# GhostBase v1.0Q+SH2+OT2 strict final IPA marker gate
+if ! ( unzip -p "$FINAL_IPA" 'Payload/Telegram.app/Frameworks/SettingsUI.framework/SettingsUI' 2>/dev/null || true ) | grep -aE 'Version: v1\.0Q\+SH2\+OT2|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep' >/dev/null; then
+  echo "ERROR: final IPA missing v1.0Q+SH2+OT2 markers"
+  exit 1
+fi
+echo "== strict GhostBase final IPA marker gate OK =="
+
 LC_ALL=C grep -RaoE "Version: v1\.0P\+SH1\+OT1|v1\.0P Pre-delete Shadow Trace|GhostBase\.V10P\.Verdict|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
 
 echo "-- verify Version: v1.0P+SH1+OT1 --"

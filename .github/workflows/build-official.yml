@@ -52,7 +52,7 @@ jobs:
       - name: Apply GhostBase v1.0D Capture Mesh Probe
         run: |
           set -e
-          python3 scripts/apply_ghostbase_v10p_sh1_ot1_combined.py
+          python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
 
       - name: Run build analysis probe
         run: |
