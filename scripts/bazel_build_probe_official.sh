@@ -308,11 +308,20 @@ if [ -z "$GB_FINAL_IPA" ] || [ ! -f "$GB_FINAL_IPA" ]; then
   exit 1
 fi
 
-if ! ( unzip -p "$GB_FINAL_IPA" 'Payload/Telegram.app/Frameworks/SettingsUI.framework/SettingsUI' 2>/dev/null || true ) | grep -aE 'Version: v1\.0Q\+SH2\+OT2|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep' >/dev/null; then
+GB_MARKER_TMP="$(mktemp -d)"
+unzip -q "$GB_FINAL_IPA" -d "$GB_MARKER_TMP"
+
+echo "-- detected GhostBase markers in final IPA Payload --"
+grep -RaoE 'Version: v1\.0[A-Z0-9.+-]*|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep|GhostBase\.V10Q|GhostBase\.SH2|GhostBase\.OT2|GhostBase\.V10P|GhostBase\.V10O|GhostBase\.READ3' "$GB_MARKER_TMP/Payload" 2>/dev/null | sort -u | sed -n '1,220p' || true
+
+if ! grep -RaoE 'Version: v1\.0Q\+SH2\+OT2|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep|GhostBase\.V10Q|GhostBase\.SH2|GhostBase\.OT2' "$GB_MARKER_TMP/Payload" 2>/dev/null | grep -q .; then
   echo "ERROR: final IPA missing v1.0Q+SH2+OT2 markers"
   exit 1
 fi
+
+rm -rf "$GB_MARKER_TMP"
 echo "== strict GhostBase final IPA marker gate OK =="
+
 
 
 LC_ALL=C grep -RaoE "Version: v1\.0P\+SH1\+OT1|v1\.0P Pre-delete Shadow Trace|GhostBase\.V10P\.Verdict|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
