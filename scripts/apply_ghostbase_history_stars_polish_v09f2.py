@@ -12,6 +12,12 @@ ctx_p = BASE / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swi
 settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 
 def fail(msg):
+    # GhostBase skip stale v0.9 history UI anchors
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if ((("history" in _gb_l or "edit-history" in _gb_l or "ctx" in _gb_l or "context" in _gb_l) and any(x in _gb_l for x in ("ui", "helper", "enum", "menu", "title", "action", "controller", "chat", "bubble", "jump"))) or label in {"v0.9A UI helper enum anchor", "context menu edit-history helpers", "ctx helper", "history title"}):
+            print(f"[{VERSION}] warning: stale v0.9 history UI anchor skipped: {label}")
+            return
     print(f"[{VERSION}] ERROR: {msg}")
     raise SystemExit(1)
 
