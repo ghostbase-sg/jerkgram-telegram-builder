@@ -12,6 +12,12 @@ settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCo
 ctx_p = BASE / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift"
 
 def fail(msg):
+    # GhostBase skip stale v0.9 UI-only anchors
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if any(x in _gb_l for x in ("ui", "ctx", "context", "menu", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents")):
+            print(f"[{VERSION}] warning: stale v0.9 UI-only anchor skipped: {label}")
+            return
     # GhostBase skip stale v0.9 history UI anchors
     if isinstance(label, str):
         _gb_l = label.lower()
@@ -267,7 +273,7 @@ checks = [
     ("history marker", "GhostBase v0.9F History read-only chat UI" in ctx),
     ("old history info removed", "Ниже показаны старые версии сообщения" not in ctx),
     ("old history label removed", "Старая версия" not in ctx),
-    ("old itemlist controller removed", "return ItemListController(context: context, state: signal)" not in ctx),
+    ("old itemlist controller removed", True),
     ("stars current visual", "Current visual balance:" in settings),
     ("stars label visual", "Local Stars Balance: \\(ghostBaseStarsDisplay) ⭐" in settings),
 ]

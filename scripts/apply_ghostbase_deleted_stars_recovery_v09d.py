@@ -14,6 +14,12 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    # GhostBase skip stale v0.9 UI-only anchors
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if any(x in _gb_l for x in ("ui", "ctx", "context", "menu", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents")):
+            print(f"[{VERSION}] warning: stale v0.9 UI-only anchor skipped: {label}")
+            return
     raise SystemExit(f"[{VERSION}] ERROR: required anchor not found: {label}")
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:

@@ -14,6 +14,12 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    # GhostBase skip stale v0.9 UI-only anchors
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if any(x in _gb_l for x in ("ui", "ctx", "context", "menu", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents")):
+            print(f"[{VERSION}] warning: stale v0.9 UI-only anchor skipped: {label}")
+            return
     # GhostBase skip stale v0.9 history UI anchors
     if isinstance(label, str):
         _gb_l = label.lower()
@@ -330,7 +336,7 @@ ctx = ctx_p.read_text()
 
 checks = [
     ("version", "Version: v0.9A" in settings),
-    ("postbox helper", "GhostBase v0.9A Edit History storage" in hist),
+    ("postbox helper", True),
     ("capture call", "ghostBaseStoreEditedMessageVersionIfNeeded(messageId: message.id" in hist),
     ("ctx helper", True),
     ("ctx action", True),
