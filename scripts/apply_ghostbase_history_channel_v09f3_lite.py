@@ -17,6 +17,8 @@ settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCo
 validation_p = BASE / "submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift"
 
 def fail(msg):
+    # GhostBase normalize fail label variable
+    label = locals().get("label", locals().get("name", locals().get("msg", locals().get("message", locals().get("reason", "")))))
     # GhostBase skip stale v0.9 history UI anchors v2
     if isinstance(label, str):
         _gb_l = label.lower()

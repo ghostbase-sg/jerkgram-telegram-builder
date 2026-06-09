@@ -14,6 +14,8 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    # GhostBase normalize fail label variable
+    label = locals().get("label", locals().get("name", locals().get("msg", locals().get("message", locals().get("reason", "")))))
     # GhostBase stale video anchor skip
     if isinstance(label, str) and "video" in label and any(x in label for x in ("save", "timed", "preview", "toggle", "protected", "gallery")):
         print(f"[{VERSION}] warning: stale video anchor skipped: {label}")
