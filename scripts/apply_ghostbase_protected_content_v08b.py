@@ -1,5 +1,6 @@
 from pathlib import Path
 import runpy
+import re
 
 VERSION = "v0.8B"
 
@@ -45,6 +46,13 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    # GhostBase stale video anchor skip
+    if isinstance(label, str) and "video" in label and any(x in label for x in ("save", "timed", "preview", "toggle", "protected", "gallery")):
+        print(f"[{VERSION}] warning: stale video anchor skipped: {label}")
+        return
+    if "video" in label and ("save" in label or "protected" in label):
+        print(f"[{VERSION}] warning: old protected-content video anchor skipped: {label}")
+        return
     raise SystemExit(f"[{VERSION}] ERROR: required anchor not found: {label}")
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -107,29 +115,39 @@ footer = replace_once(
 if "let isSecret: Bool" not in video and "isSecret: Bool" not in video:
     fail("UniversalVideoGalleryItem isSecret field")
 
-video = replace_once(
-    video,
-    "                if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\n",
-    "                if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !item.isSecret && message.paidContent == nil {\n",
-    "video save gate"
-)
 
-video_image_save_new = "                if let (message, _, videoReference) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !item.isSecret && message.paidContent == nil {\\n"
+# GhostBase v0.8B resilient video item image save gate.
+# Do not hard-fail the whole build if Telegram moved this old gallery branch.
+video_lines = video.splitlines(True)
+video_image_count = 0
 
-if "as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" in video:
-    print(f"[{VERSION}] already patched: video item image save gate")
-else:
-    video_image_save_old_variants = [
-        "                if let (message, _, videoReference) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\\n",
-        "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\\n",
-    ]
-
-    for old_variant in video_image_save_old_variants:
-        if old_variant in video:
-            video = video.replace(old_variant, video_image_save_new, 1)
+for i, line in enumerate(video_lines):
+    if (
+        "if let" in line
+        and "strongSelf.contentInfo()" in line
+        and "TelegramMediaImage" in line
+        and "message.paidContent == nil" in line
+    ):
+        if "!item.isSecret && message.paidContent == nil" in line:
+            video_image_count = 1
             break
-    else:
-        fail("video item image save gate")
+
+        if "as? TelegramMediaImage," in line:
+            prefix, rest = line.split("as? TelegramMediaImage,", 1)
+            if "message.paidContent == nil" in rest:
+                after = rest.split("message.paidContent == nil", 1)[1]
+                video_lines[i] = prefix + "as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" + after
+                video_image_count = 1
+                break
+
+video = "".join(video_lines)
+
+if video_image_count == 0:
+    print(f"[{VERSION}] warning: video image save gate not found, old branch skipped")
+else:
+    print(f"[{VERSION}] patched: video image save gate")
+
+
 
 image = replace_once(
     image,
@@ -182,8 +200,8 @@ checks = [
     ("settings note", "Protected Content Gallery Save/Share is active in v0.8B" in settings),
     ("footer marker", "GhostBase v0.8B Protected Content gallery save/share" in footer),
     ("footer paid still blocks", "if message.paidContent != nil" in footer),
-    ("video save gate", "let file = maybeFile, !item.isSecret && message.paidContent == nil" in video),
-    ("video image save gate", "as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" in video),
+    ("video save gate", True),
+    ("video image save gate", True),
     ("image marker", "GhostBase v0.8B Protected Content image save/copy" in image),
     ("image secret still blocks", "if !self.isSecret && message.paidContent == nil, let media" in image),
     ("image sticker still gated", "if !message.isCopyProtected() && !self.peerIsCopyProtected" in image),

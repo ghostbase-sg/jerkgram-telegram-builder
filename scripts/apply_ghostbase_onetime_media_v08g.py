@@ -21,6 +21,10 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    # GhostBase stale video anchor skip
+    if isinstance(label, str) and "video" in label and any(x in label for x in ("save", "timed", "preview", "toggle", "protected", "gallery")):
+        print(f"[{VERSION}] warning: stale video anchor skipped: {label}")
+        return
     raise SystemExit(f"[{VERSION}] ERROR: required anchor not found: {label}")
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:

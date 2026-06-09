@@ -32,7 +32,7 @@ def replace_once(s, old, new, label):
         return s
     die(f"pattern not found: {label}")
 
-print("[v1.0R SettingsSplit] running base v1.0R Bug Debt Cleanup + Settings Split...")
+print("[v1.0R SettingsSplit] running base v1.0Q+SH2+OT2...")
 subprocess.check_call([sys.executable, str(BASE)], cwd=str(ROOT))
 
 if not SRC.exists():
