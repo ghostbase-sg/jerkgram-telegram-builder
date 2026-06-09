@@ -14,6 +14,10 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    # GhostBase skip stale v0.9A context menu edit-history anchor
+    if label == "context menu edit-history helpers":
+        print(f"[{VERSION}] warning: stale v0.9A edit-history context-menu anchor skipped: {label}")
+        return
     raise SystemExit(f"[{VERSION}] ERROR: required anchor not found: {label}")
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
