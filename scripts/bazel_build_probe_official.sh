@@ -29,7 +29,7 @@ else
   echo "== source status before GhostBase patch =="
   git status --short | head -40
 
-  python3 ../../scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
+  python3 ../../scripts/apply_ghostbase_v10r_bug_debt_settings_split.py
 fi
 
 echo "== verify GhostBase source patch =="
@@ -289,7 +289,7 @@ unzip -q "ghostbase-final/GhostBase.ipa" -d "$TMP_GB_CHECK"
 
 echo "-- detected GhostBase markers --"
 
-# GhostBase v1.0Q+SH2+OT2 strict final IPA marker gate
+# GhostBase v1.0R Bug Debt Cleanup + Settings Split strict final IPA marker gate
 GB_FINAL_IPA="${FINAL_IPA:-}"
 if [ -z "$GB_FINAL_IPA" ]; then
   if [ -f "ghostbase-final/GhostBase.ipa" ]; then
@@ -304,7 +304,7 @@ fi
 echo "GB_FINAL_IPA=$GB_FINAL_IPA"
 
 if [ -z "$GB_FINAL_IPA" ] || [ ! -f "$GB_FINAL_IPA" ]; then
-  echo "ERROR: final IPA file not found for v1.0Q+SH2+OT2 marker gate"
+  echo "ERROR: final IPA file not found for v1.0R Bug Debt Cleanup + Settings Split marker gate"
   exit 1
 fi
 
@@ -315,7 +315,7 @@ echo "-- detected GhostBase markers in final IPA Payload --"
 grep -RaoE 'Version: v1\.0[A-Z0-9.+-]*|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep|GhostBase\.V10Q|GhostBase\.SH2|GhostBase\.OT2|GhostBase\.V10P|GhostBase\.V10O|GhostBase\.READ3' "$GB_MARKER_TMP/Payload" 2>/dev/null | sort -u | sed -n '1,220p' || true
 
 if ! grep -RaoE 'Version: v1\.0Q\+SH2\+OT2|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep|GhostBase\.V10Q|GhostBase\.SH2|GhostBase\.OT2' "$GB_MARKER_TMP/Payload" 2>/dev/null | grep -q .; then
-  echo "ERROR: final IPA missing v1.0Q+SH2+OT2 markers"
+  echo "ERROR: final IPA missing v1.0R Bug Debt Cleanup + Settings Split markers"
   exit 1
 fi
 
@@ -326,9 +326,9 @@ echo "== strict GhostBase final IPA marker gate OK =="
 
 LC_ALL=C grep -RaoE "Version: v1\.0Q\+SH2\+OT2|v1\.0P Pre-delete Shadow Trace|GhostBase\.V10P\.Verdict|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
 
-echo "-- verify Version: v1.0Q+SH2+OT2 --"
-if ! LC_ALL=C grep -Rao "Version: v1.0Q+SH2+OT2" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain Version: v1.0Q+SH2+OT2"
+echo "-- verify Version: v1.0R Bug Debt Cleanup + Settings Split --"
+if ! LC_ALL=C grep -Rao "Version: v1.0R Bug Debt Cleanup + Settings Split" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.0R Bug Debt Cleanup + Settings Split"
   exit 1
 fi
 
@@ -358,3 +358,38 @@ fi
 
 echo "== strict GhostBase final IPA marker gate OK =="
 
+
+# GhostBase v1.0R strict final IPA marker supplement
+echo "[v1.0R] strict final IPA marker supplement..."
+GB_FINAL_IPA="${GB_FINAL_IPA:-}"
+if [ -z "$GB_FINAL_IPA" ]; then
+  GB_FINAL_IPA="$(find "$PWD" -type f -name "*.ipa" | grep -E "ghostbase-final|GhostBase" | head -1 || true)"
+fi
+
+if [ -z "$GB_FINAL_IPA" ] || [ ! -f "$GB_FINAL_IPA" ]; then
+  echo "[v1.0R] ERROR: final IPA not found for marker supplement"
+  exit 1
+fi
+
+GB_V10R_TMP="/tmp/ghostbase_v10r_marker_scan"
+rm -rf "$GB_V10R_TMP"
+mkdir -p "$GB_V10R_TMP"
+
+unzip -q "$GB_FINAL_IPA" -d "$GB_V10R_TMP"
+
+if ! grep -Rsa "Version: v1.0R Bug Debt Cleanup + Settings Split" "$GB_V10R_TMP/Payload" >/dev/null; then
+  echo "[v1.0R] ERROR: missing version marker in final IPA"
+  exit 1
+fi
+
+if ! grep -Rsa "v1.0R Bug Debt Cleanup" "$GB_V10R_TMP/Payload" >/dev/null; then
+  echo "[v1.0R] ERROR: missing cleanup marker in final IPA"
+  exit 1
+fi
+
+if ! grep -Rsa "Debug / Research" "$GB_V10R_TMP/Payload" >/dev/null; then
+  echo "[v1.0R] ERROR: missing Debug / Research marker in final IPA"
+  exit 1
+fi
+
+echo "[v1.0R] final IPA markers OK"
