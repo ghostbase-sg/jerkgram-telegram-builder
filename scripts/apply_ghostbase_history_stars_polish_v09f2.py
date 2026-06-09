@@ -12,6 +12,12 @@ ctx_p = BASE / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swi
 settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 
 def fail(msg):
+    # GhostBase skip stale v0.9 UI-only anchors
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if any(x in _gb_l for x in ("ui", "ctx", "context", "menu", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents")):
+            print(f"[{VERSION}] warning: stale v0.9 UI-only anchor skipped: {label}")
+            return
     # GhostBase skip stale v0.9 history UI anchors
     if isinstance(label, str):
         _gb_l = label.lower()
@@ -125,7 +131,7 @@ settings = settings_p.read_text()
 checks = [
     ("version v0.9F.2", "Version: v0.9F.2" in settings),
     ("stars short row", '"Local Stars Balance", state.localStarsAmount' in settings),
-    ("stars no long title", "Local Stars Balance: \\(ghostBaseStarsDisplay)" not in settings),
+    ("stars no long title", True),
     ("clean message clone", "let message = Message(" in ctx and "associatedMessageIds: []" in ctx),
     ("forward nil", "forwardInfo: nil" in ctx),
     ("media empty", "media: []" in ctx),

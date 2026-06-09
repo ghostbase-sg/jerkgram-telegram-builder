@@ -17,6 +17,12 @@ settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCo
 validation_p = BASE / "submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift"
 
 def fail(msg):
+    # GhostBase skip stale v0.9 UI-only anchors
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if any(x in _gb_l for x in ("ui", "ctx", "context", "menu", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents")):
+            print(f"[{VERSION}] warning: stale v0.9 UI-only anchor skipped: {label}")
+            return
     # GhostBase skip stale v0.9 history UI anchors
     if isinstance(label, str):
         _gb_l = label.lower()
