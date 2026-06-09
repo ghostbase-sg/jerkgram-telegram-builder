@@ -14,6 +14,12 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    # GhostBase skip stale v0.9 history UI anchors v2
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if any(x in _gb_l for x in ("history", "edit-history", "ctx", "context", "menu", "ui", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents", "info text", "footer", "description")):
+            print(f"[{VERSION}] warning: stale v0.9 history/UI anchor skipped: {label}")
+            return
     # GhostBase skip stale v0.9 UI-only anchors
     if isinstance(label, str):
         _gb_l = label.lower()

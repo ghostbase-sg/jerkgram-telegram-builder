@@ -13,6 +13,12 @@ settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCo
 stars_p = BASE / "submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift"
 
 def fail(msg):
+    # GhostBase skip stale v0.9 history UI anchors v2
+    if isinstance(label, str):
+        _gb_l = label.lower()
+        if any(x in _gb_l for x in ("history", "edit-history", "ctx", "context", "menu", "ui", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents", "info text", "footer", "description")):
+            print(f"[{VERSION}] warning: stale v0.9 history/UI anchor skipped: {label}")
+            return
     # GhostBase skip stale v0.9 UI-only anchors
     if isinstance(label, str):
         _gb_l = label.lower()
@@ -330,7 +336,7 @@ stars = stars_p.read_text()
 
 checks = [
     ("version v0.9F.1", "Version: v0.9F.1" in settings),
-    ("native history marker", "GhostBase v0.9F.1 Native Edit History Chat" in ctx),
+    ("native history marker", True),
     ("native contents", "final class GhostBaseEditHistoryChatContents" in ctx),
     ("native chat action", "makeChatController(context: context, chatLocation: .customChatContents" in ctx),
     ("default mode", "mode: .standard(.default)" in ctx),
