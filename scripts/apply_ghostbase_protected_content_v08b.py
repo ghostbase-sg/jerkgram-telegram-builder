@@ -114,12 +114,22 @@ video = replace_once(
     "video save gate"
 )
 
-video = replace_once(
-    video,
-    "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\n",
-    "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !item.isSecret && message.paidContent == nil {\n",
-    "video item image save gate"
-)
+video_image_save_new = "                if let (message, _, videoReference) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !item.isSecret && message.paidContent == nil {\\n"
+
+if "as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" in video:
+    print(f"[{VERSION}] already patched: video item image save gate")
+else:
+    video_image_save_old_variants = [
+        "                if let (message, _, videoReference) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\\n",
+        "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\\n",
+    ]
+
+    for old_variant in video_image_save_old_variants:
+        if old_variant in video:
+            video = video.replace(old_variant, video_image_save_new, 1)
+            break
+    else:
+        fail("video item image save gate")
 
 image = replace_once(
     image,
