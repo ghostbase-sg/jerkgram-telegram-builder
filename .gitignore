@@ -17,3 +17,5 @@ DerivedData/
 FETCH_HEAD
 __pycache__/
 *.pyc
+ports/
+*.zip
