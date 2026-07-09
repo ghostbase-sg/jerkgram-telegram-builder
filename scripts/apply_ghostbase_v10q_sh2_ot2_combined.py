@@ -21,7 +21,7 @@ def replace_once(s, old, new, label):
         return s
     raise SystemExit(f"[v1.0Q+SH2+OT2] ERROR: pattern not found: {label}")
 
-print("[v1.0Q+SH2+OT2] running base v1.0P+SH1+OT1...")
+print("[v1.0Q+SH2+OT2] running base v1.0Q+SH2+OT2...")
 subprocess.check_call([sys.executable, str(BASE)], cwd=str(ROOT))
 
 core = SRC / "submodules/TelegramCore/Sources"
@@ -37,7 +37,7 @@ standalone = read(standalone_p)
 history_entries = read(history_entries_p)
 settings = read(settings_p)
 
-ensure(settings, "Version: v1.0P+SH1+OT1", "base version")
+ensure(settings, "Version: v1.0Q+SH2+OT2", "base version")
 ensure(state, "case let .DeleteMessagesWithGlobalIds(ids):", "global delete case")
 ensure(standalone, "public func standaloneSendEnqueueMessages(", "standalone send function")
 ensure(history_entries, "if skipViewOnceMedia, let minAutoremoveOrClearTimeout = message.minAutoremoveOrClearTimeout", "view-once skip path")
@@ -177,7 +177,7 @@ OT2LastViewOnceVisibleId: \(UserDefaults.standard.string(forKey: "GhostBase.OT2.
 '''
     settings = settings.replace("v1.0P Pre-delete Shadow Trace:", block + "v1.0P Pre-delete Shadow Trace:", 1)
 
-settings = settings.replace("Version: v1.0P+SH1+OT1", "Version: v1.0Q+SH2+OT2")
+settings = settings.replace("Version: v1.0Q+SH2+OT2", "Version: v1.0Q+SH2+OT2")
 write(settings_p, settings)
 
 state = read(state_p)

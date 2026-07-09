@@ -16,14 +16,14 @@ def write(p, s):
 
 def ensure(s, needle, label):
     if needle not in s:
-        raise SystemExit(f"[v1.0P+SH1+OT1] ERROR: missing {label}: {needle}")
+        raise SystemExit(f"[v1.0Q+SH2+OT2] ERROR: missing {label}: {needle}")
 
 def replace_once(s, old, new, label):
     if old in s:
         return s.replace(old, new, 1)
     if new in s:
         return s
-    raise SystemExit(f"[v1.0P+SH1+OT1] ERROR: pattern not found: {label}")
+    raise SystemExit(f"[v1.0Q+SH2+OT2] ERROR: pattern not found: {label}")
 
 def find_files(root, needles):
     out = []
@@ -36,7 +36,7 @@ def find_files(root, needles):
             out.append(p)
     return out
 
-print("[v1.0P+SH1+OT1] running base v1.0O+READ3...")
+print("[v1.0Q+SH2+OT2] running base v1.0O+READ3...")
 subprocess.check_call([sys.executable, str(BASE)], cwd=str(ROOT))
 
 telegram_core = SRC / "submodules/TelegramCore/Sources"
@@ -60,7 +60,7 @@ ensure(auto, "Performing autoremove", "managed autoremove")
 # v1.0P main branch: Pre-delete/Postbox shadow trace.
 delete_files = find_files(telegram_core, ["DeleteMessagesWithGlobalIds"])
 if not delete_files:
-    raise SystemExit("[v1.0P+SH1+OT1] ERROR: no DeleteMessagesWithGlobalIds file")
+    raise SystemExit("[v1.0Q+SH2+OT2] ERROR: no DeleteMessagesWithGlobalIds file")
 
 patched_delete_files = []
 
@@ -141,9 +141,9 @@ for fp in delete_files:
     patched_delete_files.append(fp)
 
 if not patched_delete_files:
-    raise SystemExit("[v1.0P+SH1+OT1] ERROR: v1.0P case patch failed")
+    raise SystemExit("[v1.0Q+SH2+OT2] ERROR: v1.0P case patch failed")
 
-print("[v1.0P+SH1+OT1] P patched files:")
+print("[v1.0Q+SH2+OT2] P patched files:")
 for fp in patched_delete_files:
     print(" -", fp.relative_to(ROOT))
 
@@ -332,7 +332,7 @@ OT1OutgoingKeepPath: \(UserDefaults.standard.string(forKey: "GhostBase.OT1.Outgo
 '''
     settings = settings.replace("v1.0O Persistent SourcePeer Candidate:", block + "v1.0O Persistent SourcePeer Candidate:", 1)
 
-settings = settings.replace("Version: v1.0O+READ3", "Version: v1.0P+SH1+OT1")
+settings = settings.replace("Version: v1.0O+READ3", "Version: v1.0Q+SH2+OT2")
 write(settings_p, settings)
 
 forward = read(forward_p)
@@ -349,11 +349,11 @@ ensure(auto, "GhostBase.OT1.AutoremoveKeepBlocked.Count", "OT1 autoremove diagno
 ensure(settings, "v1.0P Pre-delete Shadow Trace:", "P settings")
 ensure(settings, "SH1 Share Scheduled Send:", "SH1 settings")
 ensure(settings, "OT1 Timer Media Local Keep:", "OT1 settings")
-ensure(settings, "Version: v1.0P+SH1+OT1", "version")
+ensure(settings, "Version: v1.0Q+SH2+OT2", "version")
 
 for p in patched_delete_files:
     s = read(p)
     ensure(s, "GhostBase v1.0P Pre-delete Shadow Trace", "P helper")
     ensure(s, "ghostBaseV10PTracePreDelete(transaction: transaction", "P call")
 
-print("[v1.0P+SH1+OT1] patch OK")
+print("[v1.0Q+SH2+OT2] patch OK")
