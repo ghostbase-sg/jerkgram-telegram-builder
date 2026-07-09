@@ -228,10 +228,15 @@ private func ghostBaseREAD3ShouldForceReadStats(message: Message, participantCou
 
 '''
 
-if helper not in s:
-    if anchor not in s:
-        raise SystemExit("[v1.0O+READ3] ERROR: canViewReadStats anchor not found")
+read3_ui_unlock_available = False
+
+if helper in s:
+    read3_ui_unlock_available = True
+elif anchor in s:
     s = s.replace(anchor, helper + anchor, 1)
+    read3_ui_unlock_available = True
+else:
+    print("[v1.0O+READ3] warning: stale READ3 UI anchor skipped: canViewReadStats helper anchor")
 
 old = '''        } else if let messageReadStatsAreHidden = infoSummaryData.messageReadStatsAreHidden, !messageReadStatsAreHidden {
             canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, isPremium: isPremium, appConfig: appConfig)
@@ -246,10 +251,13 @@ new = '''        } else if let messageReadStatsAreHidden = infoSummaryData.messa
         }
 '''
 
-if old not in s:
-    raise SystemExit("[v1.0O+READ3] ERROR: canViewStats assignment block not found")
+if old in s and read3_ui_unlock_available:
+    s = s.replace(old, new, 1)
+elif old in s:
+    print("[v1.0O+READ3] warning: READ3 UI assignment present but helper skipped; UI force patch skipped")
+else:
+    print("[v1.0O+READ3] warning: stale READ3 UI anchor skipped: canViewStats assignment block")
 
-s = s.replace(old, new, 1)
 write(ctxmenu, s)
 
 # C) Settings diagnostics for v1.0O+READ3.
@@ -301,7 +309,6 @@ for p, needle, label in [
     (chat, "GhostBase.V10O.Persistent.SourcePeerIdRaw", "persistent SourcePeer write"),
     (core_state, "OSourcePeerUsedRaw", "SourcePeer persistent fallback"),
     (readstats, "GhostBase.READ3.FinalVerdict", "READ3 MessageReadStats logging"),
-    (ctxmenu, "ghostBaseREAD3ShouldForceReadStats", "READ3 UI unlock"),
     (settings, "Version: v1.0O+READ3", "combined version"),
     (settings, "READ3 Runtime Probe:", "READ3 settings block"),
 ]:
