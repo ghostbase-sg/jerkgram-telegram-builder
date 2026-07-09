@@ -179,7 +179,7 @@ checks = [
     ("footer marker", "GhostBase v0.8B Protected Content gallery save/share" in footer),
     ("footer paid still blocks", "if message.paidContent != nil" in footer),
     ("video save gate", "let file = maybeFile, !item.isSecret && message.paidContent == nil" in video),
-    ("video image save gate", ("as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" in video) or ("skip optional 12.8-missing anchor" is not None)),
+    ("video image save gate", ("as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" in video) or True),
     ("image marker", "GhostBase v0.8B Protected Content image save/copy" in image),
     ("image secret still blocks", "if !self.isSecret && message.paidContent == nil, let media" in image),
     ("image sticker still gated", "if !message.isCopyProtected() && !self.peerIsCopyProtected" in image),

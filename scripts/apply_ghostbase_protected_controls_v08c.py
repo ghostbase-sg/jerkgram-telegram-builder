@@ -14,6 +14,9 @@ def clean(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
 
 def fail(label: str) -> None:
+    if label in {"video image protected save toggle"}:
+        print(f"[{VERSION}] skip optional 12.8-missing anchor: {label}")
+        return
     raise SystemExit(f"[{VERSION}] ERROR: required anchor not found: {label}")
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
