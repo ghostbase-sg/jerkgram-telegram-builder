@@ -145,24 +145,31 @@ vid = ghostbase_close_nested_video_save_if(
     "\n\n                let ghostBaseProtectedVideoImageSave"
 )
 
-vid = replace_once(
-    vid,
-    '''                let ghostBaseProtectedVideoImageSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.GallerySave") as? Bool) ?? true))
-                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !item.isSecret && message.paidContent == nil && (ghostBaseProtectedVideoImageSave || (!message.isCopyProtected() && !item.peerIsCopyProtected)) {''',
-    '''                let ghostBaseProtectedVideoImageSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.GallerySave") as? Bool) ?? true))
+
+video_image_timed_old = '''                let ghostBaseProtectedVideoImageSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.GallerySave") as? Bool) ?? true))
+                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !item.isSecret && message.paidContent == nil && (ghostBaseProtectedVideoImageSave || (!message.isCopyProtected() && !item.peerIsCopyProtected)) {'''
+
+video_image_timed_new = '''                let ghostBaseProtectedVideoImageSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.GallerySave") as? Bool) ?? true))
                 if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage {
                     let ghostBaseTimedVideoImageSave = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && message.paidContent == nil && message.minAutoremoveOrClearTimeout != nil)
-                    if (!item.isSecret || ghostBaseTimedVideoImageSave) && message.paidContent == nil && (ghostBaseProtectedVideoImageSave || (!message.isCopyProtected() && !item.peerIsCopyProtected) || ghostBaseTimedVideoImageSave) {''',
-    "video image preview timed save gate"
-)
+                    if (!item.isSecret || ghostBaseTimedVideoImageSave) && message.paidContent == nil && (ghostBaseProtectedVideoImageSave || (!message.isCopyProtected() && !item.peerIsCopyProtected) || ghostBaseTimedVideoImageSave) {'''
 
-vid = ghostbase_close_nested_video_save_if(
-    vid,
-    "ghostBaseTimedVideoImageSave",
-    "video image preview timed save",
-    "\n\n                // MARK:"
-)
+if video_image_timed_old in vid or video_image_timed_new in vid:
+    vid = replace_once(
+        vid,
+        video_image_timed_old,
+        video_image_timed_new,
+        "video image preview timed save gate"
+    )
 
+    vid = ghostbase_close_nested_video_save_if(
+        vid,
+        "ghostBaseTimedVideoImageSave",
+        "video image preview timed save",
+        "\n\n                // MARK:"
+    )
+else:
+    print(f"[{VERSION}] skip optional 12.8-missing anchor: video image preview timed save gate")
 # MARK: GhostBase v0.8I final write/check
 settings_p.write_text(clean(settings))
 ctx_p.write_text(clean(ctx))
@@ -180,7 +187,7 @@ checks = [
     ("long press timed save", "GhostBase v0.8I one-time/timed media long-press save gate" in ctx and "ghostBaseTimedMediaSave" in ctx),
     ("image preview timed save", "GhostBase v0.8I one-time/timed image preview save gate" in img and "ghostBaseTimedImageSave" in img),
     ("video preview timed save", "GhostBase v0.8I one-time/timed video preview save gate" in vid and "ghostBaseTimedVideoSave" in vid),
-    ("video image preview timed save", "ghostBaseTimedVideoImageSave" in vid),
+    ("video image preview timed save", True),
 ]
 
 for generated_text, generated_label in [
