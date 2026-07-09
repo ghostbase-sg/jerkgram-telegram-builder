@@ -196,3 +196,26 @@ ensure(settings, "OT2 ViewOnce Visual Keep:", "OT2 settings")
 ensure(settings, "Version: v1.0Q+SH2+OT2", "version")
 
 print("[v1.0Q+SH2+OT2] patch OK")
+
+# MARK: GhostBase Telegram 12.8 SwiftCompile cleanup
+ctxmenu_128 = ROOT / "work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift"
+
+if ctxmenu_128.exists():
+    s128 = ctxmenu_128.read_text()
+
+    # v0.9 edit-history UI uses raw Postbox message types on Telegram 12.8.
+    if "private func ghostBaseEditHistoryKey(_ id: MessageId)" in s128:
+        if "import Postbox" not in s128:
+            s128 = s128.replace("import Foundation\n", "import Foundation\nimport Postbox\n", 1)
+        if "import TelegramCore" not in s128:
+            s128 = s128.replace("import Postbox\n", "import Postbox\nimport TelegramCore\n", 1)
+
+    old_map = "    |> map { data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer -> ContextController.Items in"
+    new_map = "    |> map { args -> ContextController.Items in\n        let (data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer) = args"
+
+    if old_map in s128:
+        s128 = s128.replace(old_map, new_map, 1)
+        print("[v1.0Q+SH2+OT2] patched Telegram 12.8 tuple map closure in ChatInterfaceStateContextMenus")
+
+    ctxmenu_128.write_text(s128)
+
