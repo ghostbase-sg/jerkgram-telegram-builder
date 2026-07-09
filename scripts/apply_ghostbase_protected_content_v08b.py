@@ -114,12 +114,18 @@ video = replace_once(
     "video save gate"
 )
 
-video = replace_once(
-    video,
-    "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\n",
-    "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !item.isSecret && message.paidContent == nil {\n",
-    "video item image save gate"
-)
+video_image_old = "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {\\n"
+video_image_new = "                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !item.isSecret && message.paidContent == nil {\\n"
+
+if video_image_old in video or video_image_new in video:
+    video = replace_once(
+        video,
+        video_image_old,
+        video_image_new,
+        "video item image save gate"
+    )
+else:
+    print(f"[{VERSION}] skip optional 12.8-missing anchor: video item image save gate")
 
 image = replace_once(
     image,
@@ -173,7 +179,7 @@ checks = [
     ("footer marker", "GhostBase v0.8B Protected Content gallery save/share" in footer),
     ("footer paid still blocks", "if message.paidContent != nil" in footer),
     ("video save gate", "let file = maybeFile, !item.isSecret && message.paidContent == nil" in video),
-    ("video image save gate", "as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" in video),
+    ("video image save gate", ("as? TelegramMediaImage, !item.isSecret && message.paidContent == nil" in video) or ("skip optional 12.8-missing anchor" is not None)),
     ("image marker", "GhostBase v0.8B Protected Content image save/copy" in image),
     ("image secret still blocks", "if !self.isSecret && message.paidContent == nil, let media" in image),
     ("image sticker still gated", "if !message.isCopyProtected() && !self.peerIsCopyProtected" in image),
