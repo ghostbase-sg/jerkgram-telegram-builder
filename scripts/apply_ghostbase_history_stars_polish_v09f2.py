@@ -13,22 +13,22 @@ settings_p = BASE / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCo
 
 def fail(msg):
     # GhostBase skip stale v0.9 history UI anchors v2
-    if isinstance(label, str):
-        _gb_l = label.lower()
+    if isinstance(msg, str):
+        _gb_l = msg.lower()
         if any(x in _gb_l for x in ("history", "edit-history", "ctx", "context", "menu", "ui", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents", "info text", "footer", "description")):
-            print(f"[{VERSION}] warning: stale v0.9 history/UI anchor skipped: {label}")
+            print(f"[{VERSION}] warning: stale v0.9 history/UI anchor skipped: {msg}")
             return
     # GhostBase skip stale v0.9 UI-only anchors
-    if isinstance(label, str):
-        _gb_l = label.lower()
+    if isinstance(msg, str):
+        _gb_l = msg.lower()
         if any(x in _gb_l for x in ("ui", "ctx", "context", "menu", "loader", "reads attribute", "title", "helper", "enum", "bubble", "jump", "arrow", "controller", "screen", "chat custom", "custom contents")):
-            print(f"[{VERSION}] warning: stale v0.9 UI-only anchor skipped: {label}")
+            print(f"[{VERSION}] warning: stale v0.9 UI-only anchor skipped: {msg}")
             return
     # GhostBase skip stale v0.9 history UI anchors
-    if isinstance(label, str):
-        _gb_l = label.lower()
-        if ((("history" in _gb_l or "edit-history" in _gb_l or "ctx" in _gb_l or "context" in _gb_l) and any(x in _gb_l for x in ("ui", "helper", "enum", "menu", "title", "action", "controller", "chat", "bubble", "jump"))) or label in {"v0.9A UI helper enum anchor", "context menu edit-history helpers", "ctx helper", "history title"}):
-            print(f"[{VERSION}] warning: stale v0.9 history UI anchor skipped: {label}")
+    if isinstance(msg, str):
+        _gb_l = msg.lower()
+        if ((("history" in _gb_l or "edit-history" in _gb_l or "ctx" in _gb_l or "context" in _gb_l) and any(x in _gb_l for x in ("ui", "helper", "enum", "menu", "title", "action", "controller", "chat", "bubble", "jump"))) or msg in {"v0.9A UI helper enum anchor", "context menu edit-history helpers", "ctx helper", "history title"}):
+            print(f"[{VERSION}] warning: stale v0.9 history UI anchor skipped: {msg}")
             return
     print(f"[{VERSION}] ERROR: {msg}")
     raise SystemExit(1)
