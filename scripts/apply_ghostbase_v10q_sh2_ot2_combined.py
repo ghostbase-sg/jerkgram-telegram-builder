@@ -211,7 +211,7 @@ if ctxmenu_128.exists():
             s128 = s128.replace("import Postbox\n", "import Postbox\nimport TelegramCore\n", 1)
 
     old_map = "    |> map { data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer -> ContextController.Items in"
-    new_map = "    |> map { args -> ContextController.Items in\n        let (data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer) = args"
+    new_map = "    |> map { args -> ContextController.Items in\n        let (data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, _, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer) = args"
 
     if old_map in s128:
         s128 = s128.replace(old_map, new_map, 1)
