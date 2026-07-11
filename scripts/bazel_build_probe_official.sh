@@ -329,7 +329,11 @@ grep -RaoE 'Version: v1\.0[A-Z0-9.+-]*|v1.0Q Raw Delete Mapping|SH2 Standalone S
 
 if ! grep -RaoE 'Version: v1\.0Q\+SH2\+OT2|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep|GhostBase\.V10Q|GhostBase\.SH2|GhostBase\.OT2' "$GB_MARKER_TMP/Payload" 2>/dev/null | grep -q .; then
   echo "ERROR: final IPA missing v1.0Q+SH2+OT2 markers"
-  exit 1
+  if [ "${CLEAN_12_8_CONTROL:-0}" = "1" ]; then
+    echo "== clean control: GhostBase final marker gate skipped =="
+  else
+    exit 1
+  fi
 fi
 
 rm -rf "$GB_MARKER_TMP"
