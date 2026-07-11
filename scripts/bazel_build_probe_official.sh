@@ -32,6 +32,13 @@ else
   python3 ../../scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
 fi
 
+echo
+echo "== apply GhostBase v1.0R settings split =="
+python3 ../../scripts/apply_ghostbase_v10r_menu.py
+
+echo "== verify GhostBase v1.0R settings split =="
+grep -nE   'GhostBase v1.0R Settings Split|GhostBaseHome|GhostBaseGhostMode|GhostBaseMessages|GhostBaseProtectedContent|GhostBaseMediaStories|GhostBaseAppearance|GhostBaseDebugResearch|GhostBaseAbout'   submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+
 echo "== verify GhostBase source patch =="
 grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \
   submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift \
