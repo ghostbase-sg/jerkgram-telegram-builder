@@ -219,35 +219,3 @@ if ctxmenu_128.exists():
 
     ctxmenu_128.write_text(s128)
 
-# MARK: GhostBase Login Probe for Telegram 12.8 fresh auth
-auth_128 = ROOT / "work/swiftgram-src/submodules/AuthorizationUI/Sources/AuthorizationSequenceController.swift"
-
-if auth_128.exists():
-    s_auth = auth_128.read_text()
-
-    old_timeout = "timeout(20.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.timeout))"
-    new_timeout = "timeout(60.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.timeout))"
-
-    if old_timeout in s_auth:
-        s_auth = s_auth.replace(old_timeout, new_timeout)
-        print("[v1.0Q+SH2+OT2] GhostBase.LOGINPROBE: auth.sendCode timeout raised 20s -> 60s")
-    elif new_timeout in s_auth:
-        print("[v1.0Q+SH2+OT2] GhostBase.LOGINPROBE: auth.sendCode timeout already 60s")
-    else:
-        print("[v1.0Q+SH2+OT2] warning: auth.sendCode timeout anchor not found")
-
-    old_error = "text = strongSelf.presentationData.strings.Login_NetworkError"
-    new_error = "text = strongSelf.presentationData.strings.Login_NetworkError + \"\\n\\nGhostBase.LOGINPROBE:\\nauth.sendCode local timeout after 60s.\\nNo Telegram RPC response was received.\""
-
-    if old_error in s_auth and "GhostBase.LOGINPROBE" not in s_auth:
-        s_auth = s_auth.replace(old_error, new_error, 1)
-        print("[v1.0Q+SH2+OT2] GhostBase.LOGINPROBE: Login_NetworkError alert patched")
-    elif "GhostBase.LOGINPROBE" in s_auth:
-        print("[v1.0Q+SH2+OT2] GhostBase.LOGINPROBE: alert already patched")
-    else:
-        print("[v1.0Q+SH2+OT2] warning: Login_NetworkError anchor not found")
-
-    auth_128.write_text(s_auth)
-else:
-    print("[v1.0Q+SH2+OT2] warning: AuthorizationSequenceController.swift not found for login probe")
-
