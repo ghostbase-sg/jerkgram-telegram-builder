@@ -262,12 +262,3 @@ if ui_auth_128.exists():
 else:
     print("[v1.0Q+SH2+OT2] warning: AuthorizationSequenceController.swift not found for login probe")
 
-
-# RUN: Login Transport Probe v2
-import subprocess as _gb_subprocess
-import sys as _gb_sys
-
-_gb_subprocess.check_call([
-    _gb_sys.executable,
-    str(ROOT / "scripts/apply_ghostbase_login_transport_probe_v2.py")
-], cwd=str(ROOT))
