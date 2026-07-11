@@ -271,3 +271,12 @@ _gb_subprocess.check_call([
     _gb_sys.executable,
     str(ROOT / "scripts/apply_ghostbase_login_transport_probe_v2.py")
 ], cwd=str(ROOT))
+
+# RUN: Login Migrate Probe v3
+import subprocess as _gb_migrate_subprocess
+import sys as _gb_migrate_sys
+
+_gb_migrate_subprocess.check_call([
+    _gb_migrate_sys.executable,
+    str(ROOT / "scripts/apply_ghostbase_login_migrate_probe_v3.py")
+], cwd=str(ROOT))
