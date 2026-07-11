@@ -280,3 +280,12 @@ _gb_migrate_subprocess.check_call([
     _gb_migrate_sys.executable,
     str(ROOT / "scripts/apply_ghostbase_login_migrate_probe_v3.py")
 ], cwd=str(ROOT))
+
+# RUN: Login DC Resume Fix
+import subprocess as _gb_resume_subprocess
+import sys as _gb_resume_sys
+
+_gb_resume_subprocess.check_call([
+    _gb_resume_sys.executable,
+    str(ROOT / "scripts/apply_ghostbase_login_dc_resume_fix.py")
+], cwd=str(ROOT))
