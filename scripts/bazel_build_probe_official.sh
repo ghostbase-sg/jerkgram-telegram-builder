@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+
+# CLEAN_12_8_CONTROL_MODE
+CLEAN_12_8_CONTROL=1
+export CLEAN_12_8_CONTROL
+echo "CLEAN_12_8_CONTROL=$CLEAN_12_8_CONTROL"
+
 set -euo pipefail
 
 export USE_BAZEL_VERSION="${USE_BAZEL_VERSION:-8.4.2}"
@@ -32,12 +38,15 @@ else
   python3 ../../scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
 fi
 
-echo "== verify GhostBase source patch =="
-grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \
-  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift \
-  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift \
-  submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift
-
+if [ "$CLEAN_12_8_CONTROL" = "1" ]; then
+  echo "== clean control: skip GhostBase source verification =="
+else
+  echo "== verify GhostBase source patch =="
+  grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBase|Telegram ID|KeychainFix' \
+    submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift \
+    submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift \
+    submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift
+fi
 
 echo "== verify required signing secrets =="
 for v in CERT_B64 PROF_B64 P12_PASSWORD KEYCHAIN_PASSWORD; do
@@ -244,8 +253,12 @@ python3 -m py_compile ../../scripts/gb_patch_swift.py
 python3 -m py_compile ../../scripts/gb_patch_entitlements.py
 python3 -m py_compile ../../scripts/gb_verify_device_ipa.py
 
-echo "[GhostBase] Fix v1.0E Push/RegisterDevice Swift helper syntax"
-python3 ../../scripts/fix_ghostbase_push_probe_swift_v10e.py
+if [ "$CLEAN_12_8_CONTROL" = "1" ]; then
+  echo "== clean control: skip GhostBase Push/RegisterDevice fix =="
+else
+  echo "[GhostBase] Fix v1.0E Push/RegisterDevice Swift helper syntax"
+  python3 ../../scripts/fix_ghostbase_push_probe_swift_v10e.py
+fi
 
 echo "== real build probe =="
 echo "GHOSTBASE_PROBE_ONLY=$GHOSTBASE_PROBE_ONLY"
