@@ -296,6 +296,13 @@ fi
 echo "== patch final IPA AppGroup .10 before verifier =="
 ../../scripts/patch_final_ipa_appgroup10.sh ghostbase-final/GhostBase.ipa
 
+# CLEAN_CONTROL_SKIP_ALL_FINAL_GHOSTBASE_VERIFIERS
+if [ "${CLEAN_12_8_CONTROL:-0}" = "1" ]; then
+  echo "== clean control: final IPA ready; skip all GhostBase-only verifiers =="
+  ls -lh ghostbase-final/GhostBase.ipa
+  exit 0
+fi
+
 echo "== strict GhostBase final IPA marker gate =="
 TMP_GB_CHECK="$(mktemp -d)"
 unzip -q "ghostbase-final/GhostBase.ipa" -d "$TMP_GB_CHECK"
