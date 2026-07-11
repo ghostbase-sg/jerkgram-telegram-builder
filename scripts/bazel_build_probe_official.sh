@@ -358,3 +358,8 @@ fi
 
 echo "== strict GhostBase final IPA marker gate OK =="
 
+
+echo
+echo "== publish final IPA with ph.telegra.Telegraph =="
+python3 ../../scripts/gb_public_bundle_id_final.py \
+  ghostbase-final/GhostBase.ipa
