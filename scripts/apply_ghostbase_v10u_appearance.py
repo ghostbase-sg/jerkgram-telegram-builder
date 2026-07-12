@@ -211,15 +211,21 @@ header = HEADER.read_text()
 header_marker = "GhostBase v1.0U hide own phone header"
 
 if header_marker not in header:
-    import re
+    lines = header.splitlines(keepends=True)
 
-    title_match = re.search(
-        r'(?m)^(?P<indent>[ \t]*)if title\.isEmpty \{\s*$',
-        header
+    title_index = next(
+        (
+            i for i, line in enumerate(lines)
+            if "peer.phone" in line
+            and "hidePhoneInSettings" in line
+        ),
+        None
     )
-    need(title_match is not None, "missing anchor: title.isEmpty")
+    need(title_index is not None, "missing header peer.phone line")
 
-    indent = title_match.group("indent")
+    indent = lines[title_index][
+        :len(lines[title_index]) - len(lines[title_index].lstrip())
+    ]
 
     helper = f"""{indent}// MARK: GhostBase v1.0U hide own phone header
 {indent}let ghostBaseHideOwnPhone = (
@@ -236,30 +242,38 @@ if header_marker not in header:
 
 """
 
-    header = (
-        header[:title_match.start()]
-        + helper
-        + header[title_match.start():]
+    lines.insert(title_index, helper)
+    title_index += 1
+
+    lines[title_index] = (
+        f"{indent}if let peer = peer as? TelegramUser, "
+        f"let phone = peer.phone, !ghostBaseHideOwnPhone {{\n"
     )
 
-    header, title_count = re.subn(
-        r'if let peer = peer as\? TelegramUser,\s*'
-        r'let phone = peer\.phone'
-        r'(?:,\s*![^{]+)?\s*\{',
-        'if let peer = peer as? TelegramUser, '
-        'let phone = peer.phone, !ghostBaseHideOwnPhone {',
-        header,
-        count=1
+    subtitle_index = next(
+        (
+            i for i, line in enumerate(lines)
+            if "formattedPhone.isEmpty" in line
+            and "hidePhoneInSettings" in line
+        ),
+        None
     )
-    need(title_count == 1, "missing anchor: title phone condition")
+    need(
+        subtitle_index is not None,
+        "missing formattedPhone hide line"
+    )
 
-    header, subtitle_count = re.subn(
-        r'if !formattedPhone\.isEmpty && [^{]+ \{',
-        'if !formattedPhone.isEmpty && ghostBaseHideOwnPhone {',
-        header,
-        count=1
+    subtitle_indent = lines[subtitle_index][
+        :len(lines[subtitle_index])
+        - len(lines[subtitle_index].lstrip())
+    ]
+
+    lines[subtitle_index] = (
+        f"{subtitle_indent}if !formattedPhone.isEmpty "
+        f"&& ghostBaseHideOwnPhone {{\n"
     )
-    need(subtitle_count == 1, "missing anchor: subtitle phone condition")
+
+    header = "".join(lines)
 
 HEADER.write_text(header)
 
