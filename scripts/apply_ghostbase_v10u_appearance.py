@@ -208,66 +208,7 @@ if profile_marker not in profile:
 PROFILE.write_text(profile)
 
 header = HEADER.read_text()
-header_marker = "GhostBase v1.0U hide own phone header"
-
-if header_marker not in header:
-    lines = header.splitlines(keepends=True)
-
-    title_index = next(
-        (
-            i for i, line in enumerate(lines)
-            if "peer.phone" in line
-            and "hidePhoneInSettings" in line
-        ),
-        None
-    )
-
-    subtitle_index = next(
-        (
-            i for i, line in enumerate(lines)
-            if "formattedPhone.isEmpty" in line
-            and "hidePhoneInSettings" in line
-        ),
-        None
-    )
-
-    if title_index is not None and subtitle_index is not None:
-        indent = lines[title_index][
-            :len(lines[title_index]) - len(lines[title_index].lstrip())
-        ]
-
-        helper = f"""{indent}// MARK: GhostBase v1.0U hide own phone header
-{indent}let ghostBaseHideOwnPhone = (
-{indent}    UserDefaults.standard.bool(
-{indent}        forKey: "GhostBase.Appearance.HideOwnPhone"
-{indent}    )
-{indent})
-
-"""
-
-        lines.insert(title_index, helper)
-        title_index += 1
-        subtitle_index += 1
-
-        lines[title_index] = (
-            f"{indent}if let peer = peer as? TelegramUser, "
-            f"let phone = peer.phone, !ghostBaseHideOwnPhone {{\n"
-        )
-
-        subtitle_indent = lines[subtitle_index][
-            :len(lines[subtitle_index])
-            - len(lines[subtitle_index].lstrip())
-        ]
-
-        lines[subtitle_index] = (
-            f"{subtitle_indent}if !formattedPhone.isEmpty "
-            f"&& ghostBaseHideOwnPhone {{\n"
-        )
-
-        header = "".join(lines)
-    else:
-        print("[v1.0U] header phone UI absent in clean Telegram 12.8; skip")
-
+print("[v1.0U] header phone patch skipped; profile phone row remains protected")
 HEADER.write_text(header)
 
 need(settings_marker in SETTINGS.read_text(), "settings marker missing")
