@@ -1,9 +1,9 @@
+#!/usr/bin/env python3
 from pathlib import Path
 
-path = Path(
-    "work/swiftgram-src/submodules/TelegramUI/Sources/Chat/"
-    "ChatControllerMediaRecording.swift"
-)
+ROOT = Path(__file__).resolve().parents[1]
+path = ROOT / "work/swiftgram-src/submodules/TelegramUI/Sources/Chat/ChatControllerMediaRecording.swift"
+
 text = path.read_text()
 
 old = """            let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: transformedMessages)
