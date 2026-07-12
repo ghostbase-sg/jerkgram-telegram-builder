@@ -223,9 +223,7 @@ if header_marker not in header:
 
     need(header_anchor is not None, "missing anchor: header phone state")
 
-    header = header.replace(
-        header_anchor,
-        '''            // MARK: GhostBase v1.0U hide own phone header
+    replacement = """            // MARK: GhostBase v1.0U hide own phone header
             let ghostBaseHideOwnPhone = (
                 (
                     UserDefaults.standard.object(
@@ -238,25 +236,51 @@ if header_marker not in header:
                 || peer.id == self.context.account.peerId
             )
 
-            // MARK: Swiftgram
             if title.isEmpty {
-''',
-        "header phone state"
+"""
+
+    header = header.replace(
+        header_anchor,
+        replacement,
+        1
     )
 
-    header = once(
-        header,
-        '''if let peer = peer as? TelegramUser, let phone = peer.phone, !self.hidePhoneInSettings {''',
-        '''if let peer = peer as? TelegramUser, let phone = peer.phone, !ghostBaseHideOwnPhone {''',
-        "header title phone"
+    title_candidates = (
+        "if let peer = peer as? TelegramUser, let phone = peer.phone, !self.hidePhoneInSettings {",
+        "if let peer = peer as? TelegramUser, let phone = peer.phone {",
     )
 
-    header = once(
-        header,
-        '''if !formattedPhone.isEmpty && self.hidePhoneInSettings {''',
-        '''if !formattedPhone.isEmpty && ghostBaseHideOwnPhone {''',
-        "header subtitle phone"
+    title_anchor = next(
+        (item for item in title_candidates if item in header),
+        None
     )
+
+    need(title_anchor is not None, "missing anchor: header title phone")
+
+    header = header.replace(
+        title_anchor,
+        "if let peer = peer as? TelegramUser, let phone = peer.phone, !ghostBaseHideOwnPhone {",
+        1
+    )
+
+    subtitle_candidates = (
+        "if !formattedPhone.isEmpty && self.hidePhoneInSettings {",
+        "if !formattedPhone.isEmpty && ghostBaseHideOwnPhone {",
+    )
+
+    subtitle_anchor = next(
+        (item for item in subtitle_candidates if item in header),
+        None
+    )
+
+    need(subtitle_anchor is not None, "missing anchor: header subtitle phone")
+
+    if "self.hidePhoneInSettings" in subtitle_anchor:
+        header = header.replace(
+            subtitle_anchor,
+            "if !formattedPhone.isEmpty && ghostBaseHideOwnPhone {",
+            1
+        )
 
 HEADER.write_text(header)
 
