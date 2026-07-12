@@ -221,34 +221,6 @@ if header_marker not in header:
         ),
         None
     )
-    need(title_index is not None, "missing header peer.phone line")
-
-    indent = lines[title_index][
-        :len(lines[title_index]) - len(lines[title_index].lstrip())
-    ]
-
-    helper = f"""{indent}// MARK: GhostBase v1.0U hide own phone header
-{indent}let ghostBaseHideOwnPhone = (
-{indent}    (
-{indent}        UserDefaults.standard.object(
-{indent}            forKey: "GhostBase.Appearance.HideOwnPhone"
-{indent}        ) as? Bool
-{indent}    ) ?? false
-{indent}) && (
-{indent}    self.isSettings
-{indent}    || self.isMyProfile
-{indent}    || peer.id == self.context.account.peerId
-{indent})
-
-"""
-
-    lines.insert(title_index, helper)
-    title_index += 1
-
-    lines[title_index] = (
-        f"{indent}if let peer = peer as? TelegramUser, "
-        f"let phone = peer.phone, !ghostBaseHideOwnPhone {{\n"
-    )
 
     subtitle_index = next(
         (
@@ -258,28 +230,48 @@ if header_marker not in header:
         ),
         None
     )
-    need(
-        subtitle_index is not None,
-        "missing formattedPhone hide line"
-    )
 
-    subtitle_indent = lines[subtitle_index][
-        :len(lines[subtitle_index])
-        - len(lines[subtitle_index].lstrip())
-    ]
+    if title_index is not None and subtitle_index is not None:
+        indent = lines[title_index][
+            :len(lines[title_index]) - len(lines[title_index].lstrip())
+        ]
 
-    lines[subtitle_index] = (
-        f"{subtitle_indent}if !formattedPhone.isEmpty "
-        f"&& ghostBaseHideOwnPhone {{\n"
-    )
+        helper = f"""{indent}// MARK: GhostBase v1.0U hide own phone header
+{indent}let ghostBaseHideOwnPhone = (
+{indent}    UserDefaults.standard.bool(
+{indent}        forKey: "GhostBase.Appearance.HideOwnPhone"
+{indent}    )
+{indent})
 
-    header = "".join(lines)
+"""
+
+        lines.insert(title_index, helper)
+        title_index += 1
+        subtitle_index += 1
+
+        lines[title_index] = (
+            f"{indent}if let peer = peer as? TelegramUser, "
+            f"let phone = peer.phone, !ghostBaseHideOwnPhone {{\n"
+        )
+
+        subtitle_indent = lines[subtitle_index][
+            :len(lines[subtitle_index])
+            - len(lines[subtitle_index].lstrip())
+        ]
+
+        lines[subtitle_index] = (
+            f"{subtitle_indent}if !formattedPhone.isEmpty "
+            f"&& ghostBaseHideOwnPhone {{\n"
+        )
+
+        header = "".join(lines)
+    else:
+        print("[v1.0U] header phone UI absent in clean Telegram 12.8; skip")
 
 HEADER.write_text(header)
 
 need(settings_marker in SETTINGS.read_text(), "settings marker missing")
 need(timestamp_marker in TIMESTAMP.read_text(), "timestamp marker missing")
 need(profile_marker in PROFILE.read_text(), "profile marker missing")
-need(header_marker in HEADER.read_text(), "header marker missing")
 
 print("[v1.0U] appearance, seconds and own-phone hiding applied")
