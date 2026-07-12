@@ -531,19 +531,28 @@ if inline_marker not in chat_controller:
 
     block = chat_controller[start:end]
 
-    old = '''        let sendMessage: (Int32?) -> Void = { [weak self] scheduleTime in
-            guard let self else {
-                return
-            }
-            let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
-'''
+    closure_anchor = (
+        "        let sendMessage: (Int32?) -> Void = "
+        "{ [weak self] scheduleTime in\n"
+    )
 
-    new = '''        let sendMessage: (Int32?) -> Void = { [weak self] scheduleTime in
-            guard let self else {
-                return
-            }
+    reply_anchor = (
+        "            let replyMessageSubject = "
+        "self.presentationInterfaceState.interfaceState."
+        "replyMessageSubject\n"
+    )
 
-            // MARK: GhostBase v1.0S inline-result scheduled send
+    require(
+        closure_anchor in block,
+        "inline send closure anchor"
+    )
+
+    require(
+        reply_anchor in block,
+        "inline reply subject anchor"
+    )
+
+    injection = """            // MARK: GhostBase v1.0S inline-result scheduled send
             let ghostBaseScheduledSend = (
                 UserDefaults.standard.object(
                     forKey: "GhostBase.GhostMode.ScheduledSend"
@@ -568,15 +577,13 @@ if inline_marker not in chat_controller:
                 ghostBaseEffectiveScheduleTime = nil
             }
 
-            let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
-'''
+"""
 
-    require(
-        old in block,
-        "inline send closure anchor"
+    block = block.replace(
+        reply_anchor,
+        injection + reply_anchor,
+        1
     )
-
-    block = block.replace(old, new, 1)
 
     require(
         "scheduleTime: scheduleTime" in block,
