@@ -384,6 +384,49 @@ old_controller = '''public func ghostBaseSettingsController(context: AccountCont
 new_controller = '''public func ghostBaseSettingsController(
     context: AccountContext
 ) -> ViewController {
+    let rawPage = UserDefaults.standard.string(
+        forKey: "GhostBase.Settings.InitialPage"
+    ) ?? "home"
+
+    UserDefaults.standard.removeObject(
+        forKey: "GhostBase.Settings.InitialPage"
+    )
+
+    let page: GhostBaseSettingsPage
+
+    switch rawPage {
+    case "ghostMode":
+        page = .ghostMode
+    case "messages":
+        page = .messages
+    case "protectedContent":
+        page = .protectedContent
+    case "mediaStories":
+        page = .mediaStories
+    case "appearance":
+        page = .appearance
+    case "debugResearch":
+        page = .debugResearch
+    case "about":
+        page = .about
+    default:
+        page = .home
+    }
+
+    return ghostBaseSettingsPageController(
+        context: context,
+        page: page
+    )
+}
+
+private func ghostBaseSettingsPageController(
+    context: AccountContext,
+    page: GhostBaseSettingsPage
+) -> ViewController {'''
+
+intermediate_controller = """public func ghostBaseSettingsController(
+    context: AccountContext
+) -> ViewController {
     return ghostBaseSettingsPageController(
         context: context,
         page: .root
@@ -393,14 +436,22 @@ new_controller = '''public func ghostBaseSettingsController(
 private func ghostBaseSettingsPageController(
     context: AccountContext,
     page: GhostBaseSettingsPage
-) -> ViewController {'''
+) -> ViewController {"""
 
-source = replace_once(
-    source,
-    old_controller,
-    new_controller,
-    "root controller wrapper"
-)
+if new_controller not in source:
+    if intermediate_controller in source:
+        source = source.replace(
+            intermediate_controller,
+            new_controller,
+            1
+        )
+    else:
+        source = replace_once(
+            source,
+            old_controller,
+            new_controller,
+            "root controller wrapper"
+        )
 
 arguments_anchor = '''    let arguments = GhostBaseSettingsArguments(updateBool: { key, value in'''
 
@@ -513,3 +564,234 @@ for needle in (
     require(needle in result, f"proof missing: {needle}")
 
 print("[v1.0R MENU] 8-section settings split OK")
+
+# MARK: GhostBase v1.0R Main Settings Group
+
+import re
+
+MAIN_ITEMS = (
+    SRC
+    / "submodules"
+    / "TelegramUI"
+    / "Components"
+    / "PeerInfo"
+    / "PeerInfoScreen"
+    / "Sources"
+    / "PeerInfoSettingsItems.swift"
+)
+
+MAIN_MARKER = (
+    "// MARK: GhostBase v1.0R Main Settings Group"
+)
+
+require(
+    MAIN_ITEMS.is_file(),
+    f"missing main settings source: {MAIN_ITEMS}"
+)
+
+items_source = MAIN_ITEMS.read_text(
+    encoding="utf-8"
+)
+
+if MAIN_MARKER not in items_source:
+    action_needle = (
+        "interaction.openSettings(.ghostbase)"
+    )
+
+    action_index = items_source.find(
+        action_needle
+    )
+
+    require(
+        action_index >= 0,
+        "existing GhostBase main-settings row not found"
+    )
+
+    append_start = items_source.rfind(
+        "items[.",
+        0,
+        action_index
+    )
+
+    require(
+        append_start >= 0,
+        "GhostBase append start not found"
+    )
+
+    line_start = (
+        items_source.rfind(
+            "\n",
+            0,
+            append_start
+        )
+        + 1
+    )
+
+    indent = items_source[
+        line_start:append_start
+    ]
+
+    section_match = re.search(
+        r"items\[\.(\w+)\]",
+        items_source[
+            append_start:action_index
+        ]
+    )
+
+    require(
+        section_match is not None,
+        "GhostBase settings section not found"
+    )
+
+    section = section_match.group(1)
+
+    open_index = items_source.find(
+        "(",
+        append_start
+    )
+
+    require(
+        open_index >= 0,
+        "GhostBase append opening bracket not found"
+    )
+
+    depth = 0
+    append_end = None
+
+    for index in range(
+        open_index,
+        len(items_source)
+    ):
+        character = items_source[index]
+
+        if character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+
+            if depth == 0:
+                append_end = index + 1
+                break
+
+    require(
+        append_end is not None,
+        "GhostBase append closing bracket not found"
+    )
+
+    rows = [
+        (
+            0,
+            "GhostBase",
+            "GhostBaseHome",
+            "home",
+        ),
+        (
+            1,
+            "Ghost Mode",
+            "GhostBaseGhostMode",
+            "ghostMode",
+        ),
+        (
+            2,
+            "Messages",
+            "GhostBaseMessages",
+            "messages",
+        ),
+        (
+            3,
+            "Protected Content",
+            "GhostBaseProtectedContent",
+            "protectedContent",
+        ),
+        (
+            4,
+            "Media & Stories",
+            "GhostBaseMediaStories",
+            "mediaStories",
+        ),
+        (
+            5,
+            "Appearance",
+            "GhostBaseAppearance",
+            "appearance",
+        ),
+        (
+            6,
+            "Debug / Research",
+            "GhostBaseDebugResearch",
+            "debugResearch",
+        ),
+        (
+            7,
+            "About",
+            "GhostBaseAbout",
+            "about",
+        ),
+    ]
+
+    generated = [MAIN_MARKER]
+
+    for item_id, title, icon, page in rows:
+        generated.append(
+            f'''items[.{section}]!.append(
+    PeerInfoScreenDisclosureItem(
+        id: {item_id},
+        text: "{title}",
+        icon: UIImage(
+            bundleImageName: "{icon}"
+        ),
+        action: {{
+            UserDefaults.standard.set(
+                "{page}",
+                forKey: "GhostBase.Settings.InitialPage"
+            )
+            interaction.openSettings(.ghostbase)
+        }}
+    )
+)'''
+        )
+
+    replacement = (
+        "\n" + indent
+    ).join(generated)
+
+    items_source = (
+        items_source[:append_start]
+        + replacement
+        + items_source[append_end:]
+    )
+
+    MAIN_ITEMS.write_text(
+        items_source,
+        encoding="utf-8"
+    )
+
+result_items = MAIN_ITEMS.read_text(
+    encoding="utf-8"
+)
+
+for required_icon in (
+    "GhostBaseHome",
+    "GhostBaseGhostMode",
+    "GhostBaseMessages",
+    "GhostBaseProtectedContent",
+    "GhostBaseMediaStories",
+    "GhostBaseAppearance",
+    "GhostBaseDebugResearch",
+    "GhostBaseAbout",
+):
+    require(
+        required_icon in result_items,
+        f"main row missing: {required_icon}"
+    )
+
+require(
+    result_items.count(
+        "GhostBase.Settings.InitialPage"
+    ) >= 8,
+    "not all main settings actions were added"
+)
+
+print(
+    "[v1.0R MENU] main Telegram settings group: 8 rows OK"
+)
