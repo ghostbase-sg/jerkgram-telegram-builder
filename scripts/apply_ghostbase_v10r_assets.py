@@ -37,9 +37,58 @@ if not SOURCE_DIR.is_dir():
         f"[v1.0R ASSETS] missing source directory: {SOURCE_DIR}"
     )
 
-if not CATALOG_DIR.is_dir():
+SG_SETTINGS_BUILD = CATALOG_DIR.parent / "BUILD"
+TELEGRAM_BUILD = (
+    ROOT
+    / "work"
+    / "swiftgram-src"
+    / "Telegram"
+    / "BUILD"
+)
+
+if not SG_SETTINGS_BUILD.is_file():
     raise RuntimeError(
-        f"[v1.0R ASSETS] missing asset catalog: {CATALOG_DIR}"
+        f"[v1.0R ASSETS] missing SGSettingsUI BUILD: {SG_SETTINGS_BUILD}"
+    )
+
+if not TELEGRAM_BUILD.is_file():
+    raise RuntimeError(
+        f"[v1.0R ASSETS] missing Telegram BUILD: {TELEGRAM_BUILD}"
+    )
+
+if 'name = "SGUIAssets"' not in SG_SETTINGS_BUILD.read_text(
+    encoding="utf-8"
+):
+    raise RuntimeError(
+        "[v1.0R ASSETS] SGUIAssets filegroup missing"
+    )
+
+if "//Swiftgram/SGSettingsUI:SGUIAssets" not in TELEGRAM_BUILD.read_text(
+    encoding="utf-8"
+):
+    raise RuntimeError(
+        "[v1.0R ASSETS] SGUIAssets not connected to Telegram resources"
+    )
+
+CATALOG_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+catalog_contents = CATALOG_DIR / "Contents.json"
+
+if not catalog_contents.is_file():
+    catalog_contents.write_text(
+        json.dumps(
+            {
+                "info": {
+                    "author": "xcode",
+                    "version": 1,
+                }
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
     )
 
 for asset_name, source_name in ICONS.items():
