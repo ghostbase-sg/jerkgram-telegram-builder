@@ -211,19 +211,30 @@ header = HEADER.read_text()
 header_marker = "GhostBase v1.0U hide own phone header"
 
 if header_marker not in header:
-    header_anchor = None
+    old = """            // MARK: Swiftgram
+            if title.isEmpty {
+                if let peer = peer as? TelegramUser, let phone = peer.phone, !self.hidePhoneInSettings {
+                    title = formatPhoneNumber(context: self.context, number: phone)
+                } else if let addressName = peer.addressName {
+                    title = "@\\(addressName)"
+                } else {
+                    title = "_"
+                }
+            }
 
-    for candidate in (
-        "            // MARK: Swiftgram\n            if title.isEmpty {\n",
-        "            if title.isEmpty {\n",
-    ):
-        if candidate in header:
-            header_anchor = candidate
-            break
+            titleStringText = title
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white)
+            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
+            
+            if self.isSettings, let user = peer as? TelegramUser {
+                // MARK: Swiftgram
+                var formattedPhone = formatPhoneNumber(context: self.context, number: user.phone ?? "")
+                if !formattedPhone.isEmpty && self.hidePhoneInSettings {
+                    formattedPhone = ""
+                }
+"""
 
-    need(header_anchor is not None, "missing anchor: header phone state")
-
-    replacement = """            // MARK: GhostBase v1.0U hide own phone header
+    new = """            // MARK: GhostBase v1.0U hide own phone header
             let ghostBaseHideOwnPhone = (
                 (
                     UserDefaults.standard.object(
@@ -237,50 +248,28 @@ if header_marker not in header:
             )
 
             if title.isEmpty {
+                if let peer = peer as? TelegramUser, let phone = peer.phone, !ghostBaseHideOwnPhone {
+                    title = formatPhoneNumber(context: self.context, number: phone)
+                } else if let addressName = peer.addressName {
+                    title = "@\\(addressName)"
+                } else {
+                    title = "_"
+                }
+            }
+
+            titleStringText = title
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white)
+            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
+            
+            if self.isSettings, let user = peer as? TelegramUser {
+                var formattedPhone = formatPhoneNumber(context: self.context, number: user.phone ?? "")
+                if !formattedPhone.isEmpty && ghostBaseHideOwnPhone {
+                    formattedPhone = ""
+                }
 """
 
-    header = header.replace(
-        header_anchor,
-        replacement,
-        1
-    )
-
-    title_candidates = (
-        "if let peer = peer as? TelegramUser, let phone = peer.phone, !self.hidePhoneInSettings {",
-        "if let peer = peer as? TelegramUser, let phone = peer.phone {",
-    )
-
-    title_anchor = next(
-        (item for item in title_candidates if item in header),
-        None
-    )
-
-    need(title_anchor is not None, "missing anchor: header title phone")
-
-    header = header.replace(
-        title_anchor,
-        "if let peer = peer as? TelegramUser, let phone = peer.phone, !ghostBaseHideOwnPhone {",
-        1
-    )
-
-    subtitle_candidates = (
-        "if !formattedPhone.isEmpty && self.hidePhoneInSettings {",
-        "if !formattedPhone.isEmpty && ghostBaseHideOwnPhone {",
-    )
-
-    subtitle_anchor = next(
-        (item for item in subtitle_candidates if item in header),
-        None
-    )
-
-    need(subtitle_anchor is not None, "missing anchor: header subtitle phone")
-
-    if "self.hidePhoneInSettings" in subtitle_anchor:
-        header = header.replace(
-            subtitle_anchor,
-            "if !formattedPhone.isEmpty && ghostBaseHideOwnPhone {",
-            1
-        )
+    need(old in header, "missing anchor: official header phone block")
+    header = header.replace(old, new, 1)
 
 HEADER.write_text(header)
 
