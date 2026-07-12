@@ -36,6 +36,10 @@ echo
 echo "== apply GhostBase v1.0R settings split =="
 python3 ../../scripts/apply_ghostbase_v10r_menu.py
 
+echo
+echo "== apply GhostBase v1.0S =="
+python3 ../../scripts/apply_ghostbase_v10s_public_controls.py
+
 echo "== verify GhostBase v1.0R settings split =="
 grep -nE   'GhostBase v1.0R Settings Split|GhostBaseHome|GhostBaseGhostMode|GhostBaseMessages|GhostBaseProtectedContent|GhostBaseMediaStories|GhostBaseAppearance|GhostBaseDebugResearch|GhostBaseAbout'   submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
 
