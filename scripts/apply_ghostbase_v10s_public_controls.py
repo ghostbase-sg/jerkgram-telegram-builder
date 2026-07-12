@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "work/swiftgram-src"
@@ -531,25 +532,14 @@ if inline_marker not in chat_controller:
 
     block = chat_controller[start:end]
 
-    closure_anchor = (
-        "        let sendMessage: (Int32?) -> Void = "
-        "{ [weak self] scheduleTime in\n"
-    )
-
-    reply_anchor = (
-        "            let replyMessageSubject = "
-        "self.presentationInterfaceState.interfaceState."
-        "replyMessageSubject\n"
+    reply_match = re.search(
+        r'(?m)^[ \t]*let replyMessageSubject\s*=\s*self\.presentationInterfaceState\.interfaceState\.replyMessageSubject[ \t]*$',
+        block
     )
 
     require(
-        closure_anchor in block,
-        "inline send closure anchor"
-    )
-
-    require(
-        reply_anchor in block,
-        "inline reply subject anchor"
+        reply_match is not None,
+        "inline replyMessageSubject anchor"
     )
 
     injection = """            // MARK: GhostBase v1.0S inline-result scheduled send
@@ -579,10 +569,12 @@ if inline_marker not in chat_controller:
 
 """
 
-    block = block.replace(
-        reply_anchor,
-        injection + reply_anchor,
-        1
+    insert_at = reply_match.start()
+
+    block = (
+        block[:insert_at]
+        + injection
+        + block[insert_at:]
     )
 
     require(
