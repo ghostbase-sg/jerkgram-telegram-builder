@@ -43,6 +43,10 @@ python3 ../../scripts/apply_ghostbase_v10s_public_controls.py
 echo
 echo "== apply GhostBase v1.0S post share fix =="
 python3 ../../scripts/apply_ghostbase_v10s_post_share_fix.py
+python3 scripts/apply_ghostbase_v10t.py
+python3 scripts/apply_ghostbase_v10t_style_settings.py
+python3 scripts/apply_ghostbase_v10t_style_menu.py
+python3 scripts/apply_ghostbase_v10t_style_runtime.py
 
 echo "== verify GhostBase v1.0R settings split =="
 grep -nE   'GhostBase v1.0R Settings Split|GhostBaseHome|GhostBaseGhostMode|GhostBaseMessages|GhostBaseProtectedContent|GhostBaseMediaStories|GhostBaseAppearance|GhostBaseDebugResearch|GhostBaseAbout'   submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
