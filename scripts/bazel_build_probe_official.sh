@@ -48,6 +48,10 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10t.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10t_style_settings.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10t_style_menu.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10t_style_runtime.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10u.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10u_voice_refine.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10u_style_preview.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10u_appearance.py"
 
 echo "== verify GhostBase v1.0R settings split =="
 grep -nE   'GhostBase v1.0R Settings Split|GhostBaseHome|GhostBaseGhostMode|GhostBaseMessages|GhostBaseProtectedContent|GhostBaseMediaStories|GhostBaseAppearance|GhostBaseDebugResearch|GhostBaseAbout'   submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
