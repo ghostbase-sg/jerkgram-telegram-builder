@@ -181,11 +181,19 @@ profile = PROFILE.read_text()
 profile_marker = "GhostBase v1.0U hide own phone profile"
 
 if profile_marker not in profile:
-    profile = once(
-        profile,
-        '''        if let phone = user.phone, !(SGSimpleSettings.shared.hidePhoneInSettings && isMyProfile) {
-''',
-        '''        // MARK: GhostBase v1.0U hide own phone profile
+    anchor = None
+
+    for candidate in (
+        '        if let phone = user.phone, !(SGSimpleSettings.shared.hidePhoneInSettings && isMyProfile) {\n',
+        '        if let phone = user.phone {\n',
+    ):
+        if candidate in profile:
+            anchor = candidate
+            break
+
+    need(anchor is not None, "missing anchor: profile phone row")
+
+    replacement = """        // MARK: GhostBase v1.0U hide own phone profile
         let ghostBaseHideOwnPhone = (
             UserDefaults.standard.object(
                 forKey: "GhostBase.Appearance.HideOwnPhone"
@@ -193,9 +201,9 @@ if profile_marker not in profile:
         ) ?? false
 
         if let phone = user.phone, !(ghostBaseHideOwnPhone && isMyProfile) {
-''',
-        "profile phone row"
-    )
+"""
+
+    profile = profile.replace(anchor, replacement, 1)
 
 PROFILE.write_text(profile)
 
@@ -203,11 +211,20 @@ header = HEADER.read_text()
 header_marker = "GhostBase v1.0U hide own phone header"
 
 if header_marker not in header:
-    header = once(
-        header,
-        '''            // MARK: Swiftgram
-            if title.isEmpty {
-''',
+    header_anchor = None
+
+    for candidate in (
+        "            // MARK: Swiftgram\n            if title.isEmpty {\n",
+        "            if title.isEmpty {\n",
+    ):
+        if candidate in header:
+            header_anchor = candidate
+            break
+
+    need(header_anchor is not None, "missing anchor: header phone state")
+
+    header = header.replace(
+        header_anchor,
         '''            // MARK: GhostBase v1.0U hide own phone header
             let ghostBaseHideOwnPhone = (
                 (
