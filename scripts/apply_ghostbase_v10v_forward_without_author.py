@@ -3,15 +3,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 import re
 
-SETTINGS = Path(
-    "work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/"
-    "GhostBaseSettingsController.swift"
-)
-PANEL = Path(
-    "work/swiftgram-src/submodules/TelegramUI/Components/Chat/"
-    "ChatMessageSelectionInputPanelNode/Sources/"
-    "ChatMessageSelectionInputPanelNode.swift"
-)
+SETTINGS = ROOT / "work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
+PANEL = ROOT / "work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode/Sources/ChatMessageSelectionInputPanelNode.swift"
 
 settings = SETTINGS.read_text()
 panel = PANEL.read_text()
