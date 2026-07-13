@@ -1,23 +1,44 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
-path = ROOT / "work/swiftgram-src/submodules/TelegramUI/Sources/Chat/ChatControllerMediaRecording.swift"
+path = ROOT / (
+    "work/swiftgram-src/submodules/TelegramUI/Sources/Chat/"
+    "ChatControllerMediaRecording.swift"
+)
 
 text = path.read_text()
+marker = "GhostBase v1.0V scheduled voice native cleanup"
 
-old = """            let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: transformedMessages)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
-                if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
-                    strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                }
-            })
+if marker in text:
+    print("[v1.0V voice] already applied")
+else:
+    pattern = re.compile(
+        r'''(?P<start>
+            let\ _\ =\ \(enqueueMessages\(
+            account:\ self\.context\.account,\ 
+            peerId:\ peerId,\ 
+            messages:\ transformedMessages
+            \)
+            \n[ \t]*\|>\ deliverOnMainQueue
+            \)\.startStandalone\(next:\ \{\ \[weak\ self\]\ _\ in
+        )
+        .*?
+        (?P<end>
+            \n[ \t]*\}\)
+        )
+        ''',
+        re.X | re.S
+    )
 
-            if ghostBaseVoiceWasScheduled {
-"""
+    match = pattern.search(text)
+    if match is None:
+        raise RuntimeError(
+            "[v1.0V voice] enqueue callback not found"
+        )
 
-new = """            let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: transformedMessages)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+    replacement = match.group("start") + '''
                 guard let strongSelf = self else {
                     return
                 }
@@ -44,37 +65,35 @@ new = """            let _ = (enqueueMessages(account: self.context.account, pee
                             }
                         }
                     )
-                }
-            })
+                }''' + match.group("end")
 
-            if ghostBaseVoiceWasScheduled {
-"""
+    text = (
+        text[:match.start()]
+        + replacement
+        + text[match.end():]
+    )
 
-if "GhostBase v1.0V scheduled voice native cleanup" in text:
-    print("[v1.0V voice] already applied")
-elif old not in text:
-    raise RuntimeError("[v1.0V voice] enqueue anchor missing")
-else:
-    path.write_text(text.replace(old, new, 1))
+    path.write_text(text)
     print("[v1.0V voice] native cleanup applied")
 
 text = path.read_text()
 
-import re
-
-pattern = re.compile(
-    r'\n[ \t]*if ghostBaseVoiceWasScheduled \{\n'
-    r'[ \t]*// MARK: GhostBase v1\.0U scheduled voice complete cleanup'
-    r'.*?'
-    r'\n[ \t]*\}\n'
-    r'(?=\n[ \t]*donateSendMessageIntent)',
-    re.S
+old_cleanup = re.compile(
+    r'''
+    \n[ \t]*if\ ghostBaseVoiceWasScheduled\ \{
+    \n[ \t]*//\ MARK:\ GhostBase\ v1\.0U
+    \ scheduled\ voice\ complete\ cleanup
+    .*?
+    \n[ \t]*\}
+    (?=\n[ \t]*donateSendMessageIntent)
+    ''',
+    re.X | re.S
 )
 
-text, count = pattern.subn("\n", text, count=1)
+text, count = old_cleanup.subn("\n", text, count=1)
 
-if count != 0:
+if count:
     path.write_text(text)
     print("[v1.0V voice] old premature cleanup removed")
 else:
-    print("[v1.0V voice] old cleanup already absent")
+    print("[v1.0V voice] old premature cleanup absent")
