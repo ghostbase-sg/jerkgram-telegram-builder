@@ -57,6 +57,7 @@ echo "== apply GhostBase v1.0V =="
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10v_voice_cleanup.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10v_forward_without_author.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10v_style_menu_fix.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/preflight_ghostbase_v10v.py"
 
 echo "== verify GhostBase v1.0R settings split =="
 grep -nE   'GhostBase v1.0R Settings Split|GhostBaseHome|GhostBaseGhostMode|GhostBaseMessages|GhostBaseProtectedContent|GhostBaseMediaStories|GhostBaseAppearance|GhostBaseDebugResearch|GhostBaseAbout'   submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift

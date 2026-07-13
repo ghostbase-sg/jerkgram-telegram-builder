@@ -47,6 +47,17 @@ else:
                     strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 }
 
+                let ghostBaseVoiceWasScheduled = transformedMessages.contains { message in
+                    switch message {
+                    case let .message(_, attributes, _, _, _, _, _, _, _, _):
+                        return attributes.contains {
+                            $0 is OutgoingScheduleInfoMessageAttribute
+                        }
+                    case .forward:
+                        return false
+                    }
+                }
+
                 if ghostBaseVoiceWasScheduled {
                     // MARK: GhostBase v1.0V scheduled voice native cleanup
                     strongSelf.deleteMediaRecording()
