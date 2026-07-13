@@ -188,10 +188,11 @@ forward_block = history_block + '''        // MARK: GhostBase v1.0W forward with
                             as? ChatControllerImpl {
                         chatController.forwardMessages(
                             forceHideNames: true,
-                            messages:
+                            messageIds: (
                                 selectAll || isImage
                                 ? messages
-                                : [message],
+                                : [message]
+                            ).map { $0.id },
                             options: ChatInterfaceForwardOptionsState(
                                 hideNames: true,
                                 hideCaptions: false,

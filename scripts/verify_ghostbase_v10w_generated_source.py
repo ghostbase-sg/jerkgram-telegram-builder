@@ -25,7 +25,8 @@ settings = (
 checks = {
     "direct ChatControllerImpl forwarding":
         "interfaceInteraction.chatController()" in context
-        and "forceHideNames: true" in context,
+        and "forceHideNames: true" in context
+        and "messageIds:" in context,
 
     "invalid string-mode forwarding removed":
         '"forwardMessagesWithNoNames"' not in context[
