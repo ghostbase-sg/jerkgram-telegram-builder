@@ -183,10 +183,23 @@ forward_block = history_block + '''        // MARK: GhostBase v1.0W forward with
                     )
                 },
                 action: { _, f in
-                    interfaceInteraction.forwardMessages(
-                        selectAll || isImage ? messages : [message],
-                        "forwardMessagesWithNoNames"
-                    )
+                    if let chatController =
+                        interfaceInteraction.chatController()
+                            as? ChatControllerImpl {
+                        chatController.forwardMessages(
+                            forceHideNames: true,
+                            messages:
+                                selectAll || isImage
+                                ? messages
+                                : [message],
+                            options: ChatInterfaceForwardOptionsState(
+                                hideNames: true,
+                                hideCaptions: false,
+                                unhideNamesOnCaptionChange: false
+                            ),
+                            resetCurrent: true
+                        )
+                    }
                     f(.dismissWithoutContent)
                 }
             )))
