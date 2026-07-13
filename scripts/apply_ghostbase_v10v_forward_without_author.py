@@ -113,7 +113,9 @@ if settings.count(row_marker) < 4:
 
 panel_marker = "GhostBase v1.0V forward without author visibility"
 
-if panel_marker not in panel:
+if panel_marker in panel:
+    print("[v1.0V forward] panel already patched")
+else:
     anchor = "        reportButton.isHidden = true\n"
 
     block = (
@@ -129,7 +131,11 @@ if panel_marker not in panel:
         + "!ghostBaseShowForwardWithoutAuthor\n"
     )
 
-    panel = once(panel, anchor, block, "selection panel")
+    if anchor in panel:
+        panel = panel.replace(anchor, block, 1)
+        print("[v1.0V forward] panel visibility inserted")
+    else:
+        print("[v1.0V forward] panel anchor absent, existing SG button kept")
 
 SETTINGS.write_text(settings)
 PANEL.write_text(panel)
