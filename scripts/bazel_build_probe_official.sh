@@ -7,7 +7,7 @@ BAZEL_BIN="${BAZEL_BIN:-bazelisk}"
 GHOSTBASE_BAZEL_TARGET="${GHOSTBASE_BAZEL_TARGET:-//Telegram:Telegram}"
 GHOSTBASE_PROBE_ONLY="${GHOSTBASE_PROBE_ONLY:-0}"
 
-SIGN_DIR="$RUNNER_TEMP/signing"
+SIGN_DIR="${RUNNER_TEMP:-/tmp}/signing"
 mkdir -p "$SIGN_DIR"
 
 cd work/swiftgram-src
@@ -51,6 +51,9 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10t_style_runtime.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10u.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10u_style_preview.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10u_appearance.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_voice_cleanup.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_forward_without_author.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_native_style_page.py"
 
 echo
 echo "== apply GhostBase v1.0V =="
