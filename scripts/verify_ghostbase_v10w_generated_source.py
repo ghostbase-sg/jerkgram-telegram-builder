@@ -23,18 +23,29 @@ settings = (
 ).read_text()
 
 checks = {
-    "direct ChatControllerImpl forwarding":
-        "interfaceInteraction.chatController()" in context
-        and "forceHideNames: true" in context
-        and "messageIds:" in context,
+    "official forward without author":
+        "GhostBase v1.0W official forward without author" in context
+        and "interfaceInteraction.chatController()" in context
+        and "messageIds: targetMessages.map { $0.id }" in context
+        and "ChatInterfaceForwardOptionsState(" in context
+        and "hideNames: true" in context
+        and "resetCurrent: true" in context,
 
-    "invalid string-mode forwarding removed":
-        '"forwardMessagesWithNoNames"' not in context[
+    "obsolete SG forwarding removed":
+        "forceHideNames: true" not in context[
             context.find(
-                "GhostBase v1.0W forward without author action"
+                "GhostBase v1.0W official forward without author"
             ):
             context.find(
-                "GhostBase v1.0W forward without author action"
+                "GhostBase v1.0W official forward without author"
+            ) + 2500
+        ]
+        and '"forwardMessagesWithNoNames"' not in context[
+            context.find(
+                "GhostBase v1.0W official forward without author"
+            ):
+            context.find(
+                "GhostBase v1.0W official forward without author"
             ) + 2500
         ],
 
@@ -50,6 +61,7 @@ checks = {
         "GhostBase v1.0T compact send style menu"
         not in settings,
 }
+
 
 failed = [name for name, ok in checks.items() if not ok]
 
