@@ -44,8 +44,7 @@ forward = once(
                             ForwardOptionsMessageAttribute(
                                 hideNames:
                                     forwardOptions?.hideNames == true
-                                    || options?.hideNames == true
-                                    || forceHideNames,
+                                    || options?.hideNames == true,
                                 hideCaptions:
                                     forwardOptions?.hideCaptions == true
                                     || options?.hideCaptions == true
@@ -57,7 +56,6 @@ forward = once(
 new_hide = (
     "hideNames: !hasNotOwnMessages "
     "|| (options?.hideNames ?? false) "
-    "|| forceHideNames"
 )
 
 if forward.count(new_hide) != 2:
@@ -103,8 +101,7 @@ saved_replacement = """return .forward(
                             threadId: nil,
                             grouping: .auto,
                             attributes: (
-                                forceHideNames
-                                || options?.hideNames == true
+                                options?.hideNames == true
                             )
                             ? [
                                 ForwardOptionsMessageAttribute(
@@ -149,8 +146,7 @@ forward = once(
                                                         ChatInterfaceForwardOptionsState(
                                                             hideNames:
                                                                 !hasNotOwnMessages
-                                                                || (options?.hideNames ?? false)
-                                                                || forceHideNames,
+                                                                || (options?.hideNames ?? false),
                                                             hideCaptions:
                                                                 options?.hideCaptions
                                                                 ?? false,
