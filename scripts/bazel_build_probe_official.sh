@@ -56,6 +56,8 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_forward_official.p
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_hide_phone_settings.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_metadata.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_native_style_page.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10x_runtime_fixes.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10x_copy_peer_id.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10w_generated_source.py"
 
 echo

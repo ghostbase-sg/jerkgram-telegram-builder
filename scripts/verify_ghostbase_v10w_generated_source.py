@@ -50,7 +50,7 @@ checks = {
         ],
 
     "voice cleanup":
-        "GhostBase v1.0W scheduled voice post-enqueue cleanup"
+        "GhostBase v1.0X scheduled voice immediate success cleanup"
         in voice,
 
     "native style page":
