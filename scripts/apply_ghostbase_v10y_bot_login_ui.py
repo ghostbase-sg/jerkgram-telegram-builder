@@ -251,20 +251,58 @@ fn = replace_once(
     "bot login button property"
 )
 
-if "    var loginAsBot: (() -> Void)?\n" not in fn:
-    callback_anchor = "    var retryPasskey: (() -> Void)?\n"
+# Remove the old accidental placement inside PhoneAndCountryNode.
+wrong_callback_location = """    var selectCountryCode: (() -> Void)?
+    var checkPhone: (() -> Void)?
+    var loginAsBot: (() -> Void)?
+    var hasNumberUpdated: ((Bool) -> Void)?
+"""
 
-    if callback_anchor not in fn:
+correct_phone_callback_block = """    var selectCountryCode: (() -> Void)?
+    var checkPhone: (() -> Void)?
+    var hasNumberUpdated: ((Bool) -> Void)?
+"""
+
+if wrong_callback_location in fn:
+    fn = fn.replace(
+        wrong_callback_location,
+        correct_phone_callback_block,
+        1
+    )
+
+node_class_anchor = (
+    "final class AuthorizationSequencePhoneEntryControllerNode: "
+    "ASDisplayNode {"
+)
+
+node_class_start = fn.find(node_class_anchor)
+
+if node_class_start == -1:
+    raise SystemExit(
+        "anchor not found: phone entry controller node class"
+    )
+
+node_class_source = fn[node_class_start:]
+
+if "    var loginAsBot: (() -> Void)?\n" not in node_class_source:
+    callback_anchor = "    var retryPasskey: (() -> Void)?\n"
+    callback_position = fn.find(
+        callback_anchor,
+        node_class_start
+    )
+
+    if callback_position == -1:
         raise SystemExit(
-            "anchor not found: bot login callback property"
+            "anchor not found: controller node retryPasskey"
         )
 
-    fn = fn.replace(
-        callback_anchor,
-        callback_anchor
+    callback_end = callback_position + len(callback_anchor)
+
+    fn = (
+        fn[:callback_end]
         + "\n"
-        + "    var loginAsBot: (() -> Void)?\n",
-        1
+        + "    var loginAsBot: (() -> Void)?\n"
+        + fn[callback_end:]
     )
 
 fn = replace_once(

@@ -83,10 +83,28 @@ combinedUi = (
     + passwordController + passwordNode
 )
 
+phoneNodeClassMarker = (
+    "final class AuthorizationSequencePhoneEntryControllerNode: "
+    "ASDisplayNode {"
+)
+
+require(
+    phoneNodeClassMarker in phoneNode,
+    "phone entry controller node class is missing"
+)
+
+phoneNodeClass = phoneNode[
+    phoneNode.index(phoneNodeClassMarker):
+]
+
+require(
+    "    var loginAsBot: (() -> Void)?" in phoneNodeClass,
+    "loginAsBot callback is outside the controller node class"
+)
+
 for proof in (
     "GhostBase v1.0Y Bot Login UI",
     "ghostBaseBotLoginNode",
-    "var loginAsBot: (() -> Void)?",
     "openGhostBaseBotLogin",
     "mode: .ghostBaseBotToken",
     "ghostBaseAuthorizeBot(",
