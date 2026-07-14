@@ -397,11 +397,6 @@ controller_block = r'''    var openSendTextStyleImpl: (() -> Void)?
                 )
 
             case "hiddenGiftsOther":
-                let presentationData =
-                    context.sharedContext.currentPresentationData.with {
-                        $0
-                    }
-
                 let controller =
                     context.sharedContext.makePeerSelectionController(
                         PeerSelectionControllerParams(
@@ -435,13 +430,38 @@ controller_block = r'''    var openSendTextStyleImpl: (() -> Void)?
         updateBool:'''
 
 if controller_block not in text:
-    if controller_anchor not in text:
+    if controller_anchor in text:
+        text = text.replace(
+            controller_anchor,
+            controller_block,
+            1
+        )
+    elif (
+        'case "hiddenGiftsOther":' not in text
+        or "runHiddenGiftsProbe(" not in text
+    ):
         raise SystemExit("controller action anchor not found")
+
+legacy_unused_presentation_data = """            case "hiddenGiftsOther":
+                let presentationData =
+                    context.sharedContext.currentPresentationData.with {
+                        $0
+                    }
+
+                let controller =
+"""
+
+fixed_hidden_gifts_selector = """            case "hiddenGiftsOther":
+                let controller =
+"""
+
+if legacy_unused_presentation_data in text:
     text = text.replace(
-        controller_anchor,
-        controller_block,
+        legacy_unused_presentation_data,
+        fixed_hidden_gifts_selector,
         1
     )
+    print("[v1.0Y] unused Hidden Gifts presentationData removed")
 
 text = once(
     text,

@@ -154,6 +154,12 @@ for proof in (
 ):
     require(proof in settings, f"missing Hidden Gifts proof: {proof}")
 
+require(
+    'case "hiddenGiftsOther":\n'
+    '                let presentationData' not in settings,
+    "unused presentationData remains in Hidden Gifts selector"
+)
+
 for forbidden in (
     "sendStarsPaymentForm",
     "sendPaymentForm",
