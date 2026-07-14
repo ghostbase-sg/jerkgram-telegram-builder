@@ -11,6 +11,7 @@ SIGN_DIR="${RUNNER_TEMP:-/tmp}/signing"
 mkdir -p "$SIGN_DIR"
 
 cd work/swiftgram-src
+export GHOSTBASE_SOURCE_ROOT="$PWD"
 
 echo "== clean stale GhostBase final artifacts =="
 rm -rf ghostbase-final
