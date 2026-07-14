@@ -65,7 +65,7 @@ block = '''        // MARK: GhostBase v1.0W official forward without author
                         interfaceInteraction.chatController()
                             as? ChatControllerImpl {
                         let targetMessages =
-                            selectAll || isImage
+                            selectAll
                             ? messages
                             : [message]
 
