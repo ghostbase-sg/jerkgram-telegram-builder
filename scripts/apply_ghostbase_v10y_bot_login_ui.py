@@ -251,17 +251,21 @@ fn = replace_once(
     "bot login button property"
 )
 
-fn = replace_once(
-    fn,
-    """    var selectCountryCode: (() -> Void)?
-    var checkPhone: (() -> Void)?
-""",
-    """    var selectCountryCode: (() -> Void)?
-    var checkPhone: (() -> Void)?
-    var loginAsBot: (() -> Void)?
-""",
-    "bot login callback"
-)
+if "    var loginAsBot: (() -> Void)?\n" not in fn:
+    callback_anchor = "    var retryPasskey: (() -> Void)?\n"
+
+    if callback_anchor not in fn:
+        raise SystemExit(
+            "anchor not found: bot login callback property"
+        )
+
+    fn = fn.replace(
+        callback_anchor,
+        callback_anchor
+        + "\n"
+        + "    var loginAsBot: (() -> Void)?\n",
+        1
+    )
 
 fn = replace_once(
     fn,

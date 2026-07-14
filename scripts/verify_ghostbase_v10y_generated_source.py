@@ -86,6 +86,7 @@ combinedUi = (
 for proof in (
     "GhostBase v1.0Y Bot Login UI",
     "ghostBaseBotLoginNode",
+    "var loginAsBot: (() -> Void)?",
     "openGhostBaseBotLogin",
     "mode: .ghostBaseBotToken",
     "ghostBaseAuthorizeBot(",

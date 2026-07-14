@@ -59,14 +59,7 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_metadata.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10w_native_style_page.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10x_runtime_fixes.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10x_copy_peer_id.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_auth_core.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_login_ui.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_token_redaction.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_multiselect_forward.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_repeated_voice.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_hidden_gifts_probe.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10w_generated_source.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10y_generated_source.py"
 
 echo
 echo "== apply GhostBase v1.0V =="
@@ -292,6 +285,16 @@ python3 ../../scripts/fix_ghostbase_push_probe_swift_v10e.py
 echo "== real build probe =="
 echo "GHOSTBASE_PROBE_ONLY=$GHOSTBASE_PROBE_ONLY"
 echo "GHOSTBASE_BAZEL_TARGET=$GHOSTBASE_BAZEL_TARGET"
+
+echo "== apply/verify GhostBase v1.0Y final overlay =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_auth_core.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_login_ui.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_token_redaction.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_multiselect_forward.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_repeated_voice.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_hidden_gifts_probe.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10y_generated_source.py"
+
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
