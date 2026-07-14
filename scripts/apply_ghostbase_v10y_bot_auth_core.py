@@ -49,7 +49,7 @@ public func ghostBaseAuthorizeBot(
         automaticFloodWait: false
     )
     |> mapError { error -> GhostBaseBotAuthorizationError in
-        let description = error.errorDescription
+        let description = error.errorDescription ?? ""
 
         if description == "ACCESS_TOKEN_INVALID"
             || description == "BOT_TOKEN_INVALID" {
@@ -136,12 +136,28 @@ else:
         raise SystemExit("Authorization.swift insertion anchor not found")
 
     patched = text.replace(anchor, addition + anchor, 1)
+    print("[v1.0Y] Bot Authorization Core added")
 
-    if dry_run:
+bad_optional_description = (
+    "        let description = error.errorDescription\n"
+)
+fixed_optional_description = (
+    "        let description = error.errorDescription ?? \"\"\n"
+)
+
+if bad_optional_description in patched:
+    patched = patched.replace(
+        bad_optional_description,
+        fixed_optional_description,
+        1
+    )
+    print("[v1.0Y] optional RPC error description fixed")
+
+if dry_run:
+    if patched != text:
         print(f"[DRY RUN] would update {path}")
-    else:
-        path.write_text(patched, encoding="utf-8")
-        print("[v1.0Y] Bot Authorization Core added")
+elif patched != text:
+    path.write_text(patched, encoding="utf-8")
 
 required = [
     marker,
