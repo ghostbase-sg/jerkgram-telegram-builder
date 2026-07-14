@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "work/swiftgram-src"
@@ -53,31 +54,51 @@ forward = once(
     "multiplePeersSelected forward options"
 )
 
-old_hide = (
-    "hideNames: !hasNotOwnMessages "
-    "|| (options?.hideNames ?? false)"
-)
-
 new_hide = (
     "hideNames: !hasNotOwnMessages "
     "|| (options?.hideNames ?? false) "
     "|| forceHideNames"
 )
 
-count = forward.count(old_hide)
+if forward.count(new_hide) != 2:
+    old_hide_candidates = [
+        (
+            "hideNames: !hasNotOwnMessages "
+            "|| (options?.hideNames ?? false)"
+        ),
+        "hideNames: !hasNotOwnMessages",
+    ]
 
-if count not in (0, 2):
-    raise RuntimeError(
-        f"[v1.0X] unexpected single-peer hideNames count: {count}"
-    )
+    for old_hide in old_hide_candidates:
+        if forward.count(old_hide) == 2:
+            forward = forward.replace(old_hide, new_hide)
+            break
+    else:
+        raise RuntimeError(
+            "[v1.0X] missing two single-peer hideNames anchors"
+        )
 
-if count == 2:
-    forward = forward.replace(old_hide, new_hide)
+saved_start = forward.index(
+    "let mappedMessages = messages.map"
+)
+saved_end = forward.index(
+    "let _ = (reactionItems",
+    saved_start
+)
+saved_block = forward[saved_start:saved_end]
 
-forward = once(
-    forward,
-    '''return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: forceHideNames ? [ForwardOptionsMessageAttribute(hideNames: true, hideCaptions: false)] : [], correlationId: correlationId)''',
-    '''return .forward(
+saved_pattern = re.compile(
+    r"return \.forward\("
+    r"\s*source: message\.id,"
+    r"\s*threadId: nil,"
+    r"\s*grouping: \.auto,"
+    r"\s*attributes:.*?,"
+    r"\s*correlationId: correlationId"
+    r"\s*\)",
+    re.S
+)
+
+saved_replacement = """return .forward(
                             source: message.id,
                             threadId: nil,
                             grouping: .auto,
@@ -94,8 +115,23 @@ forward = once(
                             ]
                             : [],
                             correlationId: correlationId
-                        )''',
-    "saved messages forward attributes"
+                        )"""
+
+saved_block, saved_count = saved_pattern.subn(
+    saved_replacement,
+    saved_block,
+    count=1
+)
+
+if saved_count != 1:
+    raise RuntimeError(
+        "[v1.0X] Saved Messages forward expression not found"
+    )
+
+forward = (
+    forward[:saved_start]
+    + saved_block
+    + forward[saved_end:]
 )
 
 forward = once(
@@ -213,12 +249,7 @@ if "GhostBase v1.0X scheduled voice immediate success cleanup" \
         1
     )
 
-header = once(
-    header,
-    '''        if let peer = peer {
-            var title: String
-''',
-    '''        if let peer = peer {
+legacy_header_state = """        if let peer = peer {
             // MARK: GhostBase v1.0X hide own phone in profile header
             let ghostBaseShouldHideOwnPhone =
                 UserDefaults.standard.bool(
@@ -231,24 +262,69 @@ header = once(
                 || ghostBaseShouldHideOwnPhone
 
             var title: String
-''',
-    "profile header hide state"
-)
+"""
+
+official_header_state = """        if let peer = peer {
+            // MARK: GhostBase v1.0X hide own phone in profile header
+            let ghostBaseHidePhoneInHeader =
+                UserDefaults.standard.bool(
+                    forKey: "GhostBase.Appearance.HideOwnPhone"
+                )
+                && peer.id == self.context.account.peerId
+
+            var title: String
+"""
+
+if legacy_header_state in header:
+    header = header.replace(
+        legacy_header_state,
+        official_header_state,
+        1
+    )
+elif official_header_state not in header:
+    header = once(
+        header,
+        """        if let peer = peer {
+            var title: String
+""",
+        official_header_state,
+        "profile header hide state"
+    )
 
 header = once(
     header,
-    '''if let peer = peer as? TelegramUser, let phone = peer.phone, !self.hidePhoneInSettings {''',
-    '''if let peer = peer as? TelegramUser,
-                   let phone = peer.phone,
-                   !ghostBaseHidePhoneInHeader {''',
+    """if case let .user(user) = peer, let phone = user.phone {""",
+    """if case let .user(user) = peer,
+                   let phone = user.phone,
+                   !ghostBaseHidePhoneInHeader {""",
     "profile header title phone"
 )
 
 header = once(
     header,
-    '''if !formattedPhone.isEmpty && self.hidePhoneInSettings {''',
-    '''if !formattedPhone.isEmpty
-                    && ghostBaseHidePhoneInHeader {''',
+    """            if self.isSettings, case let .user(user) = peer {
+                var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
+                
+                if let mainUsername = user.addressName, !mainUsername.isEmpty {
+                    subtitle = "\\(subtitle) • @\\(mainUsername)"
+                }
+""",
+    """            if self.isSettings, case let .user(user) = peer {
+                var subtitle = ghostBaseHidePhoneInHeader
+                    ? ""
+                    : formatPhoneNumber(
+                        context: self.context,
+                        number: user.phone ?? ""
+                    )
+                
+                if let mainUsername = user.addressName, !mainUsername.isEmpty {
+                    if subtitle.isEmpty {
+                        subtitle = "@\\(mainUsername)"
+                    } else {
+                        subtitle = "\\(subtitle) • @\\(mainUsername)"
+                    }
+                }
+""",
     "profile header subtitle phone"
 )
 
