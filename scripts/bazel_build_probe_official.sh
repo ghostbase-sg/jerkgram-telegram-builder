@@ -311,6 +311,11 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_scheduled_voice_li
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10za_scheduled_voice_redirect.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_scheduled_voice_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10za_scheduled_voice_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zb_bot_difference_probe.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zb_bot_difference_ui.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zb_bot_difference_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zb_seasonal_gifts.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zb_seasonal_gifts_generated_source.py"
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
