@@ -93,7 +93,7 @@ if marker not in text:
                     return .single("""
                     users.getUsers(inputUserSelf)
                     rpcError: \(error.errorCode)
-                    rpcDescription: \(error.errorDescription)
+                    rpcDescription: \(error.errorDescription ?? "nil")
                     """)
                 }
 
@@ -119,7 +119,7 @@ if marker not in text:
                     return .single("""
                     updates.getState
                     rpcError: \(error.errorCode)
-                    rpcDescription: \(error.errorDescription)
+                    rpcDescription: \(error.errorDescription ?? "nil")
                     """)
                 }
 
@@ -171,7 +171,7 @@ if marker not in text:
                     return .single("""
                     messages.getDialogs
                     rpcError: \(error.errorCode)
-                    rpcDescription: \(error.errorDescription)
+                    rpcDescription: \(error.errorDescription ?? "nil")
                     """)
                 }
 
@@ -198,7 +198,7 @@ if marker not in text:
                     return .single("""
                     messages.getPinnedDialogs
                     rpcError: \(error.errorCode)
-                    rpcDescription: \(error.errorDescription)
+                    rpcDescription: \(error.errorDescription ?? "nil")
                     """)
                 }
 
@@ -239,6 +239,15 @@ require(
     "retryRequest" not in probe_source,
     "capability requests must not use retryRequest"
 )
+
+bad_optional_description = r'\(error.errorDescription)'
+fixed_optional_description = r'\(error.errorDescription ?? "nil")'
+
+if bad_optional_description in text:
+    text = text.replace(
+        bad_optional_description,
+        fixed_optional_description
+    )
 
 path.write_text(text, encoding="utf-8")
 

@@ -54,6 +54,18 @@ require(
     "direct capability probe must not retry"
 )
 
+require(
+    r'\(error.errorDescription)' not in core_text[probe_start:],
+    "optional RPC description is interpolated implicitly"
+)
+
+require(
+    core_text[probe_start:].count(
+        r'\(error.errorDescription ?? "nil")'
+    ) == 4,
+    "expected four explicit RPC description fallbacks"
+)
+
 for proof in (
     "GhostBase v1.0ZA Bot Capability UI",
     "Bot Account Capability Probe",
