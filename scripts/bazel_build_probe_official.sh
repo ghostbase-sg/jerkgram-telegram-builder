@@ -290,10 +290,17 @@ echo "== apply/verify GhostBase v1.0Y final overlay =="
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_auth_core.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_login_ui.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_bot_token_redaction.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_bot_login_runtime.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_multiselect_forward.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_repeated_voice.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10y_hidden_gifts_probe.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_hidden_gifts_core.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_hidden_gifts_deep_probe.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10y_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_hidden_gifts_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_bot_login_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_scheduled_voice_lifecycle.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_scheduled_voice_generated_source.py"
 
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
