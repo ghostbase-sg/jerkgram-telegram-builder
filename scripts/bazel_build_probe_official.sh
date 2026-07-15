@@ -299,9 +299,16 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_hidden_gifts_deep_
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10y_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_hidden_gifts_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_bot_login_generated_source.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_scheduled_voice_lifecycle.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_scheduled_voice_generated_source.py"
 
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10za_hidden_gifts_send.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10za_hidden_gifts_send_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10za_bot_capability_core.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10za_bot_capability_ui.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10za_bot_capability_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10z_scheduled_voice_lifecycle.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10za_scheduled_voice_redirect.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10z_scheduled_voice_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10za_scheduled_voice_generated_source.py"
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
