@@ -33,6 +33,8 @@ for proof in (
     "case let .result(_, items, _):",
     "ghostBaseMakeSeasonalGifts",
     "ghostBaseMergeSeasonalGifts",
+    "ghostBaseIsSeasonalGift",
+    ".file._parse()",
     "case seasonal",
     "case .seasonal:",
     "StarsFilter.seasonal.rawValue",
@@ -83,6 +85,16 @@ require(
 require(
     "serverIds.contains($0.id)" in text,
     "server-priority duplicate guard missing"
+)
+
+require(
+    "ghostBaseSeasonalGiftIds.contains($0.id)" not in text,
+    "unsafe StarGift enum id check remains"
+)
+
+require(
+    "items[descriptor.stickerIndex].file._parse()" in text,
+    "StickerPackItem accessor is not parsed"
 )
 
 require(

@@ -106,6 +106,16 @@ private let ghostBaseSeasonalGiftIds = Set(
     ghostBaseSeasonalGiftDescriptors.map(\.id)
 )
 
+private func ghostBaseIsSeasonalGift(
+    _ gift: StarGift
+) -> Bool {
+    if case let .generic(gift) = gift {
+        return ghostBaseSeasonalGiftIds.contains(gift.id)
+    } else {
+        return false
+    }
+}
+
 private func ghostBaseMakeSeasonalGifts(
     items: [StickerPackItem]
 ) -> [StarGift] {
@@ -117,7 +127,8 @@ private func ghostBaseMakeSeasonalGifts(
             continue
         }
 
-        let file = items[descriptor.stickerIndex].file
+        let file =
+            items[descriptor.stickerIndex].file._parse()
 
         let gift = StarGift.Gift(
             id: descriptor.id,
@@ -266,9 +277,7 @@ private func ghostBaseMergeSeasonalGifts(
                                     }
                                 }
                             case .seasonal:
-                                return ghostBaseSeasonalGiftIds.contains(
-                                    $0.id
-                                )
+                                return ghostBaseIsSeasonalGift($0)
                             case .transfer:
 '''
 
@@ -297,7 +306,7 @@ private func ghostBaseMergeSeasonalGifts(
 
                 let hasSeasonalGifts =
                     self.state?.starGifts?.contains(where: {
-                        ghostBaseSeasonalGiftIds.contains($0.id)
+                        ghostBaseIsSeasonalGift($0)
                     }) ?? false
 
                 if hasSeasonalGifts {
@@ -449,6 +458,66 @@ require(
 require(
     text.count('reference: .name("DeletedGiftsStickers")') == 1,
     "sticker pack request duplicated"
+)
+
+# Normalize an already-patched generated tree as well.
+text = text.replace(
+    "        let file = items[descriptor.stickerIndex].file\n",
+    "        let file =\n"
+    "            items[descriptor.stickerIndex].file._parse()\n"
+)
+
+ids_anchor = """private let ghostBaseSeasonalGiftIds = Set(
+    ghostBaseSeasonalGiftDescriptors.map(\\.id)
+)
+
+private func ghostBaseMakeSeasonalGifts(
+"""
+
+ids_replacement = """private let ghostBaseSeasonalGiftIds = Set(
+    ghostBaseSeasonalGiftDescriptors.map(\\.id)
+)
+
+private func ghostBaseIsSeasonalGift(
+    _ gift: StarGift
+) -> Bool {
+    if case let .generic(gift) = gift {
+        return ghostBaseSeasonalGiftIds.contains(gift.id)
+    } else {
+        return false
+    }
+}
+
+private func ghostBaseMakeSeasonalGifts(
+"""
+
+if "private func ghostBaseIsSeasonalGift(" not in text:
+    if ids_anchor not in text:
+        raise SystemExit("seasonal helper normalization anchor missing")
+    text = text.replace(ids_anchor, ids_replacement, 1)
+
+text = text.replace(
+    """                            case .seasonal:
+                                return ghostBaseSeasonalGiftIds.contains(
+                                    $0.id
+                                )
+""",
+    """                            case .seasonal:
+                                return ghostBaseIsSeasonalGift($0)
+"""
+)
+
+text = text.replace(
+    """                let hasSeasonalGifts =
+                    self.state?.starGifts?.contains(where: {
+                        ghostBaseSeasonalGiftIds.contains($0.id)
+                    }) ?? false
+""",
+    """                let hasSeasonalGifts =
+                    self.state?.starGifts?.contains(where: {
+                        ghostBaseIsSeasonalGift($0)
+                    }) ?? false
+"""
 )
 
 path.write_text(text, encoding="utf-8")
