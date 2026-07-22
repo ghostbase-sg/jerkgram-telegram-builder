@@ -33,7 +33,12 @@ for proof in (
     "case rpc(String)",
     "ghostBaseBotSafeRpcCode",
     "authorizedAccount.masterDatacenterId",
-    "account: authorizedAccount"
+    "account: authorizedAccount",
+    "state: AuthorizedAccountState.State(",
+    "pts: 0",
+    "qts: 0",
+    "date: 0",
+    "seq: 0"
 ):
     require(
         proof in authorization,

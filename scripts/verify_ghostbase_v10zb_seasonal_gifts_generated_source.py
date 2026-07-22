@@ -58,6 +58,7 @@ gift_ids = (
     "5935895822435615975",
     "5969796561943660080",
     "6026193266406327981",
+    "5974210632977745012",
 )
 
 for gift_id in gift_ids:
@@ -66,7 +67,7 @@ for gift_id in gift_ids:
         f"gift ID missing or duplicated: {gift_id}"
     )
 
-for index in range(1, 10):
+for index in range(1, 11):
     require(
         text.count(f"stickerIndex: {index}") == 1,
         f"sticker index missing or duplicated: {index}"
@@ -102,8 +103,8 @@ require(
     "sticker pack loaded more than once"
 )
 
-print("[v1.0ZB seasonal verifier] nine descriptors OK")
-print("[v1.0ZB seasonal verifier] sticker indices 1...9 OK")
+print("[v1.0ZB seasonal verifier] ten descriptors OK")
+print("[v1.0ZB seasonal verifier] sticker indices 1...10 OK")
 print("[v1.0ZB seasonal verifier] bounds checking OK")
 print("[v1.0ZB seasonal verifier] server priority OK")
 print("[v1.0ZB seasonal verifier] native GiftSetupScreen route retained")

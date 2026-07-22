@@ -99,6 +99,12 @@ private let ghostBaseSeasonalGiftDescriptors: [
         title: "Builder Bear",
         price: 50,
         stickerIndex: 9
+    ),
+    GhostBaseSeasonalGiftDescriptor(
+        id: 5974210632977745012,
+        title: "Football Bear",
+        price: 50,
+        stickerIndex: 10
     )
 ]
 
@@ -446,6 +452,8 @@ for proof in (
     'text: "Сезонный"',
     "stickerIndex: 1",
     "stickerIndex: 9",
+    "stickerIndex: 10",
+    "5974210632977745012",
     "GiftSetupScreen",
 ):
     require(proof in text, f"missing proof: {proof}")

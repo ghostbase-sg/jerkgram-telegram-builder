@@ -198,7 +198,12 @@ public func ghostBaseAuthorizeBot(
                     masterDatacenterId:
                         authorizedAccount.masterDatacenterId,
                     peerId: user.id,
-                    state: nil,
+                    state: AuthorizedAccountState.State(
+                        pts: 0,
+                        qts: 0,
+                        date: 0,
+                        seq: 0
+                    ),
                     invalidatedChannels: []
                 )
 
