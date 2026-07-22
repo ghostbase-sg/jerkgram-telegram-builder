@@ -1,0 +1,92 @@
+name: GhostBase Telegram 12.9.2 Migration Control
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-probe:
+    runs-on: macos-26
+
+    env:
+      USE_BAZEL_VERSION: 8.4.2
+      BAZEL_BIN: bazelisk
+      CERT_B64: ${{ secrets.CERT_B64 }}
+      PROF_B64: ${{ secrets.PROF_B64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      BAZEL_EXTRA_ARGS: --disk_cache=${{ github.workspace }}/.bazel-disk-cache --repository_cache=${{ github.workspace }}/.bazel-repo-cache
+
+    steps:
+      - name: Checkout builder
+        uses: actions/checkout@v4
+
+      - name: Install Bazelisk
+        run: |
+          set -e
+          if ! command -v bazelisk >/dev/null 2>&1; then
+            brew install bazelisk
+          fi
+          bazelisk --version || true
+
+      - name: Toolchain diagnostics
+        run: |
+          set -e
+          echo "== macOS =="
+          sw_vers
+          echo "== selected Xcode =="
+          xcode-select -p
+          xcodebuild -version
+          XCODE_VERSION="$(xcodebuild -version | awk 'NR == 1 {print $2}')"
+          echo "Resolved Xcode version: $XCODE_VERSION"
+          if [ "$XCODE_VERSION" != "26.2" ]; then
+            echo "::error::Expected Xcode 26.2, got $XCODE_VERSION"
+            echo "== Installed Xcode applications =="
+            find /Applications -maxdepth 1 -type d -name 'Xcode*.app' -print | sort
+            false
+          fi
+          echo "== Bazelisk =="
+          bazelisk --version || true
+
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: |
+            .bazel-disk-cache
+            .bazel-repo-cache
+          key: ghostbase-12-9-2-bazel-${{ runner.os }}-${{ github.ref_name }}
+          restore-keys: |
+            ghostbase-12-9-2-bazel-${{ runner.os }}-
+
+      - name: Prepare source
+        run: |
+          set -e
+          chmod +x scripts/prepare_source_official_12_9_2.sh
+          scripts/prepare_source_official_12_9_2.sh
+
+      - name: Skip Swiftgram GhostBase patches
+        run: |
+          set -e
+          echo "Official Telegram baseline: skip Swiftgram-specific v0.8/v0.9 patches"
+
+      - name: Run build analysis probe
+        run: |
+          set -e
+          chmod +x scripts/bazel_build_probe_official_12_9_2.sh
+          scripts/bazel_build_probe_official_12_9_2.sh
+
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostbase-telegram-12-9-2-migration-build
+          path: |
+            work/swiftgram-src/ghostbase-final/**
+          if-no-files-found: warn
+
+      - name: Upload collected outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostbase-12-9-2-output
+          path: artifacts/**
+          if-no-files-found: warn
