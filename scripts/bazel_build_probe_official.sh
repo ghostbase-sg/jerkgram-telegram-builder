@@ -13,6 +13,18 @@ mkdir -p "$SIGN_DIR"
 cd work/swiftgram-src
 export GHOSTBASE_SOURCE_ROOT="$PWD"
 
+EXPECTED_TELEGRAM_COMMIT="6ad963e5b62d354da79040f388ae2b9132fb17b8"
+ACTUAL_TELEGRAM_COMMIT="$(git rev-parse HEAD)"
+
+echo "== Telegram 12.9.2 source gate =="
+echo "Expected: $EXPECTED_TELEGRAM_COMMIT"
+echo "Actual:   $ACTUAL_TELEGRAM_COMMIT"
+
+if [ "$ACTUAL_TELEGRAM_COMMIT" != "$EXPECTED_TELEGRAM_COMMIT" ]; then
+  echo "ERROR: build script received an unexpected Telegram source"
+  false
+fi
+
 echo "== clean stale GhostBase final artifacts =="
 rm -rf ghostbase-final
 mkdir -p ghostbase-final
@@ -340,6 +352,13 @@ if [ -f bazel-bin/Telegram/Telegram.ipa ]; then
   cp -f bazel-bin/Telegram/Telegram.ipa ghostbase-final/GhostBase.ipa
   echo "IPA=bazel-bin/Telegram/Telegram.ipa" > ghostbase-final/info.txt
   echo "Final=ghostbase-final/GhostBase.ipa" >> ghostbase-final/info.txt
+  TELEGRAM_VERSION="$(python3 -c 'import json; print(json.load(open("versions.json"))["app"])')"
+  TELEGRAM_COMMIT="$(git rev-parse HEAD)"
+  TELEGRAM_TAG="$(git tag --points-at HEAD | head -n 1)"
+  echo "TelegramVersion=$TELEGRAM_VERSION" >> ghostbase-final/info.txt
+  echo "TelegramCommit=$TELEGRAM_COMMIT" >> ghostbase-final/info.txt
+  echo "TelegramTag=$TELEGRAM_TAG" >> ghostbase-final/info.txt
+  cat ghostbase-final/info.txt
   ls -lh ghostbase-final/GhostBase.ipa
 else
   echo "ERROR: bazel-bin/Telegram/Telegram.ipa missing"

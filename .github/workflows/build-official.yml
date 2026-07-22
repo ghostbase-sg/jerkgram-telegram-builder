@@ -41,8 +41,8 @@ jobs:
       - name: Prepare source
         run: |
           set -e
-          chmod +x scripts/prepare_source_official_12_9_2.sh
-          scripts/prepare_source_official_12_9_2.sh
+          chmod +x scripts/prepare_source_official.sh
+          scripts/prepare_source_official.sh
 
       - name: Skip Swiftgram GhostBase patches
         run: |
@@ -52,8 +52,8 @@ jobs:
       - name: Run build analysis probe
         run: |
           set -e
-          chmod +x scripts/bazel_build_probe_official_12_9_2.sh
-          scripts/bazel_build_probe_official_12_9_2.sh
+          chmod +x scripts/bazel_build_probe_official.sh
+          scripts/bazel_build_probe_official.sh
 
       - name: Upload build artifacts
         if: success()
