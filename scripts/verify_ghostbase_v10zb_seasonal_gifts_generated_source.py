@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 from pathlib import Path
 
 root = Path(os.environ.get(
@@ -67,11 +68,15 @@ for gift_id in gift_ids:
         f"gift ID missing or duplicated: {gift_id}"
     )
 
-for index in range(1, 11):
-    require(
-        text.count(f"stickerIndex: {index}") == 1,
-        f"sticker index missing or duplicated: {index}"
-    )
+sticker_indices = [
+    int(value)
+    for value in re.findall(r"stickerIndex:\s*(\d+)", text)
+]
+
+require(
+    sticker_indices == list(range(1, 11)),
+    f"unexpected sticker indices: {sticker_indices}"
+)
 
 require(
     "min(descriptor.stickerIndex" not in text,
