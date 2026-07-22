@@ -41,24 +41,19 @@ jobs:
       - name: Prepare source
         run: |
           set -e
-          chmod +x scripts/prepare_source_official.sh
-          scripts/prepare_source_official.sh
+          chmod +x scripts/prepare_source_official_12_9_2.sh
+          scripts/prepare_source_official_12_9_2.sh
 
       - name: Skip Swiftgram GhostBase patches
         run: |
           set -e
-          echo "Official Telegram baseline: skip Swiftgram-specific v0.8/v0.9 patches"
-
-      - name: Apply GhostBase v1.0Q SH2 OT2 on Telegram 12.8
-        run: |
-          set -e
-          python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
+          echo "Official Telegram 12.9.2: skip Swiftgram-specific v0.8/v0.9 patches"
 
       - name: Run build analysis probe
         run: |
           set -e
-          chmod +x scripts/bazel_build_probe_official.sh
-          scripts/bazel_build_probe_official.sh
+          chmod +x scripts/bazel_build_probe_official_12_9_2.sh
+          scripts/bazel_build_probe_official_12_9_2.sh
 
       - name: Upload build artifacts
         if: success()
