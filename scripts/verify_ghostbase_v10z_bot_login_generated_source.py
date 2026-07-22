@@ -34,11 +34,7 @@ for proof in (
     "ghostBaseBotSafeRpcCode",
     "authorizedAccount.masterDatacenterId",
     "account: authorizedAccount",
-    "state: AuthorizedAccountState.State(",
-    "pts: 0",
-    "qts: 0",
-    "date: 0",
-    "seq: 0"
+    "state: nil"
 ):
     require(
         proof in authorization,

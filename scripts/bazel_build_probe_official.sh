@@ -328,6 +328,8 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zb_bot_difference_ui
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zb_bot_difference_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zb_seasonal_gifts.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zb_seasonal_gifts_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zc_bot_inbox.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zc_bot_inbox_generated_source.py"
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
