@@ -146,7 +146,7 @@ if shared_marker not in shared:
             ])
             Logger.shared.log(
                 "GhostBase.BotMulti1",
-                "GhostBase.BotMulti1 createAuth id=\\(authId) testing=\\(testingEnvironment)"
+                "GhostBase.BotMulti1 createAuth id=\\(String(describing: authId)) testing=\\(testingEnvironment)"
             )
         }).start()
     }

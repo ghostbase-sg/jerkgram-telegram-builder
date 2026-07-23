@@ -33,4 +33,6 @@ require("alternate: .fail(.timeout)" not in auth, "opaque sendCode timeout remai
 require("GhostBase v1.0ZG BOTMULTI1 auth record" in shared, "createAuth marker missing")
 require("let authId = transaction.createAuth" in shared, "auth id is not captured")
 require("GhostBase.BotMulti1 createAuth" in shared, "createAuth log missing")
+require("id=\\(String(describing: authId))" in shared, "optional auth id is not rendered explicitly")
+require("id=\\(authId)" not in shared, "implicit optional auth id interpolation remains")
 print("[V10ZG verifier] BOTMULTI1 diagnostics OK")
