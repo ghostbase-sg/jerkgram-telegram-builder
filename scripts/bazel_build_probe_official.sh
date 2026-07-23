@@ -358,6 +358,18 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_gifthistory1_cor
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_gifthistory1_ui_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_profileintel2_cleanup_generated_source.py"
 # END MARK: GhostBase v1.0ZG Build 85 package
+
+# MARK: GhostBase v1.0ZH Build 86 full package
+echo "== apply/verify GhostBase v1.0ZH Build 86 full package =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zh_botbootstrap1_botdedupe1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zh_gifthistory2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zh_presencehistory1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zh_profileui1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zh_botbootstrap1_botdedupe1_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zh_gifthistory2_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zh_presencehistory1_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zh_profileui1_generated_source.py"
+# END MARK: GhostBase v1.0ZH Build 86 full package
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
