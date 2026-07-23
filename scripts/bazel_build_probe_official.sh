@@ -340,6 +340,24 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zf_botsafe2_generat
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zf_profileintel2_core.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zf_profileintel2_ui.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zf_profileintel2_generated_source.py"
+
+# MARK: GhostBase v1.0ZG Build 85 package
+echo "== apply/verify GhostBase v1.0ZG Build 85 =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_accountunlock_botlogout.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_botmulti1_diagnostics.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_private_invite_probe.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_profileintel3_personal_channel.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_gifthistory1_core.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_gifthistory1_ui.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_profileintel2_cleanup.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_accountunlock_botlogout_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_botmulti1_diagnostics_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_private_invite_probe_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_profileintel3_personal_channel_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_gifthistory1_core_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_gifthistory1_ui_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_profileintel2_cleanup_generated_source.py"
+# END MARK: GhostBase v1.0ZG Build 85 package
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
