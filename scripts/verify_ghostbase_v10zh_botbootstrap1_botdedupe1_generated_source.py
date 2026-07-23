@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("GHOSTBASE_SOURCE_ROOT", "/root/gb_builder/work/swiftgram-src"))
 AUTH = ROOT / "submodules/TelegramCore/Sources/Authorization.swift"
-CONTROLLER = ROOT / "submodules/AuthorizationUI/Sources/AuthorizationSequenceController.swift"
+CONTROLLER = ROOT / "submodules/AuthorizationUI/Sources/AuthorizationSequencePhoneEntryController.swift"
 ACTIONS = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift"
 
 for path in (AUTH, CONTROLLER, ACTIONS):
