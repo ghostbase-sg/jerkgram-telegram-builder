@@ -127,6 +127,22 @@ private func ghostBaseGiftHistoryIdentity(
     return "fallback:\(gift.gift.giftId):\(gift.date):\(gift.fromPeer?.id.toInt64() ?? 0)"
 }
 
+private func ghostBaseGiftHistoryPeerTitle(_ peer: EnginePeer?) -> String? {
+    guard let peer else {
+        return nil
+    }
+    if case let .user(user) = peer {
+        let title = user.nameOrPhone
+        return title.isEmpty ? nil : title
+    } else if case let .legacyGroup(group) = peer {
+        return group.title
+    } else if case let .channel(channel) = peer {
+        return channel.title
+    } else {
+        return nil
+    }
+}
+
 private func ghostBaseGiftHistorySnapshot(
     gift: ProfileGiftsContext.State.StarGift,
     filterRawValue: Int32,
@@ -183,7 +199,7 @@ private func ghostBaseGiftHistorySnapshot(
         slug: slug,
         number: number,
         fromPeerId: gift.fromPeer?.id.toInt64(),
-        fromPeerTitle: gift.fromPeer?.compactDisplayTitle,
+        fromPeerTitle: ghostBaseGiftHistoryPeerTitle(gift.fromPeer),
         fromPeerUsername: gift.fromPeer?.addressName,
         text: gift.text,
         nameHidden: gift.nameHidden,

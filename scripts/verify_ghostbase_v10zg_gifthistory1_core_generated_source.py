@@ -24,6 +24,8 @@ for proof in (
     "nameHidden: Bool",
     "savedToProfile: Bool",
     "fromPeerUsername: String?",
+    "ghostBaseGiftHistoryPeerTitle",
+    "fromPeerTitle: ghostBaseGiftHistoryPeerTitle(gift.fromPeer)",
     "originalSenderPeerId: Int64?",
     "visibilityHistory: [GhostBaseGiftVisibilityEvent]",
     "filterRawValue: filter.rawValue",
@@ -31,4 +33,8 @@ for proof in (
 ):
     require(proof in text, f"missing proof: {proof}")
 require("Api.functions.payments.getSavedStarGifts" in text, "official saved-gifts RPC disappeared")
-print("[V10ZG verifier] GIFTHISTORY1 core OK")
+require(
+    "gift.fromPeer?.compactDisplayTitle" not in text,
+    "TelegramCore must not use UI-only EnginePeer.compactDisplayTitle"
+)
+print("[V10ZG verifier] GIFTHISTORY1 core R2 OK")
