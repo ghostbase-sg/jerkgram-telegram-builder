@@ -335,6 +335,11 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10ze_botsafe1_generat
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zd_profileintel1_core.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zd_profileintel1_ui.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zd_profileintel1_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zf_botsafe2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zf_botsafe2_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zf_profileintel2_core.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zf_profileintel2_ui.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zf_profileintel2_generated_source.py"
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
