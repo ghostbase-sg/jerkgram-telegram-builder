@@ -18,6 +18,9 @@ def require(value: bool, message: str) -> None:
 require("GhostBase v1.0ZG PRIVATELINK1 cached exported invite" in text, "marker missing")
 require(text.count("cachedData.exportedInvitation?.link") == 2, "channel/group cached invite reads missing")
 require("UIPasteboard.general.string = ghostBaseInviteLink" in text, "copy action missing")
+require("if let ghostBaseInvitePeer = data.peer" in text, "optional peer is not unwrapped")
+require("ghostBaseInvitePeer.id.toInt64()" in text, "unwrapped peer id missing")
+require("data.peer.id.toInt64()" not in text, "optional data.peer.id access remains")
 start = text.index("GhostBase v1.0ZG PRIVATELINK1 cached exported invite")
 block = text[start:start + 3200]
 for forbidden in ("exportChatInvite", "getExportedChatInvites", "editExportedChatInvite"):

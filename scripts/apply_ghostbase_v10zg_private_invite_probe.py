@@ -21,53 +21,55 @@ if marker not in text:
         raise SystemExit("[V10ZG PRIVATELINK1] infoItems result anchor not found")
 
     block = r'''    // MARK: GhostBase v1.0ZG PRIVATELINK1 cached exported invite
-    switch data.peer {
-    case .channel, .legacyGroup:
-        var ghostBaseInviteLink: String?
-        if let cachedData = data.cachedData as? CachedChannelData {
-            ghostBaseInviteLink = cachedData.exportedInvitation?.link
-        } else if let cachedData = data.cachedData as? CachedGroupData {
-            ghostBaseInviteLink = cachedData.exportedInvitation?.link
-        }
+    if let ghostBaseInvitePeer = data.peer {
+        switch ghostBaseInvitePeer {
+        case .channel, .legacyGroup:
+            var ghostBaseInviteLink: String?
+            if let cachedData = data.cachedData as? CachedChannelData {
+                ghostBaseInviteLink = cachedData.exportedInvitation?.link
+            } else if let cachedData = data.cachedData as? CachedGroupData {
+                ghostBaseInviteLink = cachedData.exportedInvitation?.link
+            }
 
-        let ghostBaseInviteStatusKey =
-            "GhostBase.PrivateInvite.LastStatus.\(context.account.peerId.toInt64()).\(data.peer.id.toInt64())"
-        if let ghostBaseInviteLink {
-            items[.peerInfoTrailing]!.append(
-                PeerInfoScreenActionItem(
-                    id: 9871001,
-                    text: "Скопировать пригласительную ссылку",
-                    color: .accent,
-                    icon: nil,
-                    alignment: .natural,
-                    action: {
-                        UIPasteboard.general.string = ghostBaseInviteLink
-                        UserDefaults.standard.set(
-                            ghostBaseInviteLink,
-                            forKey: ghostBaseInviteStatusKey
-                        )
-                    }
+            let ghostBaseInviteStatusKey =
+                "GhostBase.PrivateInvite.LastStatus.\(context.account.peerId.toInt64()).\(ghostBaseInvitePeer.id.toInt64())"
+            if let ghostBaseInviteLink {
+                items[.peerInfoTrailing]!.append(
+                    PeerInfoScreenActionItem(
+                        id: 9871001,
+                        text: "Скопировать пригласительную ссылку",
+                        color: .accent,
+                        icon: nil,
+                        alignment: .natural,
+                        action: {
+                            UIPasteboard.general.string = ghostBaseInviteLink
+                            UserDefaults.standard.set(
+                                ghostBaseInviteLink,
+                                forKey: ghostBaseInviteStatusKey
+                            )
+                        }
+                    )
                 )
-            )
-        } else {
-            items[.peerInfoTrailing]!.append(
-                PeerInfoScreenActionItem(
-                    id: 9871001,
-                    text: "Пригласительная ссылка не получена Telegram",
-                    color: .destructive,
-                    icon: nil,
-                    alignment: .natural,
-                    action: {
-                        UserDefaults.standard.set(
-                            "nil",
-                            forKey: ghostBaseInviteStatusKey
-                        )
-                    }
+            } else {
+                items[.peerInfoTrailing]!.append(
+                    PeerInfoScreenActionItem(
+                        id: 9871001,
+                        text: "Пригласительная ссылка не получена Telegram",
+                        color: .destructive,
+                        icon: nil,
+                        alignment: .natural,
+                        action: {
+                            UserDefaults.standard.set(
+                                "nil",
+                                forKey: ghostBaseInviteStatusKey
+                            )
+                        }
+                    )
                 )
-            )
+            }
+        default:
+            break
         }
-    default:
-        break
     }
 
 '''
