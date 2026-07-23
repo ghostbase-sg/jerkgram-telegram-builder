@@ -388,7 +388,7 @@ private func ghostBaseProfileIntel2DifferenceEvents(
                             }.joined(separator: ",")
                             let photoTotal = photos.first?.totalCount ?? photos.count
 
-                            var fields: [String: String] = [
+                            let fields: [String: String] = [
                                 "displayName": ghostBaseProfileIntel2Clean(user.nameOrPhone),
                                 "firstName": ghostBaseProfileIntel2Clean(user.firstName),
                                 "lastName": ghostBaseProfileIntel2Clean(user.lastName),
