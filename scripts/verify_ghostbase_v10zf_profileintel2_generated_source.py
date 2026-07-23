@@ -44,6 +44,14 @@ for proof in (
     require(proof in core, f"core proof missing: {proof}")
 
 section = core[core.index("GhostBase v1.0ZF PROFILEINTEL2 Core"):]
+require(
+    r"\\(" not in section,
+    "double-escaped Swift interpolation found"
+)
+require(
+    r'fields[key] ?? \"\"' not in section,
+    "escaped quotes remain inside Swift interpolation"
+)
 require("account.setPrivacy" not in section, "unsafe direct privacy mutation found")
 require(
     "updateSelectiveAccountPrivacySettings" not in section,

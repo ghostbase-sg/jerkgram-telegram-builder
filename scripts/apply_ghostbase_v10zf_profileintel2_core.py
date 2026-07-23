@@ -140,7 +140,7 @@ private func ghostBaseProfileIntel2Status(
             return GhostBaseProfileIntel2Status(
                 kind: "online",
                 timestamp: value.expires,
-                report: "online expires=\\(value.expires)",
+                report: "online expires=\(value.expires)",
                 reliability: "Наблюдалось"
             )
 
@@ -148,7 +148,7 @@ private func ghostBaseProfileIntel2Status(
             return GhostBaseProfileIntel2Status(
                 kind: "offline",
                 timestamp: value.wasOnline,
-                report: "offline wasOnline=\\(value.wasOnline)",
+                report: "offline wasOnline=\(value.wasOnline)",
                 reliability: "Точно"
             )
 
@@ -156,7 +156,7 @@ private func ghostBaseProfileIntel2Status(
             return GhostBaseProfileIntel2Status(
                 kind: "recently",
                 timestamp: nil,
-                report: "recently flags=\\(value.flags) bit0IsHidden=\\((value.flags & 1) != 0)",
+                report: "recently flags=\(value.flags) bit0IsHidden=\((value.flags & 1) != 0)",
                 reliability: "Приблизительно"
             )
 
@@ -164,7 +164,7 @@ private func ghostBaseProfileIntel2Status(
             return GhostBaseProfileIntel2Status(
                 kind: "lastWeek",
                 timestamp: nil,
-                report: "lastWeek flags=\\(value.flags) bit0IsHidden=\\((value.flags & 1) != 0)",
+                report: "lastWeek flags=\(value.flags) bit0IsHidden=\((value.flags & 1) != 0)",
                 reliability: "Приблизительно"
             )
 
@@ -172,7 +172,7 @@ private func ghostBaseProfileIntel2Status(
             return GhostBaseProfileIntel2Status(
                 kind: "lastMonth",
                 timestamp: nil,
-                report: "lastMonth flags=\\(value.flags) bit0IsHidden=\\((value.flags & 1) != 0)",
+                report: "lastMonth flags=\(value.flags) bit0IsHidden=\((value.flags & 1) != 0)",
                 reliability: "Приблизительно"
             )
         }
@@ -183,7 +183,7 @@ private func ghostBaseProfileIntel2Canonical(
     _ fields: [String: String]
 ) -> String {
     return fields.keys.sorted().map { key in
-        return "\\(key)=\\(fields[key] ?? \"\")"
+        return "\(key)=\(fields[key] ?? "")"
     }.joined(separator: "\n")
 }
 
@@ -210,7 +210,7 @@ private func ghostBaseProfileIntel2AppendHistory(
 ) -> String {
     var lines: [String] = []
     for event in events {
-        lines.append("\\(timestamp) · \\(event)")
+        lines.append("\(timestamp) · \(event)")
     }
 
     if let previous = defaults.string(forKey: key), !previous.isEmpty {
@@ -238,7 +238,7 @@ private func ghostBaseProfileIntel2DifferenceEvents(
         let newValue = current[key] ?? "nil"
         if oldValue != newValue {
             events.append(
-                "[\\(reliability)] \\(title): \\(oldValue) → \\(newValue)"
+                "[\(reliability)] \(title): \(oldValue) → \(newValue)"
             )
         }
     }
@@ -261,10 +261,10 @@ private func ghostBaseProfileIntel2DifferenceEvents(
             events.append("[Наблюдалось] Вошёл в сеть")
         } else if newStatus == "offline" {
             let timestamp = current["statusTimestamp"] ?? "nil"
-            events.append("[Точно] Вышел из сети: \\(timestamp)")
+            events.append("[Точно] Вышел из сети: \(timestamp)")
         } else {
             events.append(
-                "[Приблизительно] Статус: \\(oldStatus) → \\(newStatus)"
+                "[Приблизительно] Статус: \(oldStatus) → \(newStatus)"
             )
         }
     }
@@ -278,7 +278,7 @@ private func ghostBaseProfileIntel2DifferenceEvents(
         let oldValue = previous[key] ?? "nil"
         let newValue = current[key] ?? "nil"
         if oldValue != newValue, newValue != "nil" {
-            events.append("[Точно] \\(title): \\(newValue)")
+            events.append("[Точно] \(title): \(newValue)")
         }
     }
 
@@ -319,7 +319,7 @@ private func ghostBaseProfileIntel2DifferenceEvents(
 
                 case let .result(peerId):
                     guard let peerId else {
-                        return .single("PROFILEINTEL2\ntarget: @\\(username)\nresolve: not found")
+                        return .single("PROFILEINTEL2\ntarget: @\(username)\nresolve: not found")
                     }
 
                     return self.account.postbox.transaction {
@@ -331,8 +331,8 @@ private func ghostBaseProfileIntel2DifferenceEvents(
                         guard let user, let inputUser else {
                             return .single("""
                             PROFILEINTEL2
-                            target: @\\(username)
-                            peerId: \\(String(describing: peerId))
+                            target: @\(username)
+                            peerId: \(String(describing: peerId))
                             error: INPUT_USER_UNAVAILABLE
                             """)
                         }
@@ -381,7 +381,7 @@ private func ghostBaseProfileIntel2DifferenceEvents(
                                 $0.resource.id.stringRepresentation
                             }.joined(separator: ",")
                             let usernames = user.usernames.map {
-                                "\\($0.flags.rawValue):\\($0.username)"
+                                "\($0.flags.rawValue):\($0.username)"
                             }.joined(separator: ",")
                             let photoDates = photos.map {
                                 String($0.date)
@@ -412,7 +412,7 @@ private func ghostBaseProfileIntel2DifferenceEvents(
 
                             let canonical = ghostBaseProfileIntel2Canonical(fields)
                             let defaults = UserDefaults.standard
-                            let baseKey = "GhostBase.ProfileIntel2.\\(self.account.peerId.toInt64()).\\(peerId.toInt64())."
+                            let baseKey = "GhostBase.ProfileIntel2.\(self.account.peerId.toInt64()).\(peerId.toInt64())."
                             let snapshotKey = baseKey + "Snapshot"
                             let historyKey = baseKey + "History"
                             let startedKey = baseKey + "Started"
@@ -436,7 +436,7 @@ private func ghostBaseProfileIntel2DifferenceEvents(
                                         let end = Int64(status.timestamp ?? Int32(now))
                                         let seconds = max(Int64(0), end - start.int64Value)
                                         events.append(
-                                            "[Наблюдалось] Наблюдаемая сессия: \\(seconds / 60) мин."
+                                            "[Наблюдалось] Наблюдаемая сессия: \(seconds / 60) мин."
                                         )
                                     }
                                     defaults.removeObject(forKey: sessionStartKey)
@@ -469,43 +469,43 @@ private func ghostBaseProfileIntel2DifferenceEvents(
 
                             return """
                             PROFILEINTEL2
-                            target: @\\(username)
-                            peerId: \\(String(describing: peerId))
-                            fullUserSuccess: \\(fullSuccess)
+                            target: @\(username)
+                            peerId: \(String(describing: peerId))
+                            fullUserSuccess: \(fullSuccess)
 
                             SNAPSHOT
-                            name: \\(user.nameOrPhone)
-                            firstName: \\(user.firstName ?? "nil")
-                            lastName: \\(user.lastName ?? "nil")
-                            username: \\(user.username ?? "nil")
-                            usernames: \\(usernames.isEmpty ? "nil" : usernames)
-                            about: \\(about ?? "nil")
-                            premium: \\(user.flags.contains(.isPremium))
-                            bot: \\(user.botInfo != nil)
-                            userFlags: \\(user.flags.rawValue)
-                            emojiStatus: \\(String(describing: user.emojiStatus))
-                            currentPhotoResources: \\(photoFingerprint.isEmpty ? "nil" : photoFingerprint)
+                            name: \(user.nameOrPhone)
+                            firstName: \(user.firstName ?? "nil")
+                            lastName: \(user.lastName ?? "nil")
+                            username: \(user.username ?? "nil")
+                            usernames: \(usernames.isEmpty ? "nil" : usernames)
+                            about: \(about ?? "nil")
+                            premium: \(user.flags.contains(.isPremium))
+                            bot: \(user.botInfo != nil)
+                            userFlags: \(user.flags.rawValue)
+                            emojiStatus: \(String(describing: user.emojiStatus))
+                            currentPhotoResources: \(photoFingerprint.isEmpty ? "nil" : photoFingerprint)
 
                             ACTIVITY
-                            status: \\(status.report)
-                            reliability: \\(status.reliability)
+                            status: \(status.report)
+                            reliability: \(status.reliability)
 
                             TELEGRAM_SECURITY
-                            registrationMonth: \\(security.registrationMonth ?? "nil")
-                            phoneCountryNumber: \\(security.phoneCountry ?? "nil")
-                            nameChangeDate: \\(security.nameChangeDate.map(String.init) ?? "nil")
-                            photoChangeDate: \\(security.photoChangeDate.map(String.init) ?? "nil")
+                            registrationMonth: \(security.registrationMonth ?? "nil")
+                            phoneCountryNumber: \(security.phoneCountry ?? "nil")
+                            nameChangeDate: \(security.nameChangeDate.map(String.init) ?? "nil")
+                            photoChangeDate: \(security.photoChangeDate.map(String.init) ?? "nil")
 
                             PHOTOS
-                            returned: \\(photos.count)
-                            totalCount: \\(photoTotal)
-                            latestDate: \\(latestPhotoDate.map(String.init) ?? "nil")
-                            dates: \\(photoDates.isEmpty ? "nil" : photoDates)
+                            returned: \(photos.count)
+                            totalCount: \(photoTotal)
+                            latestDate: \(latestPhotoDate.map(String.init) ?? "nil")
+                            dates: \(photoDates.isEmpty ? "nil" : photoDates)
 
                             LOCAL_HISTORY
-                            observationStarted: \\(started)
-                            newEvents: \\(events.count)
-                            \\(history)
+                            observationStarted: \(started)
+                            newEvents: \(events.count)
+                            \(history)
 
                             NOTE
                             phoneCountryNumber is the country of the phone number, not residence.
