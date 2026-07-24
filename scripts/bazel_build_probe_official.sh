@@ -467,9 +467,9 @@ echo "== strict GhostBase final IPA marker gate OK =="
 
 LC_ALL=C grep -RaoE "Version: v1\.0P\+SH1\+OT1|v1\.0P Pre-delete Shadow Trace|GhostBase\.V10P\.Verdict|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
 
-echo "-- verify Version: v1.0Q+SH2+OT2 --"
-if ! LC_ALL=C grep -Rao "Version: v1.0Q+SH2+OT2" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain Version: v1.0Q+SH2+OT2"
+echo "-- verify Version: v1.1a --"
+if ! LC_ALL=C grep -Rao "Version: v1.1a" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.1a"
   exit 1
 fi
 
