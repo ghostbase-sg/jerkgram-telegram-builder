@@ -37,6 +37,16 @@ if marker_voice not in voice:
 
 '''
     voice = voice[:start] + replacement + voice[end:]
+
+# TRANSCRIPTION1 removes the local Premium UI branch. Keep the generated Swift
+# warning-clean under Telegram's warnings-as-errors build settings.
+voice = voice.replace(
+    "guard let arguments = self.arguments, let context = self.context, let message = self.message else {",
+    "guard let context = self.context, let message = self.message else {",
+    1,
+)
+voice = voice.replace("                var isConsumed: Bool?\n", "", 1)
+voice = voice.replace("                        isConsumed = attribute.consumed\n", "", 1)
 VOICE.write_text(voice, encoding="utf-8")
 
 round_text = ROUND.read_text(encoding="utf-8")

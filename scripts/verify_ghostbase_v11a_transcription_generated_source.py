@@ -15,4 +15,11 @@ for path in paths:
     section = text[text.index("private func transcribe()"):]
     if "SubscribeToPremium" in section[:3500]:
         raise SystemExit(f"[V11A verifier] local Premium refusal remains in transcribe(): {path}")
-print("[V11A verifier] voice/round transcription UI and request paths OK")
+
+voice_text = paths[0].read_text(encoding="utf-8")
+voice_transcribe = voice_text[voice_text.index("private func transcribe()"):voice_text.index("private func presentAudioTranscriptionTooltip", voice_text.index("private func transcribe()"))]
+if "guard let arguments = self.arguments" in voice_transcribe:
+    raise SystemExit("[V11A verifier] unused arguments binding remains in voice transcribe()")
+if "var isConsumed: Bool?" in voice_text or "isConsumed = attribute.consumed" in voice_text:
+    raise SystemExit("[V11A verifier] write-only isConsumed remains after transcription UI replacement")
+print("[V11A verifier] voice/round transcription UI and request paths warning-clean OK")
