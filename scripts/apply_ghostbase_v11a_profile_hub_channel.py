@@ -152,6 +152,15 @@ hub_marker = "// MARK: GhostBase v1.1A PROFILEHUB1 Telegram-style sheet"
 if hub_marker not in text:
     insert_at = text.index("func infoItems(\n")
     helper = r'''// MARK: GhostBase v1.1A PROFILEHUB1 Telegram-style sheet
+private func ghostBaseProfileDateText(_ timestamp: Int64) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "ru_RU")
+    formatter.dateFormat = "dd.MM.yyyy HH:mm"
+    return formatter.string(
+        from: Date(timeIntervalSince1970: TimeInterval(timestamp))
+    )
+}
+
 private struct GhostBaseHistoryHubSection {
     let title: String
     let report: String
@@ -457,6 +466,7 @@ for proof in (
     "case .unknown:",
     "guard current.channelPeerId != nil",
     "GhostBase v1.1A PROFILEHUB1 Telegram-style sheet",
+    "private func ghostBaseProfileDateText(_ timestamp: Int64)",
     'text: "История и сведения"',
     'items: sections.map { $0.title }',
     "presentationAnimation: .modalSheet",

@@ -8,6 +8,8 @@ for proof in (
     "GhostBase v1.1A PERSONALCHANNEL2 confirmed observation",
     "case .unknown:",
     "GhostBase v1.1A PROFILEHUB1 Telegram-style sheet",
+    "private func ghostBaseProfileDateText(_ timestamp: Int64)",
+    "ghostBaseProfileDateText(event.observedAt)",
     'self.titleLabel.text = "История и сведения"',
     'text: "История и сведения"',
     'GhostBaseHistoryHubSection(title: "Подарки"',
