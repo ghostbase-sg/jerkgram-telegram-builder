@@ -370,6 +370,20 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zh_gifthistory2_gen
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zh_presencehistory1_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zh_profileui1_generated_source.py"
 # END MARK: GhostBase v1.0ZH Build 86 full package
+
+# MARK: GhostBase v1.1a Build 87 full package
+echo "== apply/verify GhostBase v1.1a Build 87 full package =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11a_bot_repair_backfill.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11a_profile_hub_channel.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11a_presence_global.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11a_transcription.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11a_version.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_bot_repair_backfill_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_profile_hub_channel_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_presence_global_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_transcription_generated_source.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_version_generated_source.py"
+# END MARK: GhostBase v1.1a Build 87 full package
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
