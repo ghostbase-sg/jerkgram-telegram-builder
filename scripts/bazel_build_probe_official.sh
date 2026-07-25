@@ -384,6 +384,20 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_presence_global_g
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_transcription_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11a_version_generated_source.py"
 # END MARK: GhostBase v1.1a Build 87 full package
+
+# MARK: GhostBase v1.1B integrated release
+echo "== apply/verify GhostBase v1.1B integrated release =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11b_presence_global2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11b_bot_backfill3.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11b_transcription2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11b_hidden_gifts1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11b_profile_hub2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_presence_global2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_bot_backfill3.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_transcription2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_hidden_gifts1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_profile_hub2.py"
+# END MARK: GhostBase v1.1B integrated release
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
