@@ -398,6 +398,24 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_transcription2.py
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_hidden_gifts1.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11b_profile_hub2.py"
 # END MARK: GhostBase v1.1B integrated release
+
+
+# MARK: GhostBase v1.1C Stage 1 candidate
+
+echo "== apply/verify GhostBase v1.1C Stage 1 candidate =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11c_glass_core1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11c_botstate4.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11c_settingsglass1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11c_profileglass1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11c_giftsglass1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11c_version.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_glass_core1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_botstate4.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_settingsglass1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_profileglass1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_giftsglass1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_version.py"
+# END MARK: GhostBase v1.1C Stage 1 candidate
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
