@@ -414,8 +414,24 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_botstate4.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_settingsglass1.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_profileglass1.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_giftsglass1.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11c_version.py"
+echo "== v1.1C version verifier superseded by v1.1D =="
 # END MARK: GhostBase v1.1C Stage 1 candidate
+
+# MARK: GhostBase v1.1D reference rebuild candidate
+echo "== apply/verify GhostBase v1.1D reference rebuild candidate =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11d_glass_core2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11d_botbackfill4_safe.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11d_settings_global2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11d_profile_reference2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11d_gifts_glass2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11d_version.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11d_glass_core2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11d_botbackfill4_safe.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11d_settings_global2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11d_profile_reference2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11d_gifts_glass2.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11d_version.py"
+# END MARK: GhostBase v1.1D reference rebuild candidate
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
@@ -499,9 +515,9 @@ echo "== strict GhostBase final IPA marker gate OK =="
 
 LC_ALL=C grep -RaoE "Version: v1\.0P\+SH1\+OT1|v1\.0P Pre-delete Shadow Trace|GhostBase\.V10P\.Verdict|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
 
-echo "-- verify Version: v1.1C-stage1 --"
-if ! LC_ALL=C grep -Rao "Version: v1.1C-stage1" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain Version: v1.1C-stage1"
+echo "-- verify Version: v1.1D-reference --"
+if ! LC_ALL=C grep -Rao "Version: v1.1D-reference" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.1D-reference"
   exit 1
 fi
 
