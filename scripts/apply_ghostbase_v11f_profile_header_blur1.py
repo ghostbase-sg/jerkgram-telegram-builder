@@ -109,6 +109,30 @@ for filename in (
 for filename in ("PeerInfoScreen.swift", "PeerInfoScreenItemSectionContainerNode.swift"):
     restore_official(PEER_REL / filename)
 
+# MARK: GhostBase v1.1F SETTINGS_ROUTE_CASE1
+# PeerInfoScreen remains Official except for this non-visual settings route.
+# It does not alter profile layout, header geometry or transitions.
+screen_path = PEER_SOURCE / "PeerInfoScreen.swift"
+screen = screen_path.read_text(encoding="utf-8")
+
+settings_section_anchor = "enum PeerInfoSettingsSection {\n"
+ghostbase_case = "    case ghostbase\n"
+
+if ghostbase_case not in screen:
+    screen = replace_once(
+        screen,
+        settings_section_anchor,
+        settings_section_anchor + ghostbase_case,
+        "PeerInfoSettingsSection ghostbase route",
+    )
+elif screen.count(ghostbase_case) != 1:
+    fail(
+        "PeerInfoSettingsSection ghostbase route: "
+        f"expected one case, found {screen.count(ghostbase_case)}"
+    )
+
+screen_path.write_text(screen, encoding="utf-8")
+
 header_path = PEER_SOURCE / "PeerInfoHeaderNode.swift"
 restore_official(PEER_REL / "PeerInfoHeaderNode.swift")
 header = header_path.read_text(encoding="utf-8")

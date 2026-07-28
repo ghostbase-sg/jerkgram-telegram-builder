@@ -117,12 +117,31 @@ for filename, current in (
     relative = PEER_REL / filename
     official = official_bytes(relative)
     current_bytes = current.read_bytes()
+    expected_bytes = official
 
-    if current_bytes != official:
+    if filename == "PeerInfoScreen.swift":
+        official_text = official.decode("utf-8")
+        enum_anchor = "enum PeerInfoSettingsSection {\n"
+
+        if official_text.count(enum_anchor) != 1:
+            fail(
+                "Official PeerInfoSettingsSection enum anchor "
+                f"count={official_text.count(enum_anchor)}"
+            )
+
+        expected_text = official_text.replace(
+            enum_anchor,
+            enum_anchor + "    case ghostbase\n",
+            1,
+        )
+        expected_bytes = expected_text.encode("utf-8")
+
+    if current_bytes != expected_bytes:
         fail(
-            f"{filename} is not byte-identical to Official Telegram 12.9.2 "
+            f"{filename} differs from the permitted Official 12.9.2 "
+            f"materialization "
             f"(current={hashlib.sha256(current_bytes).hexdigest()}, "
-            f"official={hashlib.sha256(official).hexdigest()})"
+            f"expected={hashlib.sha256(expected_bytes).hexdigest()})"
         )
 
 header = require(HEADER)
