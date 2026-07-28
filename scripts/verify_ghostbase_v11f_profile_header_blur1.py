@@ -38,6 +38,27 @@ def require(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def official_bytes(relative: Path) -> bytes:
+    external = OFFICIAL_ROOT / relative
+    if external.is_file():
+        return external.read_bytes()
+
+    try:
+        return subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(SOURCE_ROOT),
+                "show",
+                f"HEAD:{relative.as_posix()}",
+            ],
+            stderr=subprocess.PIPE, 
+        )
+    except subprocess.CalledProcessError as error:
+        detail = error.stderr.decode("utf-8", errors="replace").strip()
+        fail(f"official reference unavailable for {relative}: {detail}")
+
+
 def require_all(text: str, values: list[str], label: str) -> None:
     missing = [value for value in values if value not in text]
     if missing:
@@ -93,13 +114,15 @@ for filename, current in (
     ("PeerInfoScreen.swift", SCREEN),
     ("PeerInfoScreenItemSectionContainerNode.swift", SECTION),
 ):
-    official = PEER_OFFICIAL / filename
-    if not official.is_file():
-        fail(f"missing official reference: {official}")
-    if current.read_bytes() != official.read_bytes():
+    relative = PEER_REL / filename
+    official = official_bytes(relative)
+    current_bytes = current.read_bytes()
+
+    if current_bytes != official:
         fail(
             f"{filename} is not byte-identical to Official Telegram 12.9.2 "
-            f"(current={sha256(current)}, official={sha256(official)})"
+            f"(current={hashlib.sha256(current_bytes).hexdigest()}, "
+            f"official={hashlib.sha256(official).hexdigest()})"
         )
 
 header = require(HEADER)

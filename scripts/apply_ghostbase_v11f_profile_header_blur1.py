@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 SOURCE_ROOT = Path(os.environ.get("GHOSTBASE_SOURCE_ROOT", "/root/gb_builder/work/swiftgram-src")).resolve()
@@ -28,6 +29,34 @@ def fail(message: str) -> "NoReturn":
 def require_file(path: Path) -> None:
     if not path.is_file():
         fail(f"missing required file: {path}")
+
+
+def official_bytes(relative: Path) -> bytes:
+    external = OFFICIAL_ROOT / relative
+    if external.is_file():
+        return external.read_bytes()
+
+    try:
+        return subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(SOURCE_ROOT),
+                "show",
+                f"HEAD:{relative.as_posix()}",
+            ],
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as error:
+        detail = error.stderr.decode("utf-8", errors="replace").strip()
+        fail(f"official reference unavailable for {relative}: {detail}")
+
+
+def restore_official(relative: Path) -> Path:
+    destination = SOURCE_ROOT / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(official_bytes(relative))
+    return destination
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -59,13 +88,17 @@ def remove_exact_if_present(text: str, old: str, label: str) -> str:
 
 
 for required in (
-    PEER_OFFICIAL / "PeerInfoHeaderNode.swift",
-    PEER_OFFICIAL / "PeerInfoScreen.swift",
-    PEER_OFFICIAL / "PeerInfoScreenItemSectionContainerNode.swift",
     PEER_SOURCE / "PeerInfoProfileItems.swift",
     SETTINGS,
 ):
     require_file(required)
+
+for filename in (
+    "PeerInfoHeaderNode.swift",
+    "PeerInfoScreen.swift",
+    "PeerInfoScreenItemSectionContainerNode.swift",
+):
+    official_bytes(PEER_REL / filename)
 
 # ---------------------------------------------------------------------------
 # 1. Restore the stock profile screen geometry and section container exactly.
@@ -74,10 +107,10 @@ for required in (
 #    from surviving merely because an earlier patcher happened to run first.
 # ---------------------------------------------------------------------------
 for filename in ("PeerInfoScreen.swift", "PeerInfoScreenItemSectionContainerNode.swift"):
-    shutil.copyfile(PEER_OFFICIAL / filename, PEER_SOURCE / filename)
+    restore_official(PEER_REL / filename)
 
 header_path = PEER_SOURCE / "PeerInfoHeaderNode.swift"
-shutil.copyfile(PEER_OFFICIAL / "PeerInfoHeaderNode.swift", header_path)
+restore_official(PEER_REL / "PeerInfoHeaderNode.swift")
 header = header_path.read_text(encoding="utf-8")
 
 header = replace_once(
