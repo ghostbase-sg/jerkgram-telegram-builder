@@ -822,6 +822,32 @@ header_path.write_text(header, encoding="utf-8")
 profile_items_path = PEER_SOURCE / "PeerInfoProfileItems.swift"
 profile_items = profile_items_path.read_text(encoding="utf-8")
 
+# MARK: GhostBase v1.1F PRESERVE_PRIVATELINK1
+private_invite_marker = (
+    "    // MARK: GhostBase v1.0ZG PRIVATELINK1 "
+    "cached exported invite\n"
+)
+private_invite_result_anchor = (
+    "    var result: [(AnyHashable, [PeerInfoScreenItem])] = []\n"
+)
+private_invite_block = ""
+
+if private_invite_marker in profile_items:
+    private_invite_start = profile_items.index(
+        private_invite_marker
+    )
+    private_invite_end = profile_items.find(
+        private_invite_result_anchor,
+        private_invite_start,
+    )
+    if private_invite_end < 0:
+        fail(
+            "PRIVATELINK1 exists but its result anchor is missing"
+        )
+    private_invite_block = profile_items[
+        private_invite_start:private_invite_end
+    ]
+
 profile_items = remove_region(
     profile_items,
     "// MARK: GhostBase v1.0ZG PROFILEINTEL3 personal channel storage",
@@ -874,6 +900,26 @@ if positions:
     if end < 0:
         fail("PeerInfoProfileItems trailing legacy block has no result anchor")
     profile_items = profile_items[:start] + profile_items[end:]
+
+if private_invite_marker not in profile_items:
+    if not private_invite_block:
+        fail(
+            "PRIVATELINK1 was absent before PROFILEHUB cleanup"
+        )
+
+    private_invite_insert_at = profile_items.find(
+        private_invite_result_anchor
+    )
+    if private_invite_insert_at < 0:
+        fail(
+            "PRIVATELINK1 restore result anchor is missing"
+        )
+
+    profile_items = (
+        profile_items[:private_invite_insert_at]
+        + private_invite_block
+        + profile_items[private_invite_insert_at:]
+    )
 
 profile_items_path.write_text(profile_items, encoding="utf-8")
 
