@@ -1216,6 +1216,33 @@ settings = settings.replace(
     "Profile Blur settings apply when a profile is opened. ",
 )
 
+# MARK: GhostBase v1.1F SETTINGS_LINT_CLEANUP1
+settings = remove_exact_if_present(
+    settings,
+    '    let profile = GhostBaseSettingsSection.profileMetrics.rawValue\n',
+    "unused legacy profile section id",
+)
+
+old_update_state = (
+    "            var next = f(current)\n"
+    "\n"
+    "            next.save()\n"
+)
+new_update_state = (
+    "            let next = f(current)\n"
+    "\n"
+    "            next.save()\n"
+)
+
+if old_update_state in settings:
+    settings = settings.replace(
+        old_update_state,
+        new_update_state,
+        1,
+    )
+elif new_update_state not in settings:
+    fail("settings updateState var/let anchor missing")
+
 settings = re.sub(r"Version: v1\.1[^\n]*", "Version: v1.1F-profile-header", settings)
 settings = settings.replace("Base: Official Telegram 12.8", "Base: Official Telegram 12.9.2")
 settings = settings.replace("Base: Official Telegram 12.7", "Base: Official Telegram 12.9.2")
