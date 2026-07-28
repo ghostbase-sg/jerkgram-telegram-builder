@@ -1066,72 +1066,75 @@ if "GhostBase v1.1F PROFILEBLURSETTINGS1" not in settings:
 '''
     settings = settings[:appearance_start] + appearance + settings[appearance_end:]
 
-    glass_cases = list(re.finditer(
-        r"(?m)^([ 	]*)case GhostBaseKey\.glassEnabled:[ 	]*$",
-        settings,
-    ))
-    if len(glass_cases) != 1:
-        fail(
-            f"settings glassEnabled switch: expected exactly one case, "
-            f"found {len(glass_cases)}"
+    profile_case_markers = (
+        "case GhostBaseKey.profileAvatarBlur:",
+        "case GhostBaseKey.profileBlurTint:",
+        "case GhostBaseKey.profileBlurReduced:",
+    )
+    present_profile_cases = [
+        marker in settings for marker in profile_case_markers
+    ]
+
+    if any(present_profile_cases) and not all(present_profile_cases):
+        fail("settings profile blur switch cases are only partially present")
+
+    if not all(present_profile_cases):
+        glass_cases = list(re.finditer(
+            r"(?m)^([ \t]*)case GhostBaseKey\.glassEnabled:[ \t]*$",
+            settings,
+        ))
+        if len(glass_cases) != 1:
+            fail(
+                f"settings glassEnabled switch: expected exactly one case, "
+                f"found {len(glass_cases)}"
+            )
+
+        glass_case = glass_cases[0]
+        switch_indent = glass_case.group(1)
+        tail = settings[glass_case.end():]
+
+        message_case = re.search(
+            rf"(?m)^{re.escape(switch_indent)}case "
+            rf"GhostBaseKey\.messageSeconds:[ \t]*$",
+            tail,
+        )
+        if message_case is None:
+            fail(
+                "settings messageSeconds switch case not found "
+                "after glassEnabled"
+            )
+
+        message_case_start = (
+            glass_case.end() + message_case.start()
         )
 
-    glass_case = glass_cases[0]
-    switch_indent = glass_case.group(1)
+        switch_block = (
+            f"{switch_indent}case GhostBaseKey.glassEnabled:\n"
+            f"{switch_indent}    updated.glassEnabled = value\n"
+            f"{switch_indent}    UserDefaults.standard.set("
+            f"value, forKey: GhostBaseKey.glassEnabled)\n\n"
 
-    message_case = re.search(
-        rf"(?m)^{re.escape(switch_indent)}case "
-        rf"GhostBaseKey\.messageSeconds:[ 	]*$",
-        settings[glass_case.end():],
-    )
-    if message_case is None:
-        fail("settings messageSeconds switch case not found after glassEnabled")
+            f"{switch_indent}case GhostBaseKey.profileAvatarBlur:\n"
+            f"{switch_indent}    updated.profileAvatarBlur = value\n"
+            f"{switch_indent}    UserDefaults.standard.set("
+            f"value, forKey: GhostBaseKey.profileAvatarBlur)\n\n"
 
-    message_case_start = glass_case.end() + message_case.start()
+            f"{switch_indent}case GhostBaseKey.profileBlurTint:\n"
+            f"{switch_indent}    updated.profileBlurTint = value\n"
+            f"{switch_indent}    UserDefaults.standard.set("
+            f"value, forKey: GhostBaseKey.profileBlurTint)\n\n"
 
-    replacement = (
-        f"{switch_indent}case GhostBaseKey.glassEnabled:
-"
-        f"{switch_indent}    updated.glassEnabled = value
-"
-        f"{switch_indent}    UserDefaults.standard.set("
-        f"value, forKey: GhostBaseKey.glassEnabled)
+            f"{switch_indent}case GhostBaseKey.profileBlurReduced:\n"
+            f"{switch_indent}    updated.profileBlurReduced = value\n"
+            f"{switch_indent}    UserDefaults.standard.set("
+            f"value, forKey: GhostBaseKey.profileBlurReduced)\n\n"
+        )
 
-"
-
-        f"{switch_indent}case GhostBaseKey.profileAvatarBlur:
-"
-        f"{switch_indent}    updated.profileAvatarBlur = value
-"
-        f"{switch_indent}    UserDefaults.standard.set("
-        f"value, forKey: GhostBaseKey.profileAvatarBlur)
-
-"
-
-        f"{switch_indent}case GhostBaseKey.profileBlurTint:
-"
-        f"{switch_indent}    updated.profileBlurTint = value
-"
-        f"{switch_indent}    UserDefaults.standard.set("
-        f"value, forKey: GhostBaseKey.profileBlurTint)
-
-"
-
-        f"{switch_indent}case GhostBaseKey.profileBlurReduced:
-"
-        f"{switch_indent}    updated.profileBlurReduced = value
-"
-        f"{switch_indent}    UserDefaults.standard.set("
-        f"value, forKey: GhostBaseKey.profileBlurReduced)
-
-"
-    )
-
-    settings = (
-        settings[:glass_case.start()]
-        + replacement
-        + settings[message_case_start:]
-    )
+        settings = (
+            settings[:glass_case.start()]
+            + switch_block
+            + settings[message_case_start:]
+        )
 
 # Remove the dead PROFILEHUB/Profile Metrics controls themselves. They no
 # longer drive any materialized profile UI and must not remain as misleading
