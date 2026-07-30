@@ -758,8 +758,8 @@ if "GhostBase v1.1E BOTSHADOW1 state override" not in account_state:
     new_diff_sig = "func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference, overrideState: AuthorizedAccountState.State? = nil, resetChannelStates: Bool = false) -> Signal<AccountMutableState, NoError> {"
     account_state = replace_once(
         account_state,
-        old_diff_call,
-        new_diff_call,
+        "        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference))",
+        "        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference), overrideState: overrideState, resetChannelStates: resetChannelStates)",
         "BOTSHADOW1 initialStateWithDifference forwarding",
     )
 
