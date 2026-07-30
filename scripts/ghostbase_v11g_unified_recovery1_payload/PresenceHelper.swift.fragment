@@ -1,0 +1,356 @@
+// MARK: GhostBase v1.1G PRESENCEBOUNDED1
+public struct GhostBasePresenceHistoryEvent: Codable, Equatable {
+    public let observedAt: Int64
+    public let status: String
+    public let until: Int32?
+    public let lastActivity: Int32
+    public let isHidden: Bool
+}
+
+public struct GhostBaseKnownUser: Codable, Equatable {
+    public let peerId: Int64
+    public var title: String
+    public var username: String?
+    public var isBot: Bool
+    public var firstSeen: Int64
+    public var lastSeen: Int64
+}
+
+private enum GhostBasePresenceStoreV11G {
+    static let queue = DispatchQueue(
+        label: "GhostBase.PresenceStore.V11G",
+        qos: .utility
+    )
+    static let maximumEvents = 500
+    static let maximumKnownUsers = 5000
+    static let minimumKnownUserWriteInterval: Int64 = 6 * 60 * 60
+
+    // Queue-confined caches prevent repeated JSON decoding on every update.
+    private static var histories: [String: [GhostBasePresenceHistoryEvent]] = [:]
+    private static var loadedHistoryKeys: Set<String> = []
+    private static var knownUsers: [String: GhostBaseKnownUser] = [:]
+    private static var loadedKnownUserKeys: Set<String> = []
+
+    static func historyKey(accountPeerId: PeerId, peerId: PeerId) -> String {
+        return "GhostBase.PresenceHistory1.\(accountPeerId.toInt64()).\(peerId.toInt64())"
+    }
+
+    static func knownUserIdsKey(_ accountPeerId: PeerId) -> String {
+        return "GhostBase.PresenceGlobal1.KnownUserIds.\(accountPeerId.toInt64())"
+    }
+
+    static func knownUserKey(accountPeerId: PeerId, peerId: PeerId) -> String {
+        return "GhostBase.PresenceGlobal1.KnownUser.\(accountPeerId.toInt64()).\(peerId.toInt64())"
+    }
+
+    static func event(_ presence: TelegramUserPresence) -> GhostBasePresenceHistoryEvent? {
+        let status: String
+        let until: Int32?
+        let isHidden: Bool
+        switch presence.status {
+        case .none:
+            return nil
+        case let .present(value):
+            status = "онлайн"
+            until = value
+            isHidden = false
+        case let .recently(hidden):
+            status = "был недавно"
+            until = nil
+            isHidden = hidden
+        case let .lastWeek(hidden):
+            status = "был на этой неделе"
+            until = nil
+            isHidden = hidden
+        case let .lastMonth(hidden):
+            status = "был в этом месяце"
+            until = nil
+            isHidden = hidden
+        }
+        return GhostBasePresenceHistoryEvent(
+            observedAt: Int64(Date().timeIntervalSince1970),
+            status: status,
+            until: until,
+            lastActivity: presence.lastActivity,
+            isHidden: isHidden
+        )
+    }
+
+    static func transitionKey(_ event: GhostBasePresenceHistoryEvent) -> String {
+        return "\(event.status)|hidden=\(event.isHidden)"
+    }
+
+    static func compact(_ source: [GhostBasePresenceHistoryEvent]) -> [GhostBasePresenceHistoryEvent] {
+        var result: [GhostBasePresenceHistoryEvent] = []
+        result.reserveCapacity(min(source.count, self.maximumEvents))
+        for event in source {
+            if event.status == "нет данных" {
+                continue
+            }
+            if let previous = result.last,
+               self.transitionKey(previous) == self.transitionKey(event) {
+                continue
+            }
+            result.append(event)
+        }
+        if result.count > self.maximumEvents {
+            result.removeFirst(result.count - self.maximumEvents)
+        }
+        return result
+    }
+
+    static func recordPresence(
+        accountPeerId: PeerId,
+        peerId: PeerId,
+        presence: TelegramUserPresence
+    ) {
+        guard let event = self.event(presence) else {
+            return
+        }
+        self.queue.async {
+            let key = self.historyKey(
+                accountPeerId: accountPeerId,
+                peerId: peerId
+            )
+            let defaults = UserDefaults.standard
+            var events: [GhostBasePresenceHistoryEvent]
+            if self.loadedHistoryKeys.contains(key) {
+                events = self.histories[key] ?? []
+            } else {
+                self.loadedHistoryKeys.insert(key)
+                if let data = defaults.data(forKey: key),
+                   let decoded = try? JSONDecoder().decode(
+                    [GhostBasePresenceHistoryEvent].self,
+                    from: data
+                   ) {
+                    events = self.compact(decoded)
+                } else {
+                    events = []
+                }
+                self.histories[key] = events
+            }
+            if let previous = events.last,
+               self.transitionKey(previous) == self.transitionKey(event) {
+                return
+            }
+            events.append(event)
+            events = self.compact(events)
+            self.histories[key] = events
+            if let data = try? JSONEncoder().encode(events) {
+                defaults.set(data, forKey: key)
+                defaults.set(
+                    "История присутствия: \(events.count) переходов",
+                    forKey: "GhostBase.Runtime.PresenceSummary.V11G"
+                )
+            }
+        }
+    }
+
+    static func registerKnownUser(
+        accountPeerId: PeerId,
+        user: TelegramUser
+    ) {
+        let peerId = user.id
+        let title = user.nameOrPhone
+        let username = user.addressName
+        let isBot = user.botInfo != nil
+
+        self.queue.async {
+            let defaults = UserDefaults.standard
+            let key = self.knownUserKey(
+                accountPeerId: accountPeerId,
+                peerId: peerId
+            )
+            let now = Int64(Date().timeIntervalSince1970)
+            let previous: GhostBaseKnownUser?
+            if self.loadedKnownUserKeys.contains(key) {
+                previous = self.knownUsers[key]
+            } else {
+                self.loadedKnownUserKeys.insert(key)
+                if let data = defaults.data(forKey: key) {
+                    previous = try? JSONDecoder().decode(
+                        GhostBaseKnownUser.self,
+                        from: data
+                    )
+                } else {
+                    previous = nil
+                }
+                if let previous {
+                    self.knownUsers[key] = previous
+                }
+            }
+
+            if let previous,
+               previous.title == title,
+               previous.username == username,
+               previous.isBot == isBot,
+               now - previous.lastSeen < self.minimumKnownUserWriteInterval {
+                return
+            }
+
+            let record = GhostBaseKnownUser(
+                peerId: peerId.toInt64(),
+                title: title,
+                username: username,
+                isBot: isBot,
+                firstSeen: previous?.firstSeen ?? now,
+                lastSeen: now
+            )
+            self.knownUsers[key] = record
+            if let data = try? JSONEncoder().encode(record) {
+                defaults.set(data, forKey: key)
+            }
+
+            if previous == nil {
+                let idsKey = self.knownUserIdsKey(accountPeerId)
+                var ids = (defaults.array(forKey: idsKey) as? [NSNumber])?
+                    .map { $0.int64Value } ?? []
+                if !ids.contains(record.peerId) {
+                    ids.append(record.peerId)
+                }
+                if ids.count > self.maximumKnownUsers {
+                    let removed = ids.prefix(ids.count - self.maximumKnownUsers)
+                    for rawId in removed {
+                        let oldPeerId = PeerId(
+                            namespace: Namespaces.Peer.CloudUser,
+                            id: PeerId.Id._internalFromInt64Value(rawId)
+                        )
+                        defaults.removeObject(
+                            forKey: self.knownUserKey(
+                                accountPeerId: accountPeerId,
+                                peerId: oldPeerId
+                            )
+                        )
+                    }
+                    ids.removeFirst(ids.count - self.maximumKnownUsers)
+                }
+                defaults.set(
+                    ids.map { NSNumber(value: $0) },
+                    forKey: idsKey
+                )
+                defaults.set(
+                    "Известные пользователи: \(ids.count)",
+                    forKey: "GhostBase.Runtime.KnownUsersSummary.V11G"
+                )
+            }
+        }
+    }
+}
+
+private func ghostBaseRecordPresence(
+    accountPeerId: PeerId,
+    peerId: PeerId,
+    presence: TelegramUserPresence
+) {
+    GhostBasePresenceStoreV11G.recordPresence(
+        accountPeerId: accountPeerId,
+        peerId: peerId,
+        presence: presence
+    )
+}
+
+private func ghostBaseRegisterKnownUser(
+    accountPeerId: PeerId,
+    user: TelegramUser
+) {
+    GhostBasePresenceStoreV11G.registerKnownUser(
+        accountPeerId: accountPeerId,
+        user: user
+    )
+}
+
+public func ghostBasePresenceHistoryEvents(
+    accountPeerId: PeerId,
+    peerId: PeerId
+) -> [GhostBasePresenceHistoryEvent] {
+    let key = GhostBasePresenceStoreV11G.historyKey(
+        accountPeerId: accountPeerId,
+        peerId: peerId
+    )
+    guard let data = UserDefaults.standard.data(forKey: key),
+          let decoded = try? JSONDecoder().decode(
+            [GhostBasePresenceHistoryEvent].self,
+            from: data
+          ) else {
+        return []
+    }
+    return GhostBasePresenceStoreV11G.compact(decoded)
+}
+
+public func ghostBasePresenceHistoryReport(
+    accountPeerId: PeerId,
+    peerId: PeerId
+) -> String? {
+    let events = ghostBasePresenceHistoryEvents(
+        accountPeerId: accountPeerId,
+        peerId: peerId
+    )
+    guard !events.isEmpty else {
+        return nil
+    }
+
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "ru_RU")
+    formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
+
+    var lines = ["История присутствия: \(events.count) переходов"]
+    for event in events.reversed() {
+        var details: [String] = []
+        if event.status == "онлайн", let until = event.until, until > 0 {
+            details.append(
+                "до \(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(until))))"
+            )
+        }
+        if event.isHidden {
+            details.append("скрытый статус")
+        }
+        let suffix = details.isEmpty
+            ? ""
+            : " · " + details.joined(separator: " · ")
+        lines.append(
+            "\(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(event.observedAt)))) · \(event.status)\(suffix)"
+        )
+    }
+    return lines.joined(separator: "\n")
+}
+
+public func ghostBaseKnownUsers(
+    accountPeerId: PeerId
+) -> [GhostBaseKnownUser] {
+    let defaults = UserDefaults.standard
+    let ids = (defaults.array(
+        forKey: GhostBasePresenceStoreV11G.knownUserIdsKey(accountPeerId)
+    ) as? [NSNumber])?.map { $0.int64Value } ?? []
+
+    var result: [GhostBaseKnownUser] = []
+    result.reserveCapacity(min(ids.count, GhostBasePresenceStoreV11G.maximumKnownUsers))
+    for rawId in ids.suffix(GhostBasePresenceStoreV11G.maximumKnownUsers) {
+        let peerId = PeerId(
+            namespace: Namespaces.Peer.CloudUser,
+            id: PeerId.Id._internalFromInt64Value(rawId)
+        )
+        let key = GhostBasePresenceStoreV11G.knownUserKey(
+            accountPeerId: accountPeerId,
+            peerId: peerId
+        )
+        if let data = defaults.data(forKey: key),
+           let user = try? JSONDecoder().decode(
+            GhostBaseKnownUser.self,
+            from: data
+           ) {
+            result.append(user)
+        }
+    }
+    return result.sorted { $0.lastSeen > $1.lastSeen }
+}
+
+public func ghostBaseKnownUsersReport(accountPeerId: PeerId) -> String {
+    let users = ghostBaseKnownUsers(accountPeerId: accountPeerId)
+    var lines = ["Известные пользователи: \(users.count)"]
+    for user in users.prefix(200) {
+        lines.append(
+            "\(user.title) · id=\(user.peerId) · username=\(user.username ?? "nil") · bot=\(user.isBot)"
+        )
+    }
+    return lines.joined(separator: "\n")
+}

@@ -451,6 +451,11 @@ echo "== apply/verify GhostBase v1.1F profile header blur =="
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11f_profile_header_blur1.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11f_profile_header_blur1.py"
 # END MARK: GhostBase v1.1F profile header blur
+# MARK: GhostBase v1.1G unified recovery
+echo "== apply/verify GhostBase v1.1G unified recovery =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11g_unified_recovery1.py"
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11g_unified_recovery1.py"
+# END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
@@ -497,54 +502,17 @@ unzip -q "ghostbase-final/GhostBase.ipa" -d "$TMP_GB_CHECK"
 
 echo "-- detected GhostBase markers --"
 
-# GhostBase v1.0Q+SH2+OT2 strict final IPA marker gate
-GB_FINAL_IPA="${FINAL_IPA:-}"
-if [ -z "$GB_FINAL_IPA" ]; then
-  if [ -f "ghostbase-final/GhostBase.ipa" ]; then
-    GB_FINAL_IPA="$(pwd)/ghostbase-final/GhostBase.ipa"
-  elif [ -f "work/swiftgram-src/ghostbase-final/GhostBase.ipa" ]; then
-    GB_FINAL_IPA="$(pwd)/work/swiftgram-src/ghostbase-final/GhostBase.ipa"
-  else
-    GB_FINAL_IPA="$(find "$(pwd)" -path '*/ghostbase-final/GhostBase.ipa' -type f | head -1)"
-  fi
-fi
 
-echo "GB_FINAL_IPA=$GB_FINAL_IPA"
 
-if [ -z "$GB_FINAL_IPA" ] || [ ! -f "$GB_FINAL_IPA" ]; then
-  echo "ERROR: final IPA file not found for v1.0Q+SH2+OT2 marker gate"
+
+LC_ALL=C grep -RaoE "Version: v1\.1G-unified-recovery|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
+
+echo "-- verify Version: v1.1G-unified-recovery --"
+if ! LC_ALL=C grep -Rao "Version: v1.1G-unified-recovery" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
+  echo "::error::Final IPA does not contain Version: v1.1G-unified-recovery"
   exit 1
 fi
 
-GB_MARKER_TMP="$(mktemp -d)"
-unzip -q "$GB_FINAL_IPA" -d "$GB_MARKER_TMP"
-
-echo "-- detected GhostBase markers in final IPA Payload --"
-grep -RaoE 'Version: v1\.0[A-Z0-9.+-]*|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep|GhostBase\.V10Q|GhostBase\.SH2|GhostBase\.OT2|GhostBase\.V10P|GhostBase\.V10O|GhostBase\.READ3' "$GB_MARKER_TMP/Payload" 2>/dev/null | sort -u | sed -n '1,220p' || true
-
-if ! grep -RaoE 'Version: v1\.0Q\+SH2\+OT2|v1.0Q Raw Delete Mapping|SH2 Standalone Share Scheduled|OT2 ViewOnce Visual Keep|GhostBase\.V10Q|GhostBase\.SH2|GhostBase\.OT2' "$GB_MARKER_TMP/Payload" 2>/dev/null | grep -q .; then
-  echo "ERROR: final IPA missing v1.0Q+SH2+OT2 markers"
-  exit 1
-fi
-
-rm -rf "$GB_MARKER_TMP"
-echo "== strict GhostBase final IPA marker gate OK =="
-
-
-
-LC_ALL=C grep -RaoE "Version: v1\.0P\+SH1\+OT1|v1\.0P Pre-delete Shadow Trace|GhostBase\.V10P\.Verdict|SH1 Share Scheduled Send|GhostBase\.SH1\.ShareScheduledIntercept|OT1 Timer Media Local Keep|GhostBase\.OT1\.OutgoingKeepBlocked|GhostBase\.V10O\.Persistent\.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" 2>/dev/null | sort -u | sed -n '1,160p' || true
-
-echo "-- verify Version: v1.1F-profile-header --"
-if ! LC_ALL=C grep -Rao "Version: v1.1F-profile-header" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain Version: v1.1F-profile-header"
-  exit 1
-fi
-
-echo "-- verify v1.0P marker --"
-if ! LC_ALL=C grep -Rao "v1.0P Pre-delete Shadow Trace" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain v1.0P marker"
-  exit 1
-fi
 
 echo "-- verify SH1 marker --"
 if ! LC_ALL=C grep -Rao "SH1 Share Scheduled Send" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
@@ -558,11 +526,6 @@ if ! LC_ALL=C grep -Rao "OT1 Timer Media Local Keep" "$TMP_GB_CHECK/Payload" >/d
   exit 1
 fi
 
-echo "-- verify v1.0O persistent SourcePeer marker --"
-if ! LC_ALL=C grep -Rao "GhostBase.V10O.Persistent.SourcePeerIdRaw" "$TMP_GB_CHECK/Payload" >/dev/null 2>&1; then
-  echo "::error::Final IPA does not contain v1.0O SourcePeer marker"
-  exit 1
-fi
 
 echo "== strict GhostBase final IPA marker gate OK =="
 

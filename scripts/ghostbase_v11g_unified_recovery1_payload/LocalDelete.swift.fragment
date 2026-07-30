@@ -1,0 +1,86 @@
+            case let .DeleteMessages(ids):
+                // MARK: GhostBase v1.1G DELETEDMESSAGES1 bounded local gate
+                let ghostBaseSaveDeleted = (
+                    UserDefaults.standard.object(
+                        forKey: "GhostBase.Messages.SaveDeleted"
+                    ) as? Bool
+                ) ?? true
+
+                if ghostBaseSaveDeleted {
+                    for id in ids {
+                        guard let currentMessage = transaction.getMessage(id) else {
+                            continue
+                        }
+                        var updatedAttributes = currentMessage.attributes
+                        let originalText: String? = currentMessage.text.isEmpty
+                            ? nil
+                            : currentMessage.text
+                        let attribute = (
+                            updatedAttributes.first(
+                                where: { $0 is GhostBaseMessageAttribute }
+                            ) as? GhostBaseMessageAttribute
+                        ) ?? GhostBaseMessageAttribute(
+                            originalText: originalText,
+                            editHistoryTexts: [],
+                            editHistoryDates: [],
+                            isDeleted: false,
+                            deletedAt: 0
+                        )
+                        updatedAttributes.removeAll(
+                            where: { $0 is GhostBaseMessageAttribute }
+                        )
+                        updatedAttributes.append(
+                            attribute.withUpdatedDeleted(
+                                isDeleted: true,
+                                deletedAt: currentMessage.timestamp
+                            )
+                        )
+
+                        transaction.updateMessage(id, update: { currentMessage in
+                            return .update(StoreMessage(
+                                id: currentMessage.id,
+                                customStableId: nil,
+                                globallyUniqueId: currentMessage.globallyUniqueId,
+                                groupingKey: currentMessage.groupingKey,
+                                threadId: currentMessage.threadId,
+                                timestamp: currentMessage.timestamp,
+                                flags: StoreMessageFlags(currentMessage.flags),
+                                tags: currentMessage.tags,
+                                globalTags: currentMessage.globalTags,
+                                localTags: currentMessage.localTags,
+                                forwardInfo: currentMessage.forwardInfo.flatMap(
+                                    StoreMessageForwardInfo.init
+                                ),
+                                authorId: currentMessage.author?.id,
+                                text: currentMessage.text,
+                                attributes: updatedAttributes,
+                                media: currentMessage.media
+                            ))
+                        })
+                    }
+                    GhostBaseRuntimeDiagnosticsV11G.record(
+                        "local-delete preserved=\(ids.count)"
+                    )
+                } else {
+                    _internal_deleteMessages(
+                        transaction: transaction,
+                        mediaBox: mediaBox,
+                        ids: ids,
+                        manualAddMessageThreadStatsDifference: {
+                            id, add, remove in
+                            addMessageThreadStatsDifference(
+                                threadKey: id,
+                                remove: remove,
+                                addedMessagePeer: nil,
+                                addedMessageId: nil,
+                                isOutgoing: false
+                            )
+                        }
+                    )
+                    GhostBaseRuntimeDiagnosticsV11G.record(
+                        "local-delete removed=\(ids.count)"
+                    )
+                }
+                deletedMessageIds.append(
+                    contentsOf: ids.map { .messageId($0) }
+                )

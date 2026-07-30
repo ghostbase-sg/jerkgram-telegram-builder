@@ -69,14 +69,21 @@ if canonical_path.is_file():
         and "# MARK: GhostBase v1.1F profile header blur" in canonical
     )
 
+    has_v11g_successor_gate = (
+        'echo "-- verify Version: v1.1G-unified-recovery --"' in canonical
+        and "Final IPA does not contain Version: v1.1G-unified-recovery" in canonical
+        and "# MARK: GhostBase v1.1G unified recovery" in canonical
+    )
+
     if (
         not has_v11d_gate
         and not has_successor_gate
         and not has_v11f_successor_gate
+        and not has_v11g_successor_gate
     ):
         raise SystemExit(
             "[VERIFY V11D VERSION] neither the original v1.1D final "
-            "gate nor a valid v1.1E/v1.1F successor gate exists"
+            "gate nor a valid v1.1E/v1.1F/v1.1G successor gate exists"
         )
 
     if 'echo "-- verify Version: v1.1C-stage1 --"' in canonical:

@@ -1,0 +1,42 @@
+// MARK: GhostBase v1.1G BOUNDEDDIAGNOSTICS1
+private enum GhostBaseRuntimeDiagnosticsV11G {
+    private static let queue = DispatchQueue(
+        label: "GhostBase.RuntimeDiagnostics.V11G",
+        qos: .utility
+    )
+    private static let key = "GhostBase.Runtime.Diagnostics.V11G"
+    private static let limit = 200
+    private static var lines: [String] = []
+    private static var didLoad = false
+    private static var eventsSinceFlush = 0
+    private static var lastFlush: Int64 = 0
+
+    static func record(_ event: String) {
+        self.queue.async {
+            let defaults = UserDefaults.standard
+            if !self.didLoad {
+                self.didLoad = true
+                self.lines = defaults.stringArray(forKey: self.key) ?? []
+                if self.lines.count > self.limit {
+                    self.lines.removeFirst(self.lines.count - self.limit)
+                }
+            }
+
+            let timestamp = Int64(Date().timeIntervalSince1970)
+            self.lines.append("\(timestamp) · \(event)")
+            if self.lines.count > self.limit {
+                self.lines.removeFirst(self.lines.count - self.limit)
+            }
+
+            self.eventsSinceFlush += 1
+            let shouldFlush = self.lastFlush == 0
+                || self.eventsSinceFlush >= 20
+                || timestamp - self.lastFlush >= 5
+            if shouldFlush {
+                defaults.set(self.lines, forKey: self.key)
+                self.eventsSinceFlush = 0
+                self.lastFlush = timestamp
+            }
+        }
+    }
+}
