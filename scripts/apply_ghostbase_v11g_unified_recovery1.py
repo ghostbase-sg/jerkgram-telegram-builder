@@ -691,7 +691,95 @@ write(UPDATE_PEERS_REL, update_peers)
 # ---------------------------------------------------------------------------
 # 5. Remove runaway delete probes; preserve deleted/edit functionality.
 # ---------------------------------------------------------------------------
+
 account_state = official_text(ACCOUNT_STATE_REL)
+
+# MARK: GhostBase V11G TelegramCore compatibility
+#
+# V10ZC and V11E are applied before V11G. V11G intentionally restores
+# AccountStateManagementUtils.swift from Official, so the exact Bot Account
+# helper and BOTSHADOW1 state-builder extensions have to be materialized again.
+if "GhostBase v1.0ZC Bot account helper" not in account_state:
+    helper_anchor = "private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<PeerId> {"
+    helper = """// MARK: GhostBase v1.0ZC Bot account helper
+func ghostBaseIsBotAccount(_ accountPeerId: PeerId) -> Bool {
+    return UserDefaults.standard.bool(
+        forKey: "GhostBase.BotAccount.\\(accountPeerId.toInt64())"
+    )
+}
+
+"""
+    account_state = replace_once(
+        account_state,
+        helper_anchor,
+        helper + helper_anchor,
+        "V10ZC bot account helper",
+    )
+
+if "GhostBase v1.1E BOTSHADOW1 state override" not in account_state:
+    old_peer_sig = "func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], storedStories: [StoryId: UpdatesStoredStory]) -> AccountMutableState {"
+    new_peer_sig = "func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], storedStories: [StoryId: UpdatesStoredStory], overrideState: AuthorizedAccountState.State? = nil, resetChannelStates: Bool = false) -> AccountMutableState { // MARK: GhostBase v1.1E BOTSHADOW1 state override"
+    account_state = replace_once(
+        account_state,
+        old_peer_sig,
+        new_peer_sig,
+        "BOTSHADOW1 initialStateWithPeerIds signature",
+    )
+
+    old_channel = """        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
+                channelStates[peerId] = AccountStateChannelState(pts: channelState.pts)
+            }
+"""
+    new_channel = """        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            if resetChannelStates {
+                channelStates[peerId] = AccountStateChannelState(pts: 0)
+            } else if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
+                channelStates[peerId] = AccountStateChannelState(pts: channelState.pts)
+            }
+"""
+    account_state = replace_once(
+        account_state,
+        old_channel,
+        new_channel,
+        "BOTSHADOW1 channel-state override",
+    )
+
+    old_state = "    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds,"
+    new_state = "    let state = AccountMutableState(initialState: AccountInitialState(state: overrideState ?? (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds,"
+    account_state = replace_once(
+        account_state,
+        old_state,
+        new_state,
+        "BOTSHADOW1 mutable-state override",
+    )
+
+    old_diff_sig = "func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {"
+    new_diff_sig = "func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference, overrideState: AuthorizedAccountState.State? = nil, resetChannelStates: Bool = false) -> Signal<AccountMutableState, NoError> {"
+    account_state = replace_once(
+        account_state,
+        old_diff_call,
+        new_diff_call,
+        "BOTSHADOW1 initialStateWithDifference forwarding",
+    )
+
+    old_final_sig = "func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference, asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?) -> Signal<AccountFinalState, NoError> {"
+    new_final_sig = "func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference, asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?, shouldResetChannels: Bool = true) -> Signal<AccountFinalState, NoError> {"
+    account_state = replace_once(
+        account_state,
+        old_final_sig,
+        new_final_sig,
+        "BOTSHADOW1 finalStateWithDifference signature",
+    )
+
+    old_final_return = "    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: true, updatesDate: nil, asyncResetChannels: asyncResetChannels)"
+    new_final_return = "    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: shouldResetChannels, updatesDate: nil, asyncResetChannels: asyncResetChannels)"
+    account_state = replace_once(
+        account_state,
+        old_final_return,
+        new_final_return,
+        "BOTSHADOW1 final-state reset policy",
+    )
 account_state = replace_once(
     account_state,
     "import EncryptionProvider\n",
