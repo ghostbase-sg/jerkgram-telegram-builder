@@ -756,12 +756,33 @@ if "GhostBase v1.1E BOTSHADOW1 state override" not in account_state:
 
     old_diff_sig = "func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {"
     new_diff_sig = "func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference, overrideState: AuthorizedAccountState.State? = nil, resetChannelStates: Bool = false) -> Signal<AccountMutableState, NoError> {"
-    account_state = replace_once(
-        account_state,
-        "        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference))",
-        "        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference), overrideState: overrideState, resetChannelStates: resetChannelStates)",
-        "BOTSHADOW1 initialStateWithDifference forwarding",
-    )
+    old_diff_signature = "func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {"
+    new_diff_signature = "func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference, overrideState: AuthorizedAccountState.State? = nil, resetChannelStates: Bool = false) -> Signal<AccountMutableState, NoError> {"
+
+    if old_diff_signature in account_state:
+        account_state = account_state.replace(
+            old_diff_signature,
+            new_diff_signature,
+            1,
+        )
+    elif new_diff_signature not in account_state:
+        raise SystemExit(
+            "[V11G] initialStateWithDifference signature unavailable"
+        )
+
+    old_diff_forwarding = "        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference))"
+    new_diff_forwarding = "        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference), overrideState: overrideState, resetChannelStates: resetChannelStates)"
+
+    if old_diff_forwarding in account_state:
+        account_state = account_state.replace(
+            old_diff_forwarding,
+            new_diff_forwarding,
+            1,
+        )
+    elif new_diff_forwarding not in account_state:
+        raise SystemExit(
+            "[V11G] initialStateWithDifference forwarding unavailable"
+        )
 
     old_final_sig = "func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference, asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?) -> Signal<AccountFinalState, NoError> {"
     new_final_sig = "func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference, asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?, shouldResetChannels: Bool = true) -> Signal<AccountFinalState, NoError> {"
