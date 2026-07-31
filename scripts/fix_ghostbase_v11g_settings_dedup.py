@@ -156,7 +156,7 @@ for name in property_names:
             f"{property_count}"
         )
 
-final_load = text[ 
+final_load = text[
     text.find("    static func load() -> GhostBaseSettingsState {"):
     text.find(
         "    func save()",
