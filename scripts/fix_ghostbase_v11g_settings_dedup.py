@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 from pathlib import Path
 
 
@@ -13,172 +14,258 @@ SOURCE_ROOT = Path(
 
 TARGET = (
     SOURCE_ROOT
-    / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
+    / "submodules/SettingsUI/Sources/GhostBase/"
+      "GhostBaseSettingsController.swift"
 )
 
-text = TARGET.read_text(encoding="utf-8")
-
-property_names = (
+PROPERTY_NAMES = (
     "glassEnabled",
     "profileAvatarBlur",
     "profileBlurTint",
     "profileBlurReduced",
 )
 
+
+def matching_paren(text: str, opening: int) -> int:
+    depth = 0
+    in_string = False
+    escaped = False
+
+    for index in range(opening, len(text)):
+        char = text[index]
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+
+    raise RuntimeError("matching closing parenthesis not found")
+
+
+def split_top_level_arguments(body: str) -> list[str]:
+    result: list[str] = []
+    start = 0
+    paren = 0
+    bracket = 0
+    brace = 0
+    in_string = False
+    escaped = False
+
+    for index, char in enumerate(body):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "(":
+            paren += 1
+        elif char == ")":
+            paren -= 1
+        elif char == "[":
+            bracket += 1
+        elif char == "]":
+            bracket -= 1
+        elif char == "{":
+            brace += 1
+        elif char == "}":
+            brace -= 1
+        elif (
+            char == ","
+            and paren == 0
+            and bracket == 0
+            and brace == 0
+        ):
+            result.append(body[start:index])
+            start = index + 1
+
+    tail = body[start:]
+    if tail.strip():
+        result.append(tail)
+
+    return result
+
+
+def argument_label(argument: str) -> str | None:
+    match = re.match(
+        r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:",
+        argument,
+    )
+    return match.group(1) if match else None
+
+
+text = TARGET.read_text(encoding="utf-8")
+
 # ------------------------------------------------------------
-# 1. Оставляем по одному stored property.
+# 1. Оставляем ровно одно stored property каждого типа.
 # ------------------------------------------------------------
 lines = text.splitlines(keepends=True)
 seen_properties: set[str] = set()
-repaired_lines: list[str] = []
+output_lines: list[str] = []
 
 for line in lines:
     stripped = line.strip()
+    matched = None
 
-    matched_name = None
-    for name in property_names:
+    for name in PROPERTY_NAMES:
         if stripped == f"var {name}: Bool":
-            matched_name = name
+            matched = name
             break
 
-    if matched_name is None:
-        repaired_lines.append(line)
-        continue
-
-    if matched_name in seen_properties:
+    if matched is None:
+        output_lines.append(line)
+    elif matched not in seen_properties:
+        seen_properties.add(matched)
+        output_lines.append(line)
+    else:
         print(
             f"[V11G SETTINGS FIX] removed duplicate property: "
-            f"{matched_name}"
+            f"{matched}"
         )
-        continue
 
-    seen_properties.add(matched_name)
-    repaired_lines.append(line)
-
-missing_properties = [
-    name for name in property_names
+missing = [
+    name for name in PROPERTY_NAMES
     if name not in seen_properties
 ]
-
-if missing_properties:
+if missing:
     raise RuntimeError(
-        "missing profile/glass properties: "
-        + ", ".join(missing_properties)
+        "missing stored properties: " + ", ".join(missing)
     )
 
-text = "".join(repaired_lines)
+text = "".join(output_lines)
 
 # ------------------------------------------------------------
-# 2. В load() оставляем по одному аргументу каждого имени.
+# 2. Разбираем весь GhostBaseSettingsState(...) в load().
 # ------------------------------------------------------------
-load_start = text.find(
+load_marker = (
     "    static func load() -> GhostBaseSettingsState {"
 )
-save_start = text.find(
-    "    func save()",
-    load_start,
-)
+call_marker = "return GhostBaseSettingsState("
 
-if load_start < 0 or save_start <= load_start:
-    raise RuntimeError("GhostBaseSettingsState load() span unavailable")
+load_start = text.find(load_marker)
+if load_start < 0:
+    raise RuntimeError("load() not found")
 
-before_load = text[:load_start]
-load_body = text[load_start:save_start]
-after_load = text[save_start:]
+call_start = text.find(call_marker, load_start)
+if call_start < 0:
+    raise RuntimeError("GhostBaseSettingsState constructor not found")
 
-load_lines = load_body.splitlines(keepends=True)
-seen_arguments: set[str] = set()
-repaired_load_lines: list[str] = []
+opening = call_start + len(call_marker) - 1
+closing = matching_paren(text, opening)
 
-for line in load_lines:
-    stripped = line.strip()
+body = text[opening + 1:closing]
+arguments = split_top_level_arguments(body)
 
-    matched_name = None
-    for name in property_names:
-        if stripped.startswith(f"{name}:"):
-            matched_name = name
-            break
+seen_labels: set[str] = set()
+clean_arguments: list[str] = []
 
-    if matched_name is None:
-        repaired_load_lines.append(line)
+for argument in arguments:
+    label = argument_label(argument)
+
+    if label is None:
+        if argument.strip():
+            clean_arguments.append(argument)
         continue
 
-    if matched_name in seen_arguments:
+    if label in seen_labels:
         print(
-            f"[V11G SETTINGS FIX] removed duplicate load argument: "
-            f"{matched_name}"
+            f"[V11G SETTINGS FIX] removed duplicate "
+            f"constructor argument: {label}"
         )
         continue
 
-    seen_arguments.add(matched_name)
-    repaired_load_lines.append(line)
+    seen_labels.add(label)
+    clean_arguments.append(argument)
 
-missing_arguments = [
-    name for name in property_names
-    if name not in seen_arguments
-]
+for name in PROPERTY_NAMES:
+    if name not in seen_labels:
+        raise RuntimeError(
+            f"required constructor argument missing: {name}"
+        )
 
-if missing_arguments:
-    raise RuntimeError(
-        "missing load arguments: "
-        + ", ".join(missing_arguments)
-    )
+# Нормализуем только разделители между уже готовыми аргументами.
+normalized = []
+for argument in clean_arguments:
+    stripped = argument.strip()
+    if stripped:
+        normalized.append("            " + stripped)
+
+new_body = "\n" + ",\n".join(normalized) + "\n        "
 
 text = (
-    before_load
-    + "".join(repaired_load_lines)
-    + after_load
+    text[:opening + 1]
+    + new_body
+    + text[closing:]
 )
 
 # ------------------------------------------------------------
-# 3. Удаляем старую неиспользуемую локальную переменную.
+# 3. Удаляем неиспользуемую локальную переменную секции.
 # ------------------------------------------------------------
-unused_profile = (
+text = text.replace(
     "    let profile = "
-    "GhostBaseSettingsSection.profileMetrics.rawValue\n"
+    "GhostBaseSettingsSection.profileMetrics.rawValue\n",
+    "",
 )
 
-if unused_profile in text:
-    text = text.replace(unused_profile, "", 1)
-    print(
-        "[V11G SETTINGS FIX] removed unused profile section local"
+# ------------------------------------------------------------
+# 4. Финальная структурная проверка.
+# ------------------------------------------------------------
+for name in PROPERTY_NAMES:
+    property_count = len(
+        re.findall(
+            rf"(?m)^\s*var {re.escape(name)}: Bool\s*$",
+            text,
+        )
     )
-
-# ------------------------------------------------------------
-# 4. Финальные проверки.
-# ------------------------------------------------------------
-for name in property_names:
-    property_count = text.count(f"    var {name}: Bool\n")
-
     if property_count != 1:
         raise RuntimeError(
-            f"{name} property count after repair: "
-            f"{property_count}"
+            f"{name} property count={property_count}"
         )
 
-final_load = text[
-    text.find("    static func load() -> GhostBaseSettingsState {"):
-    text.find(
-        "    func save()",
-        text.find(
-            "    static func load() -> GhostBaseSettingsState {"
-        ),
-    )
-]
+new_call_start = text.find(call_marker, load_start)
+new_opening = new_call_start + len(call_marker) - 1
+new_closing = matching_paren(text, new_opening)
+new_body_check = text[new_opening + 1:new_closing]
+new_arguments = split_top_level_arguments(new_body_check)
 
-for name in property_names:
-    argument_count = sum(
-        1
-        for line in final_load.splitlines()
-        if line.strip().startswith(f"{name}:")
-    )
+label_counts: dict[str, int] = {}
+for argument in new_arguments:
+    label = argument_label(argument)
+    if label is not None:
+        label_counts[label] = label_counts.get(label, 0) + 1
 
-    if argument_count != 1:
-        raise RuntimeError(
-            f"{name} load argument count after repair: "
-            f"{argument_count}"
-        )
+duplicates = {
+    label: count
+    for label, count in label_counts.items()
+    if count != 1
+}
+if duplicates:
+    raise RuntimeError(
+        f"constructor labels are not unique: {duplicates}"
+    )
 
 TARGET.write_text(text, encoding="utf-8")
 
 print(f"[V11G SETTINGS FIX] repaired {TARGET}")
+print(
+    f"[V11G SETTINGS FIX] constructor arguments="
+    f"{len(label_counts)}"
+)
