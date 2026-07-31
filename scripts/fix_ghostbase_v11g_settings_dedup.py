@@ -18,57 +18,166 @@ TARGET = (
 
 text = TARGET.read_text(encoding="utf-8")
 
-property_block = """    var glassEnabled: Bool
-    var profileAvatarBlur: Bool
-    var profileBlurTint: Bool
-    var profileBlurReduced: Bool
-"""
-
-count = text.count(property_block)
-
-if count == 2:
-    first = text.find(property_block)
-    second = text.find(property_block, first + len(property_block))
-
-    if first < 0 or second < 0:
-        raise SystemExit(
-            "[V11G SETTINGS FIX] duplicate property block offsets unavailable"
-        )
-
-    text = text[:second] + text[second + len(property_block):]
-    print("[V11G SETTINGS FIX] removed duplicate profile/glass state properties")
-elif count == 1:
-    print("[V11G SETTINGS FIX] profile/glass state properties already unique")
-else:
-    raise SystemExit(
-        f"[V11G SETTINGS FIX] unexpected profile/glass property block count: {count}"
-    )
-
-unused_profile = (
-    "    let profile = GhostBaseSettingsSection.profileMetrics.rawValue\n"
+property_names = (
+    "glassEnabled",
+    "profileAvatarBlur",
+    "profileBlurTint",
+    "profileBlurReduced",
 )
 
-profile_decl_count = text.count(unused_profile)
+# ------------------------------------------------------------
+# 1. Оставляем по одному stored property.
+# ------------------------------------------------------------
+lines = text.splitlines(keepends=True)
+seen_properties: set[str] = set()
+repaired_lines: list[str] = []
 
-if profile_decl_count == 1:
-    text = text.replace(unused_profile, "", 1)
-    print("[V11G SETTINGS FIX] removed unused profile section local")
-elif profile_decl_count == 0:
-    print("[V11G SETTINGS FIX] unused profile section local already absent")
-else:
-    raise SystemExit(
-        f"[V11G SETTINGS FIX] unexpected profile local count: {profile_decl_count}"
+for line in lines:
+    stripped = line.strip()
+
+    matched_name = None
+    for name in property_names:
+        if stripped == f"var {name}: Bool":
+            matched_name = name
+            break
+
+    if matched_name is None:
+        repaired_lines.append(line)
+        continue
+
+    if matched_name in seen_properties:
+        print(
+            f"[V11G SETTINGS FIX] removed duplicate property: "
+            f"{matched_name}"
+        )
+        continue
+
+    seen_properties.add(matched_name)
+    repaired_lines.append(line)
+
+missing_properties = [
+    name for name in property_names
+    if name not in seen_properties
+]
+
+if missing_properties:
+    raise RuntimeError(
+        "missing profile/glass properties: "
+        + ", ".join(missing_properties)
     )
 
-if text.count(property_block) != 1:
-    raise SystemExit(
-        "[V11G SETTINGS FIX] profile/glass properties are not unique after repair"
+text = "".join(repaired_lines)
+
+# ------------------------------------------------------------
+# 2. В load() оставляем по одному аргументу каждого имени.
+# ------------------------------------------------------------
+load_start = text.find(
+    "    static func load() -> GhostBaseSettingsState {"
+)
+save_start = text.find(
+    "    func save()",
+    load_start,
+)
+
+if load_start < 0 or save_start <= load_start:
+    raise RuntimeError("GhostBaseSettingsState load() span unavailable")
+
+before_load = text[:load_start]
+load_body = text[load_start:save_start]
+after_load = text[save_start:]
+
+load_lines = load_body.splitlines(keepends=True)
+seen_arguments: set[str] = set()
+repaired_load_lines: list[str] = []
+
+for line in load_lines:
+    stripped = line.strip()
+
+    matched_name = None
+    for name in property_names:
+        if stripped.startswith(f"{name}:"):
+            matched_name = name
+            break
+
+    if matched_name is None:
+        repaired_load_lines.append(line)
+        continue
+
+    if matched_name in seen_arguments:
+        print(
+            f"[V11G SETTINGS FIX] removed duplicate load argument: "
+            f"{matched_name}"
+        )
+        continue
+
+    seen_arguments.add(matched_name)
+    repaired_load_lines.append(line)
+
+missing_arguments = [
+    name for name in property_names
+    if name not in seen_arguments
+]
+
+if missing_arguments:
+    raise RuntimeError(
+        "missing load arguments: "
+        + ", ".join(missing_arguments)
     )
+
+text = (
+    before_load
+    + "".join(repaired_load_lines)
+    + after_load
+)
+
+# ------------------------------------------------------------
+# 3. Удаляем старую неиспользуемую локальную переменную.
+# ------------------------------------------------------------
+unused_profile = (
+    "    let profile = "
+    "GhostBaseSettingsSection.profileMetrics.rawValue\n"
+)
 
 if unused_profile in text:
-    raise SystemExit(
-        "[V11G SETTINGS FIX] unused profile section local remains after repair"
+    text = text.replace(unused_profile, "", 1)
+    print(
+        "[V11G SETTINGS FIX] removed unused profile section local"
     )
+
+# ------------------------------------------------------------
+# 4. Финальные проверки.
+# ------------------------------------------------------------
+for name in property_names:
+    property_count = text.count(f"    var {name}: Bool\n")
+
+    if property_count != 1:
+        raise RuntimeError(
+            f"{name} property count after repair: "
+            f"{property_count}"
+        )
+
+final_load = text[ 
+    text.find("    static func load() -> GhostBaseSettingsState {"):
+    text.find(
+        "    func save()",
+        text.find(
+            "    static func load() -> GhostBaseSettingsState {"
+        ),
+    )
+]
+
+for name in property_names:
+    argument_count = sum(
+        1
+        for line in final_load.splitlines()
+        if line.strip().startswith(f"{name}:")
+    )
+
+    if argument_count != 1:
+        raise RuntimeError(
+            f"{name} load argument count after repair: "
+            f"{argument_count}"
+        )
 
 TARGET.write_text(text, encoding="utf-8")
 
