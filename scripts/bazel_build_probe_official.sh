@@ -454,6 +454,9 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11f_profile_header_bl
 # MARK: GhostBase v1.1G unified recovery
 echo "== apply/verify GhostBase v1.1G unified recovery =="
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v11g_unified_recovery1.py"
+
+echo "== fix GhostBase v1.1G SettingsUI dedup =="
+python3 scripts/fix_ghostbase_v11g_settings_dedup.py
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v11g_unified_recovery1.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
