@@ -467,6 +467,8 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11h_recovery1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11i_profile_final1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/fix_ghostbase_v11i_profile_history_compile.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11i_profile_final1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11k_profile_polish2.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11k_profile_polish2.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \

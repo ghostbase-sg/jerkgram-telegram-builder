@@ -109,7 +109,12 @@ if marker not in text:
         let sender = entry.nameHidden
             ? "анонимно"
             : (entry.fromPeerTitle ?? entry.fromPeerUsername ?? entry.fromPeerId.map(String.init) ?? "nil")
-        let title = entry.title.isEmpty ? "Подарок \(entry.giftId)" : entry.title
+        let title: String
+        if entry.giftId == 6046178578163303744 {
+            title = entry.title.isEmpty ? "Мишка" : entry.title
+        } else {
+            title = entry.title.isEmpty ? "Подарок \(entry.giftId)" : entry.title
+        }
         lines.append(
             "\(dateText(Int64(entry.giftDate))) · \(visibility) · \(title) · giftId=\(entry.giftId) · uniqueId=\(entry.uniqueId.map(String.init) ?? "nil") · slug=\(entry.slug ?? "nil") · number=\(entry.number.map(String.init) ?? "nil") · sender=\(sender) · senderId=\(entry.fromPeerId.map(String.init) ?? "nil") · username=\(entry.fromPeerUsername ?? "nil") · text=\(entry.text ?? "nil") · first=\(dateText(entry.firstObservedAt)) · lastVisible=\(dateText(entry.lastSeenVisibleAt)) · missingSince=\(dateText(entry.missingSince))"
         )
