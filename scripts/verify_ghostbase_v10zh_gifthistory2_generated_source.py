@@ -16,6 +16,7 @@ for proof in (
     "entries[index].missingSince = observedAt",
     "исчез из публичного профиля",
     "GhostBase.GiftHistory2",
+    "6046178578163303744",
 ):
     if proof not in text:
         raise SystemExit(f"[V10ZH verifier] GIFTHISTORY2 proof missing: {proof}")

@@ -306,8 +306,8 @@ if not errors:
 
     require(
         "6046178578163303744"
-        in bearGeneratorText,
-        "bear ID missing from canonical GIFTHISTORY2 generator",
+        in text["star"],
+        "bear ID missing from materialized StarGifts.swift",
     )
 
 
