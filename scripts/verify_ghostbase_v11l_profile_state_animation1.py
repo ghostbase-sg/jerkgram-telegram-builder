@@ -186,6 +186,12 @@ require(
 )
 
 require(
+    "case GhostBaseKey.profileAnimatedBackground:"
+    in settings,
+    "animated Settings toggle action missing"
+)
+
+require(
     "GhostBaseAnimatedMediaSource"
     in bg
     and

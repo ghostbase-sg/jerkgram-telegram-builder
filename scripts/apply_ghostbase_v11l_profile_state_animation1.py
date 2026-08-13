@@ -322,20 +322,152 @@ if not matched:
         "[V11L] Settings appearance block not found"
     )
 
-settings = replace_once(
-    settings,
-    '''            case GhostBaseKey.profileAvatarBlur:
-                updated.profileAvatarBlur = value
-            case GhostBaseKey.profileBlurTint:
-''',
-    '''            case GhostBaseKey.profileAvatarBlur:
-                updated.profileAvatarBlur = value
-            case GhostBaseKey.profileAnimatedBackground:
-                updated.profileAnimatedBackground = value
-            case GhostBaseKey.profileBlurTint:
-''',
-    "Settings animated action"
-)
+# ------------------------------------------------------------
+# Animated-background toggle action.
+#
+# Do not depend on exact whitespace or the state variable name.
+# Reuse the real profileAvatarBlur case shape from materialized
+# SettingsUI and mirror it for profileAnimatedBackground.
+# ------------------------------------------------------------
+
+if (
+    "case GhostBaseKey.profileAnimatedBackground:"
+    not in settings
+):
+    avatar_case_token = (
+        "case GhostBaseKey.profileAvatarBlur:"
+    )
+
+    avatar_case_pos = settings.find(
+        avatar_case_token
+    )
+
+    if avatar_case_pos < 0:
+        raise RuntimeError(
+            "[V11L] Settings animated action: "
+            "profileAvatarBlur case missing"
+        )
+
+    line_start = (
+        settings.rfind(
+            "\n",
+            0,
+            avatar_case_pos
+        )
+        + 1
+    )
+
+    next_case_pos = settings.find(
+        "\n",
+        avatar_case_pos
+    )
+
+    if next_case_pos < 0:
+        raise RuntimeError(
+            "[V11L] Settings animated action: "
+            "avatar case line end missing"
+        )
+
+    scan_pos = next_case_pos + 1
+    following_case_pos = -1
+
+    while scan_pos < len(settings):
+        line_end = settings.find(
+            "\n",
+            scan_pos
+        )
+
+        if line_end < 0:
+            line_end = len(settings)
+
+        line = settings[
+            scan_pos:
+            line_end
+        ]
+
+        if line.lstrip().startswith(
+            "case "
+        ):
+            following_case_pos = scan_pos
+            break
+
+        if line.lstrip().startswith(
+            "default:"
+        ):
+            following_case_pos = scan_pos
+            break
+
+        scan_pos = line_end + 1
+
+    if following_case_pos < 0:
+        raise RuntimeError(
+            "[V11L] Settings animated action: "
+            "following case missing"
+        )
+
+    avatar_case_block = settings[
+        line_start:
+        following_case_pos
+    ]
+
+    assignment_lines = [
+        line
+        for line in avatar_case_block.splitlines()
+        if ".profileAvatarBlur" in line
+        and "=" in line
+    ]
+
+    if len(assignment_lines) != 1:
+        raise RuntimeError(
+            "[V11L] Settings animated action: "
+            "expected exactly one profileAvatarBlur "
+            f"assignment in case, found "
+            f"{len(assignment_lines)}"
+        )
+
+    avatar_assignment = assignment_lines[0]
+
+    animated_assignment = (
+        avatar_assignment.replace(
+            "profileAvatarBlur",
+            "profileAnimatedBackground"
+        )
+    )
+
+    case_line = settings[
+        line_start:
+        next_case_pos
+    ]
+
+    case_indent = (
+        case_line[
+            :len(case_line)
+            - len(case_line.lstrip())
+        ]
+    )
+
+    animated_case = (
+        f"{case_indent}"
+        "case GhostBaseKey."
+        "profileAnimatedBackground:\n"
+        f"{animated_assignment}\n"
+    )
+
+    settings = (
+        settings[:following_case_pos]
+        + animated_case
+        + settings[following_case_pos:]
+    )
+
+    print(
+        "[V11L] Settings animated action "
+        "mirrored from profileAvatarBlur"
+    )
+else:
+    print(
+        "[V11L] Settings animated action "
+        "already present"
+    )
 
 
 # ============================================================
