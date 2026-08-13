@@ -471,6 +471,15 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11k_profile_polish2.
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11k_profile_polish2.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11l_profile_state_animation1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11l_profile_state_animation1.py"
+
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11m_runtime_core1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11m_runtime_core1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11m_animation_coexist1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11m_animation_coexist1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11m_gifts_glass1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11m_gifts_glass1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11m_music_player_glass1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11m_music_player_glass1.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
