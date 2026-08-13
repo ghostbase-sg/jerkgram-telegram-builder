@@ -690,20 +690,6 @@ def apply_patch():
                     fallback
             )
 
-        case let .file(file):
-            if wallpaper.isPattern {
-                return .single(nil)
-            }
-
-            return self.resourceEntrySignal(
-                resource:
-                    file.file.resource,
-                identity:
-                    identity,
-                fallback:
-                    fallback
-            )
-
         default:
             let colors =
                 Self.wallpaperColors(

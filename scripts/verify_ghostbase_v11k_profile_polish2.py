@@ -111,6 +111,33 @@ if not errors:
         "persistent tone missing",
     )
 
+    wallpaperFunctionStart = text["bg"].find(
+        "private func wallpaperEntrySignal("
+    )
+
+    wallpaperFunctionEnd = text["bg"].find(
+        "private func avatarEntrySignal(",
+        wallpaperFunctionStart,
+    )
+
+    wallpaperFunction = (
+        text["bg"][
+            wallpaperFunctionStart:
+            wallpaperFunctionEnd
+        ]
+        if wallpaperFunctionStart >= 0
+        and wallpaperFunctionEnd
+            > wallpaperFunctionStart
+        else ""
+    )
+
+    require(
+        wallpaperFunction.count(
+            "case let .file(file):"
+        ) == 1,
+        "duplicate wallpaper .file branch generated",
+    )
+
     require(
         "maximumPersistentTones =\n        96"
         in text["bg"]
