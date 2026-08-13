@@ -260,16 +260,28 @@ settings = replace_once(
     "Settings animated load"
 )
 
-settings = replace_once(
-    settings,
-    '''        UserDefaults.standard.set(self.profileAvatarBlur, forKey: GhostBaseKey.profileAvatarBlur)
+settings_save_old = """        UserDefaults.standard.set(self.profileAvatarBlur, forKey: GhostBaseKey.profileAvatarBlur)
         UserDefaults.standard.set(self.profileBlurTint, forKey: GhostBaseKey.profileBlurTint)
-''',
-    '''        UserDefaults.standard.set(self.profileAvatarBlur, forKey: GhostBaseKey.profileAvatarBlur)
+"""
+
+settings_save_new = """        UserDefaults.standard.set(self.profileAvatarBlur, forKey: GhostBaseKey.profileAvatarBlur)
         UserDefaults.standard.set(self.profileAnimatedBackground, forKey: GhostBaseKey.profileAnimatedBackground)
         UserDefaults.standard.set(self.profileBlurTint, forKey: GhostBaseKey.profileBlurTint)
-''',
-    "Settings animated save"
+"""
+
+settings_save_count = settings.count(
+    settings_save_old
+)
+
+if settings_save_count not in (1, 2):
+    raise RuntimeError(
+        "[V11L] Settings animated save: "
+        f"expected 1 or 2 found {settings_save_count}"
+    )
+
+settings = settings.replace(
+    settings_save_old,
+    settings_save_new
 )
 
 old_appearance_candidates = [
