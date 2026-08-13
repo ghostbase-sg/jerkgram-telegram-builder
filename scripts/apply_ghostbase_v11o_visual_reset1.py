@@ -318,24 +318,6 @@ placeholder_helpers = """    private func placeholderColors(
                 .theme
                 .overallDarkAppearance
 
-        // Custom Telegram name color, when present.
-        if let nameColor = peer.nameColor,
-           let colors =
-                self.context
-                    .peerNameColors
-                    .get(
-                        nameColor,
-                        dark: isDark
-                    ) {
-
-            return (
-                colors.main,
-                colors.secondary
-                    ?? colors.main,
-                "nameColor:\\(String(describing: nameColor)):\\(isDark)"
-            )
-        }
-
         // Telegram legacy avatar-placeholder palette.
         let palette:
             [(UInt32, UInt32)] = [

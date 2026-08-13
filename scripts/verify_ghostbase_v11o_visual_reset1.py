@@ -246,7 +246,7 @@ require(
     "placeholderColors("
     in bg
     and
-    "peer.nameColor"
+    "Telegram legacy avatar-placeholder palette"
     in bg,
     "Telegram placeholder color mapping missing",
 )
