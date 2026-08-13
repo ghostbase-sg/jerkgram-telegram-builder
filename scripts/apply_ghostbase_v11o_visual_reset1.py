@@ -918,26 +918,37 @@ placeholder_apply = """        case let .placeholder(
 """
 
 
-apply_blur_pos = bg.find(
-    "        self.applyBlur(\n",
-    bg.find(
-        "    private func apply(\n"
-    )
+apply_start_pos = bg.find(
+    "    private func apply(\n"
 )
+
+apply_end_pos = bg.find(
+    "    private func applyTint(\n",
+    apply_start_pos
+)
+
+if (
+    apply_start_pos < 0
+    or apply_end_pos < 0
+):
+    raise RuntimeError(
+        "[V11O] apply() boundaries missing"
+    )
 
 source_switch_pos = bg.find(
     "        switch source {\n",
-    apply_blur_pos
+    apply_start_pos,
+    apply_end_pos
 )
 
 telegram_apply_pos = bg.find(
     "        case .telegramTheme:\n",
-    source_switch_pos
+    source_switch_pos,
+    apply_end_pos
 )
 
 if (
-    apply_blur_pos < 0
-    or source_switch_pos < 0
+    source_switch_pos < 0
     or telegram_apply_pos < 0
 ):
     raise RuntimeError(
