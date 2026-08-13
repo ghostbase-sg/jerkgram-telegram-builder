@@ -480,6 +480,9 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11m_gifts_glass1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11m_gifts_glass1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11m_music_player_glass1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11m_music_player_glass1.py"
+
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11n_profile_core_final1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11n_profile_core_final1.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
