@@ -251,6 +251,36 @@ require(
     "Telegram placeholder color mapping missing",
 )
 
+# V11O_PLACEHOLDER_UNUSED_GUARD
+placeholder_start = bg.find(
+    "private func placeholderColors("
+)
+placeholder_end = bg.find(
+    "private static func colorLuminance(",
+    placeholder_start
+)
+
+placeholder_helper = (
+    bg[placeholder_start:placeholder_end]
+    if (
+        placeholder_start >= 0
+        and placeholder_end > placeholder_start
+    )
+    else ""
+)
+
+require(
+    "let isDark =" not in placeholder_helper,
+    "dead unused isDark survived in placeholderColors",
+)
+
+require(
+    "presentationData _: PresentationData"
+    in placeholder_helper,
+    "placeholderColors has an unused named presentationData parameter",
+)
+
+
 for value in (
     "0xff516a",
     "0xffa85c",

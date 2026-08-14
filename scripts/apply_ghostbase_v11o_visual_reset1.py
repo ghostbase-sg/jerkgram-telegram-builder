@@ -311,13 +311,8 @@ resolve_anchor = """    private func resolveSource(
 
 placeholder_helpers = """    private func placeholderColors(
         peer: EnginePeer,
-        presentationData: PresentationData
+        presentationData _: PresentationData
     ) -> (UIColor, UIColor, String) {
-        let isDark =
-            presentationData
-                .theme
-                .overallDarkAppearance
-
         // Telegram legacy avatar-placeholder palette.
         let palette:
             [(UInt32, UInt32)] = [
