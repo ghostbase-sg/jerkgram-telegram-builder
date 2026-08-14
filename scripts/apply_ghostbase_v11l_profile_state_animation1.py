@@ -236,6 +236,52 @@ settings = replace_once(
     "Settings animated key"
 )
 
+# MARK: GhostBase v1.1L SETTINGS_STATE_DEDUP1
+# Earlier canonical Settings patches may materialize the profile-glass
+# state quartet twice inside GhostBaseSettingsState. Normalize that
+# historical duplicate before adding profileAnimatedBackground.
+_state_quartet = (
+    "    var glassEnabled: Bool\n"
+    "    var profileAvatarBlur: Bool\n"
+    "    var profileBlurTint: Bool\n"
+    "    var profileBlurReduced: Bool\n"
+)
+
+_state_quartet_count = settings.count(
+    _state_quartet
+)
+
+if _state_quartet_count == 2:
+    _first = settings.find(
+        _state_quartet
+    )
+
+    _second = settings.find(
+        _state_quartet,
+        _first + len(_state_quartet)
+    )
+
+    if _second < 0:
+        raise RuntimeError(
+            "[V11L] SettingsState dedup: "
+            "second quartet not found"
+        )
+
+    settings = (
+        settings[:_second]
+        + settings[
+            _second
+            + len(_state_quartet):
+        ]
+    )
+
+elif _state_quartet_count != 1:
+    raise RuntimeError(
+        "[V11L] SettingsState dedup: "
+        f"expected 1 or 2 quartets, "
+        f"found {_state_quartet_count}"
+    )
+
 settings = replace_once(
     settings,
     '''    var profileAvatarBlur: Bool
