@@ -2,10 +2,90 @@
 import os
 import re
 import atexit
+import subprocess
 from pathlib import Path
 
 ROOT = Path(os.environ.get('GHOSTBASE_SOURCE_ROOT', '/root/gb_builder/work/swiftgram-src'))
-OFFICIAL = Path(os.environ.get('GHOSTBASE_OFFICIAL_SOURCE_ROOT', '/root/gb_builder/ports/ghostbase_12_9_2_port/telegram-ios-12.9.2-official'))
+# MARK: GhostBase v1.1P CI_OFFICIAL_MINITREE1
+#
+# V11P needs exact pristine Telegram 12.9.2 bytes for:
+#   - renderer preflight
+#   - PeerInfo section restore
+#   - OverlayAudioPlayer restore
+#
+# Do not depend on the Linux-only /root/gb_builder/ports tree.
+# Materialize only the required Official files from the immutable
+# Telegram commit already enforced by the canonical build probe.
+OFFICIAL_COMMIT = (
+    "6ad963e5b62d354da79040f388ae2b9132fb17b8"
+)
+
+_official_tmp_root = Path(
+    os.environ.get(
+        "RUNNER_TEMP",
+        "/tmp"
+    )
+) / "ghostbase-v11p-official-12.9.2"
+
+_official_required_files = (
+    "submodules/AccountContext/Sources/"
+    "UniversalVideoNode.swift",
+
+    "submodules/TelegramUniversalVideoContent/Sources/"
+    "NativeVideoContent.swift",
+
+    "submodules/MediaPlayer/Sources/"
+    "MediaPlayerNode.swift",
+
+    "submodules/MediaPlayer/Sources/"
+    "ChunkMediaPlayerV2.swift",
+
+    "submodules/TelegramUI/Components/PeerInfo/"
+    "PeerInfoScreen/Sources/"
+    "PeerInfoScreenItemSectionContainerNode.swift",
+
+    "submodules/TelegramUI/Sources/"
+    "OverlayAudioPlayerControllerNode.swift",
+)
+
+for _rel in _official_required_files:
+    _result = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(ROOT),
+            "show",
+            f"{OFFICIAL_COMMIT}:{_rel}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    if _result.returncode != 0:
+        raise RuntimeError(
+            "[V11P] cannot materialize Official Telegram "
+            f"source {_rel} from {OFFICIAL_COMMIT}: "
+            + _result.stderr.decode(
+                "utf-8",
+                errors="replace"
+            )
+        )
+
+    _dst = (
+        _official_tmp_root
+        / _rel
+    )
+
+    _dst.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    _dst.write_bytes(
+        _result.stdout
+    )
+
+OFFICIAL = _official_tmp_root
 
 PEER = ROOT / 'submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources'
 PRESENT = ROOT / 'submodules/TelegramPresentationData/Sources/Resources/PresentationResourcesItemList.swift'
