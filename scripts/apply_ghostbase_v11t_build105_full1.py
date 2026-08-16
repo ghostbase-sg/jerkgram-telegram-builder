@@ -1311,7 +1311,7 @@ private func ghostBaseResolveDeletedReplies(
                ), !stored.isEmpty {
                 authorName = stored
             } else if let authorPeer {
-                let title = EnginePeer(authorPeer).compactDisplayTitle
+                let title = EnginePeer(authorPeer).debugDisplayTitle
                 authorName = title.isEmpty ? "Пользователь" : title
             } else {
                 authorName = "Пользователь"

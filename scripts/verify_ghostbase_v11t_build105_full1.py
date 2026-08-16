@@ -472,6 +472,17 @@ need(
     "public-name store"
 )
 
+# EnginePeer debugDisplayTitle compile lock
+need(
+    "EnginePeer(authorPeer).debugDisplayTitle" in enq,
+    "Official EnginePeer debugDisplayTitle API"
+)
+
+need(
+    "compactDisplayTitle" not in enq,
+    "invalid EnginePeer compactDisplayTitle removed"
+)
+
 need(
     "maximumCount = 256" in enq,
     "public-name store bounded"
