@@ -495,6 +495,10 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11s_runtime_recovery
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11s_runtime_recovery1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11t_build105_full1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11t_build105_full1.py"
+
+# GhostBase v1.1U / Build106
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11u_build106_final1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11u_build106_final1_generated_source.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
