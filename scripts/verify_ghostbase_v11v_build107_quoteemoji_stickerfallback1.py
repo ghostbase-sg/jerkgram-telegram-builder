@@ -1,35 +1,27 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import os
+import re
 
 ROOT = Path(os.environ.get(
     "GHOSTBASE_SOURCE_ROOT",
     "/root/gb_builder/work/swiftgram-src",
 )).resolve()
 
-CONVERSION = (
-    ROOT
-    / "submodules/TextFormat/Sources/"
+CONVERSION = ROOT / (
+    "submodules/TextFormat/Sources/"
     "ChatInputContentConversion.swift"
 )
 
-CHAT_TEXT = (
-    ROOT
-    / "submodules/ChatPresentationInterfaceState/Sources/"
+CHAT_TEXT = ROOT / (
+    "submodules/ChatPresentationInterfaceState/Sources/"
     "ChatTextFormat.swift"
 )
 
-ENQUEUE = (
-    ROOT
-    / "submodules/TelegramCore/Sources/PendingMessages/"
+ENQUEUE = ROOT / (
+    "submodules/TelegramCore/Sources/PendingMessages/"
     "EnqueueMessage.swift"
 )
-
-for path in (CONVERSION, CHAT_TEXT, ENQUEUE):
-    if not path.is_file():
-        raise SystemExit(
-            f"[V11V verifier] missing: {path}"
-        )
 
 conversion = CONVERSION.read_text(
     encoding="utf-8",
@@ -46,15 +38,17 @@ enqueue = ENQUEUE.read_text(
     errors="replace",
 )
 
-checks = []
+passed = []
+failed = []
 
 
 def check(label, ok):
-    checks.append((label, bool(ok)))
-    print(
-        ("OK   : " if ok else "FAIL : ")
-        + label
-    )
+    if ok:
+        passed.append(label)
+        print("OK   :", label)
+    else:
+        failed.append(label)
+        print("FAIL :", label)
 
 
 print()
@@ -66,16 +60,13 @@ print()
 print("--- Premium/custom emoji ---")
 
 check(
-    "V11U selection->Quote customEmoji preservation retained",
+    "selected text -> Quote keeps customEmoji",
     (
         "GhostBase v1.1U "
         "BUILD106_CUSTOM_EMOJI_QUOTE1"
     )
-    in chat_text,
-)
-
-check(
-    "customEmoji survives quote transformation",
+    in chat_text
+    and
     (
         "else if key == "
         "ChatTextInputAttributes.customEmoji"
@@ -84,7 +75,7 @@ check(
 )
 
 check(
-    "Build107 structured quote projection marker",
+    "Build107 expanded quote marker",
     (
         "GhostBase v1.1V "
         "BUILD107_BLOCKQUOTE_CUSTOM_EMOJI1"
@@ -93,16 +84,16 @@ check(
 )
 
 check(
-    "expanded quote no longer flattens through plainText",
+    "expanded quote does not flatten through plainText",
     (
-        "result.append("
-        "NSAttributedString(string: bq.content.plainText))"
+        "NSAttributedString("
+        "string: bq.content.plainText)"
     )
     not in conversion,
 )
 
 check(
-    "expanded quote preserves semantic attributed content",
+    "expanded quote uses semantic content projection",
     (
         "result.append("
         "attributedString(from: bq.content))"
@@ -111,11 +102,9 @@ check(
 )
 
 check(
-    "customEmoji semantic projection exists",
-    (
-        "ChatTextInputAttributes.customEmoji"
-        in conversion
-    ),
+    "customEmoji projection support exists",
+    "ChatTextInputAttributes.customEmoji"
+    in conversion,
 )
 
 
@@ -132,50 +121,50 @@ check(
 )
 
 check(
-    "sticker reconstructed-media rejection restored",
-    '''if let file = media as? TelegramMediaFile, file.isSticker {
-        return nil
-    }'''
-    in enqueue,
-)
-
-check(
-    "Build106 native sticker recovery removed",
+    "Build106 native sticker marker removed",
     "BUILD106_STICKER_RECOVERY1"
     not in enqueue,
 )
 
 check(
-    "TGS cache extension removed",
-    'case "application/x-tgsticker":'
-    not in enqueue,
+    "sticker recovered-media hard rejection",
+    re.search(
+        r"if let file = media as\? TelegramMediaFile,"
+        r"\s*file\.isSticker\s*\{\s*"
+        r"return nil\s*\}",
+        enqueue,
+        re.S,
+    )
+    is not None,
 )
 
 check(
-    "WebP cache extension removed",
-    'case "image/webp":'
-    not in enqueue,
+    "TGS/WebM/WebP sticker cache additions removed",
+    (
+        'case "application/x-tgsticker":'
+        not in enqueue
+        and
+        'case "video/webm":'
+        not in enqueue
+        and
+        'case "image/webp":'
+        not in enqueue
+    ),
 )
 
 check(
-    "WebM cache extension removed",
-    'case "video/webm":'
-    not in enqueue,
-)
-
-check(
-    'sticker textual label remains "Стикер"',
+    'deleted sticker textual label is "Стикер"',
     'return "Стикер"'
     in enqueue,
 )
 
 
 print()
-print("--- Build106 core retained ---")
+print("--- Build106 regression guards ---")
 
 for label, proof in (
     (
-        "Build106 deleted reply V2",
+        "deleted reply V2",
         "GhostBase v1.1U BUILD106_FINAL1",
     ),
     (
@@ -203,7 +192,7 @@ for label, proof in (
         "let collapse = sourceLength > 320",
     ),
     (
-        "entity preservation",
+        "original quote entities",
         "ghostBaseOriginalQuoteableEntities(",
     ),
 ):
@@ -213,39 +202,23 @@ for label, proof in (
     )
 
 
-passed = sum(
-    1 for _, ok in checks if ok
-)
-
-failed = [
-    label
-    for label, ok in checks
-    if not ok
-]
-
 print()
 print("============================================================")
 print("V11V BUILD107 RESULT")
 print("============================================================")
-print("PASS:", passed)
+print("PASS:", len(passed))
 print("FAIL:", len(failed))
 
 if failed:
     print()
-    for index, label in enumerate(failed, 1):
-        print(f"{index:02d}. {label}")
+    print("FAILED:")
+    for i, label in enumerate(failed, 1):
+        print(f"{i:02d}. {label}")
 
     raise SystemExit(1)
 
 print()
 print("BUILD107 MATERIALIZED SOURCE OK")
-print(
-    "premium emoji : "
-    "Quote + inside Quote preserved"
-)
-print(
-    'deleted sticker: "Стикер" textual fallback'
-)
-print(
-    "Build106 core : retained"
-)
+print("premium emoji : Quote + inside Quote preserved")
+print('deleted sticker: textual fallback "Стикер"')
+print("Build106 core : retained")
