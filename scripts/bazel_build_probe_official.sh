@@ -509,6 +509,9 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_jerkgram_v11w_build108_foundat
 
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_jerkgram_v11x_build109_foundation_hotfix1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_jerkgram_v11x_build109_foundation_hotfix1.py"
+
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_jerkgram_v11y_build110_icons_ui_recovery_polish1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_jerkgram_v11y_build110_icons_ui_recovery_polish1.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -598,3 +601,6 @@ echo
 echo "== verify Build109 final JerkGram IPA =="
 python3 ../../scripts/verify_jerkgram_v11x_build109_final_ipa.py \
   ghostbase-final/GhostBase.ipa
+
+echo "== verify Build110 final JerkGram icons/UI/recovery IPA =="
+python3 ../../scripts/verify_jerkgram_v11y_build110_final_ipa.py ghostbase-final/GhostBase.ipa
