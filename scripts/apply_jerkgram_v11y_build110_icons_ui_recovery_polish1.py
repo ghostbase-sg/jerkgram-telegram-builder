@@ -9,17 +9,17 @@ import struct
 import subprocess
 
 
-ROOT = Path(
-    os.environ.get(
-        "GHOSTBASE_SOURCE_ROOT",
-        "/root/gb_builder/work/swiftgram-src",
-    )
-).resolve()
-
 BUILDER = Path(
     os.environ.get(
         "GHOSTBASE_BUILDER_ROOT",
-        "/root/gb_builder",
+        str(Path(__file__).resolve().parents[1]),
+    )
+).resolve()
+
+ROOT = Path(
+    os.environ.get(
+        "GHOSTBASE_SOURCE_ROOT",
+        str(Path.cwd()),
     )
 ).resolve()
 

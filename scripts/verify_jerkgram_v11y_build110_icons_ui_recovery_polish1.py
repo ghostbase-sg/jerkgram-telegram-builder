@@ -6,10 +6,17 @@ import re
 import struct
 
 
+BUILDER = Path(
+    os.environ.get(
+        "GHOSTBASE_BUILDER_ROOT",
+        str(Path(__file__).resolve().parents[1]),
+    )
+).resolve()
+
 ROOT = Path(
     os.environ.get(
         "GHOSTBASE_SOURCE_ROOT",
-        "/root/gb_builder/work/swiftgram-src",
+        str(Path.cwd()),
     )
 ).resolve()
 
