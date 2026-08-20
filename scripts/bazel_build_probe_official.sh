@@ -503,6 +503,9 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11u_build106_final1
 # GhostBase v1.1V / Build107
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_ghostbase_v11v_build107_quoteemoji_stickerfallback1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11v_build107_quoteemoji_stickerfallback1.py"
+
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_jerkgram_v11w_build108_foundation1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_jerkgram_v11w_build108_foundation1.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
