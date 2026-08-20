@@ -216,7 +216,7 @@ def build_alternate_icons():
     # have unique basenames.
     for path in template_pngs:
         require(
-            path.name.startswith("BlueIcon"),
+            path.name.startswith("Blue"),
             (
                 "unexpected BlueIcon template filename: "
                 f"{path.name}"
@@ -277,13 +277,30 @@ def build_alternate_icons():
         generated = []
 
         for template_png in template_pngs:
-            suffix = template_png.name[
-                len("BlueIcon"):
-            ]
+            if template_png.name.startswith("BlueIcon"):
+                suffix = template_png.name[
+                    len("BlueIcon"):
+                ]
 
-            output_name = (
-                icon_id + suffix
-            )
+                output_name = (
+                    icon_id + suffix
+                )
+
+            elif template_png.name.startswith("Blue"):
+                suffix = template_png.name[
+                    len("Blue"):
+                ]
+
+                output_name = (
+                    icon_id + suffix
+                )
+
+            else:
+                raise RuntimeError(
+                    "[Build110] unexpected alternate "
+                    "icon template resource: "
+                    f"{template_png.name}"
+                )
 
             target_png = (
                 target
