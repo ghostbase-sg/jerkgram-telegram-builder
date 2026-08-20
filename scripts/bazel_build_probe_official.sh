@@ -506,6 +506,9 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_ghostbase_v11v_build107_quotee
 
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_jerkgram_v11w_build108_foundation1.py"
 python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_jerkgram_v11w_build108_foundation1.py"
+
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/apply_jerkgram_v11x_build109_foundation_hotfix1.py"
+python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_jerkgram_v11x_build109_foundation_hotfix1.py"
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -584,4 +587,14 @@ echo "== strict GhostBase final IPA marker gate OK =="
 echo
 echo "== publish final IPA with ph.telegra.Telegraph =="
 python3 ../../scripts/gb_public_bundle_id_final.py \
+  ghostbase-final/GhostBase.ipa
+
+echo
+echo "== finalize JerkGram display name =="
+python3 ../../scripts/jerkgram_finalize_display_name.py \
+  ghostbase-final/GhostBase.ipa
+
+echo
+echo "== verify Build109 final JerkGram IPA =="
+python3 ../../scripts/verify_jerkgram_v11x_build109_final_ipa.py \
   ghostbase-final/GhostBase.ipa
