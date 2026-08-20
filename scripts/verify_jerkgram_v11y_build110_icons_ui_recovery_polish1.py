@@ -86,6 +86,13 @@ ICON_IDS = [
 ]
 
 
+ALTERNATE_ICON_IDS = [
+    icon_id
+    for icon_id in ICON_IDS
+    if icon_id != "JerkGramSteelReveal"
+]
+
+
 def require(condition, message):
     if not condition:
         raise RuntimeError(
@@ -136,7 +143,7 @@ require(
     "Steel Reveal physical primary lost",
 )
 
-for icon_id in ICON_IDS:
+for icon_id in ALTERNATE_ICON_IDS:
     require(
         f'"{icon_id}"' in build,
         f"{icon_id} absent from alternate_icon_folders",
@@ -168,6 +175,71 @@ for icon_id in ICON_IDS:
             width > 0 and height > 0,
             f"bad dimensions: {png}",
         )
+
+        require(
+            png.name.startswith(icon_id),
+            (
+                "non-unique alternate resource basename: "
+                f"{png.name}"
+            ),
+        )
+
+        require(
+            not png.name.startswith("BlueIcon"),
+            (
+                "stock BlueIcon basename leaked into "
+                f"{icon_id}"
+            ),
+        )
+
+
+alternate_start = build.find(
+    "alternate_icon_folders = ["
+)
+
+alternate_end = build.find(
+    "\n]",
+    alternate_start,
+)
+
+require(
+    alternate_start >= 0
+    and alternate_end >= 0,
+    "alternate icon BUILD block missing",
+)
+
+alternate_block = build[
+    alternate_start:alternate_end
+]
+
+require(
+    '"JerkGramSteelReveal"'
+    not in alternate_block,
+    (
+        "Steel Reveal must stay primary, "
+        "not alternate"
+    ),
+)
+
+
+all_resource_names = []
+
+for icon_id in ALTERNATE_ICON_IDS:
+    folder = (
+        IOS
+        / f"{icon_id}.alticon"
+    )
+
+    all_resource_names.extend(
+        png.name
+        for png in folder.glob("*.png")
+    )
+
+require(
+    len(all_resource_names)
+    == len(set(all_resource_names)),
+    "duplicate JerkGram alternate PNG basenames",
+)
 
 
 require(
@@ -401,7 +473,7 @@ print(
     "[verify Build110] GREEN"
 )
 print(
-    "  8 JerkGram icons registered"
+    "  1 primary + 7 JerkGram alternate icons registered"
 )
 print(
     "  Steel Reveal = physical + logical default"

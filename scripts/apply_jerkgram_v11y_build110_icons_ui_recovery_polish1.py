@@ -210,19 +210,51 @@ def build_alternate_icons():
         "BlueIcon.alticon contains no PNG files",
     )
 
+    # Stock Telegram alternate icons use the icon name as the
+    # resource basename. rules_apple flattens these PNG resources
+    # into the application bundle, so every alternate icon must
+    # have unique basenames.
+    for path in template_pngs:
+        require(
+            path.name.startswith("BlueIcon"),
+            (
+                "unexpected BlueIcon template filename: "
+                f"{path.name}"
+            ),
+        )
+
     dimensions = {
         path.name: png_size(path)
         for path in template_pngs
     }
 
     sips = Path("/usr/bin/sips")
+
     require(
         sips.is_file(),
         "/usr/bin/sips missing on macOS builder",
     )
 
-    for icon_id, filename, _ in ICONS:
+    # Steel Reveal is already the physical primary icon from
+    # Build108. It is represented by alternateIconName == nil
+    # and must not be redundantly registered as an alternate.
+    primary_alt = (
+        TELEGRAM_IOS
+        / "JerkGramSteelReveal.alticon"
+    )
+
+    if primary_alt.exists():
+        shutil.rmtree(primary_alt)
+
+    alternate_icons = [
+        entry
+        for entry in ICONS
+        if entry[0] != "JerkGramSteelReveal"
+    ]
+
+    for icon_id, filename, _ in alternate_icons:
         master = ASSETS / filename
+
         target = (
             TELEGRAM_IOS
             / f"{icon_id}.alticon"
@@ -231,27 +263,35 @@ def build_alternate_icons():
         if target.exists():
             shutil.rmtree(target)
 
+        # Preserve any non-PNG metadata from the official folder.
         shutil.copytree(
             template,
             target,
         )
 
-        target_pngs = sorted(
-            target.glob("*.png")
-        )
+        # Remove copied BlueIcon PNGs: their duplicate basenames
+        # are what caused the first Build110 Bazel failure.
+        for copied_png in target.glob("*.png"):
+            copied_png.unlink()
 
-        require(
-            [p.name for p in target_pngs]
-            == [p.name for p in template_pngs],
-            (
-                f"template copy mismatch for "
-                f"{icon_id}"
-            ),
-        )
+        generated = []
 
-        for target_png in target_pngs:
+        for template_png in template_pngs:
+            suffix = template_png.name[
+                len("BlueIcon"):
+            ]
+
+            output_name = (
+                icon_id + suffix
+            )
+
+            target_png = (
+                target
+                / output_name
+            )
+
             width, height = (
-                dimensions[target_png.name]
+                dimensions[template_png.name]
             )
 
             subprocess.run(
@@ -273,14 +313,47 @@ def build_alternate_icons():
                 png_size(target_png)
                 == (width, height),
                 (
-                    f"resized icon dimension "
+                    "resized icon dimension "
                     f"mismatch: {target_png}"
                 ),
             )
 
+            require(
+                target_png.name.startswith(icon_id),
+                (
+                    "alternate icon resource "
+                    f"basename mismatch: {target_png.name}"
+                ),
+            )
+
+            generated.append(
+                target_png.name
+            )
+
+        require(
+            len(generated)
+            == len(template_pngs),
+            (
+                "alternate icon resource "
+                f"count mismatch: {icon_id}"
+            ),
+        )
+
+        require(
+            not any(
+                name.startswith("BlueIcon")
+                for name in generated
+            ),
+            (
+                "BlueIcon resource basename leaked into "
+                f"{icon_id}"
+            ),
+        )
+
     print(
-        "[Build110] 8 .alticon folders "
-        "materialized from official template"
+        "[Build110] 7 alternate .alticon folders "
+        "materialized with unique resource basenames; "
+        "Steel Reveal remains primary"
     )
 
 
@@ -318,7 +391,8 @@ def patch_build():
     missing = [
         icon_id
         for icon_id, _, _ in ICONS
-        if f'"{icon_id}"' not in block
+        if icon_id != "JerkGramSteelReveal"
+        and f'"{icon_id}"' not in block
     ]
 
     if missing:

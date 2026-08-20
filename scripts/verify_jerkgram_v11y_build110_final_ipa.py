@@ -13,7 +13,6 @@ IPA = Path(
 )
 
 EXPECTED_ICONS = {
-    "JerkGramSteelReveal",
     "JerkGramSteelSolid",
     "JerkGramRustReveal",
     "JerkGramRustSolid",
@@ -67,7 +66,7 @@ require(
 
 require(
     plist.get("CFBundleDisplayName")
-    == "JerkGram",
+    == "Jerkgram",
     (
         "display name mismatch: "
         f"{plist.get('CFBundleDisplayName')!r}"
@@ -76,7 +75,7 @@ require(
 
 require(
     plist.get("CFBundleName")
-    == "JerkGram",
+    == "Jerkgram",
     (
         "bundle name mismatch: "
         f"{plist.get('CFBundleName')!r}"

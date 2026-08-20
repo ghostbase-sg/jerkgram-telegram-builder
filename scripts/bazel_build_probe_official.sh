@@ -602,5 +602,8 @@ echo "== verify Build109 final JerkGram IPA =="
 python3 ../../scripts/verify_jerkgram_v11x_build109_final_ipa.py \
   ghostbase-final/GhostBase.ipa
 
+echo "== finalize Build110 display name: Jerkgram =="
+python3 ../../scripts/jerkgram_finalize_display_name_build110.py ghostbase-final/GhostBase.ipa
+
 echo "== verify Build110 final JerkGram icons/UI/recovery IPA =="
 python3 ../../scripts/verify_jerkgram_v11y_build110_final_ipa.py ghostbase-final/GhostBase.ipa
