@@ -612,6 +612,9 @@ def patch_profile_list_readability():
     )
 
     old = '''        if self.ghostBaseGlassEnabled {
+            // MARK: GhostBase v1.1L UNIFIEDMATERIAL1
+            // Fullscreen scene owns tone. Pane roots stay transparent,
+            // removing the hard horizontal color bands.
             self.backgroundColor = .clear
         } else {
             self.backgroundColor = backgroundColor
