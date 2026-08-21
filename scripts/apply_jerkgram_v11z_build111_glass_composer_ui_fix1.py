@@ -606,7 +606,19 @@ def patch_profile_list_readability():
     else:
         region = tail
         suffix = ""
-    require("self.presentationData" in region, "PeerInfoListPaneNode presentationData owner missing")
+    require(
+        "private var currentParams:" in region
+        and "presentationData: PresentationData" in region,
+        "PeerInfoListPaneNode currentParams presentationData owner missing",
+    )
+    require(
+        "private let context: AccountContext" in region,
+        "PeerInfoListPaneNode context owner missing",
+    )
+    require(
+        "currentPresentationData" in region,
+        "PeerInfoListPaneNode native presentation fallback missing",
+    )
     count = region.count("self.backgroundColor = .clear")
     require(count > 0, "PeerInfoListPaneNode clear background anchor missing")
 
@@ -615,7 +627,17 @@ def patch_profile_list_readability():
     // Shared owner for Files / Links / Voice / Music profile list panes.
     // One pane-wide translucent surface, never per-cell blur.
     private func jerkgramUpdateListPaneReadabilityBackground() {
-        let isDark = self.presentationData.theme.overallDarkAppearance
+        let presentationData: PresentationData
+
+        if let currentParams = self.currentParams {
+            presentationData = currentParams.presentationData
+        } else {
+            presentationData =
+                self.context.sharedContext.currentPresentationData.with { $0 }
+        }
+
+        let isDark = presentationData.theme.overallDarkAppearance
+
         self.backgroundColor = UIColor(
             white: isDark ? 0.0 : 1.0,
             alpha: isDark ? 0.26 : 0.18
