@@ -36,7 +36,7 @@ APP_DELEGATE = ROOT / "submodules/TelegramUI/Sources/AppDelegate.swift"
 THEME_SETTINGS = ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift"
 THEME_ICON_ITEM = ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift"
 JG_SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
-PEER_LIST = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoListPaneNode.swift"
+PANE_CONTAINER = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift"
 
 OFFICIAL_ICON = IOS / "Telegram.icon"
 OLD_STEEL_COMPOSER = IOS / "JerkGramSteelReveal.icon"
@@ -580,79 +580,102 @@ def patch_portable_reply_title():
 
 
 def patch_profile_list_readability():
-    text = read(PEER_LIST)
-    marker = "// MARK: Jerkgram v1.1Z BUILD111_LIST_PANE_READABILITY1"
+    text = read(PANE_CONTAINER)
+
+    marker = (
+        "// MARK: Jerkgram v1.1Z "
+        "BUILD111_LIST_PANE_READABILITY1"
+    )
+
     if marker in text:
         return
 
-    class_tokens = ["final class PeerInfoListPaneNode", "class PeerInfoListPaneNode"]
-    start = -1
-    for token in class_tokens:
-        start = text.find(token)
-        if start >= 0:
-            break
-    require(start >= 0, "PeerInfoListPaneNode class missing")
-    tail = text[start:]
-    brace = tail.find("{")
-    require(brace >= 0, "PeerInfoListPaneNode class brace missing")
-    next_class = re.search(
-        r"\n(?:private\s+|public\s+|internal\s+)?(?:final\s+)?class\s+[A-Za-z_]",
-        tail[brace + 1:],
-    )
-    if next_class is not None:
-        end = brace + 1 + next_class.start()
-        region = tail[:end]
-        suffix = tail[end:]
-    else:
-        region = tail
-        suffix = ""
     require(
-        "private var currentParams:" in region
-        and "presentationData: PresentationData" in region,
-        "PeerInfoListPaneNode currentParams presentationData owner missing",
+        "private let ghostBaseGlassEnabled: Bool"
+        in text,
+        "PeerInfoPaneContainerNode Glass owner missing",
     )
+
     require(
-        "private let context: AccountContext" in region,
-        "PeerInfoListPaneNode context owner missing",
+        "private(set) var currentPaneKey: PeerInfoPaneKey?"
+        in text,
+        "PeerInfoPaneContainerNode currentPaneKey owner missing",
     )
+
     require(
-        "currentPresentationData" in region,
-        "PeerInfoListPaneNode native presentation fallback missing",
-    )
-    count = region.count("self.backgroundColor = .clear")
-    require(count > 0, "PeerInfoListPaneNode clear background anchor missing")
-
-    helper = '''{
-    // MARK: Jerkgram v1.1Z BUILD111_LIST_PANE_READABILITY1
-    // Shared owner for Files / Links / Voice / Music profile list panes.
-    // One pane-wide translucent surface, never per-cell blur.
-    private func jerkgramUpdateListPaneReadabilityBackground() {
-        let presentationData: PresentationData
-
-        if let currentParams = self.currentParams {
-            presentationData = currentParams.presentationData
-        } else {
-            presentationData =
-                self.context.sharedContext.currentPresentationData.with { $0 }
-        }
-
-        let isDark = presentationData.theme.overallDarkAppearance
-
-        self.backgroundColor = UIColor(
-            white: isDark ? 0.0 : 1.0,
-            alpha: isDark ? 0.26 : 0.18
+        (
+            "func update(size: CGSize, sideInset: CGFloat, "
+            "topInset: CGFloat"
         )
-    }
+        in text,
+        "PeerInfoPaneContainerNode update owner missing",
+    )
+
+    old = '''        if self.ghostBaseGlassEnabled {
+            self.backgroundColor = .clear
+        } else {
+            self.backgroundColor = backgroundColor
+        }
 '''
-    region = region[:brace] + helper + region[brace + 1:]
-    region = region.replace("self.backgroundColor = .clear", "self.jerkgramUpdateListPaneReadabilityBackground()")
-    text = text[:start] + region + suffix
-    write(PEER_LIST, text)
-    print(f"[Build111] profile list pane readability surface installed at {count} clear-background owner(s)")
+
+    require(
+        old in text,
+        (
+            "PeerInfoPaneContainerNode existing "
+            "GhostBase Glass background block missing"
+        ),
+    )
+
+    new = '''        // MARK: Jerkgram v1.1Z BUILD111_LIST_PANE_READABILITY1
+        // One shared translucent readability surface for the
+        // native Files / Links / Voice / Music profile panes.
+        // No per-cell blur and no pane geometry changes.
+        if self.ghostBaseGlassEnabled {
+            let jerkgramNeedsReadabilitySurface =
+                self.currentPaneKey == .files
+                || self.currentPaneKey == .links
+                || self.currentPaneKey == .voice
+                || self.currentPaneKey == .music
+
+            if jerkgramNeedsReadabilitySurface {
+                let isDark =
+                    presentationData
+                        .theme
+                        .overallDarkAppearance
+
+                self.backgroundColor = UIColor(
+                    white: isDark ? 0.0 : 1.0,
+                    alpha: isDark ? 0.26 : 0.18
+                )
+            } else {
+                self.backgroundColor = .clear
+            }
+        } else {
+            self.backgroundColor = backgroundColor
+        }
+'''
+
+    text = text.replace(
+        old,
+        new,
+        1,
+    )
+
+    write(
+        PANE_CONTAINER,
+        text,
+    )
+
+    print(
+        "[Build111] Files/Links/Voice/Music "
+        "shared readability surface installed "
+        "on PeerInfoPaneContainerNode"
+    )
+
 
 
 def main():
-    for owner in (BUILD, APP_DELEGATE, THEME_SETTINGS, THEME_ICON_ITEM, JG_SETTINGS, PEER_LIST):
+    for owner in (BUILD, APP_DELEGATE, THEME_SETTINGS, THEME_ICON_ITEM, JG_SETTINGS, PANE_CONTAINER):
         require(owner.is_file(), f"source owner missing: {owner}")
     validate_and_install_composer_assets()
     materialize_steel_reveal_legacy_alticon()

@@ -19,7 +19,7 @@ APP = ROOT / "submodules/TelegramUI/Sources/AppDelegate.swift"
 THEME = ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift"
 ICON_ITEM = ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift"
 SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
-PEER_LIST = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoListPaneNode.swift"
+PANE_CONTAINER = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift"
 
 EXPECTED_ICON_JSON = "cf7c84b1ceef48a16c9ea2c193428417f99b80258752d7fcc14914f6b0ca4c89"
 EXPECTED_OVAL = "30b7245c9edef107ea7520cdd958246fcc771fa0872bb2f6cd13ab2dc11cfffd"
@@ -81,7 +81,7 @@ app = read(APP)
 theme = read(THEME)
 icon_item = read(ICON_ITEM)
 settings = read(SETTINGS)
-peer_list = read(PEER_LIST)
+pane_container = read(PANE_CONTAINER)
 
 # Official Composer owner remains untouched and is primary again.
 official = IOS / "Telegram.icon"
@@ -172,9 +172,9 @@ require('"Переносимый ответ на удалённое"' not in set
 require('"Переносимый ответ"' in settings, "short portable reply title missing")
 require("BUILD111_PORTABLE_REPLY_TITLE1" in settings, "portable reply title marker missing")
 
-require("BUILD111_LIST_PANE_READABILITY1" in peer_list, "Files/Links/Voice/Music pane readability marker missing")
-require("jerkgramUpdateListPaneReadabilityBackground" in peer_list, "pane readability helper missing")
-require("alpha: isDark ? 0.26 : 0.18" in peer_list, "pane readability alpha mismatch")
+require("BUILD111_LIST_PANE_READABILITY1" in pane_container, "Files/Links/Voice/Music pane readability marker missing")
+require("BUILD111_LIST_PANE_READABILITY1" in pane_container, "pane readability helper missing")
+require("alpha: isDark ? 0.26 : 0.18" in pane_container, "pane readability alpha mismatch")
 
 require("jerkgram.runtime.namespaceMigration.v1" in app, "Build109 namespace migration lost")
 
