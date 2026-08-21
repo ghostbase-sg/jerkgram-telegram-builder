@@ -19,3 +19,7 @@ __pycache__/
 *.pyc
 ports/
 *.zip
+
+# Build111 canonical Jerkgram Glass assets
+!assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip
+!assets/JerkgramGlass/JerkgramGlassUIPreviews.zip
