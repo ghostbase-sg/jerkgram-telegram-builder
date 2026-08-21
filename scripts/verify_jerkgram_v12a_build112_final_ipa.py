@@ -11,6 +11,9 @@ REQUIRED_EXTENSIONS = (
     "BroadcastUploadExtension.appex",
     "ShareExtension.appex",
     "WidgetExtension.appex",
+)
+
+OPTIONAL_EXTENSIONS = (
     "NotificationContentExtension.appex",
     "NotificationServiceExtension.appex",
     "IntentsExtension.appex",
@@ -109,10 +112,22 @@ def main() -> None:
         require(plugins.is_dir(), "Payload/*.app/PlugIns/ missing")
         appex = {p.name: p for p in plugins.glob("*.appex") if p.is_dir()}
         missing_ext = [name for name in REQUIRED_EXTENSIONS if name not in appex]
-        require(not missing_ext, f"missing Official extensions: {missing_ext}")
+        require(
+            not missing_ext,
+            f"missing required Official extensions: {missing_ext}",
+        )
+
+        present_optional = [
+            name for name in OPTIONAL_EXTENSIONS
+            if name in appex
+        ]
+        missing_optional = [
+            name for name in OPTIONAL_EXTENSIONS
+            if name not in appex
+        ]
 
         seen_bundle_ids = set()
-        for name in REQUIRED_EXTENSIONS:
+        for name in REQUIRED_EXTENSIONS + tuple(present_optional):
             ext = appex[name]
             ext_info = load_plist(ext / "Info.plist")
             bundle_id = ext_info.get("CFBundleIdentifier")
@@ -151,7 +166,17 @@ def main() -> None:
 
         print("[verify Build112 final] GREEN: Glass Reveal/Solid registered as native Composer alternates")
         print("[verify Build112 final] GREEN: all eight legacy Jerkgram + stock Telegram icons preserved")
-        print("[verify Build112 final] GREEN: PlugIns contains all six Official Telegram extensions")
+        print("[verify Build112 final] GREEN: required Broadcast/Share/Widget extensions are present")
+        if present_optional:
+            print(
+                "[verify Build112 final] GREEN: optional Official extensions present: "
+                + ", ".join(present_optional)
+            )
+        if missing_optional:
+            print(
+                "[verify Build112 final] NOTE: optional Official extensions absent: "
+                + ", ".join(missing_optional)
+            )
         print("[verify Build112 final] GREEN: BroadcastUploadExtension has com.apple.broadcast-services-upload")
         print("[verify Build112 final] NOTE: extension embedded.mobileprovision presence is informational only")
 

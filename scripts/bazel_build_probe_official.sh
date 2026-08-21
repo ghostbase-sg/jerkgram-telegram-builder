@@ -612,8 +612,6 @@ python3 ../../scripts/verify_jerkgram_v11x_build109_final_ipa.py \
 echo "== finalize Build110 display name: Jerkgram =="
 python3 ../../scripts/jerkgram_finalize_display_name_build110.py ghostbase-final/GhostBase.ipa
 
-echo "== verify Build110 final JerkGram icons/UI/recovery IPA =="
-# Build110 final verifier is superseded here because Build111 intentionally restores Telegram as primary Composer icon.
-echo "== verify Jerkgram Build111 final IPA =="
+echo "== verify Jerkgram Build112 final IPA: Composer alternates + Official extensions =="
 python3 ../../scripts/verify_jerkgram_v12a_build112_final_ipa.py \
   ghostbase-final/GhostBase.ipa
