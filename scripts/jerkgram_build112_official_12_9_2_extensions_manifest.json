@@ -1,0 +1,57 @@
+{
+  "broadcast_upload": {
+    "build_owner": "Telegram/BUILD",
+    "build_tokens": [
+      "name = \"BroadcastUploadInfoPlist\"",
+      "<string>{telegram_bundle_id}.BroadcastUpload</string>",
+      "<string>com.apple.broadcast-services-upload</string>",
+      "<string>BroadcastUploadSampleHandler</string>",
+      "<string>RPBroadcastProcessModeSampleBuffer</string>",
+      "name = \"BroadcastUploadExtensionLib\"",
+      "module_name = \"BroadcastUploadExtensionLib\"",
+      "\"BroadcastUpload/**/*.swift\"",
+      "name = \"BroadcastUploadExtension\"",
+      "\":BroadcastUploadInfoPlist\"",
+      "\"//conditions:default\": \"@build_configuration//provisioning:BroadcastUpload.mobileprovision\"",
+      "deps = [\":BroadcastUploadExtensionLib\"]"
+    ],
+    "extension_point": "com.apple.broadcast-services-upload",
+    "principal_class": "BroadcastUploadSampleHandler",
+    "process_mode": "RPBroadcastProcessModeSampleBuffer",
+    "sample_handler": {
+      "class_name": "BroadcastUploadSampleHandler",
+      "path": "Telegram/BroadcastUpload/BroadcastUploadExtension.swift",
+      "sha256": "ef149c48c8bb8b6a7725b007056d203ef0d8eacff430464eb514ecf96e0d1565",
+      "superclass": "RPBroadcastSampleHandler"
+    }
+  },
+  "flag_declarations": [
+    "name = \"disableExtensions\"",
+    "name = \"disableProvisioningProfiles\"",
+    "name = \"disableExtensionsSetting\"",
+    "name = \"disableProvisioningProfilesSetting\""
+  ],
+  "main_extension_labels": {
+    "BroadcastUploadExtension": "\":BroadcastUploadExtension\"",
+    "IntentsExtension": "\":IntentsExtension\"",
+    "NotificationContentExtension": "\":NotificationContentExtension\"",
+    "NotificationServiceExtension": "\":NotificationServiceExtension\" + notificationServiceExtensionVersion",
+    "ShareExtension": "\":ShareExtension\"",
+    "WidgetExtension": "\":WidgetExtension\""
+  },
+  "official_release": "12.9.2",
+  "schema": 3,
+  "source": "Official Telegram iOS 12.9.2 pristine tree",
+  "target_declaration_tokens": {
+    "BroadcastUploadExtension": "name = \"BroadcastUploadExtension\"",
+    "IntentsExtension": "name = \"IntentsExtension\"",
+    "NotificationContentExtension": "name = \"NotificationContentExtension\"",
+    "NotificationServiceExtension": "name = \"NotificationServiceExtension\" + notificationServiceExtensionVersion",
+    "ShareExtension": "name = \"ShareExtension\"",
+    "WidgetExtension": "name = \"WidgetExtension\""
+  },
+  "telegram_build": {
+    "path": "Telegram/BUILD",
+    "sha256": "73dc5fa3010534c23596af1a6e17badb34202ff6f38b5473940ba8142f180095"
+  }
+}
