@@ -122,8 +122,133 @@ def patch_rules_apple_unsigned_ios_extensions() -> None:
     )
 
 
+# Build112 unsigned ios_application provisioning gate
+def patch_rules_apple_unsigned_ios_application() -> None:
+    path = ROOT / (
+        "build-system/bazel-rules/rules_apple/"
+        "apple/internal/ios_rules.bzl"
+    )
+
+    require(
+        path.is_file(),
+        f"missing materialized rules_apple file: {path}",
+    )
+
+    text = path.read_text(encoding="utf-8")
+
+    start_token = "def _ios_application_impl(ctx):"
+    end_token = "\ndef _ios_extension_impl(ctx):"
+
+    start = text.find(start_token)
+    end = text.find(end_token, start)
+
+    require(
+        start >= 0 and end > start,
+        "ios_application function boundary missing in rules_apple",
+    )
+
+    block = text[start:end]
+
+    old = (
+        "    if platform_prerequisites.platform.is_device:\n"
+        "        processor_partials.append(\n"
+        "            partials.provisioning_profile_partial(\n"
+        "                actions = actions,\n"
+        "                profile_artifact = provisioning_profile,\n"
+        "                rule_label = label,\n"
+        "            ),\n"
+        "        )\n"
+    )
+
+    new = (
+        "    if platform_prerequisites.platform.is_device "
+        "and provisioning_profile:\n"
+        "        processor_partials.append(\n"
+        "            partials.provisioning_profile_partial(\n"
+        "                actions = actions,\n"
+        "                profile_artifact = provisioning_profile,\n"
+        "                rule_label = label,\n"
+        "            ),\n"
+        "        )\n"
+    )
+
+    old_count = block.count(old)
+    new_count = block.count(new)
+
+    if old_count == 0 and new_count == 1:
+        print(
+            "[Build112] rules_apple unsigned ios_application "
+            "provisioning gate already applied"
+        )
+        return
+
+    require(
+        old_count == 1 and new_count == 0,
+        "unexpected ios_application provisioning partial shape: "
+        f"old={old_count}, new={new_count}",
+    )
+
+    require(
+        block.count(
+            "partials.provisioning_profile_partial("
+        ) == 1,
+        "unexpected ios_application provisioning partial ownership",
+    )
+
+    require(
+        block.count(
+            "profile_artifact = provisioning_profile"
+        ) == 1,
+        "unexpected ios_application profile_artifact ownership",
+    )
+
+    block = block.replace(old, new, 1)
+
+    updated = (
+        text[:start]
+        + block
+        + text[end:]
+    )
+
+    path.write_text(updated, encoding="utf-8")
+
+    check = path.read_text(encoding="utf-8")
+    check_start = check.find(start_token)
+    check_end = check.find(
+        end_token,
+        check_start,
+    )
+
+    require(
+        check_start >= 0 and check_end > check_start,
+        "patched ios_application boundary missing",
+    )
+
+    check_block = check[
+        check_start:check_end
+    ]
+
+    require(
+        check_block.count(new) == 1,
+        "conditional ios_application provisioning gate "
+        "did not materialize",
+    )
+
+    require(
+        check_block.count(old) == 0,
+        "stale unconditional ios_application "
+        "provisioning gate survived",
+    )
+
+    print(
+        "[Build112] rules_apple ios_application now skips "
+        "provisioning_profile_partial when profile is disabled"
+    )
+
+
 def main() -> None:
     patch_rules_apple_unsigned_ios_extensions()
+    patch_rules_apple_unsigned_ios_application()
     require(BUILD.is_file(), f"missing {BUILD}")
 
     build = BUILD.read_text(encoding="utf-8")

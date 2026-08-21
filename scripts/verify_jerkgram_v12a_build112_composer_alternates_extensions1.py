@@ -309,8 +309,91 @@ def verify_rules_apple_unsigned_ios_extensions() -> None:
     )
 
 
+# Build112 verify unsigned ios_application provisioning gate
+def verify_rules_apple_unsigned_ios_application() -> None:
+    path = ROOT / (
+        "build-system/bazel-rules/rules_apple/"
+        "apple/internal/ios_rules.bzl"
+    )
+
+    require(
+        path.is_file(),
+        f"missing materialized rules_apple file: {path}",
+    )
+
+    text = path.read_text(encoding="utf-8")
+
+    start_token = "def _ios_application_impl(ctx):"
+    end_token = "\ndef _ios_extension_impl(ctx):"
+
+    start = text.find(start_token)
+    end = text.find(end_token, start)
+
+    require(
+        start >= 0 and end > start,
+        "ios_application function boundary missing in rules_apple",
+    )
+
+    block = text[start:end]
+
+    patched = (
+        "    if platform_prerequisites.platform.is_device "
+        "and provisioning_profile:\n"
+        "        processor_partials.append(\n"
+        "            partials.provisioning_profile_partial(\n"
+        "                actions = actions,\n"
+        "                profile_artifact = provisioning_profile,\n"
+        "                rule_label = label,\n"
+        "            ),\n"
+        "        )\n"
+    )
+
+    stale = (
+        "    if platform_prerequisites.platform.is_device:\n"
+        "        processor_partials.append(\n"
+        "            partials.provisioning_profile_partial(\n"
+        "                actions = actions,\n"
+        "                profile_artifact = provisioning_profile,\n"
+        "                rule_label = label,\n"
+        "            ),\n"
+        "        )\n"
+    )
+
+    require(
+        block.count(patched) == 1,
+        "conditional ios_application provisioning gate "
+        "missing or duplicated",
+    )
+
+    require(
+        block.count(stale) == 0,
+        "stale unconditional ios_application "
+        "provisioning gate remains",
+    )
+
+    require(
+        block.count(
+            "partials.provisioning_profile_partial("
+        ) == 1,
+        "unexpected ios_application provisioning partial ownership",
+    )
+
+    require(
+        block.count(
+            "profile_artifact = provisioning_profile"
+        ) == 1,
+        "unexpected ios_application profile_artifact ownership",
+    )
+
+    print(
+        "[verify Build112] rules_apple unsigned "
+        "ios_application provisioning gate OK"
+    )
+
+
 def main() -> None:
     verify_rules_apple_unsigned_ios_extensions()
+    verify_rules_apple_unsigned_ios_application()
     require(
         MANIFEST.is_file(),
         f"Official audit manifest missing: {MANIFEST}",
