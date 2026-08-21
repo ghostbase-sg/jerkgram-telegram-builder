@@ -232,74 +232,213 @@ def patch_rules_apple_unsigned_ios_application() -> None:
     )
 
 
-# Build112 Widget lastDotRange no-usage repair
-def patch_widget_last_dot_range_no_usage() -> None:
-    path = (
-        ROOT
-        / "Telegram"
-        / "WidgetKitWidget"
-        / "TodayViewController.swift"
-    )
-
-    require(
-        path.is_file(),
-        f"missing materialized Widget source: {path}",
-    )
-
-    text = path.read_text(encoding="utf-8")
-
-    old = (
-        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
+# Build112 combined lastDotRange no-usage repair
+def _repair_combined_last_dot_range_text(
+    text: str,
+    expected_count: int,
+    source_name: str,
+) -> tuple[str, int, int]:
+    needle = (
+        'guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
         'let lastDotRange = appBundleIdentifier.range('
-        'of: ".", options: [.backwards]) else {\n'
+        'of: ".", options: [.backwards]) else {'
     )
 
-    new = (
-        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
-        'appBundleIdentifier.range('
-        'of: ".", options: [.backwards]) != nil else {\n'
+    lines = text.splitlines(True)
+    out = []
+
+    hits = 0
+    inserted = 0
+    already_present = 0
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+
+        if needle in line:
+            hits += 1
+
+            indent = line[
+                :len(line) - len(line.lstrip(" \t"))
+            ]
+
+            depth = (
+                line.count("{")
+                - line.count("}")
+            )
+
+            j = i + 1
+            closed = False
+
+            while j < len(lines):
+                out.append(lines[j])
+
+                depth += (
+                    lines[j].count("{")
+                    - lines[j].count("}")
+                )
+
+                if depth <= 0:
+                    closed = True
+
+                    newline = (
+                        "\r\n"
+                        if lines[j].endswith("\r\n")
+                        else "\n"
+                    )
+
+                    sink = (
+                        indent
+                        + "_ = lastDotRange"
+                        + newline
+                    )
+
+                    next_line = (
+                        lines[j + 1]
+                        if j + 1 < len(lines)
+                        else ""
+                    )
+
+                    if next_line == sink:
+                        already_present += 1
+                    else:
+                        out.append(sink)
+                        inserted += 1
+
+                    i = j
+                    break
+
+                j += 1
+
+            require(
+                closed,
+                f"{source_name}: combined lastDotRange "
+                "guard did not close",
+            )
+
+        i += 1
+
+    require(
+        hits == expected_count,
+        f"{source_name}: expected "
+        f"{expected_count} combined lastDotRange guards, "
+        f"got {hits}",
     )
 
-    old_count = text.count(old)
-    new_count = text.count(new)
+    return (
+        "".join(out),
+        inserted,
+        already_present,
+    )
 
-    if old_count == 0 and new_count == 1:
-        print(
-            "[Build112] Widget lastDotRange no-usage "
-            "repair already applied"
+
+def patch_combined_last_dot_range_no_usage() -> None:
+    targets = (
+        (
+            "Telegram/SiriIntents/IntentHandler.swift",
+            2,
+        ),
+        (
+            "Telegram/WidgetKitWidget/"
+            "TodayViewController.swift",
+            1,
+        ),
+        (
+            "Telegram/BroadcastUpload/"
+            "BroadcastUploadExtension.swift",
+            1,
+        ),
+        (
+            "Telegram/NotificationService/Sources/"
+            "NotificationService.swift",
+            1,
+        ),
+    )
+
+    total_expected = 0
+    total_inserted = 0
+    total_already = 0
+
+    for relative_path, expected_count in targets:
+        path = ROOT / relative_path
+
+        require(
+            path.is_file(),
+            f"missing materialized Swift source: {path}",
         )
-        return
+
+        text = path.read_text(encoding="utf-8")
+
+        repaired, inserted, already = (
+            _repair_combined_last_dot_range_text(
+                text,
+                expected_count,
+                relative_path,
+            )
+        )
+
+        total_expected += expected_count
+        total_inserted += inserted
+        total_already += already
+
+        if repaired != text:
+            path.write_text(
+                repaired,
+                encoding="utf-8",
+            )
+
+        check_text = path.read_text(
+            encoding="utf-8"
+        )
+
+        check_candidate, check_inserted, check_already = (
+            _repair_combined_last_dot_range_text(
+                check_text,
+                expected_count,
+                relative_path,
+            )
+        )
+
+        require(
+            check_candidate == check_text,
+            f"{relative_path}: repair is not idempotent",
+        )
+
+        require(
+            check_inserted == 0,
+            f"{relative_path}: unrepaired combined "
+            "lastDotRange guard remains",
+        )
+
+        require(
+            check_already == expected_count,
+            f"{relative_path}: expected "
+            f"{expected_count} repaired guards, "
+            f"got {check_already}",
+        )
 
     require(
-        old_count == 1 and new_count == 0,
-        "unexpected Widget combined bundle-id guard shape: "
-        f"old={old_count}, new={new_count}",
+        total_expected == 5,
+        "combined lastDotRange audit total changed",
     )
 
-    text = text.replace(old, new, 1)
-    path.write_text(text, encoding="utf-8")
-
-    check = path.read_text(encoding="utf-8")
-
     require(
-        check.count(old) == 0,
-        "stale Widget lastDotRange guard survived",
-    )
-
-    require(
-        check.count(new) == 1,
-        "Widget no-usage repair did not materialize",
+        total_inserted + total_already == 5,
+        "not all five combined lastDotRange guards "
+        "were repaired",
     )
 
     print(
-        "[Build112] Widget lastDotRange no-usage repaired"
+        "[Build112] combined lastDotRange repair: "
+        f"inserted={total_inserted}, "
+        f"already={total_already}, total=5"
     )
-
 
 def main() -> None:
     patch_rules_apple_unsigned_ios_extensions()
     patch_rules_apple_unsigned_ios_application()
-    patch_widget_last_dot_range_no_usage()
+    patch_combined_last_dot_range_no_usage()
     require(BUILD.is_file(), f"missing {BUILD}")
 
     build = BUILD.read_text(encoding="utf-8")

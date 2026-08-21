@@ -377,55 +377,273 @@ def verify_rules_apple_unsigned_ios_application() -> None:
     )
 
 
-# Build112 verify Widget lastDotRange no-usage repair
-def verify_widget_last_dot_range_no_usage() -> None:
-    path = (
-        ROOT
-        / "Telegram"
-        / "WidgetKitWidget"
-        / "TodayViewController.swift"
-    )
-
-    require(
-        path.is_file(),
-        f"missing materialized Widget source: {path}",
-    )
-
-    text = path.read_text(encoding="utf-8")
-
-    stale = (
-        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
+# Build112 verify combined lastDotRange no-usage repair
+def _repair_combined_last_dot_range_text(
+    text: str,
+    expected_count: int,
+    source_name: str,
+) -> tuple[str, int, int]:
+    needle = (
+        'guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
         'let lastDotRange = appBundleIdentifier.range('
-        'of: ".", options: [.backwards]) else {\n'
+        'of: ".", options: [.backwards]) else {'
     )
 
-    patched = (
-        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
-        'appBundleIdentifier.range('
-        'of: ".", options: [.backwards]) != nil else {\n'
-    )
+    lines = text.splitlines(True)
+    out = []
+
+    hits = 0
+    inserted = 0
+    already_present = 0
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+
+        if needle in line:
+            hits += 1
+
+            indent = line[
+                :len(line) - len(line.lstrip(" \t"))
+            ]
+
+            depth = (
+                line.count("{")
+                - line.count("}")
+            )
+
+            j = i + 1
+            closed = False
+
+            while j < len(lines):
+                out.append(lines[j])
+
+                depth += (
+                    lines[j].count("{")
+                    - lines[j].count("}")
+                )
+
+                if depth <= 0:
+                    closed = True
+
+                    newline = (
+                        "\r\n"
+                        if lines[j].endswith("\r\n")
+                        else "\n"
+                    )
+
+                    sink = (
+                        indent
+                        + "_ = lastDotRange"
+                        + newline
+                    )
+
+                    next_line = (
+                        lines[j + 1]
+                        if j + 1 < len(lines)
+                        else ""
+                    )
+
+                    if next_line == sink:
+                        already_present += 1
+                    else:
+                        out.append(sink)
+                        inserted += 1
+
+                    i = j
+                    break
+
+                j += 1
+
+            require(
+                closed,
+                f"{source_name}: combined lastDotRange "
+                "guard did not close",
+            )
+
+        i += 1
 
     require(
-        text.count(stale) == 0,
-        "stale Widget lastDotRange guard remains",
+        hits == expected_count,
+        f"{source_name}: expected "
+        f"{expected_count} combined lastDotRange guards, "
+        f"got {hits}",
     )
 
+    return (
+        "".join(out),
+        inserted,
+        already_present,
+    )
+
+
+def _strip_combined_last_dot_range_sinks(
+    text: str,
+) -> tuple[str, int, int]:
+    needle = (
+        'guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
+        'let lastDotRange = appBundleIdentifier.range('
+        'of: ".", options: [.backwards]) else {'
+    )
+
+    lines = text.splitlines(True)
+    out = []
+
+    hits = 0
+    removed = 0
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+
+        if needle in line:
+            hits += 1
+
+            indent = line[
+                :len(line) - len(line.lstrip(" \t"))
+            ]
+
+            depth = (
+                line.count("{")
+                - line.count("}")
+            )
+
+            j = i + 1
+            closed = False
+
+            while j < len(lines):
+                out.append(lines[j])
+
+                depth += (
+                    lines[j].count("{")
+                    - lines[j].count("}")
+                )
+
+                if depth <= 0:
+                    closed = True
+
+                    newline = (
+                        "\r\n"
+                        if lines[j].endswith("\r\n")
+                        else "\n"
+                    )
+
+                    sink = (
+                        indent
+                        + "_ = lastDotRange"
+                        + newline
+                    )
+
+                    next_index = j + 1
+
+                    if (
+                        next_index < len(lines)
+                        and lines[next_index] == sink
+                    ):
+                        removed += 1
+                        i = next_index
+                    else:
+                        i = j
+
+                    break
+
+                j += 1
+
+            require(
+                closed,
+                "combined lastDotRange guard "
+                "did not close during normalization",
+            )
+
+        i += 1
+
+    return (
+        "".join(out),
+        hits,
+        removed,
+    )
+
+
+def verify_combined_last_dot_range_no_usage() -> None:
+    targets = (
+        (
+            "Telegram/SiriIntents/IntentHandler.swift",
+            2,
+        ),
+        (
+            "Telegram/WidgetKitWidget/"
+            "TodayViewController.swift",
+            1,
+        ),
+        (
+            "Telegram/BroadcastUpload/"
+            "BroadcastUploadExtension.swift",
+            1,
+        ),
+        (
+            "Telegram/NotificationService/Sources/"
+            "NotificationService.swift",
+            1,
+        ),
+    )
+
+    total = 0
+
+    for relative_path, expected_count in targets:
+        path = ROOT / relative_path
+
+        require(
+            path.is_file(),
+            f"missing materialized Swift source: {path}",
+        )
+
+        text = read_text(path)
+
+        candidate, inserted, already = (
+            _repair_combined_last_dot_range_text(
+                text,
+                expected_count,
+                relative_path,
+            )
+        )
+
+        require(
+            candidate == text,
+            f"{relative_path}: combined lastDotRange "
+            "repair is incomplete",
+        )
+
+        require(
+            inserted == 0,
+            f"{relative_path}: unrepaired combined "
+            "lastDotRange guard remains",
+        )
+
+        require(
+            already == expected_count,
+            f"{relative_path}: repaired guard count "
+            f"{already} != {expected_count}",
+        )
+
+        total += already
+
     require(
-        text.count(patched) == 1,
-        "Widget lastDotRange no-usage repair "
-        "missing or duplicated",
+        total == 5,
+        f"combined lastDotRange repaired total "
+        f"{total} != 5",
     )
 
     print(
-        "[verify Build112] Widget lastDotRange "
-        "no-usage repair OK"
+        "[verify Build112] all five combined "
+        "lastDotRange guards are no-usage safe"
     )
-
 
 def main() -> None:
     verify_rules_apple_unsigned_ios_extensions()
     verify_rules_apple_unsigned_ios_application()
-    verify_widget_last_dot_range_no_usage()
+    verify_combined_last_dot_range_no_usage()
     require(
         MANIFEST.is_file(),
         f"Official audit manifest missing: {MANIFEST}",
@@ -683,21 +901,46 @@ def main() -> None:
         / source_spec["path"]
     )
 
-    generated_source_sha = sha256(
+    generated_source_text = read_text(
         generated_source
     )
+
+    (
+        canonicalized_generated_source_text,
+        broadcast_combined_guard_count,
+        broadcast_removed_sink_count,
+    ) = _strip_combined_last_dot_range_sinks(
+        generated_source_text
+    )
+
+    require(
+        broadcast_combined_guard_count == 1,
+        "materialized Broadcast combined "
+        "lastDotRange guard count changed",
+    )
+
+    require(
+        broadcast_removed_sink_count == 1,
+        "materialized Broadcast Build112 "
+        "lastDotRange sink missing or duplicated",
+    )
+
+    import hashlib
+
+    generated_source_sha = hashlib.sha256(
+        canonicalized_generated_source_text.encode(
+            "utf-8"
+        )
+    ).hexdigest()
 
     require(
         generated_source_sha
         == expected_materialized_sha,
         "materialized Broadcast Upload implementation "
-        "does not match audited canonical result: "
+        "does not match audited canonical result after "
+        "removing the deterministic Build112 no-usage sink: "
         f"expected={expected_materialized_sha}, "
         f"actual={generated_source_sha}",
-    )
-
-    generated_source_text = read_text(
-        generated_source
     )
 
     class_pattern = (
