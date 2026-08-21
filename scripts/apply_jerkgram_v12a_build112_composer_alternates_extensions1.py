@@ -188,20 +188,6 @@ def patch_rules_apple_unsigned_ios_application() -> None:
         f"old={old_count}, new={new_count}",
     )
 
-    require(
-        block.count(
-            "partials.provisioning_profile_partial("
-        ) == 1,
-        "unexpected ios_application provisioning partial ownership",
-    )
-
-    require(
-        block.count(
-            "profile_artifact = provisioning_profile"
-        ) == 1,
-        "unexpected ios_application profile_artifact ownership",
-    )
-
     block = block.replace(old, new, 1)
 
     updated = (

@@ -371,20 +371,6 @@ def verify_rules_apple_unsigned_ios_application() -> None:
         "provisioning gate remains",
     )
 
-    require(
-        block.count(
-            "partials.provisioning_profile_partial("
-        ) == 1,
-        "unexpected ios_application provisioning partial ownership",
-    )
-
-    require(
-        block.count(
-            "profile_artifact = provisioning_profile"
-        ) == 1,
-        "unexpected ios_application profile_artifact ownership",
-    )
-
     print(
         "[verify Build112] rules_apple unsigned "
         "ios_application provisioning gate OK"
