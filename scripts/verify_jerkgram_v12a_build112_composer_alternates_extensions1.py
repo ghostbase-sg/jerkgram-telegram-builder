@@ -377,9 +377,55 @@ def verify_rules_apple_unsigned_ios_application() -> None:
     )
 
 
+# Build112 verify Widget lastDotRange no-usage repair
+def verify_widget_last_dot_range_no_usage() -> None:
+    path = (
+        ROOT
+        / "Telegram"
+        / "WidgetKitWidget"
+        / "TodayViewController.swift"
+    )
+
+    require(
+        path.is_file(),
+        f"missing materialized Widget source: {path}",
+    )
+
+    text = path.read_text(encoding="utf-8")
+
+    stale = (
+        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
+        'let lastDotRange = appBundleIdentifier.range('
+        'of: ".", options: [.backwards]) else {\n'
+    )
+
+    patched = (
+        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
+        'appBundleIdentifier.range('
+        'of: ".", options: [.backwards]) != nil else {\n'
+    )
+
+    require(
+        text.count(stale) == 0,
+        "stale Widget lastDotRange guard remains",
+    )
+
+    require(
+        text.count(patched) == 1,
+        "Widget lastDotRange no-usage repair "
+        "missing or duplicated",
+    )
+
+    print(
+        "[verify Build112] Widget lastDotRange "
+        "no-usage repair OK"
+    )
+
+
 def main() -> None:
     verify_rules_apple_unsigned_ios_extensions()
     verify_rules_apple_unsigned_ios_application()
+    verify_widget_last_dot_range_no_usage()
     require(
         MANIFEST.is_file(),
         f"Official audit manifest missing: {MANIFEST}",

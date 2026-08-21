@@ -232,9 +232,74 @@ def patch_rules_apple_unsigned_ios_application() -> None:
     )
 
 
+# Build112 Widget lastDotRange no-usage repair
+def patch_widget_last_dot_range_no_usage() -> None:
+    path = (
+        ROOT
+        / "Telegram"
+        / "WidgetKitWidget"
+        / "TodayViewController.swift"
+    )
+
+    require(
+        path.is_file(),
+        f"missing materialized Widget source: {path}",
+    )
+
+    text = path.read_text(encoding="utf-8")
+
+    old = (
+        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
+        'let lastDotRange = appBundleIdentifier.range('
+        'of: ".", options: [.backwards]) else {\n'
+    )
+
+    new = (
+        '    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, '
+        'appBundleIdentifier.range('
+        'of: ".", options: [.backwards]) != nil else {\n'
+    )
+
+    old_count = text.count(old)
+    new_count = text.count(new)
+
+    if old_count == 0 and new_count == 1:
+        print(
+            "[Build112] Widget lastDotRange no-usage "
+            "repair already applied"
+        )
+        return
+
+    require(
+        old_count == 1 and new_count == 0,
+        "unexpected Widget combined bundle-id guard shape: "
+        f"old={old_count}, new={new_count}",
+    )
+
+    text = text.replace(old, new, 1)
+    path.write_text(text, encoding="utf-8")
+
+    check = path.read_text(encoding="utf-8")
+
+    require(
+        check.count(old) == 0,
+        "stale Widget lastDotRange guard survived",
+    )
+
+    require(
+        check.count(new) == 1,
+        "Widget no-usage repair did not materialize",
+    )
+
+    print(
+        "[Build112] Widget lastDotRange no-usage repaired"
+    )
+
+
 def main() -> None:
     patch_rules_apple_unsigned_ios_extensions()
     patch_rules_apple_unsigned_ios_application()
+    patch_widget_last_dot_range_no_usage()
     require(BUILD.is_file(), f"missing {BUILD}")
 
     build = BUILD.read_text(encoding="utf-8")
