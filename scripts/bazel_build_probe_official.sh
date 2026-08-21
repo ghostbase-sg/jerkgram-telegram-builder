@@ -516,6 +516,8 @@ python3 "${GHOSTBASE_BUILDER_ROOT}/scripts/verify_jerkgram_v11y_build110_icons_u
 echo "== Jerkgram v1.1Z Build111: native Glass Composer + UI fixes =="
 python3 ../../scripts/apply_jerkgram_v11z_build111_glass_composer_ui_fix1.py
 python3 ../../scripts/verify_jerkgram_v11z_build111_glass_composer_ui_fix1.py
+python3 ../../scripts/apply_jerkgram_v12a_build112_composer_alternates_extensions1.py
+python3 ../../scripts/verify_jerkgram_v12a_build112_composer_alternates_extensions1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -523,7 +525,8 @@ python3 ../../scripts/verify_jerkgram_v11z_build111_glass_composer_ui_fix1.py
   --apple_platform_type=ios \
   --ios_multi_cpus=arm64 \
   --check_direct_dependencies=off \
-  --//Telegram:disableExtensions=true \
+  --//Telegram:disableExtensions=false \
+  --//Telegram:disableProvisioningProfiles=true \
   "$GHOSTBASE_BAZEL_TARGET"
 
 echo
@@ -612,5 +615,5 @@ python3 ../../scripts/jerkgram_finalize_display_name_build110.py ghostbase-final
 echo "== verify Build110 final JerkGram icons/UI/recovery IPA =="
 # Build110 final verifier is superseded here because Build111 intentionally restores Telegram as primary Composer icon.
 echo "== verify Jerkgram Build111 final IPA =="
-python3 ../../scripts/verify_jerkgram_v11z_build111_final_ipa.py \
+python3 ../../scripts/verify_jerkgram_v12a_build112_final_ipa.py \
   ghostbase-final/GhostBase.ipa
