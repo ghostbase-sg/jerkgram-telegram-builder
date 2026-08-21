@@ -19,6 +19,12 @@
     "principal_class": "BroadcastUploadSampleHandler",
     "process_mode": "RPBroadcastProcessModeSampleBuffer",
     "sample_handler": {
+      "canonical_materialization": {
+        "expected_sha256": "fdc7224aace1339e8cce7a9d2e1c59c2f96c10c082b4859c04f661c9612bc57d",
+        "patcher_path": "scripts/gb_patch_swift.py",
+        "patcher_sha256": "878b30ed9c560e07072b8b0a9009ff7fb933c35f9818f2977b02a46bfba8c181",
+        "reason": "canonical Bundle/AppGroup normalization of baseAppBundleId and appGroupName"
+      },
       "class_name": "BroadcastUploadSampleHandler",
       "path": "Telegram/BroadcastUpload/BroadcastUploadExtension.swift",
       "sha256": "ef149c48c8bb8b6a7725b007056d203ef0d8eacff430464eb514ecf96e0d1565",
@@ -40,7 +46,7 @@
     "WidgetExtension": "\":WidgetExtension\""
   },
   "official_release": "12.9.2",
-  "schema": 3,
+  "schema": 4,
   "source": "Official Telegram iOS 12.9.2 pristine tree",
   "target_declaration_tokens": {
     "BroadcastUploadExtension": "name = \"BroadcastUploadExtension\"",

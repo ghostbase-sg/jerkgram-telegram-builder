@@ -257,7 +257,7 @@ def main() -> None:
     )
 
     require(
-        manifest.get("schema") == 3,
+        manifest.get("schema") == 4,
         "unexpected Official audit manifest schema",
     )
 
@@ -447,16 +447,62 @@ def main() -> None:
         "sample_handler"
     ]
 
+    materialization = source_spec.get(
+        "canonical_materialization"
+    )
+
+    require(
+        isinstance(materialization, dict),
+        "canonical Broadcast materialization audit missing",
+    )
+
+    require(
+        materialization.get("patcher_path")
+        == "scripts/gb_patch_swift.py",
+        "unexpected Broadcast canonical patcher owner",
+    )
+
+    canonical_patcher = (
+        BUILDER
+        / materialization["patcher_path"]
+    )
+
+    require(
+        sha256(canonical_patcher)
+        == materialization.get("patcher_sha256"),
+        "gb_patch_swift.py changed since Broadcast "
+        "materialization audit was recorded",
+    )
+
+    expected_materialized_sha = (
+        materialization.get("expected_sha256")
+    )
+
+    require(
+        isinstance(expected_materialized_sha, str)
+        and re.fullmatch(
+            r"[0-9a-f]{64}",
+            expected_materialized_sha,
+        ) is not None,
+        "invalid expected materialized Broadcast SHA-256",
+    )
+
     generated_source = (
         ROOT
         / source_spec["path"]
     )
 
+    generated_source_sha = sha256(
+        generated_source
+    )
+
     require(
-        sha256(generated_source)
-        == source_spec["sha256"],
+        generated_source_sha
+        == expected_materialized_sha,
         "materialized Broadcast Upload implementation "
-        "differs from audited Official 12.9.2",
+        "does not match audited canonical result: "
+        f"expected={expected_materialized_sha}, "
+        f"actual={generated_source_sha}",
     )
 
     generated_source_text = read_text(
@@ -498,8 +544,9 @@ def main() -> None:
 
     print(
         "[verify Build112] GREEN: Telegram "
-        "BroadcastUploadSampleHandler is byte-identical "
-        "to audited Official 12.9.2"
+        "BroadcastUploadSampleHandler matches audited "
+        "Official 12.9.2 after canonical "
+        "gb_patch_swift Bundle/AppGroup normalization"
     )
 
     print(
