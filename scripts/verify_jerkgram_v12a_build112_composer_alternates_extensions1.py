@@ -18,7 +18,6 @@ OFFICIAL = BUILDER / "ports/ghostbase_12_9_2_port/telegram-ios-12.9.2-official"
 
 BUILD = ROOT / "Telegram/BUILD"
 PROBE = BUILDER / "scripts/bazel_build_probe_official.sh"
-POST = ROOT / "Telegram/Telegram-iOS/JerkgramIconComposerPostProcessor.sh"
 
 EXTENSIONS = (
     "BroadcastUploadExtension",
@@ -61,29 +60,73 @@ def main() -> None:
     build = text(BUILD)
     probe = text(PROBE)
     official_build = text(OFFICIAL / "Telegram/BUILD")
-    post = text(POST)
 
     # Icon blocker correction.
-    require(
-        '# MARK: Jerkgram v1.2A BUILD112_COMPOSER_ALTERNATES1' in build,
-        "Composer alternate marker missing",
-    )
-    require(
-        'ipa_post_processor = ":JerkgramIconComposerPostProcessor"' in build,
-        "Composer alternate postprocessor not wired",
-    )
-    require(
-        "Jerkgram Build112 Icon Composer alternate registration bridge" in post,
-        "Composer postprocessor payload marker missing",
-    )
+    # Local Official rules_apple proves that app_icons + primary_app_icon
+    # is the native Icon Composer owner. Build112 therefore preserves the
+    # Build111 .icon inputs and patches only final IPA registration metadata.
     require(
         'primary_app_icon = "Telegram"' in build,
         "Telegram primary Composer icon changed unexpectedly",
     )
+
+    composer_start = build.find("composer_icon_folders = [")
+    require(
+        composer_start >= 0,
+        "composer_icon_folders block missing",
+    )
+    composer_end = build.find("]", composer_start)
+    require(
+        composer_end > composer_start,
+        "composer_icon_folders block malformed",
+    )
+    composer_block = build[composer_start:composer_end + 1]
+
+    for name in (
+        "Telegram",
+        "JerkgramGlassReveal",
+        "JerkgramGlassSolid",
+    ):
+        require(
+            f'"{name}"' in composer_block,
+            f"native Composer app_icons owner missing: {name}",
+        )
+
+    require(
+        'app_icons = [ ":{}_icon".format(name) for name in composer_icon_folders ]'
+        in build,
+        "ios_application no longer consumes composer_icon_folders via app_icons",
+    )
+
     require(
         "Telegram-iOS/JerkgramGlassReveal.alticon" not in build
         and "Telegram-iOS/JerkgramGlassSolid.alticon" not in build,
         "Glass was incorrectly converted to legacy .alticon",
+    )
+
+    require(
+        'ipa_post_processor = ":JerkgramIconComposerPostProcessor"' not in build,
+        "obsolete Build112 main-app ipa_post_processor bridge survived",
+    )
+    require(
+        'name = "JerkgramIconComposerPostProcessor"' not in build,
+        "obsolete Build112 postprocessor target survived",
+    )
+
+    finalizer_token = "jerkgram_finalize_composer_alternates_build112.py"
+    final_verifier_token = "verify_jerkgram_v12a_build112_final_ipa.py"
+
+    require(
+        probe.count(finalizer_token) == 1,
+        "Build112 final-IPA Composer finalizer must run exactly once",
+    )
+    require(
+        probe.count(final_verifier_token) == 1,
+        "Build112 final verifier must run exactly once",
+    )
+    require(
+        probe.find(finalizer_token) < probe.find(final_verifier_token),
+        "Build112 Composer finalizer must run before final IPA verifier",
     )
 
     # Canonical build-mode requirement from the TЗ.
@@ -186,7 +229,7 @@ def main() -> None:
         "Broadcast Upload Info.plist differs from Official 12.9.2",
     )
 
-    print("[verify Build112] GREEN: native Glass alternates registration wired")
+    print("[verify Build112] GREEN: native Glass Composer assets preserved; final IPA registration finalizer scheduled")
     print("[verify Build112] GREEN: extensions enabled + provisioning profiles disabled")
     print("[verify Build112] GREEN: six Official extension targets preserved")
     print("[verify Build112] GREEN: BroadcastUploadSampleHandler is byte-identical to Official 12.9.2")

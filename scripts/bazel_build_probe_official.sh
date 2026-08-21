@@ -612,6 +612,10 @@ python3 ../../scripts/verify_jerkgram_v11x_build109_final_ipa.py \
 echo "== finalize Build110 display name: Jerkgram =="
 python3 ../../scripts/jerkgram_finalize_display_name_build110.py ghostbase-final/GhostBase.ipa
 
+echo "== finalize Build112 native Composer alternate registration =="
+python3 ../../scripts/jerkgram_finalize_composer_alternates_build112.py \
+  ghostbase-final/GhostBase.ipa
+
 echo "== verify Jerkgram Build112 final IPA: Composer alternates + Official extensions =="
 python3 ../../scripts/verify_jerkgram_v12a_build112_final_ipa.py \
   ghostbase-final/GhostBase.ipa

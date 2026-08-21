@@ -164,6 +164,15 @@ def main() -> None:
             "BroadcastUploadExtension is not ReplayKit Broadcast Upload",
         )
 
+        principal = broadcast_ns.get("NSExtensionPrincipalClass")
+        if principal is not None:
+            require(
+                isinstance(principal, str)
+                and "BroadcastUploadSampleHandler" in principal,
+                "BroadcastUploadExtension principal class is unexpected: "
+                + repr(principal),
+            )
+
         print("[verify Build112 final] GREEN: Glass Reveal/Solid registered as native Composer alternates")
         print("[verify Build112 final] GREEN: all eight legacy Jerkgram + stock Telegram icons preserved")
         print("[verify Build112 final] GREEN: required Broadcast/Share/Widget extensions are present")
