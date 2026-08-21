@@ -466,6 +466,16 @@ def main() -> None:
         "disableProvisioningProfiles=true missing",
     )
 
+    # ----- Build112 unsigned signing mode -----
+
+    require(
+        probe.count(
+            "--features=disable_legacy_signing"
+        ) == 1,
+        "canonical probe must contain exactly one "
+        "disable_legacy_signing feature",
+    )
+
     finalizer = (
         "jerkgram_finalize_composer_alternates_build112.py"
     )

@@ -527,6 +527,7 @@ python3 ../../scripts/verify_jerkgram_v12a_build112_composer_alternates_extensio
   --check_direct_dependencies=off \
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
+  --features=disable_legacy_signing \
   "$GHOSTBASE_BAZEL_TARGET"
 
 echo
