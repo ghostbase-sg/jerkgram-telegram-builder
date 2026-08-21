@@ -355,16 +355,10 @@ def main() -> None:
     )
 
     require(
-        "Telegram-iOS/JerkgramGlassReveal.alticon"
-        not in build
-        and
-        "Telegram-iOS/JerkgramGlassSolid.alticon"
-        not in build,
-        "Glass was incorrectly converted to .alticon"
-        not in build
-        and
-        "Telegram-iOS/JerkgramGlassSolid.alticon"
-        not in build,
+        (
+            "Telegram-iOS/JerkgramGlassReveal.alticon" not in build
+            and "Telegram-iOS/JerkgramGlassSolid.alticon" not in build
+        ),
         "Glass was incorrectly converted to .alticon",
     )
 
