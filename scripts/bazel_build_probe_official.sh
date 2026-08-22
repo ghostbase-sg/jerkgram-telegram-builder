@@ -456,6 +456,11 @@ python3 ../../scripts/verify_jerkgram_v12b_build113_recovery1.py
 echo "== Jerkgram v1.2B Build113 profile recovery =="
 python3 ../../scripts/apply_jerkgram_v12b_build113_profile_recovery1.py
 python3 ../../scripts/verify_jerkgram_v12b_build113_profile_recovery1.py
+
+echo
+echo "== Jerkgram v1.2C Build114 source/runtime/UI =="
+python3 ../../scripts/apply_jerkgram_v12c_build114_core1.py
+python3 ../../scripts/verify_jerkgram_v12c_build114_core1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -541,3 +546,10 @@ python3 ../../scripts/jerkgram_finalize_build113_esign_ready.py \
 echo "== verify Build113 final ESign-ready IPA =="
 python3 ../../scripts/verify_jerkgram_v12b_build113_final_ipa.py \
   ghostbase-final/GhostBase.ipa
+
+echo
+echo "== finalize Build114 public/resign-ready IPA =="
+python3 ../../scripts/jerkgram_finalize_build114_resign_ready.py   ghostbase-final/GhostBase.ipa
+
+echo "== verify Build114 final public/resign-ready IPA =="
+python3 ../../scripts/verify_jerkgram_v12c_build114_final_ipa.py   ghostbase-final/GhostBase.ipa
