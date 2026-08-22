@@ -9,10 +9,12 @@ import shutil
 import zipfile
 import xml.etree.ElementTree as ET
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+
 BUILDER = Path(
     os.environ.get(
         "GHOSTBASE_BUILDER_ROOT",
-        "/root/gb_builder"
+        str(SCRIPT_DIR.parent)
     )
 ).resolve()
 
@@ -248,7 +250,7 @@ def restore_resign_dynamic_identity():
 
     Здесь, ПОСЛЕ них, возвращаем именно официальную
     runtime-логику вычисления baseAppBundleId и
-    group.\(baseAppBundleId).
+    group.\\(baseAppBundleId).
 
     Поэтому ESign/Feather смогут переписать Bundle ID,
     а Telegram extensions не останутся привязаны
@@ -256,6 +258,8 @@ def restore_resign_dynamic_identity():
     """
 
     targets = (
+        "submodules/TelegramUI/Sources/AppDelegate.swift",
+
         "Telegram/SiriIntents/IntentHandler.swift",
 
         "Telegram/WidgetKitWidget/"
