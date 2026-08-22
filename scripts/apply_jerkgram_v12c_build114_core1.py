@@ -1850,27 +1850,68 @@ private func jerkgramResolvedApplicationGroupIdentifier(
         )
 
         if marker not in text:
-            imports = list(
-                re.finditer(
-                    r"^import [^\n]+\n",
-                    text,
-                    re.M
+            lines = text.splitlines(True)
+
+            import_indexes = [
+                index
+                for index, line in enumerate(lines)
+                if re.match(
+                    r"^[ \\t]*import[ \\t]+",
+                    line
                 )
-            )
+            ]
 
             require(
-                imports,
+                import_indexes,
                 (
                     "Swift imports missing: "
                     f"{relative}"
                 )
             )
 
-            position = imports[-1].end()
+            first_import = import_indexes[0]
+
+            # Walk through the complete import preamble,
+            # including conditional import blocks such as:
+            #
+            #   #if canImport(AppCenter)
+            #   import AppCenter
+            #   #endif
+            #
+            # Stop immediately before the first real Swift
+            # declaration. This avoids placing the helper
+            # inside an optional import branch.
+            insertion_line = first_import
+
+            for index in range(
+                first_import,
+                len(lines)
+            ):
+                stripped = lines[index].strip()
+
+                allowed = (
+                    stripped == ""
+                    or stripped.startswith("import ")
+                    or stripped.startswith("#if ")
+                    or stripped.startswith("#elseif ")
+                    or stripped == "#else"
+                    or stripped == "#endif"
+                    or stripped.startswith("//")
+                )
+
+                if not allowed:
+                    insertion_line = index
+                    break
+            else:
+                insertion_line = len(lines)
+
+            position = sum(
+                len(line)
+                for line in lines[:insertion_line]
+            )
 
             text = (
                 text[:position]
-                + "\n"
                 + helper
                 + text[position:]
             )
