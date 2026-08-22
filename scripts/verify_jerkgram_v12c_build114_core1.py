@@ -437,7 +437,39 @@ dynamic_targets = (
     "NotificationService.swift",
 )
 
+expected_resolved_sites = {
+    "submodules/TelegramUI/Sources/"
+    "AppDelegate.swift": 2,
+
+    "Telegram/SiriIntents/"
+    "IntentHandler.swift": 2,
+
+    "Telegram/WidgetKitWidget/"
+    "TodayViewController.swift": 1,
+
+    "Telegram/BroadcastUpload/"
+    "BroadcastUploadExtension.swift": 1,
+
+    "Telegram/Share/"
+    "ShareRootController.swift": 1,
+
+    "Telegram/NotificationContent/"
+    "NotificationViewController.swift": 1,
+
+    "Telegram/NotificationService/Sources/"
+    "NotificationService.swift": 1,
+}
+
 resolved_occurrences = 0
+
+resolved_call = (
+    "let appGroupName = "
+    "jerkgramResolvedApplicationGroupIdentifier("
+)
+
+fallback = (
+    'fallback: "group.\\(baseAppBundleId)"'
+)
 
 for relative in dynamic_targets:
     text = read(
@@ -454,10 +486,43 @@ for relative in dynamic_targets:
         )
     )
 
-    resolved_occurrences += text.count(
-        "jerkgramResolvedApplicationGroupIdentifier("
-        'fallback: "group.\\(baseAppBundleId)"'
-        ")"
+    require(
+        text.count(
+            "private func "
+            "jerkgramResolvedApplicationGroupIdentifier("
+        ) == 1,
+        (
+            "signer-neutral AppGroup helper "
+            "count invalid: "
+            + relative
+        )
+    )
+
+    actual_sites = text.count(
+        resolved_call
+    )
+
+    require(
+        actual_sites
+        == expected_resolved_sites[relative],
+        (
+            "signer-neutral AppGroup "
+            "call-site count invalid: "
+            f"{relative}: "
+            f"{actual_sites} != "
+            f"{expected_resolved_sites[relative]}"
+        )
+    )
+
+    resolved_occurrences += actual_sites
+
+    require(
+        fallback in text,
+        (
+            "Official dynamic AppGroup fallback "
+            "missing: "
+            + relative
+        )
     )
 
     require(
@@ -478,6 +543,7 @@ require(
         f"!= 9: {resolved_occurrences}"
     )
 )
+
 
 
 print(

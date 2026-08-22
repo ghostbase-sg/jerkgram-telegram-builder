@@ -1934,19 +1934,96 @@ def verify_dynamic_extensions():
         "Sources/NotificationService.swift",
     )
 
-    dynamic_hits = 0
+    marker = (
+        "// MARK: Jerkgram v1.2C "
+        "BUILD114_SIGNER_APPGROUP1"
+    )
+
+    helper_name = (
+        "jerkgramResolvedApplicationGroupIdentifier"
+    )
+
+    resolved_call = (
+        "let appGroupName = "
+        "jerkgramResolvedApplicationGroupIdentifier("
+    )
+
+    fallback = (
+        'fallback: "group.\\(baseAppBundleId)"'
+    )
+
+    expected_sites = {
+        "submodules/TelegramUI/Sources/"
+        "AppDelegate.swift": 2,
+
+        "Telegram/SiriIntents/"
+        "IntentHandler.swift": 2,
+
+        "Telegram/WidgetKitWidget/"
+        "TodayViewController.swift": 1,
+
+        "Telegram/BroadcastUpload/"
+        "BroadcastUploadExtension.swift": 1,
+
+        "Telegram/Share/"
+        "ShareRootController.swift": 1,
+
+        "Telegram/NotificationContent/"
+        "NotificationViewController.swift": 1,
+
+        "Telegram/NotificationService/"
+        "Sources/NotificationService.swift": 1,
+    }
+
+    total_sites = 0
 
     for relative in targets:
         text = read(
             ROOT / relative
         )
 
-        if (
-            'let appGroupName = '
-            '"group.\\(baseAppBundleId)"'
-            in text
-        ):
-            dynamic_hits += 1
+        require(
+            marker in text,
+            (
+                "signer-neutral AppGroup marker "
+                f"missing: {relative}"
+            )
+        )
+
+        require(
+            text.count(
+                f"private func {helper_name}("
+            ) == 1,
+            (
+                "signer-neutral AppGroup helper "
+                f"count invalid: {relative}"
+            )
+        )
+
+        actual_sites = text.count(
+            resolved_call
+        )
+
+        require(
+            actual_sites
+            == expected_sites[relative],
+            (
+                "signer-neutral AppGroup call-site "
+                f"count invalid: {relative}: "
+                f"{actual_sites} != "
+                f"{expected_sites[relative]}"
+            )
+        )
+
+        total_sites += actual_sites
+
+        require(
+            fallback in text,
+            (
+                "dynamic Official AppGroup fallback "
+                f"missing: {relative}"
+            )
+        )
 
         require(
             (
@@ -1961,17 +2038,19 @@ def verify_dynamic_extensions():
         )
 
     require(
-        dynamic_hits >= 5,
+        total_sites == 9,
         (
-            "too few resign-dynamic "
-            f"extension owners: {dynamic_hits}"
+            "unexpected signer-neutral "
+            f"AppGroup call-site count: {total_sites}"
         )
     )
 
     print(
         "[Build114] extension identity "
-        "is resign-dynamic"
+        "is signer-neutral / resign-dynamic: "
+        "7 processes / 9 AppGroup sites"
     )
+
 
 
 def main():
