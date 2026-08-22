@@ -245,228 +245,213 @@ def normalize_public_identity():
 
 def restore_resign_dynamic_identity():
     r"""
-    Старый gb_patch_swift должен остаться нетронутым
-    до завершения legacy-verifiers.
+    BUILD114_RESIGN_DYNAMIC_IDENTITY1
 
-    Здесь, ПОСЛЕ них, возвращаем именно официальную
-    runtime-логику вычисления baseAppBundleId и
-    group.\\(baseAppBundleId).
+    Late-patch after the Build113 legacy materialization.
 
-    Поэтому ESign/Feather смогут переписать Bundle ID,
-    а Telegram extensions не останутся привязаны
-    к ID автора сборки.
+    Exact runtime identity declarations were audited
+    against clean Official Telegram iOS 12.9.2,
+    commit 6ad963e5b62d354da79040f388ae2b9132fb17b8.
+
+    CI operates only on the already-materialized source.
     """
 
-    targets = (
-        "submodules/TelegramUI/Sources/AppDelegate.swift",
-
-        "Telegram/SiriIntents/IntentHandler.swift",
-
-        "Telegram/WidgetKitWidget/"
-        "TodayViewController.swift",
-
-        "Telegram/BroadcastUpload/"
-        "BroadcastUploadExtension.swift",
-
-        "Telegram/Share/"
-        "ShareRootController.swift",
-
-        "Telegram/NotificationContent/"
-        "NotificationViewController.swift",
-
-        "Telegram/NotificationService/Sources/"
-        "NotificationService.swift",
+    plans = (
+        (
+            "submodules/TelegramUI/Sources/AppDelegate.swift",
+            {
+                "baseAppBundleId": (
+                    "Bundle.main.bundleIdentifier!",
+                    "Bundle.main.bundleIdentifier!",
+                    "Bundle.main.bundleIdentifier!",
+                    "Bundle.main.bundleIdentifier!",
+                    "Bundle.main.bundleIdentifier!",
+                ),
+                "appGroupName": (
+                    r'"group.\(baseAppBundleId)"',
+                    r'"group.\(baseAppBundleId)"',
+                ),
+            },
+        ),
+        (
+            "Telegram/SiriIntents/IntentHandler.swift",
+            {
+                "baseAppBundleId": (
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                ),
+                "appGroupName": (
+                    r'"group.\(baseAppBundleId)"',
+                    r'"group.\(baseAppBundleId)"',
+                ),
+            },
+        ),
+        (
+            "Telegram/WidgetKitWidget/TodayViewController.swift",
+            {
+                "baseAppBundleId": (
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                ),
+                "appGroupName": (
+                    r'"group.\(baseAppBundleId)"',
+                ),
+            },
+        ),
+        (
+            "Telegram/BroadcastUpload/BroadcastUploadExtension.swift",
+            {
+                "baseAppBundleId": (
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                ),
+                "appGroupName": (
+                    r'"group.\(baseAppBundleId)"',
+                ),
+            },
+        ),
+        (
+            "Telegram/Share/ShareRootController.swift",
+            {
+                "baseAppBundleId": (
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                ),
+                "appGroupName": (
+                    r'"group.\(baseAppBundleId)"',
+                ),
+            },
+        ),
+        (
+            "Telegram/NotificationContent/NotificationViewController.swift",
+            {
+                "baseAppBundleId": (
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                ),
+                "appGroupName": (
+                    r'"group.\(baseAppBundleId)"',
+                ),
+            },
+        ),
+        (
+            "Telegram/NotificationService/Sources/NotificationService.swift",
+            {
+                "baseAppBundleId": (
+                    "String(appBundleIdentifier[..<lastDotRange.lowerBound])",
+                ),
+                "appGroupName": (
+                    r'"group.\(baseAppBundleId)"',
+                ),
+            },
+        ),
     )
-
-    names = (
-        "baseAppBundleId",
-        "baseAppBundleIdentifier",
-        "appGroupName",
-    )
-
-    def declaration_lines(lines, name):
-        result = []
-
-        pattern = re.compile(
-            rf"\b(?:guard\s+)?let\s+"
-            rf"{re.escape(name)}\s*="
-        )
-
-        for index, line in enumerate(lines):
-            if pattern.search(line):
-                result.append(
-                    (index, line)
-                )
-
-        return result
 
     restored = 0
 
-    for relative in targets:
-        current_path = ROOT / relative
-        official_path = OFFICIAL / relative
+    for relative, declarations in plans:
+        path = ROOT / relative
 
         require(
-            current_path.is_file(),
-            "materialized identity target "
-            f"missing: {relative}"
+            path.is_file(),
+            (
+                "materialized identity target "
+                f"missing: {relative}"
+            )
         )
 
-        require(
-            official_path.is_file(),
-            "Official identity source "
-            f"missing: {relative}"
+        text = path.read_text(
+            encoding="utf-8"
         )
 
-        current_lines = (
-            current_path
-            .read_text(encoding="utf-8")
-            .splitlines(True)
-        )
-
-        official_lines = (
-            official_path
-            .read_text(encoding="utf-8")
-            .splitlines(True)
-        )
-
-        for name in names:
-            official_decls = (
-                declaration_lines(
-                    official_lines,
-                    name
-                )
+        for name, expressions in declarations.items():
+            pattern = re.compile(
+                rf"^(?P<indent>[ \t]*)"
+                rf"let[ \t]+{re.escape(name)}"
+                rf"(?:[ \t]*:[^=\n]+)?"
+                rf"[ \t]*=[^\n]*$",
+                re.M
             )
 
-            if not official_decls:
-                continue
-
-            current_decls = (
-                declaration_lines(
-                    current_lines,
-                    name
-                )
+            matches = list(
+                pattern.finditer(text)
             )
 
             require(
-                len(current_decls)
-                == len(official_decls),
+                len(matches) == len(expressions),
                 (
-                    f"{relative}: "
-                    f"{name} declaration count "
-                    f"current={len(current_decls)} "
-                    f"official={len(official_decls)}"
+                    f"{relative}: {name} declaration "
+                    f"count current={len(matches)} "
+                    f"expected={len(expressions)}"
                 )
             )
 
-            for occurrence in range(
-                len(official_decls) - 1,
-                -1,
-                -1
+            for match, expression in reversed(
+                list(zip(matches, expressions))
             ):
-                current_index, current_line = (
-                    current_decls[occurrence]
+                replacement = (
+                    match.group("indent")
+                    + f"let {name} = {expression}"
                 )
 
-                _, official_line = (
-                    official_decls[occurrence]
-                )
-
-                if current_line != official_line:
-                    current_lines[
-                        current_index
-                    ] = official_line
-
+                if match.group(0) != replacement:
                     restored += 1
 
-                j = current_index + 1
+                text = (
+                    text[:match.start()]
+                    + replacement
+                    + text[match.end():]
+                )
 
-                while (
-                    j < len(current_lines)
-                    and current_lines[
-                        j
-                    ].strip() == ""
-                ):
-                    j += 1
+            text = re.sub(
+                rf"^[ \t]*_[ \t]*=[ \t]*"
+                rf"{re.escape(name)}[ \t]*\n?",
+                "",
+                text,
+                flags=re.M
+            )
 
-                if (
-                    j < len(current_lines)
-                    and current_lines[
-                        j
-                    ].strip()
-                    == f"_ = {name}"
-                ):
-                    del current_lines[j]
-
-                if (
-                    official_line
-                    .lstrip()
-                    .startswith(
-                        "guard let "
-                    )
-                ):
-                    j = current_index + 1
-
-                    while (
-                        j < len(current_lines)
-                        and current_lines[
-                            j
-                        ].strip() == ""
-                    ):
-                        j += 1
-
-                    if (
-                        j < len(current_lines)
-                        and current_lines[
-                            j
-                        ].strip()
-                        == "if false {"
-                    ):
-                        del current_lines[j]
-
-        current_path.write_text(
-            "".join(current_lines),
+        path.write_text(
+            text,
             encoding="utf-8"
         )
 
-        check = current_path.read_text(
+        check = path.read_text(
             encoding="utf-8"
         )
 
-        for name in names:
-            for _, official_line in (
-                declaration_lines(
-                    official_lines,
-                    name
-                )
-            ):
-                require(
-                    official_line in check,
-                    (
-                        f"{relative}: "
-                        "Official declaration "
-                        "not restored: "
-                        f"{official_line.strip()}"
-                    )
-                )
+        for name, expressions in declarations.items():
+            pattern = re.compile(
+                rf"^[ \t]*let[ \t]+{re.escape(name)}"
+                rf"(?:[ \t]*:[^=\n]+)?"
+                rf"[ \t]*=[ \t]*(?P<rhs>[^\n]+)$",
+                re.M
+            )
 
-        require(
-            (
-                f'let appGroupName = '
-                f'"{PUBLIC_GROUP}"'
+            actual = tuple(
+                match.group("rhs").strip()
+                for match in pattern.finditer(check)
             )
-            not in check,
-            (
-                f"{relative}: "
-                "static AppGroup survived"
+
+            require(
+                actual == expressions,
+                (
+                    f"{relative}: canonical {name} "
+                    f"restore mismatch: "
+                    f"actual={actual!r} "
+                    f"expected={expressions!r}"
+                )
             )
-        )
 
     print(
-        "[Build114] restored "
-        f"{restored} resign-dynamic "
-        "Official declarations"
+        "[Build114] restored",
+        restored,
+        "legacy-hardcoded identity declarations"
     )
+
+    print(
+        "[Build114] dynamic identity: "
+        "7 owners / 13 base-ID sites / "
+        "9 AppGroup sites"
+    )
+
 
 
 def restore_pre_build113_profile():
