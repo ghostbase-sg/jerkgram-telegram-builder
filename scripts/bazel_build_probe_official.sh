@@ -86,16 +86,8 @@ grep -RInE 'case ghostbase|openSettings\(\.ghostbase\)|case \.ghostbase|GhostBas
   submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift
 
 
-echo "== verify required signing secrets =="
-for v in CERT_B64 PROF_B64 P12_PASSWORD KEYCHAIN_PASSWORD; do
-  eval "x=\${$v:-}"
-  if [ -z "$x" ]; then
-    echo "::error::$v is empty or missing"
-    exit 1
-  fi
-done
-echo "CERT_B64 length: ${#CERT_B64}"
-echo "PROF_B64 length: ${#PROF_B64}"
+echo "== Build113 unsigned ESign-ready mode =="
+echo "CI certificate/provisioning secrets are intentionally not required"
 
 echo "== bazelisk / bazel =="
 which "$BAZEL_BIN"
@@ -142,66 +134,8 @@ sg_config = "{}"
 EOF
 
 echo
-echo "== decode provisioning profile =="
-PROFILE="$SIGN_DIR/Telegram.mobileprovision"
-PROFILE_PLIST="$SIGN_DIR/profile.plist"
-
-printf "%s" "$PROF_B64" | base64 -D > "$PROFILE"
-security cms -D -i "$PROFILE" > "$PROFILE_PLIST"
-
-UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" "$PROFILE_PLIST")
-
-mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-cp "$PROFILE" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
-
-cp "$PROFILE" build-input/configuration-repository/provisioning/Telegram.mobileprovision
-cp "$PROFILE" build-system/example-configuration/provisioning/Telegram.mobileprovision
-
-echo "== profile =="
-wc -c "$PROFILE"
-shasum -a 256 "$PROFILE"
-/usr/libexec/PlistBuddy -c "Print Entitlements:application-identifier" "$PROFILE_PLIST"
-/usr/libexec/PlistBuddy -c "Print Entitlements:aps-environment" "$PROFILE_PLIST"
-
-echo
-echo "== decode repack import p12 =="
-ORIG="$SIGN_DIR/original.p12"
-PEM="$SIGN_DIR/exported.pem"
-APPLE_P12="$SIGN_DIR/apple-compatible.p12"
-KEYCHAIN="$RUNNER_TEMP/gb.keychain-db"
-
-printf "%s" "$CERT_B64" | base64 -D > "$ORIG"
-
-openssl pkcs12 \
-  -in "$ORIG" \
-  -nodes \
-  -passin pass:"$P12_PASSWORD" \
-  -out "$PEM"
-
-openssl pkcs12 \
-  -export \
-  -in "$PEM" \
-  -out "$APPLE_P12" \
-  -passout pass:"$P12_PASSWORD" \
-  -certpbe PBE-SHA1-3DES \
-  -keypbe PBE-SHA1-3DES \
-  -macalg sha1
-
-security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-security set-keychain-settings -lut 21600 "$KEYCHAIN"
-
-security import "$APPLE_P12" \
-  -k "$KEYCHAIN" \
-  -P "$P12_PASSWORD" \
-  -A \
-  -f pkcs12
-
-security list-keychains -d user -s "$KEYCHAIN"
-security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-
-echo "== identities =="
-security find-identity -v -p codesigning "$KEYCHAIN"
+echo "== Build113 unsigned ESign-ready signing setup =="
+echo "Skip provisioning-profile decode, P12 import and temporary keychain"
 
 echo
 echo
@@ -344,14 +278,12 @@ python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zf_profileintel2_ge
 # MARK: GhostBase v1.0ZG Build 85 package
 echo "== apply/verify GhostBase v1.0ZG Build 85 =="
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_accountunlock_botlogout.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_botmulti1_diagnostics.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_private_invite_probe.py"
 # V11F-DISABLED-OLD-PROFILE-UI: python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_profileintel3_personal_channel.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_gifthistory1_core.py"
 # V11F-DISABLED-OLD-PROFILE-UI: python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_gifthistory1_ui.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/apply_ghostbase_v10zg_profileintel2_cleanup.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_accountunlock_botlogout_generated_source.py"
-python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_botmulti1_diagnostics_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_private_invite_probe_generated_source.py"
 # V11F-DISABLED-OLD-PROFILE-UI: python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_profileintel3_personal_channel_generated_source.py"
 python3 "$GHOSTBASE_BUILDER_ROOT/scripts/verify_ghostbase_v10zg_gifthistory1_core_generated_source.py"
@@ -518,6 +450,12 @@ python3 ../../scripts/apply_jerkgram_v11z_build111_glass_composer_ui_fix1.py
 python3 ../../scripts/verify_jerkgram_v11z_build111_glass_composer_ui_fix1.py
 python3 ../../scripts/apply_jerkgram_v12a_build112_composer_alternates_extensions1.py
 python3 ../../scripts/verify_jerkgram_v12a_build112_composer_alternates_extensions1.py
+echo "== Jerkgram v1.2B Build113 recovery =="
+python3 ../../scripts/apply_jerkgram_v12b_build113_recovery1.py
+python3 ../../scripts/verify_jerkgram_v12b_build113_recovery1.py
+echo "== Jerkgram v1.2B Build113 profile recovery =="
+python3 ../../scripts/apply_jerkgram_v12b_build113_profile_recovery1.py
+python3 ../../scripts/verify_jerkgram_v12b_build113_profile_recovery1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -559,7 +497,7 @@ else
 fi
 
 echo "== patch final IPA AppGroup .10 before verifier =="
-../../scripts/patch_final_ipa_appgroup10.sh ghostbase-final/GhostBase.ipa
+python3 ../../scripts/patch_final_ipa_appgroup_build113.py ghostbase-final/GhostBase.ipa
 
 echo "== strict GhostBase final IPA marker gate =="
 TMP_GB_CHECK="$(mktemp -d)"
@@ -596,27 +534,10 @@ echo "== strict GhostBase final IPA marker gate OK =="
 
 
 echo
-echo "== publish final IPA with ph.telegra.Telegraph =="
-python3 ../../scripts/gb_public_bundle_id_final.py \
+echo "== finalize Build113 ESign-ready IPA =="
+python3 ../../scripts/jerkgram_finalize_build113_esign_ready.py \
   ghostbase-final/GhostBase.ipa
 
-echo
-echo "== finalize JerkGram display name =="
-python3 ../../scripts/jerkgram_finalize_display_name.py \
-  ghostbase-final/GhostBase.ipa
-
-echo
-echo "== verify Build109 final JerkGram IPA =="
-python3 ../../scripts/verify_jerkgram_v11x_build109_final_ipa.py \
-  ghostbase-final/GhostBase.ipa
-
-echo "== finalize Build110 display name: Jerkgram =="
-python3 ../../scripts/jerkgram_finalize_display_name_build110.py ghostbase-final/GhostBase.ipa
-
-echo "== finalize Build112 native Composer alternate registration =="
-python3 ../../scripts/jerkgram_finalize_composer_alternates_build112.py \
-  ghostbase-final/GhostBase.ipa
-
-echo "== verify Jerkgram Build112 final IPA: Composer alternates + Official extensions =="
-python3 ../../scripts/verify_jerkgram_v12a_build112_final_ipa.py \
+echo "== verify Build113 final ESign-ready IPA =="
+python3 ../../scripts/verify_jerkgram_v12b_build113_final_ipa.py \
   ghostbase-final/GhostBase.ipa
