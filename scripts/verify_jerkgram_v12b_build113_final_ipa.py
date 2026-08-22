@@ -138,8 +138,11 @@ with tempfile.TemporaryDirectory(prefix="build113-final-") as td:
 
     bns = load_plist(present["BroadcastUploadExtension.appex"] / "Info.plist")["NSExtension"]
     require("BroadcastUploadSampleHandler" in str(bns.get("NSExtensionPrincipalClass")), "Broadcast principal mismatch")
-    attrs = bns.get("NSExtensionAttributes", {})
-    require(attrs.get("RPBroadcastProcessMode") == "RPBroadcastProcessModeSampleBuffer", f"Broadcast process mode mismatch: {attrs}")
+    process_mode = bns.get("RPBroadcastProcessMode")
+    require(
+        process_mode == "RPBroadcastProcessModeSampleBuffer",
+        f"Broadcast process mode mismatch: {process_mode!r}",
+    )
 
 print("[verify Build113 final] GREEN")
 print("[verify Build113 final] coherent main/extension namespace:", BASE)
