@@ -817,24 +817,63 @@ def main() -> None:
         "verify_jerkgram_v12a_build112_final_ipa.py"
     )
 
-    require(
-        probe.count(finalizer) == 1,
-        "Build112 Composer finalizer "
-        "must execute exactly once",
+    build113_finalizer = (
+        "jerkgram_finalize_build113_esign_ready.py"
     )
 
-    require(
-        probe.count(final_verifier) == 1,
-        "Build112 final verifier "
-        "must execute exactly once",
+    build113_final_verifier = (
+        "verify_jerkgram_v12b_build113_final_ipa.py"
     )
 
-    require(
-        probe.find(finalizer)
-        < probe.find(final_verifier),
-        "Build112 Composer finalizer "
-        "must run before final IPA verifier",
+    build113_tail = (
+        build113_finalizer in probe
+        or build113_final_verifier in probe
     )
+
+    if build113_tail:
+        require(
+            probe.count(finalizer) == 0,
+            "stale Build112 Composer finalizer survived "
+            "inside Build113 probe",
+        )
+        require(
+            probe.count(final_verifier) == 0,
+            "stale Build112 final verifier survived "
+            "inside Build113 probe",
+        )
+        require(
+            probe.count(build113_finalizer) == 1,
+            "Build113 ESign-ready finalizer "
+            "must execute exactly once",
+        )
+        require(
+            probe.count(build113_final_verifier) == 1,
+            "Build113 final verifier "
+            "must execute exactly once",
+        )
+        require(
+            probe.find(build113_finalizer)
+            < probe.find(build113_final_verifier),
+            "Build113 ESign-ready finalizer "
+            "must run before Build113 final IPA verifier",
+        )
+    else:
+        require(
+            probe.count(finalizer) == 1,
+            "Build112 Composer finalizer "
+            "must execute exactly once",
+        )
+        require(
+            probe.count(final_verifier) == 1,
+            "Build112 final verifier "
+            "must execute exactly once",
+        )
+        require(
+            probe.find(finalizer)
+            < probe.find(final_verifier),
+            "Build112 Composer finalizer "
+            "must run before final IPA verifier",
+        )
 
     require(
         "python3 ../../scripts/"
