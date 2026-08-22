@@ -256,8 +256,6 @@ def restore_resign_dynamic_identity():
     """
 
     targets = (
-        "submodules/TelegramUI/Sources/AppDelegate.swift",
-
         "Telegram/SiriIntents/IntentHandler.swift",
 
         "Telegram/WidgetKitWidget/"
@@ -1822,16 +1820,27 @@ private func jerkgramResolvedApplicationGroupIdentifier(
 
 '''
 
-    official_expression = (
-        'let appGroupName = '
-        '"group.\\(baseAppBundleId)"'
-    )
-
     replacement_expression = (
         'let appGroupName = '
         'jerkgramResolvedApplicationGroupIdentifier('
         'fallback: "group.\\(baseAppBundleId)"'
         ')'
+    )
+
+    # Accept both states that can legitimately exist here:
+    #
+    # 1. clean Official:
+    #    let appGroupName = "group.\(baseAppBundleId)"
+    #
+    # 2. legacy GhostBase-materialized:
+    #    let appGroupName = "group.<hardcoded-id>"
+    #
+    # AppDelegate.swift is a materialized/custom owner and has
+    # no same-path counterpart in clean Official 12.9.2, so it
+    # must be normalized here rather than in the Official-copy
+    # restoration pass.
+    appgroup_pattern = re.compile(
+        r'let appGroupName\s*=\s*"group\.[^"\n]+"'
     )
 
     total_replacements = 0
@@ -1877,21 +1886,17 @@ private func jerkgramResolvedApplicationGroupIdentifier(
                 + text[position:]
             )
 
-        count = text.count(
-            official_expression
+        text, count = appgroup_pattern.subn(
+            replacement_expression,
+            text
         )
 
         require(
             count >= 1,
             (
-                "Official AppGroup expression "
+                "AppGroup owner expression "
                 f"missing: {relative}"
             )
-        )
-
-        text = text.replace(
-            official_expression,
-            replacement_expression
         )
 
         total_replacements += count
