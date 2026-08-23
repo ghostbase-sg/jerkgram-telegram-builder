@@ -49,6 +49,8 @@ jobs:
           python3 -m py_compile \
             scripts/apply_jerkgram_v12d_build115_appgroup1.py \
             scripts/verify_jerkgram_v12d_build115_appgroup1.py \
+            scripts/apply_jerkgram_v12d_build115_profile_ui1.py \
+            scripts/verify_jerkgram_v12d_build115_profile_ui1.py \
             scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
