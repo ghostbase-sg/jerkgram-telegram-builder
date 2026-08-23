@@ -48,6 +48,8 @@ jobs:
             scripts/verify_jerkgram_v12d_build115_profile_ui1.py \
             scripts/apply_jerkgram_v12d_build115_localization1.py \
             scripts/verify_jerkgram_v12d_build115_localization1.py \
+            scripts/apply_jerkgram_v12d_build115_numeric_links1.py \
+            scripts/verify_jerkgram_v12d_build115_numeric_links1.py \
             scripts/install_jerkgram_v12d_build115_probe_hook.py \
             scripts/jerkgram_publish_build115_artifact.py
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
