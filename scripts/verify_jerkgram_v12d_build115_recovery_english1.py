@@ -75,12 +75,20 @@ def function_region(text, signature):
 require(ENQUEUE.is_file(), "EnqueueMessage.swift missing")
 text = ENQUEUE.read_text(encoding="utf-8")
 
-region = function_region(
+media_region = function_region(
     text,
     "private func ghostBaseDeletedMediaLabel("
 )
+quote_region = function_region(
+    text,
+    "private func ghostBaseQuoteBody("
+)
+resolver_region = function_region(
+    text,
+    "private func ghostBaseResolveDeletedReplies("
+)
 
-require(region.count(MARKER) == 1, "marker count != 1")
+require(media_region.count(MARKER) == 1, "marker count != 1")
 
 expected = (
     'return "Album"',
@@ -102,15 +110,33 @@ expected = (
 )
 
 for token in expected:
-    require(token in region, "English recovery label missing: " + token)
+    require(
+        token in media_region,
+        "English recovery label missing: " + token
+    )
 
 require(
-    re.search(r"[А-Яа-яЁё]", region) is None,
-    "Cyrillic user-facing recovery label survived"
+    'ghostBaseDeletedMediaLabel(source) ?? "Deleted Message"'
+    in quote_region,
+    "Deleted Message fallback not canonical English"
+)
+require(
+    resolver_region.count('"User"') >= 2,
+    "unknown-author fallback not canonical English"
 )
 
+for label, region in (
+    ("media label", media_region),
+    ("quote body", quote_region),
+    ("reply resolver", resolver_region),
+):
+    require(
+        re.search(r"[А-Яа-яЁё]", region) is None,
+        "Cyrillic survived in recovery owner: " + label
+    )
+
 # The Build107 sticker safety decision remains untouched here. This overlay
-# changes only portable user-facing labels; native sticker recovery is audited
+# changes only portable user-facing text; native sticker recovery is audited
 # separately before any renderer change.
 require(
     "BUILD107_STICKER_TEXT_FALLBACK1" in text,
@@ -128,5 +154,6 @@ require(
 
 print("[verify Build115 recovery English] GREEN")
 print("[verify Build115 recovery English] portable media labels are English canonical")
-print("[verify Build115 recovery English] no Cyrillic remains in deleted-media label owner")
+print("[verify Build115 recovery English] deleted fallback + unknown author are English canonical")
+print("[verify Build115 recovery English] no Cyrillic remains in portable recovery owners")
 print("[verify Build115 recovery English] sticker renderer policy intentionally unchanged")
