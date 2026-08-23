@@ -39,14 +39,23 @@ def verify(text):
     settings_region = text[start:end]
     constructor_count = settings_region.count("PeerInfoScreenData(")
     require(constructor_count >= 1, "Settings constructors missing")
+    settings_flagged_constructors = re.findall(
+        r"businessConnectedBot:\s*[^,\n\)]+,\n"
+        r"[ \t]*isSettings:\s*true\n[ \t]*\)",
+        settings_region,
+    )
     require(
-        settings_region.count("isSettings: true") == constructor_count,
+        len(settings_flagged_constructors) == constructor_count,
         "not every Settings constructor has isSettings: true",
     )
 
     ordinary_region = text[end:]
     require(
-        "isSettings: true" not in ordinary_region,
+        not re.search(
+            r"businessConnectedBot:\s*[^,\n\)]+,\n"
+            r"[ \t]*isSettings:\s*true\n[ \t]*\)",
+            ordinary_region,
+        ),
         "ordinary profile was incorrectly marked as Settings",
     )
     for pane in (

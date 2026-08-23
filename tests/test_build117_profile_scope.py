@@ -20,6 +20,9 @@ class Build117ProfileScopeTests(unittest.TestCase):
         cls.overlay = load_script(
             "apply_jerkgram_v12f_build117_profile_scope1.py"
         )
+        cls.verifier = load_script(
+            "verify_jerkgram_v12f_build117_profile_scope1.py"
+        )
 
     def test_settings_route_keeps_stock_panes_while_user_profiles_keep_history(self):
         source = '''
@@ -66,6 +69,11 @@ final class PeerInfoScreenData {
 }
 
 func peerInfoScreenSettingsData() -> PeerInfoScreenData {
+    let settingsPersonalChannel = peerInfoPersonalOrLinkedChannel(
+        context: context,
+        peerId: peerId,
+        isSettings: true
+    )
     return PeerInfoScreenData(
         peer: peer,
         availablePanes: availablePanes,
@@ -104,6 +112,42 @@ func peerInfoScreenData() -> PeerInfoScreenData {
             "ghostBasePersonalChannel",
         ):
             self.assertIn(pane, patched)
+        self.verifier.verify(patched)
+
+    def test_settings_constructor_ignores_existing_unrelated_route_flag(self):
+        source = '''
+func peerInfoScreenSettingsData() -> PeerInfoScreenData {
+    let personalChannel = peerInfoPersonalOrLinkedChannel(
+        context: context,
+        peerId: peerId,
+        isSettings: true
+    )
+    return PeerInfoScreenData(
+        peer: peer,
+        businessConnectedBot: businessConnectedBot
+    )
+}
+
+func peerInfoScreenData() -> PeerInfoScreenData {
+    return PeerInfoScreenData(
+        peer: peer,
+        businessConnectedBot: businessConnectedBot
+    )
+}
+'''
+
+        patched = self.overlay.patch_settings_constructors(source)
+
+        settings_function = patched[
+            patched.index("func peerInfoScreenSettingsData"):
+            patched.index("func peerInfoScreenData")
+        ]
+        self.assertEqual(settings_function.count("isSettings: true"), 2)
+        self.assertIn(
+            "businessConnectedBot: businessConnectedBot,\n"
+            "        isSettings: true",
+            settings_function,
+        )
 
 
 if __name__ == "__main__":

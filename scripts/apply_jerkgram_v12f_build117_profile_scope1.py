@@ -36,18 +36,26 @@ def patch_settings_constructors(text):
 
     region = text[start:end]
     pattern = re.compile(
-        r"(businessConnectedBot:\s*[^,\n\)]+)(\n\s*\))"
+        r"(?m)^([ \t]*)(businessConnectedBot:\s*[^,\n\)]+)(\n[ \t]*\))"
     )
     matches = list(pattern.finditer(region))
     require(matches, "Settings PeerInfoScreenData constructors missing")
+    existing_flags = region.count("isSettings: true")
 
     def add_flag(match):
-        indent = re.search(r"\n(\s*)\)$", match.group(2)).group(1)
-        return match.group(1) + ",\n" + indent + "isSettings: true" + match.group(2)
+        return (
+            match.group(1)
+            + match.group(2)
+            + ",\n"
+            + match.group(1)
+            + "isSettings: true"
+            + match.group(3)
+        )
 
     patched_region = pattern.sub(add_flag, region)
     require(
-        patched_region.count("isSettings: true") == len(matches),
+        patched_region.count("isSettings: true")
+        == existing_flags + len(matches),
         "not every Settings constructor received the route flag",
     )
     return text[:start] + patched_region + text[end:]
