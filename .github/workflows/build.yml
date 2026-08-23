@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build115
+name: Jerkgram 12.9.2 Build116
 
 on:
   workflow_dispatch:
@@ -57,8 +57,16 @@ jobs:
             scripts/apply_jerkgram_v12d_build115_numeric_links1.py \
             scripts/verify_jerkgram_v12d_build115_numeric_links1.py \
             scripts/install_jerkgram_v12d_build115_probe_hook.py \
-            scripts/jerkgram_publish_build115_artifact.py
+            scripts/apply_jerkgram_v12e_build116_ui1.py \
+            scripts/verify_jerkgram_v12e_build116_ui1.py \
+            scripts/apply_jerkgram_v12e_build116_extensions1.py \
+            scripts/verify_jerkgram_v12e_build116_extensions1.py \
+            scripts/apply_jerkgram_v12e_build116_foundation1.py \
+            scripts/verify_jerkgram_v12e_build116_foundation1.py \
+            scripts/install_jerkgram_v12e_build116_probe_hook.py \
+            scripts/jerkgram_publish_build116_artifact.py
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
+          python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
@@ -66,22 +74,22 @@ jobs:
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build115_artifact.py
+          python3 scripts/jerkgram_publish_build116_artifact.py
 
       - name: Upload Jerkgram build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build115
+          name: Jerkgram-build116
           path: |
-            artifacts/Jerkgram-build115.ipa
-            artifacts/Jerkgram-build115-info.txt
+            artifacts/Jerkgram-build116.ipa
+            artifacts/Jerkgram-build116-info.txt
           if-no-files-found: error
 
       - name: Upload Jerkgram collected outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build115-output
+          name: Jerkgram-build116-output
           path: artifacts/**
           if-no-files-found: warn
