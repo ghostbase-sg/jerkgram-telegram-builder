@@ -223,6 +223,7 @@ ENTRY_LITERALS = {
 
 PAGE_CANONICAL = {
     'return "GhostBase"': 'return "Jerkgram"',
+    'return "JerkGram"': 'return "Jerkgram"',
     'return "Основные функции"': 'return "Basic Functions"',
     'return "Ghost Mode"': 'return "Ghost Mode"',
     'return "Сообщения"': 'return "Messages"',

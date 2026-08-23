@@ -230,7 +230,7 @@ private enum GhostBaseSettingsPage: Equatable {
     case root
 
     var title: String {
-        return "GhostBase"
+        return "JerkGram"
     }
 }
 
@@ -323,6 +323,8 @@ let controller = ItemListController(
         for token in expected_tokens:
             self.assertIn(token, entries_text)
         self.assertEqual(localizer.cyrillic_string_literals(entries_text), [])
+        self.assertIn('return "Jerkgram"', patched)
+        self.assertNotIn('return "JerkGram"', patched)
 
     def test_localization_foundation_defines_final_settings_catalog(self):
         foundation = load_script(
