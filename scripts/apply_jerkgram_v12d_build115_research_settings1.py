@@ -30,9 +30,9 @@ STRINGS_MARKER = "// MARK: Jerkgram v1.2D BUILD115_RESEARCH_STRINGS1"
 SETTINGS_MARKER = "// MARK: Jerkgram v1.2D BUILD115_SETTINGS_LOCALIZATION1"
 
 # Late Debug / Research overlays historically injected Russian literals after
-# the main Settings source was generated.  Canonicalize those literals before
-# the strict Build115 Settings localization gate, then bind the canonical
-# English values to Telegram-language Jerkgram strings after that gate.
+# the main Settings source was generated. Canonicalize only those known late
+# literals before the strict Build115 Settings localization gate. Ordinary
+# Settings Cyrillic is intentionally left for settings_localization1.py.
 RESEARCH = (
     (
         "researchHiddenGiftsProbe",
@@ -126,6 +126,28 @@ RESEARCH = (
         "Снимок профиля + история фото",
         "Снимок профиля + история фото",
     ),
+    # Late profile/debug rows are normal user-facing Settings, but they are
+    # injected after the original menu owner and therefore share this late
+    # canonicalization phase. They still become semantic Telegram-language
+    # strings in the localized phase below.
+    (
+        "profileInformation",
+        "Profile Information",
+        "Сведения профиля",
+        "Сведения профиля",
+    ),
+    (
+        "showProfileInformation",
+        "Show Profile Information",
+        "Показывать сведения",
+        "Показывать сведения",
+    ),
+    (
+        "avatarDc",
+        "Avatar DC",
+        "DC аватара",
+        "DC аватара",
+    ),
     (
         "glassMaterialHint",
         "Glass changes only the interface material. Data, tabs, logging, and section heights do not depend on the effect. Reduced surfaces are used with Reduce Transparency and Low Power Mode.",
@@ -146,7 +168,7 @@ ENGLISH_ONLY = (
 SWIFT = r'''import Foundation
 
 // MARK: Jerkgram v1.2D BUILD115_RESEARCH_STRINGS1
-// Late legacy research UI remains available, but its labels follow Telegram's
+// Late legacy/research UI remains available, but its labels follow Telegram's
 // selected language instead of carrying Russian literals in generated source.
 public extension JerkgramStrings {
     private func researchText(_ english: String, _ russian: String) -> String {
@@ -200,6 +222,15 @@ public extension JerkgramStrings {
     }
     var researchProfileIntelSnapshot: String {
         self.researchText("Profile Snapshot + Photo History", "Снимок профиля + история фото")
+    }
+    var profileInformation: String {
+        self.researchText("Profile Information", "Сведения профиля")
+    }
+    var showProfileInformation: String {
+        self.researchText("Show Profile Information", "Показывать сведения")
+    }
+    var avatarDc: String {
+        self.researchText("Avatar DC", "DC аватара")
     }
     var glassMaterialHint: String {
         self.researchText(
@@ -280,16 +311,22 @@ def canonicalize():
         if russian_source is not None:
             entries = entries.replace(string_token(russian_source), string_token(english))
 
-    leftovers = cyrillic_literals(entries)
+    # Do not require all Cyrillic to be gone here: this phase intentionally
+    # runs before the ordinary Settings localizer. It only owns known late
+    # legacy/research/profile literals.
+    surviving = []
+    for _, _, _, russian_source in RESEARCH:
+        if russian_source is not None and string_token(russian_source) in entries:
+            surviving.append(russian_source)
     require(
-        not leftovers,
-        "unmapped Cyrillic after research canonicalization: " + " | ".join(leftovers[:24])
+        not surviving,
+        "known late Cyrillic survived canonicalization: " + " | ".join(surviving[:24])
     )
 
     entries = CANONICAL_MARKER + "\n" + entries
     SETTINGS.write_text(text[:start] + entries + text[end:], encoding="utf-8")
     print("[Build115 research settings] canonical phase GREEN")
-    print("[Build115 research settings] late research entries contain no Cyrillic literals")
+    print("[Build115 research settings] known late research/profile literals canonicalized")
 
 
 def localize():
@@ -315,7 +352,7 @@ def localize():
         "Cyrillic reappeared after localized phase: " + " | ".join(leftovers[:24])
     )
 
-    # Every canonical research label that actually survived to this point must
+    # Every canonical late label that actually survived to this point must
     # either have been converted to a semantic property or have been removed by
     # an earlier Build114 cleanup. No silent English-only fallback for these.
     surviving = []
@@ -330,7 +367,7 @@ def localize():
     entries = LOCALIZED_MARKER + "\n" + entries
     SETTINGS.write_text(text[:start] + entries + text[end:], encoding="utf-8")
     print("[Build115 research settings] localized phase GREEN")
-    print("[Build115 research settings] research labels follow Telegram language")
+    print("[Build115 research settings] late labels follow Telegram language")
 
 
 def main():
