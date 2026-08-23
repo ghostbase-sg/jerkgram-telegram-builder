@@ -52,6 +52,11 @@ jobs:
       - name: Run build analysis probe
         run: |
           set -e
+          python3 -m py_compile \
+            scripts/apply_jerkgram_v12d_build115_appgroup1.py \
+            scripts/verify_jerkgram_v12d_build115_appgroup1.py \
+            scripts/install_jerkgram_v12d_build115_probe_hook.py
+          python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
