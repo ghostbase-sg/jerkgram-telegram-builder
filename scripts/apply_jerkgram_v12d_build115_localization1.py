@@ -69,6 +69,13 @@ public enum JerkgramStringKey: String, CaseIterable {
     case saveEditHistory
     case showEditHistory
     case savedDataHint
+    case textSending
+    case sendStyle
+    case sendStyleHint
+    case deletedReplies
+    case portableReply
+    case saveDeletedMedia
+    case portableReplyHint
 
     case protectionEnabled
     case shareFromGallery
@@ -85,6 +92,23 @@ public enum JerkgramStringKey: String, CaseIterable {
     case oneTimeSave
     case storySave
     case appearancePlaceholder
+    case profileBackground
+    case profileBackgroundEffect
+    case blurProfileAvatar
+    case colorTint
+    case reducedBlur
+    case profileEffectDisabledHint
+    case other
+    case interface
+    case messageSeconds
+    case hideMyPhone
+    case showRamUnderClock
+    case hidePhoneHint
+    case presenceHistoryEmpty
+    case knownUsersNoData
+    case recentEvents
+    case eventsEmpty
+    case diagnosticsBufferHint
 
     case information
     case telegramId
@@ -186,6 +210,13 @@ public struct JerkgramStrings {
     public var saveEditHistory: String { self.text(.saveEditHistory) }
     public var showEditHistory: String { self.text(.showEditHistory) }
     public var savedDataHint: String { self.text(.savedDataHint) }
+    public var textSending: String { self.text(.textSending) }
+    public var sendStyle: String { self.text(.sendStyle) }
+    public var sendStyleHint: String { self.text(.sendStyleHint) }
+    public var deletedReplies: String { self.text(.deletedReplies) }
+    public var portableReply: String { self.text(.portableReply) }
+    public var saveDeletedMedia: String { self.text(.saveDeletedMedia) }
+    public var portableReplyHint: String { self.text(.portableReplyHint) }
 
     public var protectionEnabled: String { self.text(.protectionEnabled) }
     public var shareFromGallery: String { self.text(.shareFromGallery) }
@@ -202,6 +233,23 @@ public struct JerkgramStrings {
     public var oneTimeSave: String { self.text(.oneTimeSave) }
     public var storySave: String { self.text(.storySave) }
     public var appearancePlaceholder: String { self.text(.appearancePlaceholder) }
+    public var profileBackground: String { self.text(.profileBackground) }
+    public var profileBackgroundEffect: String { self.text(.profileBackgroundEffect) }
+    public var blurProfileAvatar: String { self.text(.blurProfileAvatar) }
+    public var colorTint: String { self.text(.colorTint) }
+    public var reducedBlur: String { self.text(.reducedBlur) }
+    public var profileEffectDisabledHint: String { self.text(.profileEffectDisabledHint) }
+    public var other: String { self.text(.other) }
+    public var interface: String { self.text(.interface) }
+    public var messageSeconds: String { self.text(.messageSeconds) }
+    public var hideMyPhone: String { self.text(.hideMyPhone) }
+    public var showRamUnderClock: String { self.text(.showRamUnderClock) }
+    public var hidePhoneHint: String { self.text(.hidePhoneHint) }
+    public var presenceHistoryEmpty: String { self.text(.presenceHistoryEmpty) }
+    public var knownUsersNoData: String { self.text(.knownUsersNoData) }
+    public var recentEvents: String { self.text(.recentEvents) }
+    public var eventsEmpty: String { self.text(.eventsEmpty) }
+    public var diagnosticsBufferHint: String { self.text(.diagnosticsBufferHint) }
 
     public var information: String { self.text(.information) }
     public var telegramId: String { self.text(.telegramId) }
@@ -263,12 +311,19 @@ public struct JerkgramStrings {
         .scheduledSend: "Scheduled Send",
 
         .deletedMessages: "Deleted Messages",
-        .saveDeletedMessages: "Save Deleted Messages",
+        .saveDeletedMessages: "Save Deleted",
         .showDeletedMessages: "Show Deleted Messages",
         .editHistory: "Edit History",
         .saveEditHistory: "Save Edit History",
         .showEditHistory: "Show Edit History",
         .savedDataHint: "Disabling these features does not remove already saved data.",
+        .textSending: "Text Sending",
+        .sendStyle: "Send Style",
+        .sendStyleHint: "The style is applied after tapping the send button.",
+        .deletedReplies: "Deleted Replies",
+        .portableReply: "Portable Reply",
+        .saveDeletedMedia: "Save Deleted Media",
+        .portableReplyHint: "The reply is materialized only after Send. Media is kept only in Jerkgram's internal cache: up to 1 GB for 30 days; if bytes are unavailable, a text fallback is used.",
 
         .protectionEnabled: "Bypass Protection",
         .shareFromGallery: "Share from Gallery",
@@ -285,6 +340,23 @@ public struct JerkgramStrings {
         .oneTimeSave: "Save One-Time Media",
         .storySave: "Save Stories",
         .appearancePlaceholder: "Jerkgram appearance settings will be added here.",
+        .profileBackground: "Profile Background",
+        .profileBackgroundEffect: "Profile Background Effect",
+        .blurProfileAvatar: "Blur Profile Avatar",
+        .colorTint: "Color Tint",
+        .reducedBlur: "Reduced Blur",
+        .profileEffectDisabledHint: "When the main effect is disabled, Jerkgram creates no additional profile views, observers, or image/palette pipeline. New values apply the next time the profile opens.",
+        .other: "Other",
+        .interface: "Interface",
+        .messageSeconds: "Message Seconds",
+        .hideMyPhone: "Hide My Phone Number",
+        .showRamUnderClock: "Show RAM Under Clock",
+        .hidePhoneHint: "Your phone number is hidden only locally in Jerkgram. Profile editing and number changing remain available.",
+        .presenceHistoryEmpty: "Presence history is empty",
+        .knownUsersNoData: "Known users: no data",
+        .recentEvents: "Recent Events",
+        .eventsEmpty: "No events yet",
+        .diagnosticsBufferHint: "The buffer is limited to 200 lines. Collection does not start when this page opens.",
 
         .information: "Information",
         .telegramId: "Telegram ID",
@@ -347,12 +419,19 @@ public struct JerkgramStrings {
         .scheduledSend: "Отложенная отправка",
 
         .deletedMessages: "Удалённые сообщения",
-        .saveDeletedMessages: "Сохранять удалённые сообщения",
+        .saveDeletedMessages: "Сохранять удалённые",
         .showDeletedMessages: "Показывать удалённые сообщения",
         .editHistory: "История изменений",
         .saveEditHistory: "Сохранять историю изменений",
         .showEditHistory: "Показывать историю изменений",
         .savedDataHint: "Выключение функций не удаляет уже сохранённые данные.",
+        .textSending: "Отправка текста",
+        .sendStyle: "Стиль отправки",
+        .sendStyleHint: "Стиль применяется после нажатия кнопки отправки.",
+        .deletedReplies: "Удалённые ответы",
+        .portableReply: "Переносимый ответ",
+        .saveDeletedMedia: "Сохранять удалённые медиа",
+        .portableReplyHint: "Ответ материализуется только после Send. Медиа хранится только во внутреннем кэше Jerkgram: до 1 ГБ, 30 дней; если bytes недоступны, используется текстовый fallback.",
 
         .protectionEnabled: "Включить обход защиты",
         .shareFromGallery: "Поделиться из галереи",
@@ -369,6 +448,23 @@ public struct JerkgramStrings {
         .oneTimeSave: "Сохранение одноразовых медиа",
         .storySave: "Сохранение историй",
         .appearancePlaceholder: "Настройки оформления Jerkgram будут добавляться в этот раздел.",
+        .profileBackground: "Фон профиля",
+        .profileBackgroundEffect: "Эффект фона профиля",
+        .blurProfileAvatar: "Размывать аватар в профиле",
+        .colorTint: "Цветовой оттенок",
+        .reducedBlur: "Облегчённое размытие",
+        .profileEffectDisabledHint: "Когда главный эффект выключен, Jerkgram не создаёт дополнительные profile views, observers или image/palette pipeline. Новые значения применяются при следующем открытии профиля.",
+        .other: "Прочее",
+        .interface: "Интерфейс",
+        .messageSeconds: "Секунды в сообщениях",
+        .hideMyPhone: "Скрывать мой номер",
+        .showRamUnderClock: "Показывать RAM под часами",
+        .hidePhoneHint: "Номер скрывается только локально в интерфейсе Jerkgram. Экран изменения профиля и смены номера остаётся доступен.",
+        .presenceHistoryEmpty: "История присутствия пока пуста",
+        .knownUsersNoData: "Известные пользователи: нет данных",
+        .recentEvents: "Последние события",
+        .eventsEmpty: "Событий пока нет",
+        .diagnosticsBufferHint: "Буфер ограничен 200 строками. Сбор не запускается при открытии этой страницы.",
 
         .information: "Сведения",
         .telegramId: "Telegram ID",
