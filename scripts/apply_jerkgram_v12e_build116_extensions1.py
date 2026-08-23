@@ -40,9 +40,11 @@ def replace_once(text, old, new, label):
 
 
 def patch_buildconfig(header, implementation):
-    header_anchor = "\n@end\n"
+    require("@interface BuildConfig : NSObject" in header, "BuildConfig primary interface missing")
+    require("@interface BuildConfig (JerkgramExtensionDiagnostics)" not in header, "diagnostic category already declared")
     declaration = '''
 
+@interface BuildConfig (JerkgramExtensionDiagnostics)
 + (void)jerkgramRecordExtensionDiagnosticWithProcess:(NSString * _Nonnull)process
     stage:(NSString * _Nonnull)stage
     appGroupIdentifier:(NSString * _Nonnull)appGroupIdentifier
@@ -50,10 +52,10 @@ def patch_buildconfig(header, implementation):
     detail:(NSString * _Nonnull)detail
     NS_SWIFT_NAME(jerkgramRecordExtensionDiagnostic(process:stage:appGroupIdentifier:sharedContainerPath:detail:));
 + (NSString * _Nonnull)jerkgramExtensionDiagnosticsReport;
+
+@end
 '''
-    last_end = header.rfind(header_anchor)
-    require(last_end >= 0, "BuildConfig header @end missing")
-    header = header[:last_end] + declaration + header[last_end:]
+    header = header.rstrip() + declaration
 
     implementation += r'''
 

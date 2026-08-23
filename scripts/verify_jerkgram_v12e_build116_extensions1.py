@@ -27,7 +27,28 @@ def require(value, message):
         raise RuntimeError("[verify Build116 extensions] " + message)
 
 
+def verify_buildconfig_contract(header, implementation):
+    primary_interface = header.split("@end", 1)[0]
+    require(
+        "jerkgramRecordExtensionDiagnostic" not in primary_interface,
+        "diagnostic method declared on primary BuildConfig interface",
+    )
+    require(
+        "jerkgramExtensionDiagnosticsReport" not in primary_interface,
+        "report method declared on primary BuildConfig interface",
+    )
+    require(
+        "@interface BuildConfig (JerkgramExtensionDiagnostics)" in header,
+        "diagnostic category declaration missing",
+    )
+    require(
+        "@implementation BuildConfig (JerkgramExtensionDiagnostics)" in implementation,
+        "diagnostic category implementation missing",
+    )
+
+
 def verify(header, implementation, settings, settings_build, owners):
+    verify_buildconfig_contract(header, implementation)
     require("jerkgramRecordExtensionDiagnostic" in header, "diagnostic API missing")
     require("jerkgramExtensionDiagnosticsReport" in header, "report API missing")
     require(implementation.count("BUILD116_EXTENSION_DIAGNOSTICS1") == 1, "implementation marker count != 1")

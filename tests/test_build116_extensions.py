@@ -18,6 +18,7 @@ class Build116ExtensionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.overlay = load_script("apply_jerkgram_v12e_build116_extensions1.py")
+        cls.verifier = load_script("verify_jerkgram_v12e_build116_extensions1.py")
 
     def test_buildconfig_owns_bounded_atomic_json_diagnostics(self):
         header, implementation = self.overlay.patch_buildconfig(
@@ -25,6 +26,13 @@ class Build116ExtensionTests(unittest.TestCase):
             "#import <BuildConfig/BuildConfig.h>\n",
         )
 
+        primary_interface = header.split("@end", 1)[0]
+        self.assertNotIn("jerkgramRecordExtensionDiagnostic", primary_interface)
+        self.assertNotIn("jerkgramExtensionDiagnosticsReport", primary_interface)
+        self.assertIn(
+            "@interface BuildConfig (JerkgramExtensionDiagnostics)",
+            header,
+        )
         self.assertIn("jerkgramRecordExtensionDiagnostic", header)
         self.assertIn("jerkgramExtensionDiagnosticsReport", header)
         self.assertIn("BUILD116_EXTENSION_DIAGNOSTICS1", implementation)
@@ -33,6 +41,21 @@ class Build116ExtensionTests(unittest.TestCase):
         self.assertIn("writeToURL:fileURL options:NSDataWritingAtomic", implementation)
         self.assertIn("jerkgram-extension-diagnostics", implementation)
         self.assertNotIn("appendData", implementation)
+        self.verifier.verify_buildconfig_contract(header, implementation)
+
+    def test_verifier_rejects_methods_declared_on_primary_buildconfig(self):
+        bad_header = '''
+@interface BuildConfig : NSObject
++ (NSString *)jerkgramExtensionDiagnosticsReport;
+@end
+'''
+        implementation = '''
+@implementation BuildConfig (JerkgramExtensionDiagnostics)
++ (NSString *)jerkgramExtensionDiagnosticsReport { return @"{}"; }
+@end
+'''
+        with self.assertRaisesRegex(RuntimeError, "primary BuildConfig interface"):
+            self.verifier.verify_buildconfig_contract(bad_header, implementation)
 
     def test_each_owner_records_selected_group_container_and_root(self):
         source = '''
