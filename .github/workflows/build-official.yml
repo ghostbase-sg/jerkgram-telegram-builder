@@ -79,6 +79,8 @@ jobs:
             scripts/verify_jerkgram_v12f_build117_profile_scope1.py \
             scripts/apply_jerkgram_v12f_build117_about_channel1.py \
             scripts/verify_jerkgram_v12f_build117_about_channel1.py \
+            scripts/apply_jerkgram_v12f_build117_profile_localization1.py \
+            scripts/verify_jerkgram_v12f_build117_profile_localization1.py \
             scripts/apply_jerkgram_v12f_build117_extension_boundaries1.py \
             scripts/verify_jerkgram_v12f_build117_extension_boundaries1.py \
             scripts/verify_jerkgram_v12f_build117_release_readiness1.py \

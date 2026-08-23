@@ -9,6 +9,8 @@ ORDERED_SCRIPTS = (
     "verify_jerkgram_v12f_build117_profile_scope1.py",
     "apply_jerkgram_v12f_build117_about_channel1.py",
     "verify_jerkgram_v12f_build117_about_channel1.py",
+    "apply_jerkgram_v12f_build117_profile_localization1.py",
+    "verify_jerkgram_v12f_build117_profile_localization1.py",
     "apply_jerkgram_v12f_build117_extension_boundaries1.py",
     "verify_jerkgram_v12f_build117_extension_boundaries1.py",
     "verify_jerkgram_v12f_build117_release_readiness1.py",
@@ -23,6 +25,8 @@ python3 ../../scripts/apply_jerkgram_v12f_build117_profile_scope1.py
 python3 ../../scripts/verify_jerkgram_v12f_build117_profile_scope1.py
 python3 ../../scripts/apply_jerkgram_v12f_build117_about_channel1.py
 python3 ../../scripts/verify_jerkgram_v12f_build117_about_channel1.py
+python3 ../../scripts/apply_jerkgram_v12f_build117_profile_localization1.py
+python3 ../../scripts/verify_jerkgram_v12f_build117_profile_localization1.py
 python3 ../../scripts/apply_jerkgram_v12f_build117_extension_boundaries1.py
 python3 ../../scripts/verify_jerkgram_v12f_build117_extension_boundaries1.py
 python3 ../../scripts/verify_jerkgram_v12f_build117_release_readiness1.py

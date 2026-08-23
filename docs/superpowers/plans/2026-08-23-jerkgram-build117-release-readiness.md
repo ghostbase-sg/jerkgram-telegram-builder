@@ -4,7 +4,7 @@
 
 **Goal:** Produce a verifier-first Build117 patch that fixes the Settings/self-profile scope, adds a live About channel credit, exposes local extension failure stages, and makes release readiness an enforced pre-Bazel gate.
 
-**Architecture:** Add three bounded late overlays after Build116: UI scope/About, extension-local diagnostics, and release readiness/wiring. Keep the historical chain intact, classify paths without changing storage selection, and publish one canonical success artifact. Build117 diagnostics gather the evidence needed for the later signing/compatibility decision while the UI changes are independently complete.
+**Architecture:** Add bounded late overlays after Build116 for UI scope/About, complete profile-report localization, extension-local diagnostics, and release readiness/wiring. Keep the historical chain intact, classify paths without changing storage selection, and publish one canonical success artifact. Build117 diagnostics gather the evidence needed for the later signing/compatibility decision while the UI changes are independently complete.
 
 **Tech Stack:** Python 3 patchers/verifiers and `unittest`; Swift 5; TelegramEngine/Postbox; ItemListPeerItem; SwiftUI/WidgetKit; ReplayKit; Bazel/GitHub Actions.
 
@@ -88,7 +88,7 @@
 - Modify: `.github/workflows/build-official.yml`
 
 **Interfaces:**
-- Produces Build116 → Build117 profile → About → extension boundary → release verifier → Bazel order.
+- Produces Build116 → Build117 profile → About → profile-report localization → extension boundary → release verifier → Bazel order.
 - Publishes one `Jerkgram-build117` success artifact.
 
 - [ ] Write failing tests for exact chain order, Build117 names, foundation preservation, raw Runtime UI rejection, and duplicate success-artifact rejection.

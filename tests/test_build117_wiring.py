@@ -50,6 +50,11 @@ class Build117WiringTests(unittest.TestCase):
         ):
             self.assertIn(token, text)
 
+        for relative in (".github/workflows/build.yml", ".github/workflows/build-official.yml"):
+            workflow = (ROOT / relative).read_text()
+            self.assertIn("apply_jerkgram_v12f_build117_profile_localization1.py", workflow)
+            self.assertIn("verify_jerkgram_v12f_build117_profile_localization1.py", workflow)
+
     def test_publisher_names_build117_and_keeps_byte_identity(self):
         text = (ROOT / "scripts/jerkgram_publish_build117_artifact.py").read_text()
         self.assertIn('OUTPUT_IPA = OUTPUT_DIR / "Jerkgram-build117.ipa"', text)

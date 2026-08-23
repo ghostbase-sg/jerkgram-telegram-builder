@@ -8,6 +8,7 @@ SOURCE_ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTB
 BUILDER_ROOT = Path(__file__).resolve().parents[1]
 SETTINGS = SOURCE_ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramSettingsStore.swift"
 ARCHIVE = SOURCE_ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchive.swift"
+PROFILE_REPORT = SOURCE_ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileReportPaneNode.swift"
 ACTIVE_WORKFLOWS = (
     BUILDER_ROOT / ".github/workflows/build.yml",
     BUILDER_ROOT / ".github/workflows/build-official.yml",
@@ -27,6 +28,8 @@ def main():
     require("BUILD116_ARCHIVE_FOUNDATION1" in archive, "typed Archive foundation missing")
     require("public var schemaVersion: Int = 1" in archive, "Archive schemaVersion is not v1")
     require("maximumEventCount = 100_000" in archive, "bounded Archive codec missing")
+    profile_report = PROFILE_REPORT.read_text(encoding="utf-8")
+    require("localizedProfileReport(rawText)" in profile_report, "profile logging localization gate missing")
 
     for path in ACTIVE_WORKFLOWS:
         workflow = path.read_text(encoding="utf-8")
