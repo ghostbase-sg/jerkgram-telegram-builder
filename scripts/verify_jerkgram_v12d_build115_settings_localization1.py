@@ -64,6 +64,15 @@ def function_region(text, signature):
     raise RuntimeError("[verify Build115 settings localization] unterminated function")
 
 
+def cyrillic_string_literals(text):
+    pattern = re.compile(r'"""(.*?)"""|"(?:\\.|[^"\\])*"', re.S)
+    return [
+        match.group(0)
+        for match in pattern.finditer(text)
+        if re.search(r"[А-Яа-яЁё]", match.group(0))
+    ]
+
+
 require(SETTINGS.is_file(), "GhostBaseSettingsController.swift missing")
 require(MAIN_ITEMS.is_file(), "PeerInfoSettingsItems.swift missing")
 settings = SETTINGS.read_text(encoding="utf-8")
@@ -127,11 +136,11 @@ required_entry_tokens = (
 for token in required_entry_tokens:
     require(token in entries, "localized settings token missing: " + token)
 
-# Visible settings rows must not carry hard-coded Cyrillic anymore. Russian is
-# now owned only by JerkgramStrings.swift and selected by Telegram language.
+leftovers = cyrillic_string_literals(entries)
 require(
-    re.search(r"[А-Яа-яЁё]", entries) is None,
-    "hard-coded Cyrillic survived in visible settings entries"
+    not leftovers,
+    "hard-coded Cyrillic survived in visible settings string literals: "
+    + " | ".join(value.replace("\n", "\\n")[:160] for value in leftovers[:8])
 )
 
 page_start = settings.find("private enum GhostBaseSettingsPage")
@@ -139,7 +148,10 @@ page_end = settings.find("private final class GhostBaseSettingsArguments", page_
 require(page_start >= 0 and page_end > page_start, "settings page enum bounds missing")
 page_region = settings[page_start:page_end]
 require("func localizedTitle(_ strings: JerkgramStrings)" in page_region, "page title localizer missing")
-require(re.search(r"[А-Яа-яЁё]", page_region) is None, "hard-coded Cyrillic survived in page titles")
+require(
+    not cyrillic_string_literals(page_region),
+    "hard-coded Cyrillic survived in page title string literals"
+)
 require('return "Jerkgram"' in page_region, "canonical page root is not Jerkgram")
 
 main_required = (
