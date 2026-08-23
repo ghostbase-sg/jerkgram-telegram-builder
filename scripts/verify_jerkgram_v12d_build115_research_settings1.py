@@ -94,9 +94,12 @@ required_properties = (
     "strings.researchResetSelection",
     "strings.researchBotCapability",
     "strings.researchBotDifference",
+    "strings.profileInformation",
+    "strings.showProfileInformation",
+    "strings.avatarDc",
 )
 for token in required_properties:
-    require(token in entries, "active research localization token missing: " + token)
+    require(token in entries, "active late localization token missing: " + token)
 
 # Build114 deliberately removes PROFILEINTEL entries. If either returns in a
 # future chain, it must be localized rather than hard-coded.
@@ -130,9 +133,12 @@ for forbidden in (
     '"Сбросить выбор"',
     '"Проверить RPC bot-аккаунта"',
     '"Проверить updates.getDifference"',
+    '"Сведения профиля"',
+    '"Показывать сведения"',
+    '"DC аватара"',
 ):
-    require(forbidden not in entries, "legacy research literal survived: " + forbidden)
+    require(forbidden not in entries, "legacy late literal survived: " + forbidden)
 
 print("[verify Build115 research settings] GREEN")
-print("[verify Build115 research settings] legacy research titles are semantic Jerkgram strings")
+print("[verify Build115 research settings] legacy research/profile titles are semantic Jerkgram strings")
 print("[verify Build115 research settings] RU/EN follows Telegram language")
