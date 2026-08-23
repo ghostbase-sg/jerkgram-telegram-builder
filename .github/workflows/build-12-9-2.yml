@@ -1,4 +1,4 @@
-name: GhostBase Telegram 12.9.2 Migration Control
+name: Jerkgram 12.9.2 Legacy Migration Control
 
 on:
   workflow_dispatch:
@@ -53,40 +53,40 @@ jobs:
           path: |
             .bazel-disk-cache
             .bazel-repo-cache
-          key: ghostbase-12-9-2-bazel-${{ runner.os }}-${{ github.ref_name }}
+          key: jerkgram-12-9-2-bazel-${{ runner.os }}-${{ github.ref_name }}
           restore-keys: |
-            ghostbase-12-9-2-bazel-${{ runner.os }}-
+            jerkgram-12-9-2-bazel-${{ runner.os }}-
 
-      - name: Prepare source
+      - name: Prepare clean Official Telegram source
         run: |
           set -e
           chmod +x scripts/prepare_source_official_12_9_2.sh
           scripts/prepare_source_official_12_9_2.sh
 
-      - name: Skip Swiftgram GhostBase patches
+      - name: Confirm legacy compatibility path
         run: |
           set -e
-          echo "Official Telegram baseline: skip Swiftgram-specific v0.8/v0.9 patches"
+          echo "Official Telegram baseline; legacy compatibility migration workflow"
 
-      - name: Run build analysis probe
+      - name: Run legacy migration probe
         run: |
           set -e
           chmod +x scripts/bazel_build_probe_official_12_9_2.sh
           scripts/bazel_build_probe_official_12_9_2.sh
 
-      - name: Upload build artifacts
+      - name: Upload Jerkgram legacy migration build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ghostbase-telegram-12-9-2-migration-build
+          name: Jerkgram-12.9.2-legacy-migration
           path: |
             work/swiftgram-src/ghostbase-final/**
           if-no-files-found: warn
 
-      - name: Upload collected outputs
+      - name: Upload Jerkgram legacy migration outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ghostbase-12-9-2-output
+          name: Jerkgram-12.9.2-legacy-output
           path: artifacts/**
           if-no-files-found: warn
