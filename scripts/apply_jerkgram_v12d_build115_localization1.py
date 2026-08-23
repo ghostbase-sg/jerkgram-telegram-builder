@@ -90,13 +90,17 @@ public enum JerkgramStringKey: String, CaseIterable {
     case oneTimeScreenshots
     case oneTimeScreenRecording
     case oneTimeSave
+    case oneTimeMedia
     case storySave
     case appearancePlaceholder
     case profileBackground
     case profileBackgroundEffect
     case blurProfileAvatar
+    case preferAvatarAsBackground
+    case animatedBackground
     case colorTint
     case reducedBlur
+    case animatedBackgroundHint
     case profileEffectDisabledHint
     case other
     case interface
@@ -231,13 +235,17 @@ public struct JerkgramStrings {
     public var oneTimeScreenshots: String { self.text(.oneTimeScreenshots) }
     public var oneTimeScreenRecording: String { self.text(.oneTimeScreenRecording) }
     public var oneTimeSave: String { self.text(.oneTimeSave) }
+    public var oneTimeMedia: String { self.text(.oneTimeMedia) }
     public var storySave: String { self.text(.storySave) }
     public var appearancePlaceholder: String { self.text(.appearancePlaceholder) }
     public var profileBackground: String { self.text(.profileBackground) }
     public var profileBackgroundEffect: String { self.text(.profileBackgroundEffect) }
     public var blurProfileAvatar: String { self.text(.blurProfileAvatar) }
+    public var preferAvatarAsBackground: String { self.text(.preferAvatarAsBackground) }
+    public var animatedBackground: String { self.text(.animatedBackground) }
     public var colorTint: String { self.text(.colorTint) }
     public var reducedBlur: String { self.text(.reducedBlur) }
+    public var animatedBackgroundHint: String { self.text(.animatedBackgroundHint) }
     public var profileEffectDisabledHint: String { self.text(.profileEffectDisabledHint) }
     public var other: String { self.text(.other) }
     public var interface: String { self.text(.interface) }
@@ -338,13 +346,17 @@ public struct JerkgramStrings {
         .oneTimeScreenshots: "One-Time Media Screenshots",
         .oneTimeScreenRecording: "One-Time Media Screen Recording",
         .oneTimeSave: "Save One-Time Media",
+        .oneTimeMedia: "One-Time Media",
         .storySave: "Save Stories",
         .appearancePlaceholder: "Jerkgram appearance settings will be added here.",
         .profileBackground: "Profile Background",
         .profileBackgroundEffect: "Profile Background Effect",
         .blurProfileAvatar: "Blur Profile Avatar",
+        .preferAvatarAsBackground: "Prefer Avatar as Background",
+        .animatedBackground: "Animated Background",
         .colorTint: "Color Tint",
         .reducedBlur: "Reduced Blur",
+        .animatedBackgroundHint: "The video avatar loops and uses Telegram's cache. In Low Power Mode or with Reduced Blur, a static frame is used.",
         .profileEffectDisabledHint: "When the main effect is disabled, Jerkgram creates no additional profile views, observers, or image/palette pipeline. New values apply the next time the profile opens.",
         .other: "Other",
         .interface: "Interface",
@@ -446,13 +458,17 @@ public struct JerkgramStrings {
         .oneTimeScreenshots: "Скриншоты одноразовых медиа",
         .oneTimeScreenRecording: "Запись одноразовых медиа",
         .oneTimeSave: "Сохранение одноразовых медиа",
+        .oneTimeMedia: "Одноразовые медиа",
         .storySave: "Сохранение историй",
         .appearancePlaceholder: "Настройки оформления Jerkgram будут добавляться в этот раздел.",
         .profileBackground: "Фон профиля",
         .profileBackgroundEffect: "Эффект фона профиля",
         .blurProfileAvatar: "Размывать аватар в профиле",
+        .preferAvatarAsBackground: "Предпочитать аватар как фон",
+        .animatedBackground: "Анимированный фон",
         .colorTint: "Цветовой оттенок",
         .reducedBlur: "Облегчённое размытие",
+        .animatedBackgroundHint: "Видеоаватар зацикливается и использует кэш Telegram. В режиме энергосбережения или облегчённого размытия используется статический кадр.",
         .profileEffectDisabledHint: "Когда главный эффект выключен, Jerkgram не создаёт дополнительные profile views, observers или image/palette pipeline. Новые значения применяются при следующем открытии профиля.",
         .other: "Прочее",
         .interface: "Интерфейс",
