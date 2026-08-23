@@ -20,6 +20,9 @@ class Build117AboutChannelTests(unittest.TestCase):
         cls.overlay = load_script(
             "apply_jerkgram_v12f_build117_about_channel1.py"
         )
+        cls.verifier = load_script(
+            "verify_jerkgram_v12f_build117_about_channel1.py"
+        )
 
     def test_about_uses_resolved_peer_avatar_and_bounded_latest_post(self):
         settings = '''
@@ -186,6 +189,38 @@ public struct JerkgramStrings {
             '.communityLoading: "Загрузка канала…"',
         ):
             self.assertIn(token, patched_strings)
+
+    def test_verifier_limits_bundle_id_check_to_about_block(self):
+        settings = '''
+// MARK: Jerkgram v1.2F BUILD117_ABOUT_CHANNEL_CARD1
+case aboutChannel
+ItemListPeerItem(
+private enum JerkgramAboutChannelState {}
+resolvePeerByName(name: "JerkgramApp", referrer: nil)
+aroundMessageHistoryViewForLocation
+String(compact.prefix(160))
+aboutChannelState: aboutChannelState
+navigateToChatController
+
+// MARK: Jerkgram v1.2F BUILD117_ABOUT_CHANNEL_CARD1
+if page == .about {
+    return [.info(1, "Jerkgram\\nBuild: 117")]
+}
+
+private func unrelatedTechnicalDiagnostics() -> String {
+    return "Bundle ID: diagnostics-only"
+}
+'''
+        strings = '''
+case communityLoading
+case communityUnavailable
+case communityNoPosts
+self.text(.communityLoading)
+self.text(.communityUnavailable)
+self.text(.communityNoPosts)
+'''
+
+        self.verifier.verify(settings, strings)
 
 
 if __name__ == "__main__":
