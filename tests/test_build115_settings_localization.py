@@ -1,5 +1,9 @@
 import importlib.util
+import os
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 
@@ -15,6 +19,159 @@ def load_script(name):
 
 
 class Build115SettingsLocalizationTests(unittest.TestCase):
+    def test_verifier_accepts_final_pre_research_settings_topology(self):
+        entry_tokens = (
+            "strings.about",
+            "strings.allowScreenRecording",
+            "strings.allowScreenshots",
+            "strings.animatedBackground",
+            "strings.animatedBackgroundHint",
+            "strings.appearance",
+            "strings.basicFunctions",
+            "strings.choosingEmoji",
+            "strings.choosingSticker",
+            "strings.colorTint",
+            "strings.copyFromChat",
+            "strings.copyFromGallery",
+            "strings.currentVisualBalance(balance)",
+            "strings.debugResearch",
+            "strings.deletedMessages",
+            "strings.deletedReplies",
+            "strings.diagnosticsBufferHint",
+            "strings.editHistory",
+            "strings.eventsEmpty",
+            "strings.forwardFromChat",
+            "strings.gameActivity",
+            "strings.ghostMode",
+            "strings.hideMyPhone",
+            "strings.hideOnline",
+            "strings.hidePhoneHint",
+            "strings.interface",
+            "strings.knownUsersNoData",
+            "strings.localStarsBalance",
+            "strings.mediaAndStories",
+            "strings.messageSeconds",
+            "strings.messages",
+            "strings.oneTimeMedia",
+            "strings.oneTimeScreenRecording",
+            "strings.oneTimeScreenshots",
+            "strings.portableReply",
+            "strings.portableReplyHint",
+            "strings.preferAvatarAsBackground",
+            "strings.presenceHistoryEmpty",
+            "strings.profileBackground",
+            "strings.profileBackgroundEffect",
+            "strings.profileEffectDisabledHint",
+            "strings.protectedContent",
+            "strings.protectionEnabled",
+            "strings.readGhost",
+            "strings.recentEvents",
+            "strings.recording",
+            "strings.reducedBlur",
+            "strings.registrationDate",
+            "strings.saveDeletedMedia",
+            "strings.saveDeletedMessages",
+            "strings.saveEditHistory",
+            "strings.saveFromChat",
+            "strings.saveFromGallery",
+            "strings.savedDataHint",
+            "strings.scheduledSend",
+            "strings.sendStyle",
+            "strings.sendStyleHint",
+            "strings.shareFromGallery",
+            "strings.showRamUnderClock",
+            "strings.starsBalance",
+            "strings.storySave",
+            "strings.telegramId",
+            "strings.textSending",
+            "strings.typing",
+            "strings.uploading",
+        )
+        main_tokens = (
+            "presentationData.strings.jerkgram.settingsTitle",
+            "presentationData.strings.jerkgram.ghostMode",
+            "presentationData.strings.jerkgram.messages",
+            "presentationData.strings.jerkgram.protectedContent",
+            "presentationData.strings.jerkgram.mediaAndStories",
+            "presentationData.strings.jerkgram.appearance",
+            "presentationData.strings.jerkgram.debugResearch",
+            "presentationData.strings.jerkgram.about",
+        )
+
+        with tempfile.TemporaryDirectory() as source_root:
+            source_root = Path(source_root)
+            settings_path = (
+                source_root
+                / "submodules/SettingsUI/Sources/GhostBase"
+                / "GhostBaseSettingsController.swift"
+            )
+            main_path = (
+                source_root
+                / "submodules/TelegramUI/Components/PeerInfo"
+                / "PeerInfoScreen/Sources/PeerInfoSettingsItems.swift"
+            )
+            settings_path.parent.mkdir(parents=True)
+            main_path.parent.mkdir(parents=True)
+            settings_path.write_text(
+                "\n".join(
+                    (
+                        "// MARK: Jerkgram v1.2D BUILD115_SETTINGS_LOCALIZATION1",
+                        "private enum GhostBaseSettingsPage {",
+                        "    func localizedTitle(_ strings: JerkgramStrings) -> String {",
+                        '        return "Jerkgram"',
+                        "    }",
+                        "}",
+                        "private final class GhostBaseSettingsArguments {}",
+                        "private func ghostBaseSettingsEntries(",
+                        "    strings: JerkgramStrings",
+                        ") -> [String] {",
+                        "    let balance = 0",
+                        "    return [",
+                        *(f"        {token}," for token in entry_tokens),
+                        "    ]",
+                        "}",
+                        "let title = page.localizedTitle(presentationData.strings.jerkgram)",
+                        "let entries = ghostBaseSettingsEntries(",
+                        "    strings: presentationData.strings.jerkgram",
+                        ")",
+                    )
+                ),
+                encoding="utf-8",
+            )
+            main_path.write_text(
+                "\n".join(
+                    (
+                        "// MARK: Jerkgram v1.2D BUILD115_MAIN_SETTINGS_LOCALIZATION1",
+                        *main_tokens,
+                    )
+                ),
+                encoding="utf-8",
+            )
+            env = os.environ.copy()
+            env["JERKGRAM_SOURCE_ROOT"] = str(source_root)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(
+                        REPO_ROOT
+                        / "scripts"
+                        / "verify_jerkgram_v12d_build115_settings_localization1.py"
+                    ),
+                ],
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+        )
+        self.assertIn("[verify Build115 settings localization] GREEN", result.stdout)
+
     def test_build108_main_settings_titles_localize(self):
         localizer = load_script(
             "apply_jerkgram_v12d_build115_settings_localization1.py"
