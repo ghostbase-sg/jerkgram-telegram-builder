@@ -48,6 +48,8 @@ jobs:
             scripts/verify_jerkgram_v12d_build115_profile_ui1.py \
             scripts/apply_jerkgram_v12d_build115_localization1.py \
             scripts/verify_jerkgram_v12d_build115_localization1.py \
+            scripts/apply_jerkgram_v12d_build115_research_settings1.py \
+            scripts/verify_jerkgram_v12d_build115_research_settings1.py \
             scripts/apply_jerkgram_v12d_build115_settings_localization1.py \
             scripts/verify_jerkgram_v12d_build115_settings_localization1.py \
             scripts/apply_jerkgram_v12d_build115_recovery_english1.py \
