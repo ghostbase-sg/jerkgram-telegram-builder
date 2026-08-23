@@ -6,8 +6,11 @@ import os
 
 ROOT = Path(
     os.environ.get(
-        "GHOSTBASE_SOURCE_ROOT",
-        str(Path.cwd())
+        "JERKGRAM_SOURCE_ROOT",
+        os.environ.get(
+            "GHOSTBASE_SOURCE_ROOT",
+            str(Path.cwd())
+        )
     )
 ).resolve()
 
@@ -27,12 +30,12 @@ import PresentationStrings
 
 // MARK: Jerkgram v1.2D BUILD115_LOCALIZATION_FOUNDATION1
 //
-// Jerkgram user-facing text must follow Telegram's selected interface
-// language, not the device language. English is the canonical source and
-// universal fallback. Persisted Jerkgram data must store semantic keys/enums,
-// never localized display strings.
+// Jerkgram user-facing text follows Telegram's selected interface language,
+// never the device locale. English is the canonical source and universal
+// fallback. Persisted Jerkgram data stores semantic values, not translations.
 public enum JerkgramStringKey: String, CaseIterable {
     case settingsTitle
+    case basicFunctions
     case ghostMode
     case messages
     case protectedContent
@@ -41,9 +44,53 @@ public enum JerkgramStringKey: String, CaseIterable {
     case debugResearch
     case about
 
+    case profileCard
+    case showIds
+    case showDcs
+    case registrationDate
+    case localStarsBalance
+    case starsBalance
+    case currentVisualBalance
+
+    case readGhost
+    case typing
+    case recording
+    case uploading
+    case choosingSticker
+    case gameActivity
+    case choosingEmoji
+    case hideOnline
+    case scheduledSend
+
+    case deletedMessages
+    case saveDeletedMessages
+    case showDeletedMessages
+    case editHistory
+    case saveEditHistory
+    case showEditHistory
+    case savedDataHint
+
+    case protectionEnabled
+    case shareFromGallery
+    case saveFromGallery
+    case copyFromGallery
+    case saveFromChat
+    case copyFromChat
+    case forwardFromChat
+    case allowScreenshots
+    case allowScreenRecording
+
+    case oneTimeScreenshots
+    case oneTimeScreenRecording
+    case oneTimeSave
+    case storySave
+    case appearancePlaceholder
+
     case information
     case telegramId
-    case registrationDate
+    case rawIdNamespace
+    case profile
+    case mainMenu
 
     case deletedMessage
     case editedMessage
@@ -53,8 +100,16 @@ public enum JerkgramStringKey: String, CaseIterable {
     case gif
     case audio
     case voiceMessage
+    case videoMessage
     case document
+    case attachment
     case album
+    case poll
+    case location
+    case contact
+    case dice
+    case taskList
+    case user
 
     case importSettings
     case exportSettings
@@ -92,6 +147,7 @@ public struct JerkgramStrings {
     }
 
     public var settingsTitle: String { self.text(.settingsTitle) }
+    public var basicFunctions: String { self.text(.basicFunctions) }
     public var ghostMode: String { self.text(.ghostMode) }
     public var messages: String { self.text(.messages) }
     public var protectedContent: String { self.text(.protectedContent) }
@@ -100,9 +156,58 @@ public struct JerkgramStrings {
     public var debugResearch: String { self.text(.debugResearch) }
     public var about: String { self.text(.about) }
 
+    public var profileCard: String { self.text(.profileCard) }
+    public var showIds: String { self.text(.showIds) }
+    public var showDcs: String { self.text(.showDcs) }
+    public var registrationDate: String { self.text(.registrationDate) }
+    public var localStarsBalance: String { self.text(.localStarsBalance) }
+    public var starsBalance: String { self.text(.starsBalance) }
+    public func currentVisualBalance(_ balance: String) -> String {
+        return self.text(.currentVisualBalance).replacingOccurrences(
+            of: "{balance}",
+            with: balance
+        )
+    }
+
+    public var readGhost: String { self.text(.readGhost) }
+    public var typing: String { self.text(.typing) }
+    public var recording: String { self.text(.recording) }
+    public var uploading: String { self.text(.uploading) }
+    public var choosingSticker: String { self.text(.choosingSticker) }
+    public var gameActivity: String { self.text(.gameActivity) }
+    public var choosingEmoji: String { self.text(.choosingEmoji) }
+    public var hideOnline: String { self.text(.hideOnline) }
+    public var scheduledSend: String { self.text(.scheduledSend) }
+
+    public var deletedMessages: String { self.text(.deletedMessages) }
+    public var saveDeletedMessages: String { self.text(.saveDeletedMessages) }
+    public var showDeletedMessages: String { self.text(.showDeletedMessages) }
+    public var editHistory: String { self.text(.editHistory) }
+    public var saveEditHistory: String { self.text(.saveEditHistory) }
+    public var showEditHistory: String { self.text(.showEditHistory) }
+    public var savedDataHint: String { self.text(.savedDataHint) }
+
+    public var protectionEnabled: String { self.text(.protectionEnabled) }
+    public var shareFromGallery: String { self.text(.shareFromGallery) }
+    public var saveFromGallery: String { self.text(.saveFromGallery) }
+    public var copyFromGallery: String { self.text(.copyFromGallery) }
+    public var saveFromChat: String { self.text(.saveFromChat) }
+    public var copyFromChat: String { self.text(.copyFromChat) }
+    public var forwardFromChat: String { self.text(.forwardFromChat) }
+    public var allowScreenshots: String { self.text(.allowScreenshots) }
+    public var allowScreenRecording: String { self.text(.allowScreenRecording) }
+
+    public var oneTimeScreenshots: String { self.text(.oneTimeScreenshots) }
+    public var oneTimeScreenRecording: String { self.text(.oneTimeScreenRecording) }
+    public var oneTimeSave: String { self.text(.oneTimeSave) }
+    public var storySave: String { self.text(.storySave) }
+    public var appearancePlaceholder: String { self.text(.appearancePlaceholder) }
+
     public var information: String { self.text(.information) }
     public var telegramId: String { self.text(.telegramId) }
-    public var registrationDate: String { self.text(.registrationDate) }
+    public var rawIdNamespace: String { self.text(.rawIdNamespace) }
+    public var profile: String { self.text(.profile) }
+    public var mainMenu: String { self.text(.mainMenu) }
 
     public var deletedMessage: String { self.text(.deletedMessage) }
     public var editedMessage: String { self.text(.editedMessage) }
@@ -112,8 +217,16 @@ public struct JerkgramStrings {
     public var gif: String { self.text(.gif) }
     public var audio: String { self.text(.audio) }
     public var voiceMessage: String { self.text(.voiceMessage) }
+    public var videoMessage: String { self.text(.videoMessage) }
     public var document: String { self.text(.document) }
+    public var attachment: String { self.text(.attachment) }
     public var album: String { self.text(.album) }
+    public var poll: String { self.text(.poll) }
+    public var location: String { self.text(.location) }
+    public var contact: String { self.text(.contact) }
+    public var dice: String { self.text(.dice) }
+    public var taskList: String { self.text(.taskList) }
+    public var user: String { self.text(.user) }
 
     public var importSettings: String { self.text(.importSettings) }
     public var exportSettings: String { self.text(.exportSettings) }
@@ -122,6 +235,7 @@ public struct JerkgramStrings {
 
     private static let english: [JerkgramStringKey: String] = [
         .settingsTitle: "Jerkgram",
+        .basicFunctions: "Basic Functions",
         .ghostMode: "Ghost Mode",
         .messages: "Messages",
         .protectedContent: "Protected Content",
@@ -130,9 +244,53 @@ public struct JerkgramStrings {
         .debugResearch: "Debug / Research",
         .about: "About",
 
+        .profileCard: "Profile Card",
+        .showIds: "Show IDs",
+        .showDcs: "Show DCs",
+        .registrationDate: "Registration Date",
+        .localStarsBalance: "Local Stars Balance",
+        .starsBalance: "Stars Balance",
+        .currentVisualBalance: "Current visual balance: {balance} ⭐",
+
+        .readGhost: "Don't Mark as Read",
+        .typing: "Typing",
+        .recording: "Recording",
+        .uploading: "Uploading",
+        .choosingSticker: "Choosing Sticker",
+        .gameActivity: "Game Activity",
+        .choosingEmoji: "Choosing Emoji",
+        .hideOnline: "Online Status",
+        .scheduledSend: "Scheduled Send",
+
+        .deletedMessages: "Deleted Messages",
+        .saveDeletedMessages: "Save Deleted Messages",
+        .showDeletedMessages: "Show Deleted Messages",
+        .editHistory: "Edit History",
+        .saveEditHistory: "Save Edit History",
+        .showEditHistory: "Show Edit History",
+        .savedDataHint: "Disabling these features does not remove already saved data.",
+
+        .protectionEnabled: "Bypass Protection",
+        .shareFromGallery: "Share from Gallery",
+        .saveFromGallery: "Save from Gallery",
+        .copyFromGallery: "Copy from Gallery",
+        .saveFromChat: "Save from Chat",
+        .copyFromChat: "Copy from Chat",
+        .forwardFromChat: "Forward from Chat",
+        .allowScreenshots: "Allow Screenshots",
+        .allowScreenRecording: "Allow Screen Recording",
+
+        .oneTimeScreenshots: "One-Time Media Screenshots",
+        .oneTimeScreenRecording: "One-Time Media Screen Recording",
+        .oneTimeSave: "Save One-Time Media",
+        .storySave: "Save Stories",
+        .appearancePlaceholder: "Jerkgram appearance settings will be added here.",
+
         .information: "Information",
         .telegramId: "Telegram ID",
-        .registrationDate: "Registration Date",
+        .rawIdNamespace: "Raw ID / Namespace",
+        .profile: "Profile",
+        .mainMenu: "Main Menu",
 
         .deletedMessage: "Deleted Message",
         .editedMessage: "Edited Message",
@@ -142,8 +300,16 @@ public struct JerkgramStrings {
         .gif: "GIF",
         .audio: "Audio",
         .voiceMessage: "Voice Message",
+        .videoMessage: "Video Message",
         .document: "Document",
+        .attachment: "Attachment",
         .album: "Album",
+        .poll: "Poll",
+        .location: "Location",
+        .contact: "Contact",
+        .dice: "Dice",
+        .taskList: "Task List",
+        .user: "User",
 
         .importSettings: "Import Settings",
         .exportSettings: "Export Settings",
@@ -153,6 +319,7 @@ public struct JerkgramStrings {
 
     private static let russian: [JerkgramStringKey: String] = [
         .settingsTitle: "Jerkgram",
+        .basicFunctions: "Основные функции",
         .ghostMode: "Режим призрака",
         .messages: "Сообщения",
         .protectedContent: "Защищённый контент",
@@ -161,9 +328,53 @@ public struct JerkgramStrings {
         .debugResearch: "Отладка / Исследования",
         .about: "О Jerkgram",
 
+        .profileCard: "Карточка профиля",
+        .showIds: "Показывать ID",
+        .showDcs: "Показывать DC",
+        .registrationDate: "Дата регистрации",
+        .localStarsBalance: "Локальный баланс Stars",
+        .starsBalance: "Баланс Stars",
+        .currentVisualBalance: "Текущий визуальный баланс: {balance} ⭐",
+
+        .readGhost: "Не отмечать прочитанным",
+        .typing: "Набор текста",
+        .recording: "Запись",
+        .uploading: "Загрузка",
+        .choosingSticker: "Выбор стикера",
+        .gameActivity: "Игровая активность",
+        .choosingEmoji: "Выбор эмодзи",
+        .hideOnline: "Онлайн-статус",
+        .scheduledSend: "Отложенная отправка",
+
+        .deletedMessages: "Удалённые сообщения",
+        .saveDeletedMessages: "Сохранять удалённые сообщения",
+        .showDeletedMessages: "Показывать удалённые сообщения",
+        .editHistory: "История изменений",
+        .saveEditHistory: "Сохранять историю изменений",
+        .showEditHistory: "Показывать историю изменений",
+        .savedDataHint: "Выключение функций не удаляет уже сохранённые данные.",
+
+        .protectionEnabled: "Включить обход защиты",
+        .shareFromGallery: "Поделиться из галереи",
+        .saveFromGallery: "Сохранить из галереи",
+        .copyFromGallery: "Копировать из галереи",
+        .saveFromChat: "Сохранить из чата",
+        .copyFromChat: "Копировать из чата",
+        .forwardFromChat: "Переслать из чата",
+        .allowScreenshots: "Разрешить скриншоты",
+        .allowScreenRecording: "Разрешить запись экрана",
+
+        .oneTimeScreenshots: "Скриншоты одноразовых медиа",
+        .oneTimeScreenRecording: "Запись одноразовых медиа",
+        .oneTimeSave: "Сохранение одноразовых медиа",
+        .storySave: "Сохранение историй",
+        .appearancePlaceholder: "Настройки оформления Jerkgram будут добавляться в этот раздел.",
+
         .information: "Сведения",
         .telegramId: "Telegram ID",
-        .registrationDate: "Дата регистрации",
+        .rawIdNamespace: "Raw ID / Namespace",
+        .profile: "Профиль",
+        .mainMenu: "Главное меню",
 
         .deletedMessage: "Удалённое сообщение",
         .editedMessage: "Изменённое сообщение",
@@ -173,8 +384,16 @@ public struct JerkgramStrings {
         .gif: "GIF",
         .audio: "Аудио",
         .voiceMessage: "Голосовое сообщение",
+        .videoMessage: "Видеосообщение",
         .document: "Документ",
+        .attachment: "Вложение",
         .album: "Альбом",
+        .poll: "Опрос",
+        .location: "Геолокация",
+        .contact: "Контакт",
+        .dice: "Бросок кубика",
+        .taskList: "Список задач",
+        .user: "Пользователь",
 
         .importSettings: "Импорт настроек",
         .exportSettings: "Экспорт настроек",
@@ -213,19 +432,12 @@ def main():
             MARKER in text,
             "unexpected existing JerkgramStrings.swift"
         )
-        print(
-            "[Build115 localization] already installed"
-        )
+        print("[Build115 localization] already installed")
         return
 
-    TARGET.write_text(
-        SWIFT,
-        encoding="utf-8"
-    )
+    TARGET.write_text(SWIFT, encoding="utf-8")
 
-    print(
-        "[Build115 localization] JerkgramStrings installed"
-    )
+    print("[Build115 localization] JerkgramStrings installed")
     print(
         "[Build115 localization] language owner: "
         "PresentationStrings.baseLanguageCode"
