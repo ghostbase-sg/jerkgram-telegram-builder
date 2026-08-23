@@ -10,6 +10,8 @@ PROFILE_APPLY = "apply_jerkgram_v12d_build115_profile_ui1.py"
 PROFILE_VERIFY = "verify_jerkgram_v12d_build115_profile_ui1.py"
 LOCALIZATION_APPLY = "apply_jerkgram_v12d_build115_localization1.py"
 LOCALIZATION_VERIFY = "verify_jerkgram_v12d_build115_localization1.py"
+RESEARCH_APPLY = "apply_jerkgram_v12d_build115_research_settings1.py"
+RESEARCH_VERIFY = "verify_jerkgram_v12d_build115_research_settings1.py"
 SETTINGS_LOCALIZATION_APPLY = "apply_jerkgram_v12d_build115_settings_localization1.py"
 SETTINGS_LOCALIZATION_VERIFY = "verify_jerkgram_v12d_build115_settings_localization1.py"
 RECOVERY_APPLY = "apply_jerkgram_v12d_build115_recovery_english1.py"
@@ -45,9 +47,18 @@ python3 ../../scripts/apply_jerkgram_v12d_build115_localization1.py
 python3 ../../scripts/verify_jerkgram_v12d_build115_localization1.py
 
 echo
+echo "== Jerkgram v1.2D Build115 research Settings canonicalization =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_research_settings1.py --phase canonical
+
+echo
 echo "== Jerkgram v1.2D Build115 Settings localization =="
 python3 ../../scripts/apply_jerkgram_v12d_build115_settings_localization1.py
 python3 ../../scripts/verify_jerkgram_v12d_build115_settings_localization1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 research Settings localization =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_research_settings1.py --phase localized
+python3 ../../scripts/verify_jerkgram_v12d_build115_research_settings1.py
 
 echo
 echo "== Jerkgram v1.2D Build115 recovery English baseline =="
@@ -71,23 +82,25 @@ def main():
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     text = PROBE.read_text(encoding="utf-8")
 
-    names = (
-        APPGROUP_APPLY,
-        APPGROUP_VERIFY,
-        PROFILE_APPLY,
-        PROFILE_VERIFY,
-        LOCALIZATION_APPLY,
-        LOCALIZATION_VERIFY,
-        SETTINGS_LOCALIZATION_APPLY,
-        SETTINGS_LOCALIZATION_VERIFY,
-        RECOVERY_APPLY,
-        RECOVERY_VERIFY,
-        NUMERIC_APPLY,
-        NUMERIC_VERIFY,
-    )
-    counts = {name: text.count(name) for name in names}
+    expected_counts = {
+        APPGROUP_APPLY: 1,
+        APPGROUP_VERIFY: 1,
+        PROFILE_APPLY: 1,
+        PROFILE_VERIFY: 1,
+        LOCALIZATION_APPLY: 1,
+        LOCALIZATION_VERIFY: 1,
+        RESEARCH_APPLY: 2,
+        RESEARCH_VERIFY: 1,
+        SETTINGS_LOCALIZATION_APPLY: 1,
+        SETTINGS_LOCALIZATION_VERIFY: 1,
+        RECOVERY_APPLY: 1,
+        RECOVERY_VERIFY: 1,
+        NUMERIC_APPLY: 1,
+        NUMERIC_VERIFY: 1,
+    }
+    counts = {name: text.count(name) for name in expected_counts}
 
-    if all(value == 1 for value in counts.values()):
+    if all(counts[name] == expected for name, expected in expected_counts.items()):
         print("[Build115 probe hook] already installed")
     else:
         require(
@@ -99,8 +112,11 @@ def main():
         PROBE.write_text(text, encoding="utf-8")
 
     check = PROBE.read_text(encoding="utf-8")
-    for name in names:
-        require(check.count(name) == 1, "wiring count != 1: " + name)
+    for name, expected in expected_counts.items():
+        require(check.count(name) == expected, "wiring count mismatch: " + name)
+
+    research_first = check.index(RESEARCH_APPLY)
+    research_second = check.index(RESEARCH_APPLY, research_first + len(RESEARCH_APPLY))
 
     order = [
         check.index("apply_jerkgram_v12c_build114_core1.py"),
@@ -111,8 +127,11 @@ def main():
         check.index(PROFILE_VERIFY),
         check.index(LOCALIZATION_APPLY),
         check.index(LOCALIZATION_VERIFY),
+        research_first,
         check.index(SETTINGS_LOCALIZATION_APPLY),
         check.index(SETTINGS_LOCALIZATION_VERIFY),
+        research_second,
+        check.index(RESEARCH_VERIFY),
         check.index(RECOVERY_APPLY),
         check.index(RECOVERY_VERIFY),
         check.index(NUMERIC_APPLY),
@@ -123,8 +142,9 @@ def main():
 
     print(
         "[Build115 probe hook] GREEN: Build114 -> "
-        "AppGroup -> profile UI -> localization -> Settings localization -> "
-        "recovery English -> numeric links -> Bazel"
+        "AppGroup -> profile UI -> localization -> research canonical -> "
+        "Settings localization -> research localization -> recovery English -> "
+        "numeric links -> Bazel"
     )
 
 
