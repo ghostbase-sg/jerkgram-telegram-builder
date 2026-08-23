@@ -35,13 +35,13 @@ python3 ../../scripts/verify_jerkgram_v12d_build115_numeric_links1.py
         positions.append(patched.index('"$BAZEL_BIN" build'))
         self.assertEqual(positions, sorted(positions))
 
-    def test_active_workflows_publish_build116(self):
+    def test_active_workflows_retain_build116_layer_under_build117(self):
         for relative in (".github/workflows/build.yml", ".github/workflows/build-official.yml"):
             text = (REPO_ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn("Jerkgram 12.9.2 Build116", text)
-            self.assertIn("jerkgram_publish_build116_artifact.py", text)
-            self.assertIn("Jerkgram-build116.ipa", text)
-            self.assertNotIn("name: Jerkgram 12.9.2 Build115", text)
+            self.assertIn("Jerkgram 12.9.2 Build117", text)
+            for name in self.installer.ORDERED_SCRIPTS:
+                self.assertIn(name, text)
+            self.assertNotIn("jerkgram_publish_build116_artifact.py", text)
 
     def test_publisher_uses_build116_outputs(self):
         text = (REPO_ROOT / "scripts/jerkgram_publish_build116_artifact.py").read_text(encoding="utf-8")

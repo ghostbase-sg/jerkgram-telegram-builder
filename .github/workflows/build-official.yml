@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build116
+name: Jerkgram 12.9.2 Build117
 
 on:
   workflow_dispatch:
@@ -75,9 +75,18 @@ jobs:
             scripts/apply_jerkgram_v12e_build116_foundation1.py \
             scripts/verify_jerkgram_v12e_build116_foundation1.py \
             scripts/install_jerkgram_v12e_build116_probe_hook.py \
-            scripts/jerkgram_publish_build116_artifact.py
+            scripts/apply_jerkgram_v12f_build117_profile_scope1.py \
+            scripts/verify_jerkgram_v12f_build117_profile_scope1.py \
+            scripts/apply_jerkgram_v12f_build117_about_channel1.py \
+            scripts/verify_jerkgram_v12f_build117_about_channel1.py \
+            scripts/apply_jerkgram_v12f_build117_extension_boundaries1.py \
+            scripts/verify_jerkgram_v12f_build117_extension_boundaries1.py \
+            scripts/verify_jerkgram_v12f_build117_release_readiness1.py \
+            scripts/install_jerkgram_v12f_build117_probe_hook.py \
+            scripts/jerkgram_publish_build117_artifact.py
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
+          python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
@@ -85,22 +94,14 @@ jobs:
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build116_artifact.py
+          python3 scripts/jerkgram_publish_build117_artifact.py
 
       - name: Upload Jerkgram build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build116
+          name: Jerkgram-build117
           path: |
-            artifacts/Jerkgram-build116.ipa
-            artifacts/Jerkgram-build116-info.txt
+            artifacts/Jerkgram-build117.ipa
+            artifacts/Jerkgram-build117-info.txt
           if-no-files-found: error
-
-      - name: Upload Jerkgram collected outputs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Jerkgram-build116-output
-          path: artifacts/**
-          if-no-files-found: warn

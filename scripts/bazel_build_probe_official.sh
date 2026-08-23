@@ -461,6 +461,70 @@ echo
 echo "== Jerkgram v1.2C Build114 source/runtime/UI =="
 python3 ../../scripts/apply_jerkgram_v12c_build114_core1.py
 python3 ../../scripts/verify_jerkgram_v12c_build114_core1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 AppGroup selection =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_appgroup1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_appgroup1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 profile UI =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_profile_ui1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_profile_ui1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 localization foundation =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_localization1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_localization1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 research Settings canonicalization =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_research_settings1.py --phase canonical
+
+echo
+echo "== Jerkgram v1.2D Build115 Settings localization =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_settings_localization1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_settings_localization1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 research Settings localization =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_research_settings1.py --phase localized
+python3 ../../scripts/verify_jerkgram_v12d_build115_research_settings1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 recovery English baseline =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_recovery_english1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_recovery_english1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 numeric links =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_numeric_links1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_numeric_links1.py
+
+echo
+echo "== Jerkgram v1.2E Build116 user-facing fixes =="
+python3 ../../scripts/apply_jerkgram_v12e_build116_ui1.py
+python3 ../../scripts/verify_jerkgram_v12e_build116_ui1.py
+
+echo
+echo "== Jerkgram v1.2E Build116 extension diagnostics =="
+python3 ../../scripts/apply_jerkgram_v12e_build116_extensions1.py
+python3 ../../scripts/verify_jerkgram_v12e_build116_extensions1.py
+
+echo
+echo "== Jerkgram v1.2E Build116 typed foundations =="
+python3 ../../scripts/apply_jerkgram_v12e_build116_foundation1.py
+python3 ../../scripts/verify_jerkgram_v12e_build116_foundation1.py
+
+echo
+echo "== Jerkgram v1.2F Build117 release-readiness update =="
+python3 ../../scripts/apply_jerkgram_v12f_build117_profile_scope1.py
+python3 ../../scripts/verify_jerkgram_v12f_build117_profile_scope1.py
+python3 ../../scripts/apply_jerkgram_v12f_build117_about_channel1.py
+python3 ../../scripts/verify_jerkgram_v12f_build117_about_channel1.py
+python3 ../../scripts/apply_jerkgram_v12f_build117_extension_boundaries1.py
+python3 ../../scripts/verify_jerkgram_v12f_build117_extension_boundaries1.py
+python3 ../../scripts/verify_jerkgram_v12f_build117_release_readiness1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
