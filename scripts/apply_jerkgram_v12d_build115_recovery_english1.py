@@ -25,7 +25,7 @@ MARKER = (
 )
 
 
-REPLACEMENTS = (
+MEDIA_REPLACEMENTS = (
     ('return "Альбом"', 'return "Album"'),
     ('return "Опрос"', 'return "Poll"'),
     ('return "📍 Геолокация"', 'return "📍 Location"'),
@@ -90,6 +90,26 @@ def function_bounds(text, signature):
     )
 
 
+def replace_region(text, signature, replacements):
+    start, _, end = function_bounds(text, signature)
+    region = text[start:end]
+
+    for old, new, expected in replacements:
+        count = region.count(old)
+        require(
+            count == expected,
+            (
+                signature
+                + ": anchor count for "
+                + repr(old)
+                + f" != {expected}: {count}"
+            )
+        )
+        region = region.replace(old, new)
+
+    return text[:start] + region + text[end:]
+
+
 def main():
     require(ENQUEUE.is_file(), "EnqueueMessage.swift missing")
     text = ENQUEUE.read_text(encoding="utf-8")
@@ -104,30 +124,26 @@ def main():
         "Build107 sticker fallback prerequisite missing"
     )
 
-    start, brace, end = function_bounds(
+    start, _, end = function_bounds(
         text,
         "private func ghostBaseDeletedMediaLabel("
     )
-
     region = text[start:end]
 
-    for old, new in REPLACEMENTS:
+    for old, new in MEDIA_REPLACEMENTS:
+        count = region.count(old)
         require(
-            region.count(old) == 1,
+            count == 1,
             (
                 "recovery label anchor count != 1: "
                 + old
                 + " -> "
-                + str(region.count(old))
+                + str(count)
             )
         )
         region = region.replace(old, new, 1)
 
-    # GIF is already language-neutral and intentionally remains unchanged.
-    require(
-        'return "GIF"' in region,
-        "GIF label missing"
-    )
+    require('return "GIF"' in region, "GIF label missing")
 
     local_brace = region.find("{")
     require(local_brace >= 0, "local function brace missing")
@@ -143,16 +159,37 @@ def main():
         + region[local_brace + 1:]
     )
 
-    updated = text[:start] + region + text[end:]
+    text = text[:start] + region + text[end:]
 
-    ENQUEUE.write_text(
-        updated,
-        encoding="utf-8"
+    text = replace_region(
+        text,
+        "private func ghostBaseQuoteBody(",
+        (
+            (
+                'ghostBaseDeletedMediaLabel(source) ?? "Удалённое сообщение"',
+                'ghostBaseDeletedMediaLabel(source) ?? "Deleted Message"',
+                1,
+            ),
+        ),
     )
+
+    text = replace_region(
+        text,
+        "private func ghostBaseResolveDeletedReplies(",
+        (
+            ('"Пользователь"', '"User"', 2),
+        ),
+    )
+
+    ENQUEUE.write_text(text, encoding="utf-8")
 
     print(
         "[Build115 recovery English] "
         "portable deleted-media labels -> English canonical"
+    )
+    print(
+        "[Build115 recovery English] "
+        "deleted-message fallback + unknown author -> English canonical"
     )
     print(
         "[Build115 recovery English] "
