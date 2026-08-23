@@ -10,6 +10,8 @@ PROFILE_APPLY = "apply_jerkgram_v12d_build115_profile_ui1.py"
 PROFILE_VERIFY = "verify_jerkgram_v12d_build115_profile_ui1.py"
 LOCALIZATION_APPLY = "apply_jerkgram_v12d_build115_localization1.py"
 LOCALIZATION_VERIFY = "verify_jerkgram_v12d_build115_localization1.py"
+SETTINGS_LOCALIZATION_APPLY = "apply_jerkgram_v12d_build115_settings_localization1.py"
+SETTINGS_LOCALIZATION_VERIFY = "verify_jerkgram_v12d_build115_settings_localization1.py"
 RECOVERY_APPLY = "apply_jerkgram_v12d_build115_recovery_english1.py"
 RECOVERY_VERIFY = "verify_jerkgram_v12d_build115_recovery_english1.py"
 NUMERIC_APPLY = "apply_jerkgram_v12d_build115_numeric_links1.py"
@@ -43,6 +45,11 @@ python3 ../../scripts/apply_jerkgram_v12d_build115_localization1.py
 python3 ../../scripts/verify_jerkgram_v12d_build115_localization1.py
 
 echo
+echo "== Jerkgram v1.2D Build115 Settings localization =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_settings_localization1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_settings_localization1.py
+
+echo
 echo "== Jerkgram v1.2D Build115 recovery English baseline =="
 python3 ../../scripts/apply_jerkgram_v12d_build115_recovery_english1.py
 python3 ../../scripts/verify_jerkgram_v12d_build115_recovery_english1.py
@@ -71,6 +78,8 @@ def main():
         PROFILE_VERIFY,
         LOCALIZATION_APPLY,
         LOCALIZATION_VERIFY,
+        SETTINGS_LOCALIZATION_APPLY,
+        SETTINGS_LOCALIZATION_VERIFY,
         RECOVERY_APPLY,
         RECOVERY_VERIFY,
         NUMERIC_APPLY,
@@ -102,6 +111,8 @@ def main():
         check.index(PROFILE_VERIFY),
         check.index(LOCALIZATION_APPLY),
         check.index(LOCALIZATION_VERIFY),
+        check.index(SETTINGS_LOCALIZATION_APPLY),
+        check.index(SETTINGS_LOCALIZATION_VERIFY),
         check.index(RECOVERY_APPLY),
         check.index(RECOVERY_VERIFY),
         check.index(NUMERIC_APPLY),
@@ -112,8 +123,8 @@ def main():
 
     print(
         "[Build115 probe hook] GREEN: Build114 -> "
-        "AppGroup -> profile UI -> localization -> recovery English -> "
-        "numeric links -> Bazel"
+        "AppGroup -> profile UI -> localization -> Settings localization -> "
+        "recovery English -> numeric links -> Bazel"
     )
 
 
