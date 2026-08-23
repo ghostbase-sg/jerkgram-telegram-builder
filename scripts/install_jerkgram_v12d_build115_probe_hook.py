@@ -8,6 +8,8 @@ APPGROUP_APPLY = "apply_jerkgram_v12d_build115_appgroup1.py"
 APPGROUP_VERIFY = "verify_jerkgram_v12d_build115_appgroup1.py"
 PROFILE_APPLY = "apply_jerkgram_v12d_build115_profile_ui1.py"
 PROFILE_VERIFY = "verify_jerkgram_v12d_build115_profile_ui1.py"
+LOCALIZATION_APPLY = "apply_jerkgram_v12d_build115_localization1.py"
+LOCALIZATION_VERIFY = "verify_jerkgram_v12d_build115_localization1.py"
 
 ANCHOR = '''echo
 echo "== Jerkgram v1.2C Build114 source/runtime/UI =="
@@ -30,6 +32,11 @@ echo
 echo "== Jerkgram v1.2D Build115 profile UI =="
 python3 ../../scripts/apply_jerkgram_v12d_build115_profile_ui1.py
 python3 ../../scripts/verify_jerkgram_v12d_build115_profile_ui1.py
+
+echo
+echo "== Jerkgram v1.2D Build115 localization foundation =="
+python3 ../../scripts/apply_jerkgram_v12d_build115_localization1.py
+python3 ../../scripts/verify_jerkgram_v12d_build115_localization1.py
 # END MARK: GhostBase v1.1G unified recovery
 '''
 
@@ -48,6 +55,8 @@ def main():
         APPGROUP_VERIFY,
         PROFILE_APPLY,
         PROFILE_VERIFY,
+        LOCALIZATION_APPLY,
+        LOCALIZATION_VERIFY,
     )
     counts = {name: text.count(name) for name in names}
 
@@ -73,13 +82,15 @@ def main():
         check.index(APPGROUP_VERIFY),
         check.index(PROFILE_APPLY),
         check.index(PROFILE_VERIFY),
+        check.index(LOCALIZATION_APPLY),
+        check.index(LOCALIZATION_VERIFY),
         check.index('"$BAZEL_BIN" build'),
     ]
     require(order == sorted(order), "Build114 -> Build115 -> Bazel order invalid")
 
     print(
         "[Build115 probe hook] GREEN: Build114 -> "
-        "AppGroup -> profile UI -> Bazel"
+        "AppGroup -> profile UI -> localization -> Bazel"
     )
 
 

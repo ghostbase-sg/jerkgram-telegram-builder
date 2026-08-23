@@ -1,4 +1,4 @@
-name: GhostBase Official Telegram Baseline
+name: Jerkgram 12.9.2 Build115
 
 on:
   workflow_dispatch:
@@ -34,22 +34,22 @@ jobs:
           path: |
             .bazel-disk-cache
             .bazel-repo-cache
-          key: ghostbase-official-bazel-${{ runner.os }}-${{ github.ref_name }}
+          key: jerkgram-official-bazel-${{ runner.os }}-${{ github.ref_name }}
           restore-keys: |
-            ghostbase-official-bazel-${{ runner.os }}-
+            jerkgram-official-bazel-${{ runner.os }}-
 
-      - name: Prepare source
+      - name: Prepare clean Official Telegram source
         run: |
           set -e
           chmod +x scripts/prepare_source_official.sh
           scripts/prepare_source_official.sh
 
-      - name: Skip Swiftgram GhostBase patches
+      - name: Confirm Official Telegram baseline
         run: |
           set -e
-          echo "Official Telegram 12.9.2: skip Swiftgram-specific v0.8/v0.9 patches"
+          echo "Official Telegram 12.9.2 clean source prepared"
 
-      - name: Run build analysis probe
+      - name: Build Jerkgram
         run: |
           set -e
           python3 -m py_compile \
@@ -57,24 +57,34 @@ jobs:
             scripts/verify_jerkgram_v12d_build115_appgroup1.py \
             scripts/apply_jerkgram_v12d_build115_profile_ui1.py \
             scripts/verify_jerkgram_v12d_build115_profile_ui1.py \
-            scripts/install_jerkgram_v12d_build115_probe_hook.py
+            scripts/apply_jerkgram_v12d_build115_localization1.py \
+            scripts/verify_jerkgram_v12d_build115_localization1.py \
+            scripts/install_jerkgram_v12d_build115_probe_hook.py \
+            scripts/jerkgram_publish_build115_artifact.py
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
-      - name: Upload build artifacts
+      - name: Publish Jerkgram artifact
+        if: success()
+        run: |
+          set -e
+          python3 scripts/jerkgram_publish_build115_artifact.py
+
+      - name: Upload Jerkgram build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ghostbase-official-telegram-build
+          name: Jerkgram-build115
           path: |
-            work/swiftgram-src/ghostbase-final/**
-          if-no-files-found: warn
+            artifacts/Jerkgram-build115.ipa
+            artifacts/Jerkgram-build115-info.txt
+          if-no-files-found: error
 
-      - name: Upload collected outputs
+      - name: Upload Jerkgram collected outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ghostbase-output
+          name: Jerkgram-build115-output
           path: artifacts/**
           if-no-files-found: warn
