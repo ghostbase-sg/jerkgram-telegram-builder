@@ -234,7 +234,7 @@ PAGE_CANONICAL = {
 }
 
 MAIN_TITLES = (
-    (("GhostBase", "Jerkgram"), "presentationData.strings.jerkgram.settingsTitle"),
+    (("GhostBase", "JerkGram", "Jerkgram"), "presentationData.strings.jerkgram.settingsTitle"),
     (("Ghost Mode",), "presentationData.strings.jerkgram.ghostMode"),
     (("Messages", "Сообщения"), "presentationData.strings.jerkgram.messages"),
     (("Protected Content", "Защищённый контент"), "presentationData.strings.jerkgram.protectedContent"),

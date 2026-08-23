@@ -15,6 +15,54 @@ def load_script(name):
 
 
 class Build115SettingsLocalizationTests(unittest.TestCase):
+    def test_build108_main_settings_titles_localize(self):
+        localizer = load_script(
+            "apply_jerkgram_v12d_build115_settings_localization1.py"
+        )
+        main_items = r'''
+// MARK: GhostBase v1.0R Main Settings Group
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "JerkGram", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 1, text: "Ghost Mode", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 2, text: "Messages", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 3, text: "Protected Content", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 4, text: "Media & Stories", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 5, text: "Appearance", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 6, text: "Debug / Research", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+items[.ghostbase]!.append(PeerInfoScreenDisclosureItem(id: 7, text: "About", icon: icon, action: {
+    interaction.openSettings(.ghostbase)
+}))
+'''
+
+        patched = localizer.patch_main_items(main_items)
+
+        expected_tokens = (
+            "presentationData.strings.jerkgram.settingsTitle",
+            "presentationData.strings.jerkgram.ghostMode",
+            "presentationData.strings.jerkgram.messages",
+            "presentationData.strings.jerkgram.protectedContent",
+            "presentationData.strings.jerkgram.mediaAndStories",
+            "presentationData.strings.jerkgram.appearance",
+            "presentationData.strings.jerkgram.debugResearch",
+            "presentationData.strings.jerkgram.about",
+        )
+        for token in expected_tokens:
+            self.assertIn(token, patched)
+        self.assertNotIn('text: "JerkGram"', patched)
+
     def test_final_materialized_settings_literals_localize_without_cyrillic(self):
         localizer = load_script(
             "apply_jerkgram_v12d_build115_settings_localization1.py"
