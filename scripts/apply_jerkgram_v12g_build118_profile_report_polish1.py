@@ -39,7 +39,7 @@ def main():
         '"Username: \\(value(previous.username)) → \\(value(current.username))"': '"Юзернейм: \\(value(previous.username)) → \\(value(current.username))"',
         '"BIO: \\(value(previous.about)) → \\(value(current.about))"': '"Описание: \\(value(previous.about)) → \\(value(current.about))"',
         '"Emoji-status: \\(previous.emojiStatus) → \\(current.emojiStatus)"': '"Эмодзи-статус: \\(emojiStatusValue(previous.emojiStatus)) → \\(emojiStatusValue(current.emojiStatus))"',
-        '"Username: "\n                        + value(previous.username)': '"Юзернейм: "\n                        + value(previous.username)',
+        '"Username: \\(oldValue) → \\(newValue)"': '"Юзернейм: \\(oldValue) → \\(newValue)"',
     }
     for old, new in replacements.items():
         require(old in report, "report label missing: " + old)
