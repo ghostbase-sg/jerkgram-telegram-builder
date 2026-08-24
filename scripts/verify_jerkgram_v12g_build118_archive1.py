@@ -18,7 +18,7 @@ def main():
     require(ARCHIVE.is_file() and TRANSACTION.is_file(), "sources missing")
     archive = ARCHIVE.read_text(encoding="utf-8")
     transaction = TRANSACTION.read_text(encoding="utf-8")
-    for token in ("schemaVersion = 2", "accountPeerId", "settingsSnapshot", "sha256", "maximumUncompressedBytes", "unsafePath", "checksumMismatch"):
+    for token in ("schemaVersion = 2", "accountPeerId", "settingsSnapshot", "sha256", "maximumUncompressedBytes", "unsafePath", "checksumMismatch", "public init(\n        component:", "public init(\n        accountPeerId:"):
         require(token in archive, "archive invariant missing: " + token)
     for forbidden in ("authKey", "sessionToken", "provisioning", "embedded.mobileprovision"):
         require(forbidden not in archive, "forbidden archive payload: " + forbidden)

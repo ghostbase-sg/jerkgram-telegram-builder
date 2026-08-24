@@ -20,6 +20,13 @@ def require(value, message):
 
 def patch_settings(text):
     text = text.replace("    case root\n", "    case root\n    case dataAndBackup\n", 1)
+    legacy_title = '        case .root:\n            return "Jerkgram"\n'
+    require(text.count(legacy_title) == 1, "legacy title root anchor mismatch")
+    text = text.replace(
+        legacy_title,
+        legacy_title + '        case .dataAndBackup:\n            return "Data and Backup"\n',
+        1,
+    )
     text = text.replace("        case .root:\n            return strings.settingsTitle", "        case .root:\n            return strings.settingsTitle\n        case .dataAndBackup:\n            return strings.dataAndBackup", 1)
     root_row = '.disclosure(0, 8, strings.about, "Chat/Context Menu/Info", .about)'
     require(root_row in text, "root About row missing")
@@ -47,6 +54,8 @@ def patch_settings(text):
     }''', 1)
     else:
         text += '\n// Build118 route owner: jerkgramDataAndBackupController(context:)\n'
+    require('case .dataAndBackup:\n            return "Data and Backup"' in text, "legacy title route missing")
+    require("case .dataAndBackup:\n            return strings.dataAndBackup" in text, "localized title route missing")
     return text
 
 

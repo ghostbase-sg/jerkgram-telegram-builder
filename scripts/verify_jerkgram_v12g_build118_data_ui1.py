@@ -17,6 +17,9 @@ def main():
     flow = (ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift").read_text()
     ui = (ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift").read_text()
     require(".dataAndBackup" in settings and "jerkgramDataAndBackupController" in settings, "route missing")
+    require('case .dataAndBackup:\n            return "Data and Backup"' in settings, "legacy title switch missing data route")
+    require("case .dataAndBackup:\n            return strings.dataAndBackup" in settings, "localized title switch missing data route")
+    require("import PresentationDataUtils" in flow, "archive alert compatibility import missing")
     for token in ("SSZipArchive", "legacyICloudFilePicker", "accountPeerId", "confirmSettingsChanges", "validateExtractedPayloads"):
         require(token in flow, "flow invariant missing: " + token)
     for token in (".days7", ".days30", ".days90", ".forever", ".unlimited", "archiveSecretChats"):

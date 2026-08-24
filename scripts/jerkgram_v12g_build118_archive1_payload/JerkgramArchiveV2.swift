@@ -39,11 +39,33 @@ public struct JerkgramArchivePayloadDescriptor: Codable, Equatable {
     public let recordCount: Int
     public let uncompressedBytes: Int64
     public let sha256: String
+
+    public init(
+        component: JerkgramArchiveComponent,
+        relativePath: String,
+        recordCount: Int,
+        uncompressedBytes: Int64,
+        sha256: String
+    ) {
+        self.component = component
+        self.relativePath = relativePath
+        self.recordCount = recordCount
+        self.uncompressedBytes = uncompressedBytes
+        self.sha256 = sha256
+    }
 }
 
 public struct JerkgramArchiveAccountManifest: Codable, Equatable {
     public let accountPeerId: Int64
     public let payloads: [JerkgramArchivePayloadDescriptor]
+
+    public init(
+        accountPeerId: Int64,
+        payloads: [JerkgramArchivePayloadDescriptor]
+    ) {
+        self.accountPeerId = accountPeerId
+        self.payloads = payloads
+    }
 }
 
 public struct JerkgramArchiveManifestV2: Codable, Equatable {
