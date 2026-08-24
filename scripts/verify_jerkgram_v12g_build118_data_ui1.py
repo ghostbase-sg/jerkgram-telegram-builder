@@ -19,12 +19,13 @@ def main():
     require(".dataAndBackup" in settings and "jerkgramDataAndBackupController" in settings, "route missing")
     require('case .dataAndBackup:\n            return "Data and Backup"' in settings, "legacy title switch missing data route")
     require("case .dataAndBackup:\n            return strings.dataAndBackup" in settings, "localized title switch missing data route")
+    require(settings.count('strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup') == 2, "route must be visible from root and Basic Functions")
     require("import PresentationDataUtils" in flow, "archive alert compatibility import missing")
     for token in ("SSZipArchive", "legacyICloudFilePicker", "accountPeerId", "confirmSettingsChanges", "validateExtractedPayloads"):
         require(token in flow, "flow invariant missing: " + token)
     for token in (".days7", ".days30", ".days90", ".forever", ".unlimited", "archiveSecretChats"):
         require(token in ui, "retention choice missing: " + token)
-    print("[verify Build118 data UI] GREEN: visible route, real ZIP export/import, exact account and retention controls")
+    print("[verify Build118 data UI] GREEN: root and Basic Functions routes, real ZIP export/import, exact account and retention controls")
 
 
 if __name__ == "__main__":

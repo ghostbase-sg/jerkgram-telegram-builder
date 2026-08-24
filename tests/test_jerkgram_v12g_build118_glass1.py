@@ -13,6 +13,12 @@ OVERLAY = REPO / "scripts/apply_jerkgram_v12g_build118_glass1.py"
 
 
 class Build118GlassTests(unittest.TestCase):
+    def test_overlay_uses_exact_profile_report_card_material(self):
+        text = OVERLAY.read_text(encoding="utf-8")
+        self.assertIn("alpha: presentationData.theme.overallDarkAppearance ? 0.26 : 0.18", text)
+        self.assertIn("itemPlainSeparatorColor", text)
+        self.assertNotIn("withAlphaComponent(0.075)", text)
+
     def test_glass_is_account_setting_gated_and_uses_reference_material(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -39,13 +45,14 @@ class Build118GlassTests(unittest.TestCase):
             combined = "\n".join((root / relative).read_text() for relative in relative_paths)
             self.assertIn("BUILD118_GLASS1", combined)
             self.assertIn("ghostBaseGlassEnabled: Bool", combined)
-            self.assertIn("UIColor.black.withAlphaComponent(0.075)", combined)
-            self.assertIn("UIColor.white.withAlphaComponent(0.035)", combined)
+            self.assertIn("white: presentationData.theme.overallDarkAppearance ? 0.0 : 1.0", combined)
+            self.assertIn("alpha: presentationData.theme.overallDarkAppearance ? 0.26 : 0.18", combined)
+            self.assertIn("itemPlainSeparatorColor", combined)
             self.assertIn("cornerRadius: 16.0", combined)
             self.assertIn("ghostBaseGlassEnabled: ghostBaseGlassEnabled", combined)
-            self.assertIn("//submodules/TelegramUI/Components/GlassBackgroundComponent", combined)
             list_source = (root / relative_paths[4]).read_text(encoding="utf-8")
-            self.assertIn("import ComponentFlow\n", list_source)
+            self.assertIn("private let glassBackgroundView: UIView", list_source)
+            self.assertNotIn("GlassBackgroundView.TintColor", list_source)
             self.assertIn("else {", combined)
 
 

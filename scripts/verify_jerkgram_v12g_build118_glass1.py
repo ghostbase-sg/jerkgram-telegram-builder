@@ -25,8 +25,9 @@ def main():
     require("ghostBaseGlassEnabled" not in frame_section, "FrameSequenceThumbnailNode contaminated by pane flag")
     require("private let ghostBaseGlassEnabled: Bool" in pane_section, "pane flag property missing")
     require("self.ghostBaseGlassEnabled = ghostBaseGlassEnabled" in pane_section, "pane flag assignment missing")
-    require("import ComponentFlow\n" in list_source, "ComponentTransition owner import missing from list pane")
-    for token in ("BUILD118_GLASS1", "withAlphaComponent(0.075)", "withAlphaComponent(0.035)", "cornerRadius: 16.0", "ghostBaseGlassEnabled"):
+    require("private let glassBackgroundView: UIView" in list_source, "plain report-card surface owner missing")
+    require("GlassBackgroundView.TintColor" not in list_source, "Links still uses mismatched glass material")
+    for token in ("BUILD118_GLASS1", "? 0.26 : 0.18", "itemPlainSeparatorColor", "cornerRadius = 16.0", "ghostBaseGlassEnabled"):
         require(token in text, "missing " + token)
     print("[verify Build118 glass] GREEN: reference material and stock fallback present")
 

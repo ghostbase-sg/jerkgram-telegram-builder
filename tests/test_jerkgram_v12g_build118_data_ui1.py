@@ -24,16 +24,32 @@ class Build118DataUITests(unittest.TestCase):
             settings.write_text('''private enum GhostBaseSettingsPage: Equatable {
     case root
     case about
+    var title: String {
+        switch self {
+        case .root:
+            return "Jerkgram"
+        case .about:
+            return "About"
+        }
+    }
     func localizedTitle(_ strings: JerkgramStrings) -> String {
         switch self {
-        case .root: return strings.settingsTitle
-        case .about: return strings.about
+        case .root:
+            return strings.settingsTitle
+        case .about:
+            return strings.about
         }
     }
 }
 if page == .root {
     return [
         .disclosure(0, 8, strings.about, "Chat/Context Menu/Info", .about)
+    ]
+}
+if page == .home {
+    return [
+        .header(1, strings.basicFunctions),
+        .info(1, strings.currentVisualBalance("0"))
     ]
 }
 ''')
@@ -51,6 +67,7 @@ if page == .root {
             self.assertIn("jerkgramDataAndBackupController", rendered_settings)
             self.assertIn('strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup', rendered_settings)
             self.assertIn('strings.about, "Chat/Context Menu/Info", .about', rendered_settings)
+            self.assertIn('strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup', rendered_settings.split("if page == .home", 1)[1])
             self.assertNotIn('"GhostBaseMediaStories"', rendered_settings)
             self.assertNotIn('"GhostBaseAbout"', rendered_settings)
             self.assertIn("SSZipArchive", flow)

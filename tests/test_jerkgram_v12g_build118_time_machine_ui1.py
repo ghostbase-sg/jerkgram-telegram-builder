@@ -19,7 +19,7 @@ class Build118TimeMachineUITests(unittest.TestCase):
             strings = root / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
             node.parent.mkdir(parents=True)
             strings.parent.mkdir(parents=True)
-            node.write_text('''public final class ChatSearchNavigationContentNode {\n    private let interaction: ChatPanelInterfaceInteraction\n    public init(context: AccountContext, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction) {\n        self.interaction = interaction\n        super.init()\n    }\n    override public var nominalHeight: CGFloat {\n        return 60.0\n    }\n    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {\n        return size\n    }\n}\n''')
+            node.write_text('''public final class ChatSearchNavigationContentNode {\n    private let interaction: ChatPanelInterfaceInteraction\n    public init(context: AccountContext, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction) {\n        self.interaction = interaction\n        super.init()\n        self.view.addSubview(self.backgroundContainer)\n    }\n    override public var nominalHeight: CGFloat {\n        return 60.0\n    }\n    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {\n        return size\n    }\n}\n''')
             build.write_text('deps = [\n]')
             strings.write_text('public struct JerkgramStrings { public let languageCode: String }')
             env = os.environ.copy()
@@ -30,6 +30,11 @@ class Build118TimeMachineUITests(unittest.TestCase):
             controller = (node.parent / "JerkgramTimeMachineController.swift").read_text()
             self.assertIn("jerkgramTimeMachineController", rendered)
             self.assertIn("interaction.presentController", rendered)
+            self.assertLess(
+                rendered.index("self.view.addSubview(self.backgroundContainer)"),
+                rendered.index("self.view.addSubview(self.jerkgramTimeMachineBackground)"),
+                "Time Machine control must be above the full-size background container",
+            )
             for token in ("deletedMessage", "editedMessage", "recoveredMedia", "senderPeerId", "JerkgramTextDiff.diff", "navigateToMessage", "localDetail"):
                 self.assertIn(token, controller)
             self.assertIn("event.eventId", controller)

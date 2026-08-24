@@ -34,7 +34,10 @@ def patch_source(text):
 ''', 1)
     super_marker = "        super.init()\n"
     require(super_marker in text, "super init missing")
-    text = text.replace(super_marker, super_marker + '''
+    background_marker = "        self.view.addSubview(self.backgroundContainer)\n"
+    require(background_marker in text, "background hierarchy missing")
+    text = text.replace(background_marker, background_marker + '''
+        // Keep the Time Machine control above the full-size background container.
         self.view.addSubview(self.jerkgramTimeMachineBackground)
         self.jerkgramTimeMachineBackground.contentView.addSubview(self.jerkgramTimeMachineLabel)
         self.jerkgramTimeMachineBackground.contentView.addGestureRecognizer(

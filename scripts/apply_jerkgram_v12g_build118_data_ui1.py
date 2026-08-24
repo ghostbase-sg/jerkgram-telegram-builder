@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import re
 import shutil
 
 
@@ -31,6 +32,15 @@ def patch_settings(text):
     root_row = '.disclosure(0, 8, strings.about, "Chat/Context Menu/Info", .about)'
     require(root_row in text, "root About row missing")
     text = text.replace(root_row, '.disclosure(0, 8, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup),\n            .disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)', 1)
+    home_shortcut = re.compile(
+        r'(\s+\.info\(1, strings\.currentVisualBalance\([^\n]+\)\))(\n\s+\])'
+    )
+    text, shortcut_count = home_shortcut.subn(
+        r'\1,\n            .header(2, strings.backup),\n            .disclosure(2, 1, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup)\2',
+        text,
+        count=1,
+    )
+    require(shortcut_count == 1, "Basic Functions shortcut anchor mismatch")
     opener = '''openPage: { selectedPage in
         pushController?(
             ghostBaseSettingsPageController(
@@ -56,6 +66,7 @@ def patch_settings(text):
         text += '\n// Build118 route owner: jerkgramDataAndBackupController(context:)\n'
     require('case .dataAndBackup:\n            return "Data and Backup"' in text, "legacy title route missing")
     require("case .dataAndBackup:\n            return strings.dataAndBackup" in text, "localized title route missing")
+    require(text.count('strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup') == 2, "data route must be visible from root and Basic Functions")
     return text
 
 

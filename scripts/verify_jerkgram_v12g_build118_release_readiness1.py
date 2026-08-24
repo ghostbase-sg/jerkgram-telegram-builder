@@ -16,6 +16,7 @@ def main():
     for token in ("BUILD118_ACCOUNT_SETTINGS_SCOPE1", "BUILD118_RETENTION1", "BUILD118_ARCHIVE_V2", "BUILD118_TIME_MACHINE_UI1", "JerkgramCommunity", "Build: 118", "case forever", "case unlimited"):
         require(token in combined, "release invariant missing: " + token)
     require("Build: 117" not in settings.read_text(), "stale About build label")
+    require(r'Jerkgram\\nBase:' not in settings.read_text(), "literal About newline regression")
     print("[verify Build118 release] GREEN: account scope, archive, retention, Time Machine and About")
 
 if __name__ == "__main__": main()

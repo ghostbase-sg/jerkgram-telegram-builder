@@ -12,6 +12,8 @@ def main():
     text = SETTINGS.read_text()
     for token in ("BUILD118_ABOUT_CHANNEL_CARDS1", 'username: "JerkgramApp"', 'username: "JerkgramCommunity"', "height: .peerList", "Build: 118", "aroundMessageHistoryViewForLocation"):
         require(token in text, "missing " + token)
+    require(r'Jerkgram\nBase: Official Telegram 12.9.2\nBuild: 118' in text, "Swift newline escapes missing")
+    require(r'Jerkgram\\nBase:' not in text, "literal backslash-n footer regression")
     print("[verify Build118 About cards] GREEN: two live, larger native cards")
 
 if __name__ == "__main__": main()

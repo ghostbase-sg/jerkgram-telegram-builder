@@ -19,6 +19,7 @@ def main():
     controller = (BASE / "JerkgramTimeMachineController.swift").read_text()
     build = BUILD.read_text()
     require("jerkgramOpenTimeMachine" in node and "interaction.presentController" in node, "search route missing")
+    require(node.index("self.view.addSubview(self.backgroundContainer)") < node.index("self.view.addSubview(self.jerkgramTimeMachineBackground)"), "Time Machine control is covered by background container")
     require("peerId: EnginePeer.Id(event.chatPeerId)" in controller, "message navigation peer-id owner mismatch")
     require("import PresentationDataUtils" in controller, "PresentationDataUtils import missing")
     require("//submodules/PresentationDataUtils:PresentationDataUtils" in build, "PresentationDataUtils BUILD dependency missing")

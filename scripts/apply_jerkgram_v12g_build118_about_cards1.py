@@ -4,6 +4,7 @@ import os
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
+ABOUT_BUILD_FOOTER_SWIFT = r"Jerkgram\nBase: Official Telegram 12.9.2\nBuild: 118"
 
 def require(value, message):
     if not value: raise RuntimeError("[Build118 About cards] " + message)
@@ -44,9 +45,9 @@ def patch(text):
             .header(0, strings.about),
             channelEntry(index: 1, username: "JerkgramApp", state: aboutChannelState),
             channelEntry(index: 2, username: "JerkgramCommunity", state: aboutCommunityState),
-            .info(1, "Jerkgram\\nBase: Official Telegram 12.9.2\\nBuild: 118")
+            .info(1, "__JERKGRAM_BUILD118_FOOTER__")
         ]
-    }'''
+    }'''.replace("__JERKGRAM_BUILD118_FOOTER__", ABOUT_BUILD_FOOTER_SWIFT)
     text = text[:start] + new_block + text[end:]
     text = once(text, '''    let aboutChannelSignal = jerkgramAboutChannelState(
         context: context,
