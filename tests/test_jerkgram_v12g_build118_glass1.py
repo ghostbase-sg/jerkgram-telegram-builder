@@ -44,6 +44,8 @@ class Build118GlassTests(unittest.TestCase):
             self.assertIn("cornerRadius: 16.0", combined)
             self.assertIn("ghostBaseGlassEnabled: ghostBaseGlassEnabled", combined)
             self.assertIn("//submodules/TelegramUI/Components/GlassBackgroundComponent", combined)
+            list_source = (root / relative_paths[4]).read_text(encoding="utf-8")
+            self.assertIn("import ComponentFlow\n", list_source)
             self.assertIn("else {", combined)
 
 

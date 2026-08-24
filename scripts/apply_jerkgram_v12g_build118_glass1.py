@@ -87,7 +87,7 @@ def patch_visual(text):
 
 
 def patch_list(text):
-    text = replace_once(text, "import PeerInfoPaneNode\n", "import PeerInfoPaneNode\nimport GlassBackgroundComponent\n", "list import")
+    text = replace_once(text, "import PeerInfoPaneNode\n", "import PeerInfoPaneNode\nimport ComponentFlow\nimport GlassBackgroundComponent\n", "list import")
     text = replace_once(text, "    private let listNode: ChatHistoryListNode\n", "    // MARK: Jerkgram v1.2G BUILD118_GLASS1\n    private let ghostBaseGlassEnabled: Bool\n    private let glassBackgroundView: GlassBackgroundView\n    private let listNode: ChatHistoryListNode\n", "list property")
     old_init = "chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: EngineMessage.Tags) {"
     new_init = "chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: EngineMessage.Tags, ghostBaseGlassEnabled: Bool = false) {"
@@ -128,7 +128,11 @@ def patch_container(text):
 def main():
     for path in (SECTION, SINGLE, MULTI, CONTAINER, LIST, VISUAL, VISUAL_BUILD):
         require(path.is_file(), "missing target: " + str(path))
-    if "BUILD118_GLASS1" in LIST.read_text() and "BUILD118_GLASS1" in VISUAL.read_text():
+    list_text = LIST.read_text()
+    if "BUILD118_GLASS1" in list_text and "BUILD118_GLASS1" in VISUAL.read_text():
+        if "import ComponentFlow\n" not in list_text:
+            list_text = replace_once(list_text, "import GlassBackgroundComponent\n", "import ComponentFlow\nimport GlassBackgroundComponent\n", "existing list component import")
+            LIST.write_text(list_text, encoding="utf-8")
         print("[Build118 glass] reference glass already applied")
         return
     SECTION.write_text(patch_simple_surfaces(SECTION.read_text()), encoding="utf-8")

@@ -56,6 +56,8 @@ class Build118ProfileReportPolishTests(unittest.TestCase):
             rendered_strings = strings.read_text(encoding="utf-8")
             self.assertIn('"Юзернейм: \\(oldValue) → \\(newValue)"', rendered_report)
             self.assertIn("emojiStatusValue(previous.emojiStatus)", rendered_report)
+            self.assertIn("suffix.prefix(while:", rendered_report)
+            self.assertNotIn("suffix.prefix(where:", rendered_report)
             self.assertIn('("Эмодзи-статус:", "Emoji status:")', rendered_strings)
 
 

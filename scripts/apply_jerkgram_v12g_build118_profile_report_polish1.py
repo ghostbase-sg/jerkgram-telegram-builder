@@ -27,7 +27,7 @@ def main():
                 if raw == "nil" { return "—" }
                 if let marker = raw.range(of: "fileId: ") {
                     let suffix = raw[marker.upperBound...]
-                    let digits = suffix.prefix(where: { $0.isNumber })
+                    let digits = suffix.prefix(while: { $0.isNumber })
                     if !digits.isEmpty { return "#" + digits }
                 }
                 if raw.localizedCaseInsensitiveContains("starGift") { return "🎁" }
