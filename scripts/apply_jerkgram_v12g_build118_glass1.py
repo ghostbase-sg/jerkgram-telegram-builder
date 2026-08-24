@@ -39,7 +39,9 @@ def patch_visual(text):
     old_init = "contentType: ContentType, captureProtected: Bool, initialFocusMessageIndex: EngineMessage.Index?) {"
     new_init = "contentType: ContentType, captureProtected: Bool, initialFocusMessageIndex: EngineMessage.Index?, ghostBaseGlassEnabled: Bool = false) {"
     text = replace_once(text, old_init, new_init, "visual init")
-    text = replace_once(text, "        self.context = context\n", "        self.context = context\n        self.ghostBaseGlassEnabled = ghostBaseGlassEnabled\n", "visual flag init")
+    visual_context_anchor = new_init + "\n        self.context = context\n"
+    visual_context_replacement = new_init + "\n        self.context = context\n        self.ghostBaseGlassEnabled = ghostBaseGlassEnabled\n"
+    text = replace_once(text, visual_context_anchor, visual_context_replacement, "visual flag init")
     old_background = '''        self.listBackgroundView = UIImageView()
         self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
 '''
