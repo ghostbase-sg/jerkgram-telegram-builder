@@ -177,6 +177,15 @@ public struct JerkgramStrings {
             "navigateToChatController",
         ):
             self.assertIn(token, patched_settings)
+        self.assertIn(
+            "setPeerIdWithRevealedOptions: { _, _ in },",
+            patched_settings,
+        )
+        self.assertIn("removePeer: { _ in }", patched_settings)
+        self.assertIn("openAboutChannel: (EnginePeer) -> Void", patched_settings)
+        self.assertIn("arguments.openAboutChannel(peer)", patched_settings)
+        self.assertIn("chatLocation: .peer(peer)", patched_settings)
+        self.assertNotIn("chatLocation: .peer(peerId)", patched_settings)
         self.assertNotIn("BUILD116_ABOUT_COMMUNITY1", patched_settings)
         self.assertNotIn(".researchAction(0, 1, strings.community", patched_settings)
 
@@ -221,6 +230,17 @@ self.text(.communityNoPosts)
 '''
 
         self.verifier.verify(settings, strings)
+
+    def test_about_poll_keeps_void_type_and_live_channel_subscription(self):
+        source = self.overlay.about_state_source()
+
+        self.assertIn(
+            "|> then(\n"
+            "                context.account.viewTracker.polledChannel(peerId: peer.id)\n"
+            "            )",
+            source,
+        )
+        self.assertNotIn("|> ignoreValues", source)
 
 
 if __name__ == "__main__":

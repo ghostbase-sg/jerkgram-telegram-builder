@@ -77,7 +77,7 @@ def patch_arguments(text):
         "private final class GhostBaseSettingsArguments {\n",
         "private final class GhostBaseSettingsArguments {\n"
         "    let context: AccountContext\n"
-        "    let openAboutChannel: (EnginePeer.Id) -> Void\n",
+        "    let openAboutChannel: (EnginePeer) -> Void\n",
         "arguments properties",
     )
     text = replace_once(
@@ -86,7 +86,7 @@ def patch_arguments(text):
         runResearchAction: @escaping (String) -> Void,''',
         '''    init(
         context: AccountContext,
-        openAboutChannel: @escaping (EnginePeer.Id) -> Void,
+        openAboutChannel: @escaping (EnginePeer) -> Void,
         runResearchAction: @escaping (String) -> Void,''',
         "arguments initializer signature",
     )
@@ -171,8 +171,10 @@ def patch_entry(text):
                     selectable: true,
                     sectionId: self.section,
                     action: {
-                        arguments.openAboutChannel(peer.id)
-                    }
+                        arguments.openAboutChannel(peer)
+                    },
+                    setPeerIdWithRevealedOptions: { _, _ in },
+                    removePeer: { _ in }
                 )
             } else {
                 return ItemListDisclosureItem(
@@ -238,7 +240,6 @@ private func jerkgramAboutChannelState(
             let poll: Signal<Void, NoError> = .single(Void())
             |> then(
                 context.account.viewTracker.polledChannel(peerId: peer.id)
-                |> ignoreValues
             )
 
             return combineLatest(history, poll)
@@ -340,12 +341,12 @@ def patch_controller(text):
         context: context,
         enabled: page == .about
     )
-    var openAboutChannelImpl: ((EnginePeer.Id) -> Void)?
+    var openAboutChannelImpl: ((EnginePeer) -> Void)?
 
     let arguments = GhostBaseSettingsArguments(
         context: context,
-        openAboutChannel: { peerId in
-            openAboutChannelImpl?(peerId)
+        openAboutChannel: { peer in
+            openAboutChannelImpl?(peer)
         },
 '''
     text = replace_once(text, arguments_anchor, setup, "About controller state")
@@ -386,7 +387,7 @@ def patch_controller(text):
         state: signal
     )
 
-    openAboutChannelImpl = { [weak controller] peerId in
+    openAboutChannelImpl = { [weak controller] peer in
         guard let navigationController = controller?.navigationController
             as? NavigationController else {
             return
@@ -395,7 +396,7 @@ def patch_controller(text):
             NavigateToChatControllerParams(
                 navigationController: navigationController,
                 context: context,
-                chatLocation: .peer(peerId)
+                chatLocation: .peer(peer)
             )
         )
     }
