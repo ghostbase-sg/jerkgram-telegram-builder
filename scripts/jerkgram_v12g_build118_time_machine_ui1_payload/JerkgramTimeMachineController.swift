@@ -148,7 +148,7 @@ public func jerkgramTimeMachineController(
     }, selectEvent: { event in
         if let namespace = event.messageNamespace, let id = event.messageId {
             navigateToMessage(EngineMessage.Id(
-                peerId: PeerId(event.chatPeerId),
+                peerId: EnginePeer.Id(event.chatPeerId),
                 namespace: namespace,
                 id: id
             ))

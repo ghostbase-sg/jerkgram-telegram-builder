@@ -17,6 +17,7 @@ def main():
     node = (BASE / "ChatSearchNavigationContentNode.swift").read_text()
     controller = (BASE / "JerkgramTimeMachineController.swift").read_text()
     require("jerkgramOpenTimeMachine" in node and "interaction.presentController" in node, "search route missing")
+    require("peerId: EnginePeer.Id(event.chatPeerId)" in controller, "message navigation peer-id owner mismatch")
     for token in ("deletedMessage", "editedMessage", "recoveredMedia", "senderPeerId", "JerkgramTextDiff.diff", "navigateToMessage", "event.eventId"):
         require(token in controller, "controller invariant missing: " + token)
     print("[verify Build118 Time Machine UI] GREEN: ordinary search entry, filters, author, exact diff and live/local navigation")
