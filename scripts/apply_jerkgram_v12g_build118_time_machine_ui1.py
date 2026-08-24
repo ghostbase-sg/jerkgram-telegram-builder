@@ -84,7 +84,7 @@ def patch_source(text):
 
 
 def patch_build(text):
-    for dep in ('        "//submodules/JerkgramCore:JerkgramCore",\n', '        "//submodules/ItemListUI:ItemListUI",\n', '        "//submodules/AlertUI:AlertUI",\n'):
+    for dep in ('        "//submodules/JerkgramCore:JerkgramCore",\n', '        "//submodules/ItemListUI:ItemListUI",\n', '        "//submodules/AlertUI:AlertUI",\n', '        "//submodules/PresentationDataUtils:PresentationDataUtils",\n'):
         if dep not in text:
             require("deps = [\n" in text, "BUILD deps missing")
             text = text.replace("deps = [\n", "deps = [\n" + dep, 1)
