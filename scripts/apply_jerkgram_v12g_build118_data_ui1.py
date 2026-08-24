@@ -21,9 +21,9 @@ def require(value, message):
 def patch_settings(text):
     text = text.replace("    case root\n", "    case root\n    case dataAndBackup\n", 1)
     text = text.replace("        case .root:\n            return strings.settingsTitle", "        case .root:\n            return strings.settingsTitle\n        case .dataAndBackup:\n            return strings.dataAndBackup", 1)
-    root_row = '.disclosure(0, 8, strings.about, "GhostBaseAbout", .about)'
+    root_row = '.disclosure(0, 8, strings.about, "Chat/Context Menu/Info", .about)'
     require(root_row in text, "root About row missing")
-    text = text.replace(root_row, '.disclosure(0, 8, strings.dataAndBackup, "GhostBaseMediaStories", .dataAndBackup),\n            .disclosure(0, 9, strings.about, "GhostBaseAbout", .about)', 1)
+    text = text.replace(root_row, '.disclosure(0, 8, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup),\n            .disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)', 1)
     opener = '''openPage: { selectedPage in
         pushController?(
             ghostBaseSettingsPageController(

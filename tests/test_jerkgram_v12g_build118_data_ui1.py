@@ -21,7 +21,22 @@ class Build118DataUITests(unittest.TestCase):
             strings = root / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
             settings.parent.mkdir(parents=True)
             strings.parent.mkdir(parents=True)
-            settings.write_text('''private enum GhostBaseSettingsPage: Equatable {\n    case root\n    case about\n    func localizedTitle(_ strings: JerkgramStrings) -> String {\n        switch self {\n        case .root: return strings.settingsTitle\n        case .about: return strings.about\n        }\n    }\n}\nif page == .root {\n    return [\n        .disclosure(0, 8, strings.about, "GhostBaseAbout", .about)\n    ]\n}\n''')
+            settings.write_text('''private enum GhostBaseSettingsPage: Equatable {
+    case root
+    case about
+    func localizedTitle(_ strings: JerkgramStrings) -> String {
+        switch self {
+        case .root: return strings.settingsTitle
+        case .about: return strings.about
+        }
+    }
+}
+if page == .root {
+    return [
+        .disclosure(0, 8, strings.about, "Chat/Context Menu/Info", .about)
+    ]
+}
+''')
             strings.write_text('''public enum JerkgramStringKey: String, CaseIterable {\n    case about\n}\npublic struct JerkgramStrings {\n    public var about: String { self.text(.about) }\n    private static let english: [JerkgramStringKey: String] = [\n        .about: "About"\n    ]\n    private static let russian: [JerkgramStringKey: String] = [\n        .about: "О приложении"\n    ]\n}\n''')
             (root / "submodules/SettingsUI/BUILD").write_text('deps = [\n]')
             env = os.environ.copy()
@@ -34,6 +49,10 @@ class Build118DataUITests(unittest.TestCase):
             rendered_settings = settings.read_text()
             self.assertIn(".dataAndBackup", rendered_settings)
             self.assertIn("jerkgramDataAndBackupController", rendered_settings)
+            self.assertIn('strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup', rendered_settings)
+            self.assertIn('strings.about, "Chat/Context Menu/Info", .about', rendered_settings)
+            self.assertNotIn('"GhostBaseMediaStories"', rendered_settings)
+            self.assertNotIn('"GhostBaseAbout"', rendered_settings)
             self.assertIn("SSZipArchive", flow)
             self.assertIn("legacyICloudFilePicker", flow)
             self.assertIn("confirmSettingsChanges", flow)
