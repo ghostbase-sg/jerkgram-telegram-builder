@@ -33,7 +33,7 @@ def main():
 
     for path in ACTIVE_WORKFLOWS:
         workflow = path.read_text(encoding="utf-8")
-        require("Jerkgram-build117" in workflow, f"{path.name}: Build117 artifact missing")
+        require("Jerkgram-build118" in workflow, f"{path.name}: Build118 artifact missing")
         require(workflow.count("uses: actions/upload-artifact@v4") == 1, f"{path.name}: exactly one success artifact required")
         require("if: always()" not in workflow, f"{path.name}: duplicate always-upload remains")
         # Release packaging must never copy an unrelated Whitegram dylib payload.

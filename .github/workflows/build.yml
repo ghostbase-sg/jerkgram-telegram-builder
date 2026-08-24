@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build117
+name: Jerkgram 12.9.2 Build118
 
 on:
   workflow_dispatch:
@@ -74,10 +74,35 @@ jobs:
             scripts/verify_jerkgram_v12f_build117_extension_boundaries1.py \
             scripts/verify_jerkgram_v12f_build117_release_readiness1.py \
             scripts/install_jerkgram_v12f_build117_probe_hook.py \
-            scripts/jerkgram_publish_build117_artifact.py
+            scripts/jerkgram_publish_build117_artifact.py \
+            scripts/apply_jerkgram_v12g_build118_core1.py \
+            scripts/verify_jerkgram_v12g_build118_core1.py \
+            scripts/apply_jerkgram_v12g_build118_storage1.py \
+            scripts/verify_jerkgram_v12g_build118_storage1.py \
+            scripts/apply_jerkgram_v12g_build118_time_machine1.py \
+            scripts/verify_jerkgram_v12g_build118_time_machine1.py \
+            scripts/apply_jerkgram_v12g_build118_archive1.py \
+            scripts/verify_jerkgram_v12g_build118_archive1.py \
+            scripts/apply_jerkgram_v12g_build118_about_cards1.py \
+            scripts/verify_jerkgram_v12g_build118_about_cards1.py \
+            scripts/apply_jerkgram_v12g_build118_profile_report_polish1.py \
+            scripts/verify_jerkgram_v12g_build118_profile_report_polish1.py \
+            scripts/apply_jerkgram_v12g_build118_integration1.py \
+            scripts/apply_jerkgram_v12g_build118_data_ui1.py \
+            scripts/verify_jerkgram_v12g_build118_data_ui1.py \
+            scripts/apply_jerkgram_v12g_build118_time_machine_ui1.py \
+            scripts/verify_jerkgram_v12g_build118_time_machine_ui1.py \
+            scripts/apply_jerkgram_v12g_build118_glass1.py \
+            scripts/verify_jerkgram_v12g_build118_glass1.py \
+            scripts/apply_jerkgram_v12g_build118_since_last_open1.py \
+            scripts/verify_jerkgram_v12g_build118_since_last_open1.py \
+            scripts/verify_jerkgram_v12g_build118_release_readiness1.py \
+            scripts/install_jerkgram_v12g_build118_probe_hook.py \
+            scripts/jerkgram_publish_build118_artifact.py
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
+          python3 scripts/install_jerkgram_v12g_build118_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
@@ -85,14 +110,14 @@ jobs:
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build117_artifact.py
+          python3 scripts/jerkgram_publish_build118_artifact.py
 
       - name: Upload Jerkgram build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build117
+          name: Jerkgram-build118
           path: |
-            artifacts/Jerkgram-build117.ipa
-            artifacts/Jerkgram-build117-info.txt
+            artifacts/Jerkgram-build118.ipa
+            artifacts/Jerkgram-build118-info.txt
           if-no-files-found: error

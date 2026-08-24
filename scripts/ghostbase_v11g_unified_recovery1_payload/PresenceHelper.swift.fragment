@@ -1,5 +1,6 @@
 // MARK: GhostBase v1.1G PRESENCEBOUNDED1
 public struct GhostBasePresenceHistoryEvent: Codable, Equatable {
+    public var eventId: String?
     public let observedAt: Int64
     public let status: String
     public let until: Int32?
@@ -68,6 +69,7 @@ private enum GhostBasePresenceStoreV11G {
             isHidden = hidden
         }
         return GhostBasePresenceHistoryEvent(
+            eventId: UUID().uuidString.lowercased(),
             observedAt: Int64(Date().timeIntervalSince1970),
             status: status,
             until: until,
@@ -76,19 +78,35 @@ private enum GhostBasePresenceStoreV11G {
         )
     }
 
-    static func transitionKey(_ event: GhostBasePresenceHistoryEvent) -> String {
-        return "\(event.status)|hidden=\(event.isHidden)"
+    static func structuralKey(_ event: GhostBasePresenceHistoryEvent) -> String {
+        return "\(event.observedAt)|\(event.status)|\(event.until.map(String.init) ?? "-")|\(event.lastActivity)|\(event.isHidden)"
+    }
+
+    static func migratedEventId(_ event: GhostBasePresenceHistoryEvent, index: Int) -> String {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in "\(index)|\(self.structuralKey(event))".utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 1_099_511_628_211
+        }
+        return "presence-v1-" + String(hash, radix: 16)
     }
 
     static func compact(_ source: [GhostBasePresenceHistoryEvent]) -> [GhostBasePresenceHistoryEvent] {
         var result: [GhostBasePresenceHistoryEvent] = []
         result.reserveCapacity(min(source.count, self.maximumEvents))
-        for event in source {
+        var identities = Set<String>()
+        for (index, sourceEvent) in source.enumerated() {
+            var event = sourceEvent
             if event.status == "нет данных" {
                 continue
             }
-            if let previous = result.last,
-               self.transitionKey(previous) == self.transitionKey(event) {
+            if event.eventId == nil {
+                // Stable migration identity uses structural fields and the
+                // stored ordinal, never localized display text alone.
+                event.eventId = self.migratedEventId(event, index: index)
+            }
+            guard let eventId = event.eventId,
+                  identities.insert(eventId).inserted else {
                 continue
             }
             result.append(event)
@@ -130,7 +148,11 @@ private enum GhostBasePresenceStoreV11G {
                 self.histories[key] = events
             }
             if let previous = events.last,
-               self.transitionKey(previous) == self.transitionKey(event) {
+               previous.status == event.status,
+               previous.until == event.until,
+               previous.lastActivity == event.lastActivity,
+               previous.isHidden == event.isHidden,
+               event.observedAt - previous.observedAt <= 2 {
                 return
             }
             events.append(event)
@@ -296,7 +318,8 @@ public func ghostBasePresenceHistoryReport(
     var lines = ["История присутствия: \(events.count) переходов"]
     for event in events.reversed() {
         var details: [String] = []
-        if event.status == "онлайн", let until = event.until, until > 0 {
+        if event.status == "онлайн", let until = event.until,
+           Int64(until) >= event.observedAt {
             details.append(
                 "до \(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(until))))"
             )

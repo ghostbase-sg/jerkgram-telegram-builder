@@ -527,6 +527,31 @@ python3 ../../scripts/verify_jerkgram_v12f_build117_profile_localization1.py
 python3 ../../scripts/apply_jerkgram_v12f_build117_extension_boundaries1.py
 python3 ../../scripts/verify_jerkgram_v12f_build117_extension_boundaries1.py
 python3 ../../scripts/verify_jerkgram_v12f_build117_release_readiness1.py
+
+echo
+echo "== Jerkgram v1.2G Build118 =="
+python3 ../../scripts/apply_jerkgram_v12g_build118_core1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_core1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_storage1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_storage1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_time_machine1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_time_machine1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_archive1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_archive1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_about_cards1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_about_cards1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_profile_report_polish1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_profile_report_polish1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_integration1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_data_ui1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_data_ui1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_time_machine_ui1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_time_machine_ui1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_glass1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_glass1.py
+python3 ../../scripts/apply_jerkgram_v12g_build118_since_last_open1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_since_last_open1.py
+python3 ../../scripts/verify_jerkgram_v12g_build118_release_readiness1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
