@@ -2,6 +2,9 @@ name: Jerkgram 12.9.2 Build118
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - Jerkgram-12.9.2
 
 jobs:
   build-probe:
