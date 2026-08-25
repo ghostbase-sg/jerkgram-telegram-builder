@@ -80,15 +80,29 @@ class Build120ProfileBlurLifecycleTests(unittest.TestCase):
 
     def test_probe_hook_runs_after_build119_and_before_bazel(self) -> None:
         source = HOOK.read_text(encoding="utf-8")
+        source_order_start = source.index("SOURCE_ORDERED = (")
+        source_order_end = source.index(")\nSOURCE_ANCHOR", source_order_start)
+        source_order = source[source_order_start:source_order_end]
         ordered = (
-            "verify_jerkgram_v12h_build119_hybrid_ui1.py",
             "apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py",
             "verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py",
             "apply_jerkgram_v12i_build120_sticker_alpha1.py",
             "verify_jerkgram_v12i_build120_sticker_alpha1.py",
         )
-        positions = [source.index(token) for token in ordered]
+        positions = [source_order.index(token) for token in ordered]
         self.assertEqual(positions, sorted(positions))
+        self.assertIn(
+            'SOURCE_ANCHOR = "python3 ../../scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py\\n"',
+            source,
+        )
+        self.assertIn(
+            'require(text.index("verify_jerkgram_v12h_build119_hybrid_ui1.py") < source_positions[0]',
+            source,
+        )
+        self.assertIn(
+            'require(source_positions[-1] < text.index(BAZEL_ANCHOR)',
+            source,
+        )
         self.assertIn("jerkgram_finalize_build120_identity.py", source)
         self.assertIn("verify_jerkgram_v12i_build120_final_ipa.py", source)
 
