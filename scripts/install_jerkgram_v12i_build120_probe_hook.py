@@ -8,6 +8,8 @@ PROBE = Path(__file__).resolve().parent / "bazel_build_probe_official.sh"
 SOURCE_ORDERED = (
     "apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py",
     "verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py",
+    "apply_jerkgram_v12i_build120_sticker_alpha1.py",
+    "verify_jerkgram_v12i_build120_sticker_alpha1.py",
 )
 SOURCE_ANCHOR = "python3 ../../scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py\n"
 BAZEL_ANCHOR = '"$BAZEL_BIN" build'
@@ -41,7 +43,7 @@ def main():
         require(text.count(SOURCE_ANCHOR) == 1, "Build119 source verifier anchor count != 1")
         block = (
             SOURCE_ANCHOR
-            + '\necho\necho "== Jerkgram v1.2I Build120 profile blur lifecycle =="\n'
+            + '\necho\necho "== Jerkgram v1.2I Build120 profile lifecycle + sticker alpha =="\n'
             + "\n".join(source_line(name) for name in SOURCE_ORDERED)
             + "\n"
         )
@@ -75,7 +77,7 @@ def main():
 
     PROBE.write_text(text, encoding="utf-8")
     print("[Build120 probe hook] GREEN")
-    print("[Build120 probe hook] profile lifecycle overlay follows Build119 and precedes Bazel")
+    print("[Build120 probe hook] profile lifecycle and sticker alpha follow Build119 and precede Bazel")
     print("[Build120 probe hook] embedded Build120 identity follows Build119 final verification")
 
 

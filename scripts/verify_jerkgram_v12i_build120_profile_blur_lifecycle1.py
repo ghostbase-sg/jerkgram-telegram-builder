@@ -18,7 +18,9 @@ BG = ROOT / (
 
 PIPELINE_MARK = "GhostBase v1.1T BUILD97_STATIC_AVATAR_PIPELINE1"
 BUILD120_MARK = "Jerkgram v1.2I BUILD120_PROFILE_COLDSTART1"
-BUILD113_MARK = "Jerkgram v1.2B BUILD113_STATIC_AVATAR_BLUR_OWNER1"
+BUILD106_MARK = "GhostBase v1.1U BUILD106_STATIC_AVATAR_BLUR1"
+BUILD114_MARK = "Jerkgram v1.2C BUILD114_SOURCE_LUMINANCE1"
+REMOVED_BUILD113_MARK = "Jerkgram v1.2B BUILD113_STATIC_AVATAR_BLUR_OWNER1"
 CACHE_MARK = "GhostBase v1.1T AVATAR_REOPEN_NO_GREY1"
 
 
@@ -31,8 +33,12 @@ def main() -> None:
     require(BG.is_file(), "profile background source missing: " + str(BG))
     text = BG.read_text(encoding="utf-8")
 
-    for token in (PIPELINE_MARK, BUILD120_MARK, BUILD113_MARK, CACHE_MARK):
+    for token in (PIPELINE_MARK, BUILD120_MARK, BUILD106_MARK, BUILD114_MARK, CACHE_MARK):
         require(token in text, "owner missing: " + token)
+    require(
+        REMOVED_BUILD113_MARK not in text,
+        "obsolete Build113 systemMaterial owner survived Build114",
+    )
 
     start = text.find("    // MARK: " + PIPELINE_MARK + "\n")
     end = text.find("    private func resourceEntrySignal(\n", start)
@@ -44,15 +50,9 @@ def main() -> None:
     require("synchronousLoad: false" not in avatar, "synchronousLoad false survived in static avatar owner")
     require(avatar.count(BUILD120_MARK) == 1, "Build120 cold-start owner count != 1")
 
-    blur_start = text.find("            // MARK: " + BUILD113_MARK + "\n")
-    blur_end = text.find("\n        case .telegramTheme:", blur_start)
-    require(blur_start >= 0, "Build113 static blur owner start missing")
-    if blur_end < 0:
-        blur_end = min(len(text), blur_start + 5000)
-    blur = text[blur_start:blur_end]
-
-    require("systemMaterialDark" in blur, "Build113 dark systemMaterial owner missing")
-    require("systemMaterialLight" in blur, "Build113 light systemMaterial owner missing")
+    blur_start = text.find("            // MARK: " + BUILD106_MARK + "\n")
+    require(blur_start >= 0, "Build114-restored Build106 blur owner start missing")
+    blur = text[blur_start:min(len(text), blur_start + 1800)]
     require("self.blurView.alpha = 1.0" in blur, "persistent blur owner is not fully opaque")
 
     cache_start = text.find("            // MARK: " + CACHE_MARK + "\n")
@@ -66,7 +66,8 @@ def main() -> None:
 
     print("[Build120 profile blur verify] GREEN")
     print("[Build120 profile blur verify] static avatar cold load is synchronous through Telegram peerAvatarImage")
-    print("[Build120 profile blur verify] decoded source remains unblurred before the single Build113 material owner")
+    print("[Build120 profile blur verify] Build114-restored Build106 blur alpha owner is retained")
+    print("[Build120 profile blur verify] obsolete Build113 systemMaterial override is absent")
     print("[Build120 profile blur verify] RAM/disk reopen cache remains intact")
 
 
