@@ -102,6 +102,7 @@ jobs:
             scripts/verify_jerkgram_v12g_build118_release_readiness1.py \
             scripts/install_jerkgram_v12g_build118_probe_hook.py \
             scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py \
+            scripts/apply_jerkgram_v12h_build119_hybrid_ui2.py \
             scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py \
             scripts/install_jerkgram_v12h_build119_probe_hook.py \
             scripts/jerkgram_finalize_build119_identity.py \
