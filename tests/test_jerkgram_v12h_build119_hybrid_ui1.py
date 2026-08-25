@@ -4,7 +4,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 WORKFLOW = REPO / ".github/workflows/build.yml"
-BAZEL = REPO / "scripts/bazel_build_probe_official.sh"
+INSTALL = REPO / "scripts/install_jerkgram_v12h_build119_probe_hook.py"
 APPLY = REPO / "scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py"
 VERIFY = REPO / "scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py"
 FINALIZE = REPO / "scripts/jerkgram_finalize_build119_identity.py"
@@ -18,6 +18,7 @@ class Build119HybridUIContractTests(unittest.TestCase):
         self.assertIn("name: Jerkgram 12.9.2 Build119", source)
         self.assertIn("scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py", source)
         self.assertIn("scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py", source)
+        self.assertIn("scripts/install_jerkgram_v12h_build119_probe_hook.py", source)
         self.assertIn("scripts/jerkgram_finalize_build119_identity.py", source)
         self.assertIn("scripts/verify_jerkgram_v12h_build119_final_ipa.py", source)
         self.assertIn("scripts/jerkgram_publish_build119_artifact.py", source)
@@ -26,23 +27,28 @@ class Build119HybridUIContractTests(unittest.TestCase):
         self.assertNotIn("name: Jerkgram 12.9.2 Build118", source)
         self.assertNotIn("name: Jerkgram-build118", source)
 
-    def test_build119_source_overlay_is_after_build118_and_before_bazel(self) -> None:
-        source = BAZEL.read_text(encoding="utf-8")
-        build118 = source.index("verify_jerkgram_v12g_build118_release_readiness1.py")
-        apply119 = source.index("apply_jerkgram_v12h_build119_hybrid_ui1.py")
-        verify119 = source.index("verify_jerkgram_v12h_build119_hybrid_ui1.py")
-        bazel = source.index('"$BAZEL_BIN" build')
-        self.assertLess(build118, apply119)
-        self.assertLess(apply119, verify119)
-        self.assertLess(verify119, bazel)
+    def test_installer_materializes_source_overlay_after_build118_before_bazel(self) -> None:
+        source = INSTALL.read_text(encoding="utf-8")
+        for token in (
+            "verify_jerkgram_v12g_build118_release_readiness1.py",
+            "apply_jerkgram_v12h_build119_hybrid_ui1.py",
+            "verify_jerkgram_v12h_build119_hybrid_ui1.py",
+            '\"$BAZEL_BIN\" build',
+        ):
+            self.assertIn(token, source)
+        self.assertIn("source_positions == sorted(source_positions)", source)
+        self.assertIn("source_positions[-1] < text.index(BAZEL_ANCHOR)", source)
 
-    def test_build119_final_identity_is_after_build114_finalizer(self) -> None:
-        source = BAZEL.read_text(encoding="utf-8")
-        build114 = source.index("jerkgram_finalize_build114_resign_ready.py")
-        build119 = source.index("jerkgram_finalize_build119_identity.py")
-        verify119 = source.index("verify_jerkgram_v12h_build119_final_ipa.py")
-        self.assertLess(build114, build119)
-        self.assertLess(build119, verify119)
+    def test_installer_materializes_final_identity_after_build114(self) -> None:
+        source = INSTALL.read_text(encoding="utf-8")
+        for token in (
+            "verify_jerkgram_v12c_build114_final_ipa.py",
+            "jerkgram_finalize_build119_identity.py",
+            "verify_jerkgram_v12h_build119_final_ipa.py",
+        ):
+            self.assertIn(token, source)
+        self.assertIn("final_positions == sorted(final_positions)", source)
+        self.assertIn("final_positions[0] > text.index(FINAL_ANCHOR)", source)
 
     def test_settings_overlay_replaces_permanent_stars_input_with_route(self) -> None:
         source = APPLY.read_text(encoding="utf-8")
