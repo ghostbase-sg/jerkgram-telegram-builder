@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -15,9 +16,9 @@ PUBLISH = REPO / "scripts/jerkgram_publish_build119_artifact.py"
 
 
 class Build119HybridUIContractTests(unittest.TestCase):
-    def test_workflow_is_real_build119_and_wires_all_gates(self) -> None:
+    def test_workflow_preserves_build119_gates_under_successor_builds(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("name: Jerkgram 12.9.2 Build119", source)
+        self.assertRegex(source, r"name: (?:GhostBase Swiftgram Builder|Jerkgram 12\.9\.2 Build\d+)")
         self.assertIn("scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py", source)
         self.assertIn("scripts/apply_jerkgram_v12h_build119_hybrid_ui2.py", source)
         self.assertIn("scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py", source)
@@ -25,8 +26,12 @@ class Build119HybridUIContractTests(unittest.TestCase):
         self.assertIn("scripts/jerkgram_finalize_build119_identity.py", source)
         self.assertIn("scripts/verify_jerkgram_v12h_build119_final_ipa.py", source)
         self.assertIn("scripts/jerkgram_publish_build119_artifact.py", source)
-        self.assertIn("name: Jerkgram-build119", source)
-        self.assertIn("artifacts/Jerkgram-build119.ipa", source)
+
+        artifact_builds = [int(value) for value in re.findall(r"name: Jerkgram-build(\d+)", source)]
+        self.assertTrue(artifact_builds, "current Jerkgram artifact build missing")
+        current_build = max(artifact_builds)
+        self.assertGreaterEqual(current_build, 119)
+        self.assertIn(f"artifacts/Jerkgram-build{current_build}.ipa", source)
         self.assertNotIn("name: Jerkgram 12.9.2 Build118", source)
         self.assertNotIn("name: Jerkgram-build118", source)
 
