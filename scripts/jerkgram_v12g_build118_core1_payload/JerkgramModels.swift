@@ -123,4 +123,8 @@ public enum JerkgramCoreError: Error, Equatable {
     case duplicateEvent(JerkgramEventId)
     case conflictingEvent(JerkgramEventId)
     case invalidRelativePath(String)
+    case accountScopeMismatch(expected: Int64, actual: Int64)
+    case incompleteRead(expected: Int, actual: Int)
+    case invalidIndexRange
+    case indexNotReady(Int64)
 }

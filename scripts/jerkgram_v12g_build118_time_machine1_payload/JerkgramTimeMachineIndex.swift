@@ -12,7 +12,6 @@ public struct JerkgramTimeMachineQuery: Equatable {
     public let chatPeerId: Int64
     public let kinds: Set<JerkgramEventKind>
     public let senderPeerId: Int64?
-    public let text: String?
     public let eventIds: Set<JerkgramEventId>?
 
     public init(
@@ -20,14 +19,12 @@ public struct JerkgramTimeMachineQuery: Equatable {
         chatPeerId: Int64,
         kinds: Set<JerkgramEventKind> = [],
         senderPeerId: Int64? = nil,
-        text: String? = nil,
         eventIds: Set<JerkgramEventId>? = nil
     ) {
         self.accountPeerId = accountPeerId
         self.chatPeerId = chatPeerId
         self.kinds = kinds
         self.senderPeerId = senderPeerId
-        self.text = text
         self.eventIds = eventIds
     }
 }
@@ -54,10 +51,6 @@ public final class JerkgramTimeMachineIndex {
     }
 
     public func query(_ query: JerkgramTimeMachineQuery) -> [JerkgramTimeMachineResult] {
-        let normalizedText = query.text?.folding(
-            options: [.caseInsensitive, .diacriticInsensitive],
-            locale: .current
-        )
         return self.records.lazy.filter { record in
             guard record.accountPeerId == query.accountPeerId,
                   record.chatPeerId == query.chatPeerId else {
@@ -66,13 +59,6 @@ public final class JerkgramTimeMachineIndex {
             if !query.kinds.isEmpty && !query.kinds.contains(record.kind) { return false }
             if let senderPeerId = query.senderPeerId, record.senderPeerId != senderPeerId { return false }
             if let eventIds = query.eventIds, !eventIds.contains(record.eventId) { return false }
-            if let normalizedText, !normalizedText.isEmpty {
-                let key = record.searchKey.folding(
-                    options: [.caseInsensitive, .diacriticInsensitive],
-                    locale: .current
-                )
-                if !key.contains(normalizedText) { return false }
-            }
             return true
         }.sorted { lhs, rhs in
             if lhs.sequence != rhs.sequence { return lhs.sequence > rhs.sequence }
@@ -104,6 +90,15 @@ public final class JerkgramVisitWatermarkStore {
 
     public init(rootURL: URL) {
         self.rootURL = rootURL
+    }
+
+    public func previousSequence(accountPeerId: Int64, chatPeerId: Int64) -> Int64? {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        return (try? String(
+            contentsOf: self.url(accountPeerId: accountPeerId, chatPeerId: chatPeerId),
+            encoding: .utf8
+        )).flatMap(Int64.init)
     }
 
     public func snapshotChangesSinceLastOpening(
@@ -165,8 +160,7 @@ public final class JerkgramVisitWatermarkStore {
                 kind: event.kind,
                 senderPeerId: event.senderPeerId,
                 observedAtMs: event.observedAtMs,
-                locator: locator,
-                searchKey: ""
+                locator: locator
             )
         }
         return try self.snapshotChangesSinceLastOpening(

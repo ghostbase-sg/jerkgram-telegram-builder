@@ -33,13 +33,21 @@ def patch_chat(text):
                 guard let self else { return }
                 let rootURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                     .appendingPathComponent("Jerkgram", isDirectory: true)
-                let eventStore = JerkgramJSONLEventStore(rootURL: rootURL)
-                let events = (try? eventStore.events(accountPeerId: accountPeerId, chatPeerId: chatPeerIdValue)) ?? []
                 let watermarkStore = JerkgramVisitWatermarkStore(rootURL: rootURL)
+                let previousSequence = watermarkStore.previousSequence(
+                    accountPeerId: accountPeerId,
+                    chatPeerId: chatPeerIdValue
+                )
+                guard let records = try? JerkgramCaptureRecorder.readyIndexRecords(
+                    accountPeerId: accountPeerId,
+                    chatPeerId: chatPeerIdValue,
+                    afterSequence: previousSequence,
+                    throughSequence: nil
+                ) else { return }
                 guard let changes = try? watermarkStore.snapshotChangesSinceLastOpening(
                     accountPeerId: accountPeerId,
                     chatPeerId: chatPeerIdValue,
-                    events: events
+                    records: records
                 ), changes.deletedCount + changes.editedCount + changes.recoveredMediaCount > 0 else { return }
                 Queue.mainQueue().async { [weak self] in
                     guard let self, self.viewIfLoaded?.window != nil else { return }

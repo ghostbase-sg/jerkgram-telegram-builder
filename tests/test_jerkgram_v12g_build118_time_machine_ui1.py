@@ -37,6 +37,8 @@ class Build118TimeMachineUITests(unittest.TestCase):
             )
             for token in ("deletedMessage", "editedMessage", "recoveredMedia", "senderPeerId", "JerkgramTextDiff.diff", "navigateToMessage", "localDetail"):
                 self.assertIn(token, controller)
+            self.assertIn("loadNextPage", controller)
+            self.assertIn("timeMachineLoadMore", strings.read_text())
             self.assertIn("event.eventId", controller)
             self.assertNotIn("deduplicat", controller.lower())
 

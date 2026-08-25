@@ -15,18 +15,26 @@ private struct JerkgramTimeMachineUIState: Equatable {
     var senderPeerId: Int64?
 }
 
+private struct JerkgramTimeMachinePageState: Equatable {
+    var events: [JerkgramCanonicalEvent]
+    var hasMore: Bool
+}
+
 private final class JerkgramTimeMachineUIArguments {
     let toggleKind: (JerkgramEventKind) -> Void
     let selectSender: () -> Void
     let selectEvent: (JerkgramCanonicalEvent) -> Void
+    let loadMore: () -> Void
     init(
         toggleKind: @escaping (JerkgramEventKind) -> Void,
         selectSender: @escaping () -> Void,
-        selectEvent: @escaping (JerkgramCanonicalEvent) -> Void
+        selectEvent: @escaping (JerkgramCanonicalEvent) -> Void,
+        loadMore: @escaping () -> Void
     ) {
         self.toggleKind = toggleKind
         self.selectSender = selectSender
         self.selectEvent = selectEvent
+        self.loadMore = loadMore
     }
 }
 
@@ -35,17 +43,19 @@ private enum JerkgramTimeMachineUIEntry: ItemListNodeEntry {
     case filter(Int32, Int32, String, String, JerkgramEventKind?)
     case result(Int32, Int32, String, String, JerkgramCanonicalEvent)
     case info(Int32, String)
+    case loadMore(Int32, String)
 
     var section: ItemListSectionId {
         switch self {
-        case let .header(section, _), let .filter(section, _, _, _, _), let .result(section, _, _, _, _), let .info(section, _): return section
+        case let .header(section, _), let .filter(section, _, _, _, _), let .result(section, _, _, _, _), let .info(section, _), let .loadMore(section, _): return section
         }
     }
     var stableId: Int32 {
         switch self {
         case let .header(section, _): return section * 1000
         case let .filter(section, index, _, _, _), let .result(section, index, _, _, _): return section * 1000 + index
-        case let .info(section, _): return section * 1000 + 999
+        case .info: return Int32.max - 1
+        case .loadMore: return Int32.max
         }
     }
     static func == (lhs: Self, rhs: Self) -> Bool { return lhs.stableId == rhs.stableId && String(describing: lhs) == String(describing: rhs) }
@@ -73,6 +83,13 @@ private enum JerkgramTimeMachineUIEntry: ItemListNodeEntry {
             )
         case let .info(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .loadMore(_, title):
+            return ItemListDisclosureItem(
+                presentationData: presentationData, systemStyle: .glass,
+                title: title, label: "", labelStyle: .text,
+                sectionId: self.section, style: .blocks,
+                disclosureStyle: .arrow, action: { arguments.loadMore() }
+            )
         }
     }
 }
@@ -115,8 +132,49 @@ public func jerkgramTimeMachineController(
     navigateToMessage: @escaping (EngineMessage.Id) -> Void
 ) -> ViewController {
     let accountPeerId = context.account.peerId.toInt64()
-    let store = JerkgramJSONLEventStore(rootURL: jerkgramTimeMachineRootURL())
-    let allEvents = (try? store.events(accountPeerId: accountPeerId, chatPeerId: chatPeerId)) ?? []
+    let eventsValue = Atomic<[JerkgramCanonicalEvent]>(value: [])
+    let eventsPromise = ValuePromise(
+        JerkgramTimeMachinePageState(events: [], hasMore: true),
+        ignoreRepeated: true
+    )
+    let pageLock = NSLock()
+    var beforeSequence: Int64?
+    var beforeEventId: JerkgramEventId?
+    var hasMore = true
+    var isLoading = false
+    let loadNextPage: () -> Void = {
+        pageLock.lock()
+        guard hasMore && !isLoading else {
+            pageLock.unlock()
+            return
+        }
+        isLoading = true
+        let cursorSequence = beforeSequence
+        let cursorEventId = beforeEventId
+        pageLock.unlock()
+        Queue.concurrentDefaultQueue().async {
+            let store = JerkgramJSONLEventStore(rootURL: jerkgramTimeMachineRootURL())
+            let page = (try? store.eventPage(
+                accountPeerId: accountPeerId,
+                chatPeerId: chatPeerId,
+                beforeSequence: cursorSequence,
+                beforeEventId: cursorEventId,
+                limit: 250
+            )) ?? []
+            let events = eventsValue.modify { $0 + page }
+            pageLock.lock()
+            if let last = page.last {
+                beforeSequence = last.sequence
+                beforeEventId = last.eventId
+            }
+            hasMore = page.count == 250
+            isLoading = false
+            let pageHasMore = hasMore
+            pageLock.unlock()
+            eventsPromise.set(JerkgramTimeMachinePageState(events: events, hasMore: pageHasMore))
+        }
+    }
+    loadNextPage()
     let initial = JerkgramTimeMachineUIState(
         kinds: [.deletedMessage, .deletedReply, .editedMessage, .recoveredMedia],
         senderPeerId: nil
@@ -124,7 +182,6 @@ public func jerkgramTimeMachineController(
     let stateValue = Atomic(value: initial)
     let statePromise = ValuePromise(initial, ignoreRepeated: true)
     var controller: ItemListController?
-    let senders = Array(Set(allEvents.compactMap(\.senderPeerId))).sorted()
 
     let arguments = JerkgramTimeMachineUIArguments(toggleKind: { kind in
         let value = stateValue.modify { current in
@@ -134,6 +191,7 @@ public func jerkgramTimeMachineController(
         }
         statePromise.set(value)
     }, selectSender: {
+        let senders = Array(Set(eventsValue.with { $0.compactMap(\.senderPeerId) })).sorted()
         let value = stateValue.modify { current in
             var current = current
             if let sender = current.senderPeerId, let index = senders.firstIndex(of: sender), index + 1 < senders.count {
@@ -164,14 +222,14 @@ public func jerkgramTimeMachineController(
                 actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
             ), in: .window(.root), with: nil)
         }
-    })
+    }, loadMore: loadNextPage)
 
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), eventsPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, page -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let strings = presentationData.strings.jerkgram
         let needle = initialQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let results = allEvents.filter { event in
+        let results = page.events.filter { event in
             if let eventIds, !eventIds.contains(event.eventId) { return false }
             guard state.kinds.contains(event.kind) else { return false }
             if let senderPeerId = state.senderPeerId, event.senderPeerId != senderPeerId { return false }
@@ -198,6 +256,7 @@ public func jerkgramTimeMachineController(
             entries.append(.result(1, Int32(index + 1), String(text.prefix(80)), jerkgramEventKindTitle(event.kind, strings: strings), event))
         }
         if results.isEmpty { entries.append(.info(1, strings.timeMachineEmpty)) }
+        if page.hasMore { entries.append(.loadMore(1, strings.timeMachineLoadMore)) }
         return (
             ItemListControllerState(
                 presentationData: ItemListPresentationData(presentationData),

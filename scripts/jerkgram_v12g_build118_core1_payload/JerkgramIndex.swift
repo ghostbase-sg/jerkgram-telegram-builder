@@ -24,8 +24,11 @@ public struct JerkgramTimeMachineIndexRecord: Codable, Equatable {
     public let kind: JerkgramEventKind
     public let senderPeerId: Int64?
     public let observedAtMs: Int64
+    public let byteOffset: UInt64
+    public let byteLength: UInt64
+    public let messageNamespace: Int32?
+    public let messageId: Int32?
     public let locator: JerkgramCanonicalLocator
-    public let searchKey: String
 
     public init(
         accountPeerId: Int64,
@@ -35,8 +38,11 @@ public struct JerkgramTimeMachineIndexRecord: Codable, Equatable {
         kind: JerkgramEventKind,
         senderPeerId: Int64?,
         observedAtMs: Int64,
-        locator: JerkgramCanonicalLocator,
-        searchKey: String
+        byteOffset: UInt64 = 0,
+        byteLength: UInt64 = 0,
+        messageNamespace: Int32? = nil,
+        messageId: Int32? = nil,
+        locator: JerkgramCanonicalLocator
     ) {
         self.accountPeerId = accountPeerId
         self.chatPeerId = chatPeerId
@@ -45,7 +51,10 @@ public struct JerkgramTimeMachineIndexRecord: Codable, Equatable {
         self.kind = kind
         self.senderPeerId = senderPeerId
         self.observedAtMs = observedAtMs
+        self.byteOffset = byteOffset
+        self.byteLength = byteLength
+        self.messageNamespace = messageNamespace
+        self.messageId = messageId
         self.locator = locator
-        self.searchKey = searchKey
     }
 }

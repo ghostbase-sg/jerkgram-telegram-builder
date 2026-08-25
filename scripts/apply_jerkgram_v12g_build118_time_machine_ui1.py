@@ -116,6 +116,7 @@ public extension JerkgramStrings {
     var timeMachineAllAuthors: String { self.languageCode == "ru" ? "Все" : "All" }
     var timeMachineResults: String { self.languageCode == "ru" ? "Результаты" : "Results" }
     var timeMachineEmpty: String { self.languageCode == "ru" ? "Локальных изменений не найдено." : "No local changes found." }
+    var timeMachineLoadMore: String { self.languageCode == "ru" ? "Загрузить ещё" : "Load More" }
 }
 '''
     STRINGS.write_text(strings, encoding="utf-8")

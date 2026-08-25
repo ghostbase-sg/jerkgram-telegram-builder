@@ -176,7 +176,36 @@ public final class JerkgramRetentionStore {
 /// transaction boundary. Values are keyed by the real Telegram account peer
 /// id and chat peer id; there is deliberately no "current account" fallback.
 public enum JerkgramRetentionRuntime {
+    private struct Snapshot {
+        let configuration: JerkgramRetentionConfiguration
+        let chatOverridesByPeerId: [Int64: JerkgramChatRetentionOverride]
+
+        init(configuration: JerkgramRetentionConfiguration) {
+            self.configuration = configuration
+            var chatOverridesByPeerId: [Int64: JerkgramChatRetentionOverride] = [:]
+            for override in configuration.chatOverrides {
+                chatOverridesByPeerId[override.chatPeerId] = override
+            }
+            self.chatOverridesByPeerId = chatOverridesByPeerId
+        }
+
+        func effectivePolicy(chatPeerId: Int64) -> (Bool, JerkgramRetentionPolicy) {
+            guard let override = self.chatOverridesByPeerId[chatPeerId] else {
+                return (true, self.configuration.accountPolicy)
+            }
+            return (
+                override.captureEnabled ?? true,
+                JerkgramRetentionPolicy(
+                    historyDuration: override.historyDuration ?? self.configuration.accountPolicy.historyDuration,
+                    mediaByteLimit: override.mediaByteLimit ?? self.configuration.accountPolicy.mediaByteLimit,
+                    archiveSecretChats: override.archiveSecretChats ?? self.configuration.accountPolicy.archiveSecretChats
+                )
+            )
+        }
+    }
+
     private static let lock = NSLock()
+    private static var snapshots: [Int64: Snapshot] = [:]
 
     public static func save(
         _ configuration: JerkgramRetentionConfiguration,
@@ -187,6 +216,7 @@ public enum JerkgramRetentionRuntime {
         let data = try encoder.encode(configuration)
         self.lock.lock()
         userDefaults.set(data, forKey: self.accountKey(configuration.accountPeerId))
+        self.snapshots[configuration.accountPeerId] = Snapshot(configuration: configuration)
         self.lock.unlock()
     }
 
@@ -196,12 +226,20 @@ public enum JerkgramRetentionRuntime {
     ) -> JerkgramRetentionConfiguration {
         self.lock.lock()
         defer { self.lock.unlock() }
+        if let snapshot = self.snapshots[accountPeerId] {
+            return snapshot.configuration
+        }
+        let configuration: JerkgramRetentionConfiguration
         guard let data = userDefaults.data(forKey: self.accountKey(accountPeerId)),
               let value = try? JSONDecoder().decode(JerkgramRetentionConfiguration.self, from: data),
               value.accountPeerId == accountPeerId else {
-            return JerkgramRetentionConfiguration(accountPeerId: accountPeerId)
+            configuration = JerkgramRetentionConfiguration(accountPeerId: accountPeerId)
+            self.snapshots[accountPeerId] = Snapshot(configuration: configuration)
+            return configuration
         }
-        return value
+        configuration = value
+        self.snapshots[accountPeerId] = Snapshot(configuration: configuration)
+        return configuration
     }
 
     public static func shouldCapture(
@@ -211,11 +249,22 @@ public enum JerkgramRetentionRuntime {
         legacyToggleKey: String,
         userDefaults: UserDefaults = .standard
     ) -> Bool {
-        let configuration = self.configuration(
-            accountPeerId: accountPeerId,
-            userDefaults: userDefaults
-        )
-        let (captureEnabled, policy) = configuration.effectivePolicy(chatPeerId: chatPeerId)
+        self.lock.lock()
+        let cachedSnapshot = self.snapshots[accountPeerId]
+        self.lock.unlock()
+        let snapshot: Snapshot
+        if let cachedSnapshot {
+            snapshot = cachedSnapshot
+        } else {
+            let configuration = self.configuration(
+                accountPeerId: accountPeerId,
+                userDefaults: userDefaults
+            )
+            self.lock.lock()
+            snapshot = self.snapshots[accountPeerId] ?? Snapshot(configuration: configuration)
+            self.lock.unlock()
+        }
+        let (captureEnabled, policy) = snapshot.effectivePolicy(chatPeerId: chatPeerId)
         guard JerkgramRetentionEngine.shouldCapture(
             captureEnabled: captureEnabled,
             policy: policy,

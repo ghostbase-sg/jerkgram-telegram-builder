@@ -33,6 +33,8 @@ def main():
         "mediaEventIdsToRemove",
         "retainedEvents",
         "public enum JerkgramRetentionRuntime",
+        "private static var snapshots",
+        "chatOverridesByPeerId",
         "jerkgram.retention.account.\\(accountPeerId)",
         "jerkgram.account.\\(accountPeerId).setting",
         "public static func applyCleanup",
@@ -41,7 +43,7 @@ def main():
         require(token in text, "retention invariant missing: " + token)
     require("accountPeerId: Int64" in text, "account scope missing")
     require("chatPeerId: Int64" in text, "chat scope missing")
-    print("[verify Build118 storage] GREEN: defaults, overrides, forever/unlimited, fallback-preserving eviction")
+    print("[verify Build118 storage] GREEN: cached account snapshots, overrides, forever/unlimited, fallback-preserving eviction")
 
 
 if __name__ == "__main__":

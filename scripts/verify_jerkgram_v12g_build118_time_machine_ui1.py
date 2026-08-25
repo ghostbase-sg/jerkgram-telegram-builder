@@ -22,6 +22,8 @@ def main():
     require(node.index("self.view.addSubview(self.backgroundContainer)") < node.index("self.view.addSubview(self.jerkgramTimeMachineBackground)"), "Time Machine control is covered by background container")
     require("peerId: EnginePeer.Id(event.chatPeerId)" in controller, "message navigation peer-id owner mismatch")
     require("import PresentationDataUtils" in controller, "PresentationDataUtils import missing")
+    require("loadNextPage" in controller and "timeMachineLoadMore" in controller, "bounded paging control missing")
+    require("while let page" not in controller, "Time Machine still drains complete history eagerly")
     require("//submodules/PresentationDataUtils:PresentationDataUtils" in build, "PresentationDataUtils BUILD dependency missing")
     for token in ("deletedMessage", "editedMessage", "recoveredMedia", "senderPeerId", "JerkgramTextDiff.diff", "navigateToMessage", "event.eventId"):
         require(token in controller, "controller invariant missing: " + token)
