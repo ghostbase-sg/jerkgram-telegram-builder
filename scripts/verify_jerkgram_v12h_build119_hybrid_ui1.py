@@ -15,7 +15,7 @@ ROOT = Path(
 SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 STRINGS = ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
 DATA = ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift"
-TIME_MACHINE = ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramTimeMachineController.swift"
+TIME_MACHINE = ROOT / "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift"
 APPLY = REPO / "scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py"
 
 EXPECTED_ARTIFACT = "Jerkgram-build119"
@@ -104,8 +104,8 @@ def main():
     require("strings.change" in stars, "Stars editor action header missing")
     require("strings.starsEditorHint" in stars, "Stars local-only explanation missing")
 
+    require("BUILD118_ABOUT_CHANNEL_CARDS1" in settings, "Build118 About channel/community owner lost")
     about = block(settings, "if page == .about {")
-    require("BUILD118_ABOUT_CHANNEL_CARDS1" in about, "Build118 About channel/community cards lost")
     require("strings.aboutBuild119Summary" in about, "Build119 About identity missing")
     require("Build: 118" not in about, "Build118 About identity survived")
 
