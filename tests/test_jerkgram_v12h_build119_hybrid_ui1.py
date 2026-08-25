@@ -6,7 +6,9 @@ REPO = Path(__file__).resolve().parents[1]
 WORKFLOW = REPO / ".github/workflows/build.yml"
 INSTALL = REPO / "scripts/install_jerkgram_v12h_build119_probe_hook.py"
 APPLY = REPO / "scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py"
+APPLY_CORRECTION = REPO / "scripts/apply_jerkgram_v12h_build119_hybrid_ui2.py"
 VERIFY = REPO / "scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py"
+BUILD117_RELEASE = REPO / "scripts/verify_jerkgram_v12f_build117_release_readiness1.py"
 FINALIZE = REPO / "scripts/jerkgram_finalize_build119_identity.py"
 FINAL_VERIFY = REPO / "scripts/verify_jerkgram_v12h_build119_final_ipa.py"
 PUBLISH = REPO / "scripts/jerkgram_publish_build119_artifact.py"
@@ -27,15 +29,16 @@ class Build119HybridUIContractTests(unittest.TestCase):
         self.assertNotIn("name: Jerkgram 12.9.2 Build118", source)
         self.assertNotIn("name: Jerkgram-build118", source)
 
-    def test_installer_materializes_source_overlay_after_build118_before_bazel(self) -> None:
+    def test_installer_materializes_corrected_source_overlay_after_build118_before_bazel(self) -> None:
         source = INSTALL.read_text(encoding="utf-8")
         for token in (
             "verify_jerkgram_v12g_build118_release_readiness1.py",
-            "apply_jerkgram_v12h_build119_hybrid_ui1.py",
+            "apply_jerkgram_v12h_build119_hybrid_ui2.py",
             "verify_jerkgram_v12h_build119_hybrid_ui1.py",
             '\"$BAZEL_BIN\" build',
         ):
             self.assertIn(token, source)
+        self.assertNotIn('"apply_jerkgram_v12h_build119_hybrid_ui1.py",\n    "verify_jerkgram', source)
         self.assertIn("source_positions == sorted(source_positions)", source)
         self.assertIn("source_positions[-1] < text.index(BAZEL_ANCHOR)", source)
 
@@ -49,6 +52,26 @@ class Build119HybridUIContractTests(unittest.TestCase):
             self.assertIn(token, source)
         self.assertIn("final_positions == sorted(final_positions)", source)
         self.assertIn("final_positions[0] > text.index(FINAL_ANCHOR)", source)
+
+    def test_about_correction_uses_exact_materialized_build118_owner(self) -> None:
+        source = APPLY_CORRECTION.read_text(encoding="utf-8")
+        self.assertIn("apply_jerkgram_v12h_build119_hybrid_ui1.py", source)
+        self.assertIn('old_footer = \' .info(1, "Jerkgram', source.replace("'= '.info", "'= ' .info"))
+        self.assertIn("Official Telegram 12.9.2", source)
+        self.assertIn("Build: 118", source)
+        self.assertIn("block.count(old_footer) == 1", source)
+        self.assertIn("strings.aboutBuild119Summary", source)
+        self.assertIn("module.patch_about = patch_about", source)
+        self.assertIn("module.main()", source)
+
+    def test_build117_release_gate_accepts_truthful_successor_artifact(self) -> None:
+        source = BUILD117_RELEASE.read_text(encoding="utf-8")
+        self.assertIn('re.findall(r"Jerkgram-build(\\d+)"', source)
+        self.assertIn("max(artifact_builds) >= 118", source)
+        self.assertIn("Build118-or-newer Jerkgram artifact missing", source)
+        self.assertNotIn('require("Jerkgram-build118" in workflow', source)
+        self.assertIn('workflow.count("uses: actions/upload-artifact@v4") == 1', source)
+        self.assertIn('"Whitegram" not in workflow', source)
 
     def test_settings_overlay_replaces_permanent_stars_input_with_route(self) -> None:
         source = APPLY.read_text(encoding="utf-8")
