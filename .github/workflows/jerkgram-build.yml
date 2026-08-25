@@ -1,0 +1,193 @@
+name: Jerkgram 12.9.2 Build120
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - Jerkgram-12.9.2
+
+concurrency:
+  group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build-probe:
+    runs-on: macos-26
+
+    env:
+      USE_BAZEL_VERSION: 8.4.2
+      BAZEL_BIN: bazelisk
+      CERT_B64: ${{ secrets.CERT_B64 }}
+      PROF_B64: ${{ secrets.PROF_B64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+    steps:
+      - name: Checkout builder
+        uses: actions/checkout@v4
+
+      - name: Purge obsolete GitHub UI state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          echo "== Delete temporary branches =="
+          for branch in \
+            GhostBase-12.9.2 \
+            Jerkgram-build120-work \
+            Jerkgram-build120-clean \
+            Jerkgram-build120-clean2 \
+            Jerkgram-build120-clean3 \
+            Jerkgram-build120-clean4 \
+            tmp-cleanup-checkpoint \
+            build119-hybrid-ui \
+            build120-sticker-alpha \
+            build120-sticker-alpha-red \
+            build120-visual-sticker
+          do
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true
+          done
+
+          echo "== Delete obsolete workflow history =="
+          mapfile -t obsolete_runs < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+              --jq '.workflow_runs[] | select(.id != env.GITHUB_RUN_ID) | select(.name == "Build120 Source Checks" or .path == ".github/workflows/build.yml") | .id'
+          )
+
+          for id in "${obsolete_runs[@]:-}"; do
+            [ -n "$id" ] || continue
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/cancel" >/dev/null 2>&1 || true
+          done
+          sleep 2
+          for id in "${obsolete_runs[@]:-}"; do
+            [ -n "$id" ] || continue
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/runs/${id}" >/dev/null 2>&1 || true
+          done
+
+          echo "Repository UI cleanup complete"
+
+      - name: Install Bazelisk
+        run: |
+          set -e
+          if ! command -v bazelisk >/dev/null 2>&1; then
+            brew install bazelisk
+          fi
+          bazelisk --version || true
+
+      - name: Prepare clean Official Telegram source
+        run: |
+          set -e
+          chmod +x scripts/prepare_source_official.sh
+          scripts/prepare_source_official.sh
+
+      - name: Apply legacy compatibility baseline
+        run: |
+          set -e
+          python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
+
+      - name: Build Jerkgram
+        run: |
+          set -e
+          python3 -m py_compile \
+            scripts/apply_jerkgram_v12d_build115_appgroup1.py \
+            scripts/verify_jerkgram_v12d_build115_appgroup1.py \
+            scripts/apply_jerkgram_v12d_build115_profile_ui1.py \
+            scripts/verify_jerkgram_v12d_build115_profile_ui1.py \
+            scripts/apply_jerkgram_v12d_build115_localization1.py \
+            scripts/verify_jerkgram_v12d_build115_localization1.py \
+            scripts/apply_jerkgram_v12d_build115_research_settings1.py \
+            scripts/verify_jerkgram_v12d_build115_research_settings1.py \
+            scripts/apply_jerkgram_v12d_build115_settings_localization1.py \
+            scripts/verify_jerkgram_v12d_build115_settings_localization1.py \
+            scripts/apply_jerkgram_v12d_build115_recovery_english1.py \
+            scripts/verify_jerkgram_v12d_build115_recovery_english1.py \
+            scripts/apply_jerkgram_v12d_build115_numeric_links1.py \
+            scripts/verify_jerkgram_v12d_build115_numeric_links1.py \
+            scripts/install_jerkgram_v12d_build115_probe_hook.py \
+            scripts/apply_jerkgram_v12e_build116_ui1.py \
+            scripts/verify_jerkgram_v12e_build116_ui1.py \
+            scripts/apply_jerkgram_v12e_build116_extensions1.py \
+            scripts/verify_jerkgram_v12e_build116_extensions1.py \
+            scripts/apply_jerkgram_v12e_build116_foundation1.py \
+            scripts/verify_jerkgram_v12e_build116_foundation1.py \
+            scripts/install_jerkgram_v12e_build116_probe_hook.py \
+            scripts/apply_jerkgram_v12f_build117_profile_scope1.py \
+            scripts/verify_jerkgram_v12f_build117_profile_scope1.py \
+            scripts/apply_jerkgram_v12f_build117_about_channel1.py \
+            scripts/verify_jerkgram_v12f_build117_about_channel1.py \
+            scripts/apply_jerkgram_v12f_build117_profile_localization1.py \
+            scripts/verify_jerkgram_v12f_build117_profile_localization1.py \
+            scripts/apply_jerkgram_v12f_build117_extension_boundaries1.py \
+            scripts/verify_jerkgram_v12f_build117_extension_boundaries1.py \
+            scripts/verify_jerkgram_v12f_build117_release_readiness1.py \
+            scripts/install_jerkgram_v12f_build117_probe_hook.py \
+            scripts/jerkgram_publish_build117_artifact.py \
+            scripts/apply_jerkgram_v12g_build118_core1.py \
+            scripts/verify_jerkgram_v12g_build118_core1.py \
+            scripts/apply_jerkgram_v12g_build118_storage1.py \
+            scripts/verify_jerkgram_v12g_build118_storage1.py \
+            scripts/apply_jerkgram_v12g_build118_time_machine1.py \
+            scripts/verify_jerkgram_v12g_build118_time_machine1.py \
+            scripts/apply_jerkgram_v12g_build118_archive1.py \
+            scripts/verify_jerkgram_v12g_build118_archive1.py \
+            scripts/apply_jerkgram_v12g_build118_about_cards1.py \
+            scripts/verify_jerkgram_v12g_build118_about_cards1.py \
+            scripts/apply_jerkgram_v12g_build118_profile_report_polish1.py \
+            scripts/verify_jerkgram_v12g_build118_profile_report_polish1.py \
+            scripts/apply_jerkgram_v12g_build118_integration1.py \
+            scripts/apply_jerkgram_v12g_build118_data_ui1.py \
+            scripts/verify_jerkgram_v12g_build118_data_ui1.py \
+            scripts/apply_jerkgram_v12g_build118_time_machine_ui1.py \
+            scripts/verify_jerkgram_v12g_build118_time_machine_ui1.py \
+            scripts/apply_jerkgram_v12g_build118_glass1.py \
+            scripts/verify_jerkgram_v12g_build118_glass1.py \
+            scripts/apply_jerkgram_v12g_build118_since_last_open1.py \
+            scripts/verify_jerkgram_v12g_build118_since_last_open1.py \
+            scripts/verify_jerkgram_v12g_build118_release_readiness1.py \
+            scripts/install_jerkgram_v12g_build118_probe_hook.py \
+            scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py \
+            scripts/apply_jerkgram_v12h_build119_hybrid_ui2.py \
+            scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py \
+            scripts/install_jerkgram_v12h_build119_probe_hook.py \
+            scripts/jerkgram_finalize_build119_identity.py \
+            scripts/verify_jerkgram_v12h_build119_final_ipa.py \
+            scripts/jerkgram_publish_build119_artifact.py \
+            scripts/apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py \
+            scripts/verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py \
+            scripts/install_jerkgram_v12i_build120_probe_hook.py \
+            scripts/jerkgram_finalize_build120_identity.py \
+            scripts/verify_jerkgram_v12i_build120_final_ipa.py \
+            scripts/jerkgram_publish_build120_artifact.py \
+            tests/test_jerkgram_v12h_build119_hybrid_ui1.py \
+            tests/test_jerkgram_v12i_build120_profile_blur_lifecycle1.py
+          python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
+          python3 -m unittest tests.test_jerkgram_v12i_build120_profile_blur_lifecycle1
+          python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
+          python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
+          python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
+          python3 scripts/install_jerkgram_v12g_build118_probe_hook.py
+          python3 scripts/install_jerkgram_v12h_build119_probe_hook.py
+          python3 scripts/install_jerkgram_v12i_build120_probe_hook.py
+          chmod +x scripts/bazel_build_probe_official.sh
+          scripts/bazel_build_probe_official.sh
+
+      - name: Publish Jerkgram artifact
+        if: success()
+        run: |
+          set -e
+          python3 scripts/jerkgram_publish_build120_artifact.py
+
+      - name: Upload Jerkgram build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-build120
+          path: |
+            artifacts/Jerkgram-build120.ipa
+            artifacts/Jerkgram-build120-info.txt
+          if-no-files-found: error
