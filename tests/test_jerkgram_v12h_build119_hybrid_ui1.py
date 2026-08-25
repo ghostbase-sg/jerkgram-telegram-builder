@@ -64,6 +64,18 @@ class Build119HybridUIContractTests(unittest.TestCase):
         self.assertIn("module.patch_about = patch_about", source)
         self.assertIn("module.main()", source)
 
+    def test_correction_targets_materialized_time_machine_owner(self) -> None:
+        source = APPLY_CORRECTION.read_text(encoding="utf-8")
+        self.assertIn("module.TIME_MACHINE =", source)
+        self.assertIn(
+            "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift",
+            source,
+        )
+        self.assertNotIn(
+            'module.ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramTimeMachineController.swift"',
+            source,
+        )
+
     def test_build117_release_gate_accepts_truthful_successor_artifact(self) -> None:
         source = BUILD117_RELEASE.read_text(encoding="utf-8")
         self.assertIn('re.findall(r"Jerkgram-build(\\d+)"', source)
