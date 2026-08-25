@@ -6,6 +6,10 @@ on:
     branches:
       - Jerkgram-12.9.2
 
+concurrency:
+  group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-probe:
     runs-on: macos-26
