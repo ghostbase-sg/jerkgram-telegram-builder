@@ -113,8 +113,18 @@ class Build119HybridUIContractTests(unittest.TestCase):
         self.assertIn("JerkgramDataAndBackupController.swift", source)
         self.assertIn("JerkgramTimeMachineController.swift", source)
 
-    def test_verifier_checks_invariants_not_only_marker(self) -> None:
+    def test_verifier_checks_materialized_owners_and_invariants(self) -> None:
         source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn(
+            "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift",
+            source,
+        )
+        self.assertNotIn(
+            'ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramTimeMachineController.swift"',
+            source,
+        )
+        self.assertIn('"BUILD118_ABOUT_CHANNEL_CARDS1" in settings', source)
+        self.assertNotIn('"BUILD118_ABOUT_CHANNEL_CARDS1" in about', source)
         for token in (
             "BUILD119_HYBRID_UI1",
             "localStarsAmount",
