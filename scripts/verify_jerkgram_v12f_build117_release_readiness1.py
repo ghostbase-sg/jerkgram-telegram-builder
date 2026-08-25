@@ -12,7 +12,6 @@ ARCHIVE = SOURCE_ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchive.
 PROFILE_REPORT = SOURCE_ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileReportPaneNode.swift"
 ACTIVE_WORKFLOWS = (
     BUILDER_ROOT / ".github/workflows/build.yml",
-    BUILDER_ROOT / ".github/workflows/build-official.yml",
 )
 
 
