@@ -125,6 +125,16 @@ class Build119HybridUIContractTests(unittest.TestCase):
         )
         self.assertIn('"BUILD118_ABOUT_CHANNEL_CARDS1" in settings', source)
         self.assertNotIn('"BUILD118_ABOUT_CHANNEL_CARDS1" in about', source)
+        self.assertIn("def region(text, start_signature, end_signature):", source)
+        self.assertIn('"private enum GhostBaseSettingsPage"', source)
+        self.assertIn('"private final class GhostBaseSettingsArguments"', source)
+        self.assertIn('page_enum.count("    case stars\\n") == 1', source)
+        self.assertIn('page_enum.count("        case .stars:\\n") == 2', source)
+        self.assertNotIn('settings.count("case stars")', source)
+        self.assertIn('"private enum GhostBaseSettingsEntry"', source)
+        self.assertIn('"private func ghostBaseSettingsEntries("', source)
+        self.assertIn("entry_enum.count(", source)
+        self.assertNotIn('settings.count("case valueDisclosure")', source)
         for token in (
             "BUILD119_HYBRID_UI1",
             "localStarsAmount",
