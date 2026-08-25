@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build118
+name: Jerkgram 12.9.2 Build119
 
 on:
   workflow_dispatch:
@@ -101,11 +101,19 @@ jobs:
             scripts/verify_jerkgram_v12g_build118_since_last_open1.py \
             scripts/verify_jerkgram_v12g_build118_release_readiness1.py \
             scripts/install_jerkgram_v12g_build118_probe_hook.py \
-            scripts/jerkgram_publish_build118_artifact.py
+            scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py \
+            scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py \
+            scripts/install_jerkgram_v12h_build119_probe_hook.py \
+            scripts/jerkgram_finalize_build119_identity.py \
+            scripts/verify_jerkgram_v12h_build119_final_ipa.py \
+            scripts/jerkgram_publish_build119_artifact.py \
+            tests/test_jerkgram_v12h_build119_hybrid_ui1.py
+          python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
           python3 scripts/install_jerkgram_v12g_build118_probe_hook.py
+          python3 scripts/install_jerkgram_v12h_build119_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
@@ -113,14 +121,14 @@ jobs:
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build118_artifact.py
+          python3 scripts/jerkgram_publish_build119_artifact.py
 
       - name: Upload Jerkgram build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build118
+          name: Jerkgram-build119
           path: |
-            artifacts/Jerkgram-build118.ipa
-            artifacts/Jerkgram-build118-info.txt
+            artifacts/Jerkgram-build119.ipa
+            artifacts/Jerkgram-build119-info.txt
           if-no-files-found: error
