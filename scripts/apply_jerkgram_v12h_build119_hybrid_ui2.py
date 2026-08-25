@@ -26,12 +26,12 @@ def main():
     )
 
     def patch_about(text):
-        start, end = module.block_bounds(text, "if page == .about {")
-        block = text[start:end]
         module.require(
-            "BUILD118_ABOUT_CHANNEL_CARDS1" in block,
+            "BUILD118_ABOUT_CHANNEL_CARDS1" in text,
             "Build118 About cards prerequisite missing",
         )
+        start, end = module.block_bounds(text, "if page == .about {")
+        block = text[start:end]
         old_footer = '.info(1, "Jerkgram\\nBase: Official Telegram 12.9.2\\nBuild: 118")'
         module.require(
             block.count(old_footer) == 1,
