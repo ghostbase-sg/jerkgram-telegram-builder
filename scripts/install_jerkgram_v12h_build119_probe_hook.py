@@ -6,7 +6,7 @@ from pathlib import Path
 PROBE = Path(__file__).resolve().parent / "bazel_build_probe_official.sh"
 
 SOURCE_ORDERED = (
-    "apply_jerkgram_v12h_build119_hybrid_ui1.py",
+    "apply_jerkgram_v12h_build119_hybrid_ui2.py",
     "verify_jerkgram_v12h_build119_hybrid_ui1.py",
 )
 SOURCE_ANCHOR = "python3 ../../scripts/verify_jerkgram_v12g_build118_release_readiness1.py\n"
