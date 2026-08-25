@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import re
 
 
 SOURCE_ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
@@ -33,12 +34,16 @@ def main():
 
     for path in ACTIVE_WORKFLOWS:
         workflow = path.read_text(encoding="utf-8")
-        require("Jerkgram-build118" in workflow, f"{path.name}: Build118 artifact missing")
+        artifact_builds = [int(value) for value in re.findall(r"Jerkgram-build(\d+)", workflow)]
+        require(
+            artifact_builds and max(artifact_builds) >= 118,
+            f"{path.name}: Build118-or-newer Jerkgram artifact missing",
+        )
         require(workflow.count("uses: actions/upload-artifact@v4") == 1, f"{path.name}: exactly one success artifact required")
         require("if: always()" not in workflow, f"{path.name}: duplicate always-upload remains")
         # Release packaging must never copy an unrelated Whitegram dylib payload.
         require("Whitegram" not in workflow, f"{path.name}: foreign payload reference")
-    print("[Build117 release readiness] GREEN: foundations retained; exactly one success artifact; no foreign payload")
+    print("[Build117 release readiness] GREEN: foundations retained; Build118+ successor artifact; exactly one success artifact; no foreign payload")
 
 
 if __name__ == "__main__":
