@@ -10,6 +10,10 @@ concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   build-probe:
     runs-on: macos-26
@@ -25,6 +29,44 @@ jobs:
     steps:
       - name: Checkout builder
         uses: actions/checkout@v4
+
+      - name: Purge obsolete GitHub UI state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          echo "== Delete temporary branches =="
+          for branch in \
+            GhostBase-12.9.2 \
+            Jerkgram-build120-work \
+            build119-hybrid-ui \
+            build120-sticker-alpha \
+            build120-sticker-alpha-red \
+            build120-visual-sticker
+          do
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true
+          done
+
+          echo "== Collect obsolete workflow runs =="
+          mapfile -t obsolete_runs < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+              --jq '.workflow_runs[] | select(.id != env.GITHUB_RUN_ID) | select(.name == "Build120 Source Checks" or (.path == ".github/workflows/build.yml" and .run_number >= 383 and .run_number <= 392)) | .id'
+          )
+
+          for id in "${obsolete_runs[@]:-}"; do
+            [ -n "$id" ] || continue
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/cancel" >/dev/null 2>&1 || true
+          done
+
+          sleep 2
+
+          for id in "${obsolete_runs[@]:-}"; do
+            [ -n "$id" ] || continue
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/runs/${id}" >/dev/null 2>&1 || true
+          done
+
+          echo "Repository UI cleanup complete"
 
       - name: Install Bazelisk
         run: |
