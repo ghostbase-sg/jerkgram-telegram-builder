@@ -19,6 +19,12 @@ def load_base():
 def main():
     module = load_base()
 
+    # Build118 materializes Time Machine in TelegramUI, not SettingsUI.
+    module.TIME_MACHINE = (
+        module.ROOT
+        / "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift"
+    )
+
     def patch_about(text):
         start, end = module.block_bounds(text, "if page == .about {")
         block = text[start:end]
@@ -41,6 +47,7 @@ def main():
     module.patch_about = patch_about
     module.main()
     print("[Build119 hybrid UI2] exact Build118 About footer -> Build119 semantic identity")
+    print("[Build119 hybrid UI2] Time Machine owner -> materialized TelegramUI path")
 
 
 if __name__ == "__main__":
