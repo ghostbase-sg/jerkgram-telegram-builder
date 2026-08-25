@@ -56,6 +56,14 @@ def block(text, signature):
     raise RuntimeError("[Build119 hybrid UI verify] unbalanced owner: " + signature)
 
 
+def region(text, start_signature, end_signature):
+    start = text.find(start_signature)
+    require(start >= 0, "region start missing: " + start_signature)
+    end = text.find(end_signature, start)
+    require(end > start, "region end missing: " + end_signature)
+    return text[start:end]
+
+
 def main():
     for path in (SETTINGS, STRINGS, DATA, TIME_MACHINE, APPLY):
         require(path.is_file(), "missing file: " + str(path))
@@ -66,11 +74,27 @@ def main():
     time_machine = TIME_MACHINE.read_text(encoding="utf-8")
     apply = APPLY.read_text(encoding="utf-8")
 
-    # Settings owner / route invariants.
-    require(settings.count("case stars") == 1, "Stars route owner count != 1")
-    require(settings.count("case .stars:") >= 2, "Stars canonical/localized title routes missing")
-    require(settings.count("case valueDisclosure") == 1, "valueDisclosure owner count != 1")
-    require("systemStyle: .glass" in settings, "Build119 compact material missing")
+    # Settings owner / route invariants. Check exact bounded owners instead of
+    # broad substrings: the full Settings file can legitimately contain other
+    # cases whose names begin with "stars" or "valueDisclosure".
+    page_enum = region(
+        settings,
+        "private enum GhostBaseSettingsPage",
+        "private final class GhostBaseSettingsArguments",
+    )
+    require(page_enum.count("    case stars\n") == 1, "Stars page enum owner count != 1")
+    require(page_enum.count("        case .stars:\n") == 2, "Stars canonical/localized title routes missing")
+
+    entry_enum = region(
+        settings,
+        "private enum GhostBaseSettingsEntry",
+        "private func ghostBaseSettingsEntries(",
+    )
+    require(
+        entry_enum.count("    case valueDisclosure(Int32, Int32, String, String, String?, GhostBaseSettingsPage)\n") == 1,
+        "valueDisclosure enum owner count != 1",
+    )
+    require("systemStyle: .glass" in entry_enum, "Build119 compact material missing")
 
     root = block(settings, "if page == .root {")
     require(".valueDisclosure(" in root and '"Jerkgram"' in root, "root Jerkgram summary missing")
