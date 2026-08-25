@@ -15,21 +15,9 @@ permissions:
   actions: write
 
 jobs:
-  build-probe:
-    runs-on: macos-26
-
-    env:
-      USE_BAZEL_VERSION: 8.4.2
-      BAZEL_BIN: bazelisk
-      CERT_B64: ${{ secrets.CERT_B64 }}
-      PROF_B64: ${{ secrets.PROF_B64 }}
-      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-
+  cleanup:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout builder
-        uses: actions/checkout@v4
-
       - name: Purge obsolete GitHub UI state
         env:
           GH_TOKEN: ${{ github.token }}
@@ -56,20 +44,38 @@ jobs:
           echo "== Delete obsolete workflow history =="
           mapfile -t obsolete_runs < <(
             gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
-              --jq '.workflow_runs[] | select(.id != env.GITHUB_RUN_ID) | select(.name == "Build120 Source Checks" or .path == ".github/workflows/build.yml") | .id'
+              --jq '.workflow_runs[] | select((.id | tostring) != env.GITHUB_RUN_ID) | select(.name == "Build120 Source Checks" or .path == ".github/workflows/build.yml" or .path == ".github/workflows/jerkgram-build.yml") | .id'
           )
 
           for id in "${obsolete_runs[@]:-}"; do
             [ -n "$id" ] || continue
             gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/cancel" >/dev/null 2>&1 || true
           done
+
           sleep 2
+
           for id in "${obsolete_runs[@]:-}"; do
             [ -n "$id" ] || continue
             gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/runs/${id}" >/dev/null 2>&1 || true
           done
 
           echo "Repository UI cleanup complete"
+
+  build-probe:
+    needs: cleanup
+    runs-on: macos-26
+
+    env:
+      USE_BAZEL_VERSION: 8.4.2
+      BAZEL_BIN: bazelisk
+      CERT_B64: ${{ secrets.CERT_B64 }}
+      PROF_B64: ${{ secrets.PROF_B64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+    steps:
+      - name: Checkout builder
+        uses: actions/checkout@v4
 
       - name: Install Bazelisk
         run: |
