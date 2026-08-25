@@ -1,7 +1,0 @@
-name: Jerkgram 12.9.2 Build120
-
-on:
-  workflow_dispatch:
-
-# Retired in favor of .github/workflows/jerkgram-build.yml.
-# Kept inert for one commit so GitHub no longer schedules this legacy workflow identity.
