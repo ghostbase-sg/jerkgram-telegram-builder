@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build120
+name: Jerkgram 12.9.2 Build121
 
 on:
   workflow_dispatch:
@@ -114,20 +114,31 @@ jobs:
             scripts/jerkgram_publish_build119_artifact.py \
             scripts/apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py \
             scripts/verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py \
+            scripts/apply_jerkgram_v12i_build120_sticker_alpha1.py \
+            scripts/verify_jerkgram_v12i_build120_sticker_alpha1.py \
             scripts/install_jerkgram_v12i_build120_probe_hook.py \
             scripts/jerkgram_finalize_build120_identity.py \
             scripts/verify_jerkgram_v12i_build120_final_ipa.py \
             scripts/jerkgram_publish_build120_artifact.py \
+            scripts/apply_jerkgram_v12j_build121_sticker_recovery1.py \
+            scripts/verify_jerkgram_v12j_build121_sticker_recovery1.py \
+            scripts/install_jerkgram_v12j_build121_probe_hook.py \
+            scripts/jerkgram_finalize_build121_identity.py \
+            scripts/verify_jerkgram_v12j_build121_final_ipa.py \
+            scripts/jerkgram_publish_build121_artifact.py \
             tests/test_jerkgram_v12h_build119_hybrid_ui1.py \
-            tests/test_jerkgram_v12i_build120_profile_blur_lifecycle1.py
+            tests/test_jerkgram_v12i_build120_profile_blur_lifecycle1.py \
+            tests/test_jerkgram_v12j_build121_sticker_recovery1.py
           python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
           python3 -m unittest tests.test_jerkgram_v12i_build120_profile_blur_lifecycle1
+          python3 -m unittest tests.test_jerkgram_v12j_build121_sticker_recovery1
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
           python3 scripts/install_jerkgram_v12g_build118_probe_hook.py
           python3 scripts/install_jerkgram_v12h_build119_probe_hook.py
           python3 scripts/install_jerkgram_v12i_build120_probe_hook.py
+          python3 scripts/install_jerkgram_v12j_build121_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
@@ -135,14 +146,14 @@ jobs:
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build120_artifact.py
+          python3 scripts/jerkgram_publish_build121_artifact.py
 
       - name: Upload Jerkgram build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build120
+          name: Jerkgram-build121
           path: |
-            artifacts/Jerkgram-build120.ipa
-            artifacts/Jerkgram-build120-info.txt
+            artifacts/Jerkgram-build121.ipa
+            artifacts/Jerkgram-build121-info.txt
           if-no-files-found: error
