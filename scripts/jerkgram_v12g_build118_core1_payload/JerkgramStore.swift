@@ -278,8 +278,13 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
         do {
             let canonicalHandle = try FileHandle(forWritingTo: canonicalURL)
             defer { try? canonicalHandle.close() }
-            _ = try canonicalHandle.seekToEnd()
-            try canonicalHandle.write(contentsOf: canonicalAppend)
+            if #available(iOS 13.4, *) {
+                _ = try canonicalHandle.seekToEnd()
+                try canonicalHandle.write(contentsOf: canonicalAppend)
+            } else {
+                canonicalHandle.seekToEndOfFile()
+                canonicalHandle.write(canonicalAppend)
+            }
         } catch {
             if let rollbackHandle = try? FileHandle(forWritingTo: canonicalURL) {
                 try? rollbackHandle.truncate(atOffset: state.canonicalLength)
@@ -352,7 +357,7 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
         guard let records = try? self.loadIndex(accountPeerId: accountPeerId),
            self.isCompleteIndex(records, canonicalLength: canonicalLength),
            records.allSatisfy({ $0.accountPeerId == accountPeerId }),
-           Set(records.map(\.eventId)).count == records.count {
+           Set(records.map(\.eventId)).count == records.count else {
             return nil
         }
         let state = AccountIndexState(
@@ -531,7 +536,12 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
             throw JerkgramCoreError.invalidIndexRange
         }
         try handle.seek(toOffset: record.byteOffset)
-        let data = try handle.read(upToCount: Int(record.byteLength)) ?? Data()
+        let data: Data
+        if #available(iOS 13.4, *) {
+            data = try handle.read(upToCount: Int(record.byteLength)) ?? Data()
+        } else {
+            data = handle.readData(ofLength: Int(record.byteLength))
+        }
         guard data.count == Int(record.byteLength) else {
             throw JerkgramCoreError.incompleteRead(
                 expected: Int(record.byteLength),
@@ -578,8 +588,13 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
         }
         let handle = try FileHandle(forWritingTo: url)
         defer { try? handle.close() }
-        _ = try handle.seekToEnd()
-        try handle.write(contentsOf: data)
+        if #available(iOS 13.4, *) {
+            _ = try handle.seekToEnd()
+            try handle.write(contentsOf: data)
+        } else {
+            handle.seekToEndOfFile()
+            handle.write(data)
+        }
     }
 
     private func publishIndexLocked(accountPeerId: Int64, records: [JerkgramTimeMachineIndexRecord]) throws {
@@ -637,7 +652,12 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
             let lowerBound = upperBound > chunkSize ? upperBound - chunkSize : 0
             try handle.seek(toOffset: lowerBound)
             let count = Int(upperBound - lowerBound)
-            let data = try handle.read(upToCount: count) ?? Data()
+            let data: Data
+            if #available(iOS 13.4, *) {
+                data = try handle.read(upToCount: count) ?? Data()
+            } else {
+                data = handle.readData(ofLength: count)
+            }
             if let newline = data.lastIndex(of: 0x0a) {
                 return lowerBound + UInt64(data.distance(from: data.startIndex, to: newline)) + 1
             }
