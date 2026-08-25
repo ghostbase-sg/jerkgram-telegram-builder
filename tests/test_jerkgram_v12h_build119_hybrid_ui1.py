@@ -18,7 +18,8 @@ PUBLISH = REPO / "scripts/jerkgram_publish_build119_artifact.py"
 class Build119HybridUIContractTests(unittest.TestCase):
     def test_workflow_preserves_build119_gates_under_successor_builds(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
-        self.assertRegex(source, r"name: (?:GhostBase Swiftgram Builder|Jerkgram 12\.9\.2 Build\d+)")
+        self.assertRegex(source, r"name: Jerkgram 12\.9\.2 Build\d+")
+        self.assertNotIn("GhostBase Swiftgram Builder", source)
         self.assertIn("scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py", source)
         self.assertIn("scripts/apply_jerkgram_v12h_build119_hybrid_ui2.py", source)
         self.assertIn("scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py", source)
