@@ -57,6 +57,8 @@ class Build119HybridUIContractTests(unittest.TestCase):
     def test_about_correction_uses_exact_materialized_build118_owner(self) -> None:
         source = APPLY_CORRECTION.read_text(encoding="utf-8")
         self.assertIn("apply_jerkgram_v12h_build119_hybrid_ui1.py", source)
+        self.assertIn('"BUILD118_ABOUT_CHANNEL_CARDS1" in text', source)
+        self.assertNotIn('"BUILD118_ABOUT_CHANNEL_CARDS1" in block', source)
         self.assertIn("old_footer =", source)
         self.assertIn("Jerkgram\\\\nBase: Official Telegram 12.9.2\\\\nBuild: 118", source)
         self.assertIn("block.count(old_footer) == 1", source)
