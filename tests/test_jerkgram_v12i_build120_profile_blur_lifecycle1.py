@@ -116,16 +116,17 @@ class Build120ProfileBlurLifecycleTests(unittest.TestCase):
         self.assertIn('Jerkgram-build120.ipa', publish)
         self.assertIn('Jerkgram-build120-info.txt', publish)
 
-    def test_workflow_is_build120_and_runs_contract(self) -> None:
+    def test_workflow_retains_build120_contract_in_newer_builds(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("name: Jerkgram 12.9.2 Build120", workflow)
         self.assertIn("tests/test_jerkgram_v12i_build120_profile_blur_lifecycle1.py", workflow)
         self.assertIn("python3 -m unittest tests.test_jerkgram_v12i_build120_profile_blur_lifecycle1", workflow)
+        self.assertIn("apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py", workflow)
+        self.assertIn("verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py", workflow)
+        self.assertIn("apply_jerkgram_v12i_build120_sticker_alpha1.py", workflow)
+        self.assertIn("verify_jerkgram_v12i_build120_sticker_alpha1.py", workflow)
         self.assertIn("install_jerkgram_v12i_build120_probe_hook.py", workflow)
-        self.assertIn("jerkgram_publish_build120_artifact.py", workflow)
-        self.assertIn("name: Jerkgram-build120", workflow)
-        self.assertIn("artifacts/Jerkgram-build120.ipa", workflow)
-        self.assertIn("artifacts/Jerkgram-build120-info.txt", workflow)
+        self.assertIn("jerkgram_finalize_build120_identity.py", workflow)
+        self.assertIn("verify_jerkgram_v12i_build120_final_ipa.py", workflow)
 
 
 if __name__ == "__main__":
