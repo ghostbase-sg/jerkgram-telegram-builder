@@ -3,7 +3,6 @@
 from pathlib import Path
 import hashlib
 import os
-import os
 import re
 import shutil
 import struct

@@ -38,6 +38,8 @@ def main() -> None:
     require("textUpdated: { arguments.setAmount" in stars, "Stars local draft owner missing")
     require("textUpdated: { _ in }" in settings, "legacy input neutralization missing")
     require("UserDefaults.standard.set(ghostBaseSanitizeStarsAmount(updatedText)" not in settings, "per-keystroke Stars persistence survived")
+    require("case let .input(_, _, key, title, text):" not in settings, "unused legacy Stars key binding survived")
+    require("case let .input(_, _, _, title, text):" in settings, "warning-clean legacy Stars input binding missing")
 
     require("ItemListActionItem" in data, "Data action buttons missing")
     require('action == "perChat" ? .arrow : .none' in data, "Data disclosure semantics missing")

@@ -99,6 +99,12 @@ def patch_settings() -> None:
                 textUpdated: { _ in },''',
         "remove per-keystroke Stars persistence",
     )
+    text = replace_once(
+        text,
+        "        case let .input(_, _, key, title, text):",
+        "        case let .input(_, _, _, title, text):",
+        "remove unused legacy Stars key binding",
+    )
     require(legacy_stars_write not in text, "Stars input must not write UserDefaults")
     text = replace_once(
         text,

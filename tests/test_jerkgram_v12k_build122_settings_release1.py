@@ -39,6 +39,7 @@ class Build122SettingsReleaseContractTests(unittest.TestCase):
             self.assertIn(token, source)
         self.assertIn("Stars input must not write UserDefaults", source)
         self.assertNotIn("UserDefaults.standard.set(ghostBaseSanitizeStarsAmount(updatedText), forKey: key)", source)
+        self.assertIn("case let .input(_, _, _, title, text):", source)
 
     def test_action_rows_do_not_fake_navigation(self) -> None:
         source = APPLY.read_text(encoding="utf-8")
