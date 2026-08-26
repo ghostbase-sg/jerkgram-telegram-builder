@@ -13,7 +13,7 @@ ENQUEUE = ROOT / "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage
 STATIC_STICKER = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageStickerItemNode/Sources/ChatMessageStickerItemNode.swift"
 ANIMATED_STICKER = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode/Sources/ChatMessageAnimatedStickerItemNode.swift"
 
-MARKER = "Jerkgram v1.2K BUILD122_REPLY_NO_REUPLOAD1"
+MARKER = "Jerkgram v1.2K BUILD122_STICKER_REPLY_NO_REUPLOAD1"
 STATIC_MARKER = "Jerkgram v1.2K BUILD122_STATIC_STICKER_ALPHA_OWNER1"
 ANIMATED_MARKER = "Jerkgram v1.2K BUILD122_ANIMATED_STICKER_ALPHA1"
 
@@ -65,56 +65,44 @@ def patch_enqueue(text: str) -> str:
         require(proof in text, "enqueue prerequisite missing: " + proof)
 
     resolver = text.find("private func ghostBaseResolveDeletedReplies(")
-    loop_start, loop_end = balanced_block(text, "                for plan in plans {", resolver)
-    old_loop = text[loop_start:loop_end]
+    _, resolver_end = balanced_block(text, "private func ghostBaseResolveDeletedReplies(")
+    old_resolver = text[resolver:resolver_end]
     for proof in (
         "ghostBaseReconstructedMedia(",
         "recoveredGroup",
         "ghostBaseBuildRecoveredAlbumTail(",
         "recoveredMedia: recovered",
     ):
-        require(proof in old_loop, "expected Build106/121 outgoing recovery owner missing: " + proof)
+        require(proof in old_resolver, "expected Build106/121 recovery owner missing: " + proof)
 
-    new_loop = r'''                // MARK: Jerkgram v1.2K BUILD122_REPLY_NO_REUPLOAD1
-                // A reply to a locally deleted/recovered message is a reply/quote only.
-                // Never turn the source message's cached media into outgoing media.
-                // This must be identical for cached, uncached, partially loaded and album sources.
-                for plan in plans {
-                    guard
-                        let source = plan.source,
-                        let authorName = plan.authorName
-                    else {
-                        result.append(plan.outgoing)
-                        continue
+    old = "                    let recovered = recoveredGroup.first\n"
+    require(old_resolver.count(old) == 1, "single-media recovered owner count != 1")
+    new = r'''                    // MARK: Jerkgram v1.2K BUILD122_STICKER_REPLY_NO_REUPLOAD1
+                    // A recovered sticker must stay inside the quoted source context;
+                    // attaching it as outgoing media sends a second sticker message.
+                    // Preserve the established photo/video/GIF/audio/document and album paths.
+                    let jerkgramStickerReply = source.media.contains { media in
+                        guard let file = media as? TelegramMediaFile else {
+                            return false
+                        }
+                        return file.isSticker
                     }
+                    let recovered = jerkgramStickerReply ? nil : recoveredGroup.first
+'''
+    text = text[:resolver] + old_resolver.replace(old, new, 1) + text[resolver_end:]
 
-                    let candidate =
-                        ghostBaseBuildPortableDeletedReply(
-                            outgoing: plan.outgoing,
-                            source: source,
-                            authorName: authorName,
-                            authorUsername: plan.authorUsername,
-                            mentionPeerId: plan.mentionPeerId,
-                            recoveredMedia: nil
-                        )
-
-                    result.append(candidate)
-                }'''
-
-    text = text[:loop_start] + new_loop + text[loop_end:]
-
-    patched_start, patched_end = balanced_block(
-        text, "                // MARK: Jerkgram v1.2K BUILD122_REPLY_NO_REUPLOAD1"
-    )
-    patched_loop = text[patched_start:patched_end]
-    require("recoveredMedia: nil" in patched_loop, "nil-media reply contract missing")
-    for forbidden in (
+    _, patched_end = balanced_block(text, "private func ghostBaseResolveDeletedReplies(")
+    patched_resolver = text[resolver:patched_end]
+    require("let jerkgramStickerReply" in patched_resolver, "sticker reply discriminator missing")
+    require("file.isSticker" in patched_resolver, "sticker reply media test missing")
+    require("let recovered = jerkgramStickerReply ? nil : recoveredGroup.first" in patched_resolver, "sticker-only nil-media contract missing")
+    for preserved in (
         "ghostBaseReconstructedMedia(",
         "recoveredGroup",
         "ghostBaseBuildRecoveredAlbumTail(",
         "recoveredMedia: recovered",
     ):
-        require(forbidden not in patched_loop, "outgoing recovery survived: " + forbidden)
+        require(preserved in patched_resolver, "non-sticker recovery path lost: " + preserved)
     return text
 
 
@@ -129,9 +117,7 @@ def patch_static_sticker(text: str) -> str:
     require(text.count(old) == 1, "Build120 static alpha owner count != 1")
     new = (
         "        // MARK: Jerkgram v1.2K BUILD122_STATIC_STICKER_ALPHA_OWNER1\n"
-        "        // Keep the deleted state on the extracted-content container too, so\n"
-        "        // child image/placeholder animation alpha cannot cancel it.\n"
-        "        self.contextSourceNode.alpha = ghostBaseDeletedStickerAlpha\n"
+        "        // One alpha owner only: parent + child alpha would multiply to 0.3025.\n"
         "        self.contextSourceNode.contentNode.alpha = ghostBaseDeletedStickerAlpha\n"
     )
     return text.replace(old, new, 1)
@@ -154,7 +140,6 @@ def patch_animated_sticker(text: str) -> str:
         super_call
         + "        // MARK: Jerkgram v1.2K BUILD122_ANIMATED_STICKER_ALPHA1\n"
         + "        let ghostBaseDeletedAnimatedStickerAlpha: CGFloat = (((item.message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted) ?? false) ? 0.55 : 1.0\n"
-        + "        self.contextSourceNode.alpha = ghostBaseDeletedAnimatedStickerAlpha\n"
         + "        self.contextSourceNode.contentNode.alpha = ghostBaseDeletedAnimatedStickerAlpha\n"
     )
     block = block.replace(super_call, patch, 1)
@@ -173,8 +158,9 @@ def main() -> None:
     STATIC_STICKER.write_text(static, encoding="utf-8")
     ANIMATED_STICKER.write_text(animated, encoding="utf-8")
 
-    print("[Build122] reply source media hard-disabled for deleted/recovered replies")
-    print("[Build122] static + animated/video sticker deleted alpha owners materialized")
+    print("[Build122] sticker replies no longer attach a duplicate outgoing sticker")
+    print("[Build122] non-sticker and album recovered-media paths preserved")
+    print("[Build122] static + animated/video stickers use one effective alpha owner")
 
 
 if __name__ == "__main__":

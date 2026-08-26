@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 
 REPO = Path(__file__).resolve().parents[1]
 APPLY = REPO / "scripts/apply_jerkgram_v12k_build122_reply_sticker_contract1.py"
+VERIFY = REPO / "scripts/verify_jerkgram_v12k_build122_reply_sticker_contract1.py"
 
 
 def load_apply():
@@ -66,42 +71,46 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
 
 class Build122ReplyStickerContractTests(unittest.TestCase):
-    def test_deleted_reply_never_reuploads_recovered_source_media(self):
+    def test_deleted_sticker_reply_does_not_reupload_sticker_media(self):
         module = load_apply()
         patched = module.patch_enqueue(ENQUEUE_FIXTURE)
         resolver = patched[patched.index("private func ghostBaseResolveDeletedReplies("):]
-        self.assertIn("BUILD122_REPLY_NO_REUPLOAD1", resolver)
-        self.assertIn("recoveredMedia: nil", resolver)
-        self.assertNotIn("ghostBaseReconstructedMedia(", resolver)
-        self.assertNotIn("recoveredGroup", resolver)
-        self.assertNotIn("ghostBaseBuildRecoveredAlbumTail(", resolver)
-        self.assertNotIn("recoveredMedia: recovered", resolver)
+        self.assertIn("BUILD122_STICKER_REPLY_NO_REUPLOAD1", resolver)
+        self.assertIn("let jerkgramStickerReply", resolver)
+        self.assertIn("file.isSticker", resolver)
+        self.assertIn("let recovered = jerkgramStickerReply ? nil : recoveredGroup.first", resolver)
 
-    def test_reply_contract_is_cache_and_media_type_independent(self):
+    def test_non_sticker_and_album_recovery_paths_survive(self):
         module = load_apply()
-        for label in ("cached-webp", "cached-tgs", "cached-webm", "missing-cache", "album"):
-            with self.subTest(label=label):
-                patched = module.patch_enqueue(ENQUEUE_FIXTURE + "\n// " + label + "\n")
-                resolver = patched[patched.index("private func ghostBaseResolveDeletedReplies("):]
-                self.assertEqual(resolver.count("recoveredMedia: nil"), 1)
-                self.assertNotIn("ghostBaseReconstructedMedia(", resolver)
+        patched = module.patch_enqueue(ENQUEUE_FIXTURE)
+        resolver = patched[patched.index("private func ghostBaseResolveDeletedReplies("):]
+        self.assertIn("ghostBaseReconstructedMedia(", resolver)
+        self.assertIn("recoveredGroup", resolver)
+        self.assertIn("ghostBaseBuildRecoveredAlbumTail(", resolver)
+        self.assertIn("recoveredMedia: recovered", resolver)
 
-    def test_static_sticker_alpha_owns_container_and_resets_live_nodes(self):
+    def test_static_sticker_has_one_effective_alpha_owner(self):
         module = load_apply()
         patched = module.patch_static_sticker(STATIC_FIXTURE)
         self.assertIn("BUILD122_STATIC_STICKER_ALPHA_OWNER1", patched)
         self.assertIn("? 0.55 : 1.0", patched)
-        self.assertIn("self.contextSourceNode.alpha = ghostBaseDeletedStickerAlpha", patched)
         self.assertIn("self.contextSourceNode.contentNode.alpha = ghostBaseDeletedStickerAlpha", patched)
+        self.assertNotIn("self.contextSourceNode.alpha = ghostBaseDeletedStickerAlpha", patched)
+        assignment_count = patched.count(".alpha = ghostBaseDeletedStickerAlpha")
+        self.assertEqual(assignment_count, 1)
+        self.assertEqual(0.55 ** assignment_count, 0.55)
 
-    def test_animated_and_video_sticker_renderer_gets_deleted_alpha(self):
+    def test_animated_and_video_sticker_has_one_effective_alpha_owner(self):
         module = load_apply()
         patched = module.patch_animated_sticker(ANIMATED_FIXTURE)
         self.assertIn("BUILD122_ANIMATED_STICKER_ALPHA1", patched)
         self.assertIn("GhostBaseMessageAttribute", patched)
         self.assertIn("? 0.55 : 1.0", patched)
-        self.assertIn("self.contextSourceNode.alpha = ghostBaseDeletedAnimatedStickerAlpha", patched)
         self.assertIn("self.contextSourceNode.contentNode.alpha = ghostBaseDeletedAnimatedStickerAlpha", patched)
+        self.assertNotIn("self.contextSourceNode.alpha = ghostBaseDeletedAnimatedStickerAlpha", patched)
+        assignment_count = patched.count(".alpha = ghostBaseDeletedAnimatedStickerAlpha")
+        self.assertEqual(assignment_count, 1)
+        self.assertEqual(0.55 ** assignment_count, 0.55)
 
     def test_patches_are_idempotent(self):
         module = load_apply()
@@ -111,6 +120,30 @@ class Build122ReplyStickerContractTests(unittest.TestCase):
         self.assertEqual(module.patch_enqueue(enqueue_once), enqueue_once)
         self.assertEqual(module.patch_static_sticker(static_once), static_once)
         self.assertEqual(module.patch_animated_sticker(animated_once), animated_once)
+
+    def test_verifier_accepts_single_alpha_and_preserved_non_sticker_recovery(self):
+        module = load_apply()
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            files = {
+                "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": module.patch_enqueue(ENQUEUE_FIXTURE),
+                "submodules/TelegramUI/Components/Chat/ChatMessageStickerItemNode/Sources/ChatMessageStickerItemNode.swift": module.patch_static_sticker(STATIC_FIXTURE),
+                "submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode/Sources/ChatMessageAnimatedStickerItemNode.swift": module.patch_animated_sticker(ANIMATED_FIXTURE),
+            }
+            for relative, content in files.items():
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content, encoding="utf-8")
+            env = os.environ.copy()
+            env["GHOSTBASE_SOURCE_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(VERIFY)],
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

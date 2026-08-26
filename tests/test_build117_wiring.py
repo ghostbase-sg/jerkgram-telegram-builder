@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+import re
 import unittest
 
 
@@ -29,11 +30,16 @@ class Build117WiringTests(unittest.TestCase):
         self.assertLess(cls_patch.index("verify_jerkgram_v12f_build117_release_readiness1.py"), cls_patch.index('"$BAZEL_BIN" build'))
 
     def test_active_workflows_publish_one_build117_artifact(self):
-        for relative in (".github/workflows/build.yml", ".github/workflows/build-official.yml"):
-            text = (ROOT / relative).read_text()
-            self.assertIn("Jerkgram 12.9.2 Build117", text)
+        workflows = sorted((ROOT / ".github/workflows").glob("build*.yml"))
+        self.assertTrue(workflows)
+        for path in workflows:
+            text = path.read_text()
+            match = re.search(r"Jerkgram 12\.9\.2 Build(\d+)", text)
+            self.assertIsNotNone(match)
+            current_build = int(match.group(1))
+            self.assertGreaterEqual(current_build, 117)
             self.assertIn("jerkgram_publish_build117_artifact.py", text)
-            self.assertIn("name: Jerkgram-build117", text)
+            self.assertIn(f"name: Jerkgram-build{current_build}", text)
             self.assertEqual(text.count("uses: actions/upload-artifact@v4"), 1)
             self.assertNotIn("Jerkgram-build117-output", text)
 
@@ -44,14 +50,17 @@ class Build117WiringTests(unittest.TestCase):
             "BUILD116_ARCHIVE_FOUNDATION1",
             "Settings schemaVersion",
             "Archive schemaVersion",
-            "Jerkgram-build117",
+            're.findall(r"Jerkgram-build(\\d+)"',
+            "max(artifact_builds) >= 118",
             "Whitegram",
             "exactly one success artifact",
         ):
             self.assertIn(token, text)
 
-        for relative in (".github/workflows/build.yml", ".github/workflows/build-official.yml"):
-            workflow = (ROOT / relative).read_text()
+        workflows = sorted((ROOT / ".github/workflows").glob("build*.yml"))
+        self.assertTrue(workflows)
+        for path in workflows:
+            workflow = path.read_text()
             self.assertIn("apply_jerkgram_v12f_build117_profile_localization1.py", workflow)
             self.assertIn("verify_jerkgram_v12f_build117_profile_localization1.py", workflow)
 

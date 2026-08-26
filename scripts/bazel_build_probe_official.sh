@@ -552,6 +552,32 @@ python3 ../../scripts/verify_jerkgram_v12g_build118_glass1.py
 python3 ../../scripts/apply_jerkgram_v12g_build118_since_last_open1.py
 python3 ../../scripts/verify_jerkgram_v12g_build118_since_last_open1.py
 python3 ../../scripts/verify_jerkgram_v12g_build118_release_readiness1.py
+
+echo
+echo "== Jerkgram v1.2H Build119 hybrid UI =="
+python3 ../../scripts/apply_jerkgram_v12h_build119_hybrid_ui2.py
+python3 ../../scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py
+
+echo
+echo "== Jerkgram v1.2I Build120 profile lifecycle + sticker alpha =="
+python3 ../../scripts/apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py
+python3 ../../scripts/verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py
+python3 ../../scripts/apply_jerkgram_v12i_build120_sticker_alpha1.py
+python3 ../../scripts/verify_jerkgram_v12i_build120_sticker_alpha1.py
+
+echo
+echo "== Jerkgram v1.2J Build121 native sticker recovery =="
+python3 ../../scripts/apply_jerkgram_v12j_build121_sticker_recovery1.py
+python3 ../../scripts/verify_jerkgram_v12j_build121_sticker_recovery1.py
+
+echo
+echo "== Jerkgram v1.2K Build122 reply/sticker runtime contracts =="
+python3 ../../scripts/apply_jerkgram_v12k_build122_reply_sticker_contract1.py
+python3 ../../scripts/verify_jerkgram_v12k_build122_reply_sticker_contract1.py
+python3 ../../scripts/apply_jerkgram_v12k_build122_edit_caption_history1.py
+python3 ../../scripts/verify_jerkgram_v12k_build122_edit_caption_history1.py
+python3 ../../scripts/apply_jerkgram_v12k_build122_settings_release1.py
+python3 ../../scripts/verify_jerkgram_v12k_build122_settings_release1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -644,3 +670,23 @@ python3 ../../scripts/jerkgram_finalize_build114_resign_ready.py   ghostbase-fin
 
 echo "== verify Build114 final public/resign-ready IPA =="
 python3 ../../scripts/verify_jerkgram_v12c_build114_final_ipa.py   ghostbase-final/GhostBase.ipa
+
+echo
+echo "== Jerkgram v1.2H Build119 final identity =="
+python3 ../../scripts/jerkgram_finalize_build119_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12h_build119_final_ipa.py ghostbase-final/GhostBase.ipa
+
+echo
+echo "== Jerkgram v1.2I Build120 final identity =="
+python3 ../../scripts/jerkgram_finalize_build120_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12i_build120_final_ipa.py ghostbase-final/GhostBase.ipa
+
+echo
+echo "== Jerkgram v1.2J Build121 final identity =="
+python3 ../../scripts/jerkgram_finalize_build121_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12j_build121_final_ipa.py ghostbase-final/GhostBase.ipa
+
+echo
+echo "== Jerkgram v1.2K Build122 final identity =="
+python3 ../../scripts/jerkgram_finalize_build122_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12k_build122_final_ipa.py ghostbase-final/GhostBase.ipa

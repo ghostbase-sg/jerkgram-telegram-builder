@@ -13,7 +13,7 @@ ENQUEUE = ROOT / "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage
 STATIC_STICKER = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageStickerItemNode/Sources/ChatMessageStickerItemNode.swift"
 ANIMATED_STICKER = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode/Sources/ChatMessageAnimatedStickerItemNode.swift"
 
-REPLY_MARKER = "BUILD122_REPLY_NO_REUPLOAD1"
+REPLY_MARKER = "BUILD122_STICKER_REPLY_NO_REUPLOAD1"
 STATIC_MARKER = "BUILD122_STATIC_STICKER_ALPHA_OWNER1"
 ANIMATED_MARKER = "BUILD122_ANIMATED_STICKER_ALPHA1"
 
@@ -62,30 +62,35 @@ def main() -> None:
 
     require(REPLY_MARKER in enqueue, "reply marker missing")
     resolver_pos = enqueue.find("private func ghostBaseResolveDeletedReplies(")
-    reply_loop = balanced_block(enqueue, "                // MARK: Jerkgram v1.2K BUILD122_REPLY_NO_REUPLOAD1", resolver_pos)
-    require("recoveredMedia: nil" in reply_loop, "reply does not force nil source media")
-    for forbidden in (
+    resolver = balanced_block(enqueue, "private func ghostBaseResolveDeletedReplies(", resolver_pos)
+    require("let jerkgramStickerReply" in resolver, "sticker reply discriminator missing")
+    require("file.isSticker" in resolver, "sticker media test missing")
+    require("let recovered = jerkgramStickerReply ? nil : recoveredGroup.first" in resolver, "sticker-only nil source media contract missing")
+    for preserved in (
         "ghostBaseReconstructedMedia(",
         "recoveredGroup",
         "ghostBaseBuildRecoveredAlbumTail(",
         "recoveredMedia: recovered",
     ):
-        require(forbidden not in reply_loop, "cache/media-dependent outgoing path survived: " + forbidden)
+        require(preserved in resolver, "non-sticker recovery path missing: " + preserved)
 
     require(STATIC_MARKER in static, "static sticker alpha marker missing")
-    require("self.contextSourceNode.alpha = ghostBaseDeletedStickerAlpha" in static, "static container alpha missing")
     require("self.contextSourceNode.contentNode.alpha = ghostBaseDeletedStickerAlpha" in static, "static content alpha missing")
+    require("self.contextSourceNode.alpha = ghostBaseDeletedStickerAlpha" not in static, "static alpha is multiplied by parent")
+    require(static.count(".alpha = ghostBaseDeletedStickerAlpha") == 1, "static alpha owner count != 1")
     require("? 0.55 : 1.0" in static, "static deleted/live alpha values missing")
 
     require(ANIMATED_MARKER in animated, "animated sticker alpha marker missing")
     require("GhostBaseMessageAttribute" in animated, "animated deleted-state attribute lookup missing")
-    require("self.contextSourceNode.alpha = ghostBaseDeletedAnimatedStickerAlpha" in animated, "animated container alpha missing")
     require("self.contextSourceNode.contentNode.alpha = ghostBaseDeletedAnimatedStickerAlpha" in animated, "animated content alpha missing")
+    require("self.contextSourceNode.alpha = ghostBaseDeletedAnimatedStickerAlpha" not in animated, "animated alpha is multiplied by parent")
+    require(animated.count(".alpha = ghostBaseDeletedAnimatedStickerAlpha") == 1, "animated alpha owner count != 1")
     require("? 0.55 : 1.0" in animated, "animated deleted/live alpha values missing")
 
     print("[Build122 verify] GREEN")
-    print("[Build122 verify] deleted/recovered replies cannot reupload source media")
-    print("[Build122 verify] static + animated/video sticker alpha owners present")
+    print("[Build122 verify] sticker reply cannot attach a duplicate outgoing sticker")
+    print("[Build122 verify] non-sticker and album recovery paths preserved")
+    print("[Build122 verify] static + animated/video sticker effective alpha is 0.55")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+import re
 import unittest
 
 
@@ -36,9 +37,13 @@ python3 ../../scripts/verify_jerkgram_v12d_build115_numeric_links1.py
         self.assertEqual(positions, sorted(positions))
 
     def test_active_workflows_retain_build116_layer_under_build117(self):
-        for relative in (".github/workflows/build.yml", ".github/workflows/build-official.yml"):
-            text = (REPO_ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn("Jerkgram 12.9.2 Build117", text)
+        workflows = sorted((REPO_ROOT / ".github/workflows").glob("build*.yml"))
+        self.assertTrue(workflows)
+        for path in workflows:
+            text = path.read_text(encoding="utf-8")
+            match = re.search(r"Jerkgram 12\.9\.2 Build(\d+)", text)
+            self.assertIsNotNone(match)
+            self.assertGreaterEqual(int(match.group(1)), 117)
             for name in self.installer.ORDERED_SCRIPTS:
                 self.assertIn(name, text)
             self.assertNotIn("jerkgram_publish_build116_artifact.py", text)

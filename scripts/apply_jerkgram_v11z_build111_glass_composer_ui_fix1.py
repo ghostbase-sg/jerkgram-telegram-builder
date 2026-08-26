@@ -209,7 +209,9 @@ def materialize_steel_reveal_legacy_alticon():
     require(png_size(master) == (1254, 1254), "Steel Reveal legacy master size mismatch")
     template_pngs = sorted(template.glob("*.png"))
     require(template_pngs, "BlueIcon.alticon has no PNGs")
-    sips = Path("/usr/bin/sips")
+    # The release runner uses macOS sips; non-macOS source audits may inject
+    # a command-compatible resizer without changing generated resources.
+    sips = Path(os.environ.get("SIPS_BIN", "/usr/bin/sips"))
     require(sips.is_file(), "/usr/bin/sips missing")
 
     dimensions = {p.name: png_size(p) for p in template_pngs}

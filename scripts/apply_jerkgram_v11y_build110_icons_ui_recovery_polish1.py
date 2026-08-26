@@ -3,6 +3,7 @@
 from pathlib import Path
 import hashlib
 import os
+import os
 import re
 import shutil
 import struct
@@ -228,7 +229,9 @@ def build_alternate_icons():
         for path in template_pngs
     }
 
-    sips = Path("/usr/bin/sips")
+    # Keep the macOS release default, while allowing the materialization
+    # verifier to provide a compatible image resizer on non-macOS hosts.
+    sips = Path(os.environ.get("SIPS_BIN", "/usr/bin/sips"))
 
     require(
         sips.is_file(),

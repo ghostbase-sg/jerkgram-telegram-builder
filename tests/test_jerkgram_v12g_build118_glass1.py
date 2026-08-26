@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -48,7 +49,7 @@ class Build118GlassTests(unittest.TestCase):
             self.assertIn("white: presentationData.theme.overallDarkAppearance ? 0.0 : 1.0", combined)
             self.assertIn("alpha: presentationData.theme.overallDarkAppearance ? 0.26 : 0.18", combined)
             self.assertIn("itemPlainSeparatorColor", combined)
-            self.assertIn("cornerRadius: 16.0", combined)
+            self.assertRegex(combined, r"cornerRadius\s*(?::|=)\s*16\.0")
             self.assertIn("ghostBaseGlassEnabled: ghostBaseGlassEnabled", combined)
             list_source = (root / relative_paths[4]).read_text(encoding="utf-8")
             self.assertIn("private let glassBackgroundView: UIView", list_source)
