@@ -5,6 +5,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "scripts" / "apply_jerkgram_build124_telegram_api_credentials1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_build124_telegram_api_credentials1.py"
 
 
 class TelegramApiCredentialsTests(unittest.TestCase):
@@ -39,6 +40,13 @@ class TelegramApiCredentialsTests(unittest.TestCase):
         for api_id, api_hash in bad:
             with self.assertRaises(ValueError):
                 module.validate_credentials(api_id, api_hash)
+
+    def test_uses_existing_jerkgram_secret_environment_names(self):
+        source = SCRIPT.read_text(encoding="utf-8") + VERIFY.read_text(encoding="utf-8")
+        self.assertIn('JERKGRAM_TELEGRAM_API_ID', source)
+        self.assertIn('JERKGRAM_TELEGRAM_API_HASH', source)
+        self.assertNotIn('os.environ.get("TELEGRAM_API_ID"', source)
+        self.assertNotIn('os.environ.get("TELEGRAM_API_HASH"', source)
 
     def test_does_not_log_secret_values(self):
         source = SCRIPT.read_text(encoding="utf-8")
