@@ -98,10 +98,10 @@ class Build122SettingsReleaseContractTests(unittest.TestCase):
         ):
             self.assertIn(token, install)
             self.assertIn(token, workflow)
-        self.assertIn("name: Jerkgram 12.9.2 Build122", workflow)
-        self.assertIn("python3 scripts/jerkgram_publish_build122_artifact.py", workflow)
-        self.assertIn("name: Jerkgram-build122", workflow)
-        self.assertIn("artifacts/Jerkgram-build122.ipa", workflow)
+        self.assertIn("name: Jerkgram 12.9.2 Build123", workflow)
+        self.assertIn("python3 scripts/jerkgram_publish_build123_artifact.py", workflow)
+        self.assertIn("name: Jerkgram-build123", workflow)
+        self.assertIn("artifacts/Jerkgram-build123.ipa", workflow)
         self.assertNotIn("python3 scripts/jerkgram_publish_build121_artifact.py", workflow)
 
     def test_build122_finalizer_stamps_main_and_all_extensions(self) -> None:

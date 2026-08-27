@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build122
+name: Jerkgram 12.9.2 Build123
 
 on:
   workflow_dispatch:
@@ -136,18 +136,29 @@ jobs:
             scripts/jerkgram_finalize_build122_identity.py \
             scripts/verify_jerkgram_v12k_build122_final_ipa.py \
             scripts/jerkgram_publish_build122_artifact.py \
+            scripts/apply_jerkgram_v12l_build123_state_runtime1.py \
+            scripts/apply_jerkgram_v12l_build123_message_fidelity1.py \
+            scripts/apply_jerkgram_v12l_build123_profile_ui1.py \
+            scripts/apply_jerkgram_v12l_build123_settings_ui1.py \
+            scripts/verify_jerkgram_v12l_build123_release_recovery1.py \
+            scripts/install_jerkgram_v12l_build123_probe_hook.py \
+            scripts/jerkgram_finalize_build123_identity.py \
+            scripts/verify_jerkgram_v12l_build123_final_ipa.py \
+            scripts/jerkgram_publish_build123_artifact.py \
             tests/test_jerkgram_v12h_build119_hybrid_ui1.py \
             tests/test_jerkgram_v12i_build120_profile_blur_lifecycle1.py \
             tests/test_jerkgram_v12j_build121_sticker_recovery1.py \
             tests/test_jerkgram_v12k_build122_reply_sticker_contract1.py \
             tests/test_jerkgram_v12k_build122_edit_caption_history1.py \
-            tests/test_jerkgram_v12k_build122_settings_release1.py
+            tests/test_jerkgram_v12k_build122_settings_release1.py \
+            tests/test_jerkgram_v12l_build123_release_recovery1.py
           python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
           python3 -m unittest tests.test_jerkgram_v12i_build120_profile_blur_lifecycle1
           python3 -m unittest tests.test_jerkgram_v12j_build121_sticker_recovery1
           python3 -m unittest tests.test_jerkgram_v12k_build122_reply_sticker_contract1
           python3 -m unittest tests.test_jerkgram_v12k_build122_edit_caption_history1
           python3 -m unittest tests.test_jerkgram_v12k_build122_settings_release1
+          python3 -m unittest tests.test_jerkgram_v12l_build123_release_recovery1
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
@@ -156,6 +167,7 @@ jobs:
           python3 scripts/install_jerkgram_v12i_build120_probe_hook.py
           python3 scripts/install_jerkgram_v12j_build121_probe_hook.py
           python3 scripts/install_jerkgram_v12k_build122_probe_hook.py
+          python3 scripts/install_jerkgram_v12l_build123_probe_hook.py
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
@@ -163,14 +175,14 @@ jobs:
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build122_artifact.py
+          python3 scripts/jerkgram_publish_build123_artifact.py
 
       - name: Upload Jerkgram build
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build122
+          name: Jerkgram-build123
           path: |
-            artifacts/Jerkgram-build122.ipa
-            artifacts/Jerkgram-build122-info.txt
+            artifacts/Jerkgram-build123.ipa
+            artifacts/Jerkgram-build123-info.txt
           if-no-files-found: error

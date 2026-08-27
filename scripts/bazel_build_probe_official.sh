@@ -578,6 +578,14 @@ python3 ../../scripts/apply_jerkgram_v12k_build122_edit_caption_history1.py
 python3 ../../scripts/verify_jerkgram_v12k_build122_edit_caption_history1.py
 python3 ../../scripts/apply_jerkgram_v12k_build122_settings_release1.py
 python3 ../../scripts/verify_jerkgram_v12k_build122_settings_release1.py
+
+echo
+echo "== Jerkgram v1.2L Build123 release recovery =="
+python3 ../../scripts/apply_jerkgram_v12l_build123_state_runtime1.py
+python3 ../../scripts/apply_jerkgram_v12l_build123_message_fidelity1.py
+python3 ../../scripts/apply_jerkgram_v12l_build123_profile_ui1.py
+python3 ../../scripts/apply_jerkgram_v12l_build123_settings_ui1.py
+python3 ../../scripts/verify_jerkgram_v12l_build123_release_recovery1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -690,3 +698,8 @@ echo
 echo "== Jerkgram v1.2K Build122 final identity =="
 python3 ../../scripts/jerkgram_finalize_build122_identity.py ghostbase-final/GhostBase.ipa
 python3 ../../scripts/verify_jerkgram_v12k_build122_final_ipa.py ghostbase-final/GhostBase.ipa
+
+echo
+echo "== Jerkgram v1.2L Build123 final identity =="
+python3 ../../scripts/jerkgram_finalize_build123_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12l_build123_final_ipa.py ghostbase-final/GhostBase.ipa
