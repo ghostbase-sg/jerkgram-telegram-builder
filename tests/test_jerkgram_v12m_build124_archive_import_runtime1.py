@@ -103,7 +103,7 @@ class Build124ArchiveImportRuntimeTests(unittest.TestCase):
     def test_transaction_commit_moves_off_alert_action_thread(self):
         module = self.load_patch()
         updated = module.patch_text(FIXTURE)
-        action = updated[updated.index("TextAlertAction(type: .defaultAction"):]
+        action = updated[updated.index("title: strings.importSettings"):]
         self.assertLess(action.index("Queue.concurrentDefaultQueue().async"), action.index("JerkgramArchiveTransaction.apply"))
         self.assertNotIn("try? JerkgramArchiveTransaction.apply", action)
 
