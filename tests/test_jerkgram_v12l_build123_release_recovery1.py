@@ -1,4 +1,5 @@
 from pathlib import Path
+import importlib.util
 import plistlib
 import subprocess
 import tempfile
@@ -55,6 +56,50 @@ class Build123ReleaseRecoveryTests(unittest.TestCase):
         ):
             self.assertIn(token, source)
         self.assertIn("data.messageActions.options.contains(.forward) survived portable gate", source)
+
+    def test_edit_history_uses_previous_message_entities_not_deletion_scope(self):
+        source = MESSAGE.read_text(encoding="utf-8")
+        self.assertIn("originalEntities: previousEntities", source)
+        self.assertNotIn("text = text.replace(old, new)", source)
+
+    def test_deleted_entity_patcher_keeps_each_swift_binding_in_scope(self):
+        spec = importlib.util.spec_from_file_location("build123_message_fidelity", MESSAGE)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / "AccountStateManagementUtils.swift"
+            deleted = root / "DeleteMessagesInteractively.swift"
+            state.write_text('''
+                            ) ?? GhostBaseMessageAttribute(
+                                originalText: originalText,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0
+                            )
+                        if attribute == nil {
+                            attribute = GhostBaseMessageAttribute(
+                                originalText: previousMessage.text,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0
+                            )
+                        }
+''', encoding="utf-8")
+            deleted.write_text(
+                "                        updatedAttributes.append(GhostBaseMessageAttribute(originalText: currentMessage.text, editHistoryTexts: [], editHistoryDates: [], isDeleted: true, deletedAt: currentMessage.timestamp))",
+                encoding="utf-8",
+            )
+            module.STATE = state
+            module.DELETE = deleted
+            module.patch_deleted_entities()
+            result = state.read_text(encoding="utf-8")
+            self.assertIn("originalText: originalText", result)
+            self.assertIn("originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []", result)
+            self.assertIn("originalText: previousMessage.text", result)
+            self.assertIn("originalEntities: previousEntities", result)
 
     def test_profile_links_groups_description_and_login_have_explicit_owners(self):
         source = PROFILE.read_text(encoding="utf-8")

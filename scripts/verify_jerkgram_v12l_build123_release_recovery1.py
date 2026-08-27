@@ -35,6 +35,7 @@ def main() -> None:
     state = read("submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift")
     require("BUILD123_ENTITY_HISTORY_CAPTURE1" in state and "entities: previousEntities" in state, "entity capture missing")
     require("BUILD123_DELETED_ENTITY_SNAPSHOT1" in state and "originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []" in state, "deleted message entities missing")
+    require("originalEntities: previousEntities" in state, "edit history original entities use the wrong scope")
     deleted = read("submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessagesInteractively.swift")
     require("BUILD123_DELETED_ENTITY_SNAPSHOT1" in deleted and "originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []" in deleted, "interactive deletion entities missing")
     history = read("submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift")

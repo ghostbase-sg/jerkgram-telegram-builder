@@ -255,18 +255,36 @@ def patch_deleted_entities() -> None:
     text = STATE.read_text(encoding="utf-8")
     marker = "BUILD123_DELETED_ENTITY_SNAPSHOT1"
     if marker not in text:
-        old = '''                                editHistoryDates: [],
+        deletion_old = '''                                originalText: originalText,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
                                 isDeleted: false,
                                 deletedAt: 0
                             )'''
-        new = '''                                editHistoryDates: [],
+        deletion_new = '''                                originalText: originalText,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
                                 isDeleted: false,
                                 deletedAt: 0,
                                 // MARK: Jerkgram v1.2L BUILD123_DELETED_ENTITY_SNAPSHOT1
                                 originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []
                             )'''
-        require(text.count(old) == 2, f"server deletion snapshot: expected two anchors, found {text.count(old)}")
-        text = text.replace(old, new)
+        text = replace_once(text, deletion_old, deletion_new, "server deletion snapshot")
+        history_old = '''                                originalText: previousMessage.text,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0
+                            )'''
+        history_new = '''                                originalText: previousMessage.text,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0,
+                                // MARK: Jerkgram v1.2L BUILD123_DELETED_ENTITY_SNAPSHOT1
+                                originalEntities: previousEntities
+                            )'''
+        text = replace_once(text, history_old, history_new, "edit history original entity snapshot")
         STATE.write_text(text, encoding="utf-8")
 
     text = DELETE.read_text(encoding="utf-8")
