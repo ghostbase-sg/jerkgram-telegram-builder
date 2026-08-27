@@ -5,7 +5,7 @@ import os
 
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
-TARGET = ROOT / "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift"
+FORWARD = ROOT / "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_PROTECTED_FORWARD_LOCAL_COPY1"
 OLD_MARKER = "// MARK: Jerkgram v1.2L BUILD123_PORTABLE_FORWARD1"
 
@@ -15,28 +15,125 @@ def require(value: bool, message: str) -> None:
         raise RuntimeError("[Build124 protected forward] " + message)
 
 
-HELPERS = r'''// MARK: Jerkgram v1.2M BUILD124_PROTECTED_FORWARD_LOCAL_COPY1
-private func jerkgramProtectedForwardResourceData(
+def balanced_region(text: str, token: str) -> tuple[int, int]:
+    start = text.find(token)
+    require(start >= 0, f"token missing: {token}")
+    brace = text.find("{", start + len(token))
+    require(brace >= 0, f"opening brace missing: {token}")
+    depth = 0
+    in_string = False
+    escaped = False
+    i = brace
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return start, i + 1
+        i += 1
+    raise RuntimeError("[Build124 protected forward] unbalanced Swift region")
+
+
+HELPER = r'''// MARK: Jerkgram v1.2M BUILD124_PROTECTED_FORWARD_LOCAL_COPY1
+private func jerkgramPortableForwardBaseMessage(
+    _ message: Message,
+    hideAuthor: Bool,
+    threadId: Int64?,
+    mediaReference: AnyMediaReference?
+) -> EnqueueMessage {
+    var text = message.text
+    var entities = message.textEntitiesAttribute?.entities ?? []
+
+    // Telegram's own forwarding UI resolves attribution from forwardInfo first
+    // and then effectiveAuthor. For channel-authored posts the chat peer itself
+    // is not necessarily the author we need to reproduce.
+    if !hideAuthor, let author = message.forwardInfo?.author ?? message.effectiveAuthor {
+        let sourcePeer = EnginePeer(author)
+        let title = sourcePeer.compactDisplayTitle
+        if !title.isEmpty {
+            let prefix = text.isEmpty ? "" : "\n\n"
+            let start = (text as NSString).length + (prefix as NSString).length
+            text += prefix + "— " + title
+            let titleStart = start + 2
+            let titleEnd = titleStart + (title as NSString).length
+            if let username = sourcePeer.addressName, !username.isEmpty {
+                entities.append(MessageTextEntity(
+                    range: titleStart ..< titleEnd,
+                    type: .TextUrl(url: "https://t.me/\(username)")
+                ))
+            }
+            entities.append(MessageTextEntity(range: titleStart ..< titleEnd, type: .Bold))
+        }
+    }
+
+    var attributes: [MessageAttribute] = []
+    if !entities.isEmpty {
+        attributes.append(TextEntitiesMessageAttribute(entities: entities))
+    }
+    let embeddedFiles = (
+        message.attributes.first(where: { $0 is EmbeddedMediaStickersMessageAttribute })
+        as? EmbeddedMediaStickersMessageAttribute
+    )?.files ?? []
+    var inlineStickers: [MediaId: Media] = [:]
+    for file in embeddedFiles {
+        inlineStickers[file.fileId] = file
+    }
+
+    return .message(
+        text: text,
+        attributes: attributes,
+        inlineStickers: inlineStickers,
+        mediaReference: mediaReference,
+        threadId: threadId,
+        replyToMessageId: nil,
+        replyToStoryId: nil,
+        localGroupingKey: message.groupingKey,
+        correlationId: nil,
+        bubbleUpEmojiOrStickersets: []
+    )
+}
+
+private func jerkgramProtectedResourceData(
     context: AccountContext,
-    reference: AnyMediaReference,
+    message: Message,
+    mediaReference: AnyMediaReference,
     resource: TelegramMediaResource,
-    userContentType: MediaResourceUserContentType
-) -> Signal<MediaResourceData, NoError> {
+    userContentType: MediaResourceUserContentType,
+    pathExtension: String?
+) -> Signal<EngineMediaResource.ResourceData, NoError> {
+    // Use the same public EngineResources fetch/data pair as Official Telegram's
+    // SaveToCameraRoll path. The cloud reference stays alive only while fetching;
+    // the outgoing message is created after a completed local path exists.
     return Signal { subscriber in
-        let fetchDisposable = fetchedMediaResource(
-            mediaBox: context.account.postbox.mediaBox,
-            userLocation: .other,
-            userContentType: userContentType,
-            reference: reference.resourceReference(resource)
+        let fetchDisposable = context.engine.resources.fetch(
+            reference: mediaReference.resourceReference(resource),
+            userLocation: .peer(message.id.peerId),
+            userContentType: userContentType
         ).start()
-        let dataDisposable = context.account.postbox.mediaBox.resourceData(
-            resource,
-            option: .complete(waitUntilFetchStatus: true)
+        let dataDisposable = context.engine.resources.data(
+            resource: EngineMediaResource(resource),
+            pathExtension: pathExtension,
+            waitUntilFetchStatus: true
         ).start(next: { data in
-            if data.complete {
+            if data.isComplete {
                 subscriber.putNext(data)
                 subscriber.putCompletion()
             }
+        }, completed: {
+            subscriber.putCompletion()
         })
         return ActionDisposable {
             fetchDisposable.dispose()
@@ -46,12 +143,20 @@ private func jerkgramProtectedForwardResourceData(
     |> take(1)
 }
 
-private func jerkgramProtectedForwardMediaReference(
-    context: AccountContext,
-    message: Message
-) -> Signal<AnyMediaReference?, NoError> {
-    guard let media = message.media.first else {
-        return .single(nil)
+private func jerkgramPortableForwardMessage(
+    _ message: Message,
+    hideAuthor: Bool,
+    threadId: Int64?,
+    context: AccountContext
+) -> Signal<EnqueueMessage, NoError> {
+    guard message.isCopyProtected(), let media = message.media.first else {
+        let reference = message.media.first.map { AnyMediaReference.standalone(media: $0) }
+        return .single(jerkgramPortableForwardBaseMessage(
+            message,
+            hideAuthor: hideAuthor,
+            threadId: threadId,
+            mediaReference: reference
+        ))
     }
 
     if let file = media as? TelegramMediaFile {
@@ -59,53 +164,69 @@ private func jerkgramProtectedForwardMediaReference(
             message: MessageReference(message),
             media: file
         )
-        return jerkgramProtectedForwardResourceData(
+        let pathExtension: String?
+        if let fileName = file.fileName {
+            let ext = (fileName as NSString).pathExtension
+            pathExtension = ext.isEmpty ? nil : ext
+        } else {
+            pathExtension = nil
+        }
+        return jerkgramProtectedResourceData(
             context: context,
-            reference: sourceReference,
+            message: message,
+            mediaReference: sourceReference,
             resource: file.resource,
-            userContentType: MediaResourceUserContentType(file: file)
+            userContentType: MediaResourceUserContentType(file: file),
+            pathExtension: pathExtension
         )
-        |> map { data -> AnyMediaReference? in
+        |> map { data -> EnqueueMessage in
             let localId = Int64.random(in: Int64.min ... Int64.max)
             let localResource = LocalFileReferenceMediaResource(
                 localFilePath: data.path,
-                randomId: localId,
-                isUniquelyReferencedTemporaryFile: false,
-                size: data.size
+                randomId: localId
             )
+            // Do not retain protected cloud thumbnail/alternative resources in
+            // the outgoing file. Dimensions/duration/voice/video semantics live
+            // in attributes and are preserved; Telegram regenerates upload media.
             let localFile = TelegramMediaFile(
                 fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: localId),
                 partialReference: nil,
                 resource: localResource,
-                previewRepresentations: file.previewRepresentations,
-                videoThumbnails: file.videoThumbnails,
-                videoCover: file.videoCover,
+                previewRepresentations: [],
+                videoThumbnails: [],
+                videoCover: nil,
                 immediateThumbnailData: file.immediateThumbnailData,
                 mimeType: file.mimeType,
-                size: data.size,
+                size: file.size,
                 attributes: file.attributes,
                 alternativeRepresentations: []
             )
-            return AnyMediaReference.standalone(media: localFile)
+            return jerkgramPortableForwardBaseMessage(
+                message,
+                hideAuthor: hideAuthor,
+                threadId: threadId,
+                mediaReference: .standalone(media: localFile)
+            )
         }
-    } else if let image = media as? TelegramMediaImage, let representation = largestImageRepresentation(image.representations) {
+    } else if let image = media as? TelegramMediaImage,
+              let representation = largestImageRepresentation(image.representations) {
         let sourceReference = AnyMediaReference.message(
             message: MessageReference(message),
             media: image
         )
-        return jerkgramProtectedForwardResourceData(
+        return jerkgramProtectedResourceData(
             context: context,
-            reference: sourceReference,
+            message: message,
+            mediaReference: sourceReference,
             resource: representation.resource,
-            userContentType: .image
+            userContentType: .image,
+            pathExtension: "jpg"
         )
-        |> map { data -> AnyMediaReference? in
+        |> map { data -> EnqueueMessage in
             let localId = Int64.random(in: Int64.min ... Int64.max)
             let localResource = LocalFileReferenceMediaResource(
                 localFilePath: data.path,
-                randomId: localId,
-                isUniquelyReferencedTemporaryFile: false,
-                size: data.size
+                randomId: localId
             )
             let localRepresentation = TelegramMediaImageRepresentation(
                 dimensions: representation.dimensions,
@@ -118,197 +239,143 @@ private func jerkgramProtectedForwardMediaReference(
             let localImage = TelegramMediaImage(
                 imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: localId),
                 representations: [localRepresentation],
-                videoRepresentations: [],
                 immediateThumbnailData: image.immediateThumbnailData,
-                emojiMarkup: image.emojiMarkup,
                 reference: nil,
                 partialReference: nil,
-                flags: image.flags,
-                video: nil
+                flags: image.flags
             )
-            return AnyMediaReference.standalone(media: localImage)
+            return jerkgramPortableForwardBaseMessage(
+                message,
+                hideAuthor: hideAuthor,
+                threadId: threadId,
+                mediaReference: .standalone(media: localImage)
+            )
         }
     } else {
-        return .single(AnyMediaReference.standalone(media: media))
-    }
-}
-
-private func jerkgramPortableForwardMessage(
-    context: AccountContext,
-    _ message: Message,
-    hideAuthor: Bool,
-    threadId: Int64?
-) -> Signal<EnqueueMessage, NoError> {
-    var text = message.text
-    var entities = message.textEntitiesAttribute?.entities ?? []
-
-    if !hideAuthor, let author = message.forwardInfo?.author ?? message.effectiveAuthor {
-        let sourcePeer = EnginePeer(author)
-        let title = sourcePeer.compactDisplayTitle
-        if !text.isEmpty {
-            text += "\n\n"
-        }
-        let titleStart = (text as NSString).length
-        text += title
-        let titleEnd = (text as NSString).length
-        if let username = sourcePeer.addressName, !username.isEmpty {
-            entities.append(MessageTextEntity(range: titleStart ..< titleEnd, type: .TextUrl(url: "https://t.me/\(username)")))
-        }
-        entities.append(MessageTextEntity(range: titleStart ..< titleEnd, type: .Bold))
-    }
-
-    var attributes: [MessageAttribute] = []
-    if !entities.isEmpty {
-        attributes.append(TextEntitiesMessageAttribute(entities: entities))
-    }
-
-    return jerkgramProtectedForwardMediaReference(context: context, message: message)
-    |> map { mediaReference -> EnqueueMessage in
-        return .message(
-            text: text,
-            attributes: attributes,
-            inlineStickers: [:],
-            mediaReference: mediaReference,
+        // The red-failure regression is the protected upload-media path. Keep
+        // existing portable semantics for non-upload message media.
+        return .single(jerkgramPortableForwardBaseMessage(
+            message,
+            hideAuthor: hideAuthor,
             threadId: threadId,
-            replyToMessageId: nil,
-            replyToStoryId: nil,
-            localGroupingKey: nil,
-            correlationId: nil,
-            bubbleUpEmojiOrStickersets: []
-        )
+            mediaReference: .standalone(media: media)
+        ))
     }
 }
-
 '''
 
-OLD_PORTABLE_BRANCH = r'''                        let hideAuthor = forwardOptions?.hideNames == true
-                        let canUsePortableCopy = messages.allSatisfy { message in
-                            message.id.peerId.namespace != Namespaces.Peer.SecretChat
-                        }
-                        if canUsePortableCopy && (hideAuthor || messages.contains(where: { $0.isCopyProtected() })) {
-                            result.append(contentsOf: messages.map { message in
-                                jerkgramPortableForwardMessage(message, hideAuthor: hideAuthor, threadId: strongSelf.chatLocation.threadId)
-                            })
-                        } else {
-                            result.append(contentsOf: messages.map { message -> EnqueueMessage in
-                                return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil)
-                            })
-                        }
-'''
 
-NEW_PORTABLE_BRANCH = r'''                        var jerkgramPortableMessagesSignal: Signal<[EnqueueMessage], NoError>?
-                        let hideAuthor = forwardOptions?.hideNames == true
-                        let canUsePortableCopy = messages.allSatisfy { message in
-                            message.id.peerId.namespace != Namespaces.Peer.SecretChat
-                        }
-                        if canUsePortableCopy && (hideAuthor || messages.contains(where: { $0.isCopyProtected() })) {
-                            jerkgramPortableMessagesSignal = combineLatest(messages.map { message in
-                                jerkgramPortableForwardMessage(
-                                    context: strongSelf.context,
-                                    message,
-                                    hideAuthor: hideAuthor,
-                                    threadId: strongSelf.chatLocation.threadId
-                                )
-                            })
-                        } else {
-                            result.append(contentsOf: messages.map { message -> EnqueueMessage in
-                                return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil)
-                            })
-                        }
-'''
+def replace_helper(text: str) -> str:
+    token = "private func jerkgramPortableForwardMessage("
+    require(text.count(token) == 1, f"portable helper owner count is {text.count(token)}")
+    start, end = balanced_region(text, token)
+    marker_start = text.rfind(OLD_MARKER, 0, start)
+    if marker_start >= 0 and text[marker_start:start].strip() == OLD_MARKER:
+        start = marker_start
+    return text[:start] + HELPER + text[end:]
 
-OLD_MODE_SWITCH = r'''                        switch mode {
-                        case .generic:
-                            commit(result)
-                        case .silent:
-                            let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: true)
-                            commit(transformedMessages)
-                        case .schedule:
-                            strongSelf.presentScheduleTimePicker(completion: { [weak self] timeResult in
-                                if let strongSelf = self {
-                                    let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: timeResult.silentPosting, scheduleTime: timeResult.time, repeatPeriod: timeResult.repeatPeriod)
-                                    commit(transformedMessages)
-                                }
-                            })
-                        case .whenOnline:
-                            let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: strongSelf.presentationInterfaceState.interfaceState.silentPosting, scheduleTime: scheduleWhenOnlineTimestamp)
-                            commit(transformedMessages)
-                        }
-'''
 
-NEW_MODE_SWITCH = r'''                        let commitResolved: ([EnqueueMessage]) -> Void = { resolvedResult in
-                            switch mode {
-                            case .generic:
-                                commit(resolvedResult)
-                            case .silent:
-                                let transformedMessages = strongSelf.transformEnqueueMessages(resolvedResult, silentPosting: true)
-                                commit(transformedMessages)
-                            case .schedule:
-                                strongSelf.presentScheduleTimePicker(completion: { [weak self] timeResult in
-                                    if let strongSelf = self {
-                                        let transformedMessages = strongSelf.transformEnqueueMessages(resolvedResult, silentPosting: timeResult.silentPosting, scheduleTime: timeResult.time, repeatPeriod: timeResult.repeatPeriod)
-                                        commit(transformedMessages)
-                                    }
-                                })
-                            case .whenOnline:
-                                let transformedMessages = strongSelf.transformEnqueueMessages(resolvedResult, silentPosting: strongSelf.presentationInterfaceState.interfaceState.silentPosting, scheduleTime: scheduleWhenOnlineTimestamp)
-                                commit(transformedMessages)
-                            }
-                        }
+def patch_portable_branch(text: str) -> str:
+    variable_anchor = "var result: [EnqueueMessage] = []"
+    require(text.count(variable_anchor) >= 1, "forward result owner missing")
+    text = text.replace(
+        variable_anchor,
+        variable_anchor + "\n                        var jerkgramPortableMessagesSignal: Signal<[EnqueueMessage], NoError>?",
+        1,
+    )
 
-                        if let jerkgramPortableMessagesSignal {
-                            let baseResult = result
-                            let _ = (jerkgramPortableMessagesSignal
-                            |> deliverOnMainQueue).startStandalone(next: { portableMessages in
-                                commitResolved(baseResult + portableMessages)
-                            })
-                        } else {
-                            commitResolved(result)
-                        }
-'''
+    old_actual = '''result.append(contentsOf: messages.map {
+                                jerkgramPortableForwardMessage($0, hideAuthor: hideAuthor, threadId: strongSelf.chatLocation.threadId)
+                            })'''
+    old_fixture = '''result.append(contentsOf: messages.map { message in
+                jerkgramPortableForwardMessage(message, hideAuthor: hideAuthor, threadId: strongSelf.chatLocation.threadId)
+            })'''
+    if old_actual in text:
+        old = old_actual
+        indent = "                            "
+    elif old_fixture in text:
+        old = old_fixture
+        indent = "            "
+    else:
+        raise RuntimeError("[Build124 protected forward] portable append branch missing")
+
+    new = '''let jerkgramPrefixMessages = result
+{indent}jerkgramPortableMessagesSignal = combineLatest(messages.map {{ message in
+{indent}    jerkgramPortableForwardMessage(
+{indent}        message,
+{indent}        hideAuthor: hideAuthor,
+{indent}        threadId: strongSelf.chatLocation.threadId,
+{indent}        context: strongSelf.context
+{indent}    )
+{indent}}})
+{indent}|> map {{ portableMessages in
+{indent}    jerkgramPrefixMessages + portableMessages
+{indent}}}'''.format(indent=indent)
+    return text.replace(old, new, 1)
+
+
+def patch_commit_resolution(text: str) -> str:
+    token = "switch mode {"
+    require(text.count(token) == 1, f"forward mode switch count is {text.count(token)}")
+    switch_start, switch_end = balanced_region(text, token)
+    line_start = text.rfind("\n", 0, switch_start) + 1
+    indent = text[line_start:switch_start]
+    require(indent.strip() == "", "forward mode indentation detection failed")
+    switch_region = text[switch_start:switch_end]
+    switch_region = switch_region.replace("commit(result)", "commit(resolvedResult)")
+    switch_region = switch_region.replace(
+        "transformEnqueueMessages(result,",
+        "transformEnqueueMessages(resolvedResult,",
+    )
+    nested = "\n".join(("    " + line if line else line) for line in switch_region.split("\n"))
+    replacement = (
+        "let commitResolved: ([EnqueueMessage]) -> Void = { resolvedResult in\n"
+        + indent + nested
+        + "\n" + indent + "}\n"
+        + indent + "if let jerkgramPortableMessagesSignal {\n"
+        + indent + "    let _ = (jerkgramPortableMessagesSignal\n"
+        + indent + "    |> deliverOnMainQueue).startStandalone(next: { resolvedMessages in\n"
+        + indent + "        commitResolved(resolvedMessages)\n"
+        + indent + "    })\n"
+        + indent + "} else {\n"
+        + indent + "    commitResolved(result)\n"
+        + indent + "}"
+    )
+    return text[:switch_start] + replacement + text[switch_end:]
 
 
 def patch_text(text: str) -> str:
     if MARKER in text:
         return text
-
-    require(OLD_MARKER in text, "Build123 portable-forward marker missing")
-    require(text.count("extension ChatControllerImpl {") >= 1, "ChatControllerImpl extension missing")
-    helper_start = text.index(OLD_MARKER)
-    extension_start = text.index("extension ChatControllerImpl {", helper_start)
-    old_helper = text[helper_start:extension_start]
-    require("private func jerkgramPortableForwardMessage(" in old_helper, "Build123 portable helper missing")
-    require("let mediaReference = message.media.first.map { AnyMediaReference.standalone(media: $0) }" in old_helper, "Build123 original-cloud media owner missing")
-
-    if "import Postbox\n" not in text:
-        require("import Foundation\n" in text, "Foundation import missing")
-        text = text.replace("import Foundation\n", "import Foundation\nimport Postbox\n", 1)
-        helper_start = text.index(OLD_MARKER)
-        extension_start = text.index("extension ChatControllerImpl {", helper_start)
-        old_helper = text[helper_start:extension_start]
-
-    text = text[:helper_start] + HELPERS + text[extension_start:]
-
-    require(text.count(OLD_PORTABLE_BRANCH) == 1, f"expected one Build123 portable branch, found {text.count(OLD_PORTABLE_BRANCH)}")
-    text = text.replace(OLD_PORTABLE_BRANCH, NEW_PORTABLE_BRANCH, 1)
-
-    require(text.count(OLD_MODE_SWITCH) == 1, f"expected one forwarding mode switch, found {text.count(OLD_MODE_SWITCH)}")
-    text = text.replace(OLD_MODE_SWITCH, NEW_MODE_SWITCH, 1)
-
-    require(MARKER in text, "Build124 marker was not installed")
-    require("message.forwardInfo?.author ?? message.effectiveAuthor" in text, "correct author semantics missing")
-    require("LocalFileReferenceMediaResource" in text, "fresh local resource missing")
-    require("jerkgramPortableMessagesSignal" in text, "async portable forwarding missing")
+    require("BUILD123_PORTABLE_FORWARD1" in text, "Build123 portable forward prerequisite missing")
+    text = replace_helper(text)
+    text = patch_portable_branch(text)
+    text = patch_commit_resolution(text)
+    for proof in (
+        MARKER,
+        "LocalFileReferenceMediaResource",
+        "Namespaces.Media.LocalFile",
+        "Namespaces.Media.LocalImage",
+        "context.engine.resources.fetch",
+        "waitUntilFetchStatus: true",
+        "message.forwardInfo?.author ?? message.effectiveAuthor",
+        "var jerkgramPortableMessagesSignal: Signal<[EnqueueMessage], NoError>?",
+        "let commitResolved",
+    ):
+        require(proof in text, f"proof missing: {proof}")
+    require(
+        "let mediaReference = message.media.first.map { AnyMediaReference.standalone(media: $0) }" not in text,
+        "Build123 protected cloud media owner survived",
+    )
     return text
 
 
 def main() -> None:
-    require(TARGET.is_file(), f"target missing: {TARGET}")
-    original = TARGET.read_text(encoding="utf-8")
-    updated = patch_text(original)
-    TARGET.write_text(updated, encoding="utf-8")
+    require(FORWARD.is_file(), f"missing materialized source: {FORWARD}")
+    source = FORWARD.read_text(encoding="utf-8")
+    FORWARD.write_text(patch_text(source), encoding="utf-8")
     print("[Build124 protected forward] GREEN")
-    print("[Build124 protected forward] protected file/photo forwards are fetched and re-enqueued as fresh local uploads")
+    print("[Build124 protected forward] protected file/photo forwards wait for a complete local resource and re-upload a fresh media id")
 
 
 if __name__ == "__main__":
