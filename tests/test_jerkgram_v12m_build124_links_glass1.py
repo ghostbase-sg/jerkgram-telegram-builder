@@ -1,0 +1,90 @@
+import importlib.util
+from pathlib import Path
+import unittest
+
+
+REPO = Path(__file__).resolve().parents[1]
+PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_links_glass1.py"
+
+
+class Build124LinksGlassTests(unittest.TestCase):
+    def load_patch(self):
+        spec = importlib.util.spec_from_file_location("build124_links_glass", PATCH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def build123_owner(self) -> str:
+        return '''        // MARK: Jerkgram v1.2D BUILD115_LINKS_READABILITY_OWNER1
+        // PeerInfoListPaneNode is the actual visible owner for Links.
+        // Keep dark profile sources transparent. On bright sources,
+        // add one local neutral black readability surface only here.
+        if self.jerkgramLinksReadabilityEnabled {
+            let luminance = (
+                UserDefaults.standard.object(
+                    forKey: "Jerkgram.ProfileBackdrop.SourceLuminance"
+                ) as? NSNumber
+            )?.doubleValue ?? 0.0
+
+            let lightness = max(
+                0.0,
+                min(
+                    1.0,
+                    (CGFloat(luminance) - 0.55) / 0.45
+                )
+            )
+
+            let readabilityColor = UIColor.black.withAlphaComponent(
+                0.26 * lightness
+            )
+
+            self.backgroundColor = readabilityColor
+            self.listNode.backgroundColor = readabilityColor
+        }
+
+        // MARK: Jerkgram v1.2L BUILD123_LINKS_INTRINSIC_GLASS1
+        if self.ghostBaseGlassEnabled && !self.jerkgramLinksReadabilityEnabled {
+            self.glassBackgroundView.isHidden = false
+        } else {
+            self.glassBackgroundView.isHidden = true
+            transition.updateFrame(
+                view: self.glassBackgroundView,
+                frame: self.jerkgramLinksReadabilityEnabled ? .zero : self.glassBackgroundView.frame
+            )
+        }
+'''
+
+    def test_links_material_has_nonzero_alpha_floor(self):
+        module = self.load_patch()
+        result = module.patch_text(self.build123_owner())
+        self.assertIn("BUILD124_LINKS_INTRINSIC_MATERIAL1", result)
+        self.assertIn("let materialAlpha", result)
+        self.assertIn("0.20 + 0.06 * lightness", result)
+        self.assertIn("0.14 + 0.04 * lightness", result)
+        self.assertNotIn("0.26 * lightness", result)
+
+    def test_links_material_is_theme_aware_and_glass_gated(self):
+        module = self.load_patch()
+        result = module.patch_text(self.build123_owner())
+        self.assertIn("if self.ghostBaseGlassEnabled", result)
+        self.assertIn("presentationData.theme.overallDarkAppearance ? 0.0 : 1.0", result)
+        self.assertIn("self.backgroundColor = .clear", result)
+        self.assertIn("self.listNode.backgroundColor = .clear", result)
+
+    def test_does_not_restore_viewport_glass_plate_for_links(self):
+        module = self.load_patch()
+        result = module.patch_text(self.build123_owner())
+        build123 = result[result.index("BUILD123_LINKS_INTRINSIC_GLASS1"):]
+        self.assertIn("self.jerkgramLinksReadabilityEnabled ? .zero", build123)
+        self.assertNotIn("&& self.jerkgramLinksReadabilityEnabled", build123)
+
+    def test_patch_is_idempotent(self):
+        module = self.load_patch()
+        once = module.patch_text(self.build123_owner())
+        twice = module.patch_text(once)
+        self.assertEqual(once, twice)
+        self.assertEqual(once.count("BUILD124_LINKS_INTRINSIC_MATERIAL1"), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
