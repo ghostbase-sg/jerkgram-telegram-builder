@@ -6,6 +6,7 @@ import unittest
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "scripts" / "apply_jerkgram_build124_telegram_api_credentials1.py"
 VERIFY = REPO / "scripts" / "verify_jerkgram_build124_telegram_api_credentials1.py"
+EXPECTED_API_ID = "22732185"
 
 
 class TelegramApiCredentialsTests(unittest.TestCase):
@@ -20,8 +21,8 @@ class TelegramApiCredentialsTests(unittest.TestCase):
 
     def test_replaces_only_api_credentials(self):
         module = self.load_module()
-        result = module.patch_variables(self.official_variables(), "12345678", "0123456789abcdef0123456789abcdef")
-        self.assertIn('telegram_api_id = "12345678"', result)
+        result = module.patch_variables(self.official_variables(), EXPECTED_API_ID, "0123456789abcdef0123456789abcdef")
+        self.assertIn(f'telegram_api_id = "{EXPECTED_API_ID}"', result)
         self.assertIn('telegram_api_hash = "0123456789abcdef0123456789abcdef"', result)
         self.assertIn('telegram_bundle_id = "ph.telegra.Telegraph"', result)
         self.assertIn('telegram_team_id = "C67CF9S4VU"', result)
@@ -30,16 +31,22 @@ class TelegramApiCredentialsTests(unittest.TestCase):
 
     def test_rejects_missing_credentials(self):
         module = self.load_module()
-        for api_id, api_hash in (("", "0123456789abcdef0123456789abcdef"), ("12345678", "")):
+        for api_id, api_hash in (("", "0123456789abcdef0123456789abcdef"), (EXPECTED_API_ID, "")):
             with self.assertRaises(ValueError):
                 module.validate_credentials(api_id, api_hash)
 
     def test_rejects_malformed_credentials(self):
         module = self.load_module()
-        bad = (("abc", "0123456789abcdef0123456789abcdef"), ("12345678", "not-a-telegram-api-hash"))
+        bad = (("abc", "0123456789abcdef0123456789abcdef"), (EXPECTED_API_ID, "not-a-telegram-api-hash"))
         for api_id, api_hash in bad:
             with self.assertRaises(ValueError):
                 module.validate_credentials(api_id, api_hash)
+
+    def test_rejects_any_api_id_other_than_build124_canary_identity(self):
+        module = self.load_module()
+        for api_id in ("8", "12345678", "22732184", "22732186"):
+            with self.assertRaises(ValueError):
+                module.validate_credentials(api_id, "0123456789abcdef0123456789abcdef")
 
     def test_uses_existing_jerkgram_secret_environment_names(self):
         source = SCRIPT.read_text(encoding="utf-8") + VERIFY.read_text(encoding="utf-8")
@@ -57,7 +64,7 @@ class TelegramApiCredentialsTests(unittest.TestCase):
 
     def test_patch_is_idempotent(self):
         module = self.load_module()
-        api_id = "12345678"
+        api_id = EXPECTED_API_ID
         api_hash = "0123456789abcdef0123456789abcdef"
         once = module.patch_variables(self.official_variables(), api_id, api_hash)
         twice = module.patch_variables(once, api_id, api_hash)
