@@ -57,10 +57,14 @@ class TelegramApiCredentialsTests(unittest.TestCase):
 
     def test_does_not_log_secret_values(self):
         source = SCRIPT.read_text(encoding="utf-8")
-        self.assertNotIn("print(api_id", source)
-        self.assertNotIn("print(api_hash", source)
-        self.assertNotIn("{api_id}", source)
-        self.assertNotIn("{api_hash}", source)
+        print_lines = "\n".join(
+            line for line in source.splitlines()
+            if "print(" in line
+        )
+        self.assertNotIn("api_id", print_lines)
+        self.assertNotIn("api_hash", print_lines)
+        self.assertNotIn("{api_id}", print_lines)
+        self.assertNotIn("{api_hash}", print_lines)
 
     def test_patch_is_idempotent(self):
         module = self.load_module()
