@@ -3,6 +3,8 @@
 from pathlib import Path
 import os
 
+from install_jerkgram_build124_telegram_api_probe_hook1 import patch_probe as patch_telegram_api_probe
+
 
 PROBE = Path(os.environ.get("JERKGRAM_PROBE_PATH", str(Path(__file__).resolve().parent / "bazel_build_probe_official.sh"))).resolve()
 SOURCE_ORDERED = (
@@ -44,6 +46,12 @@ def main() -> None:
         require(text.count(FINAL_ANCHOR) == 1, "Build122 final anchor count")
         block = FINAL_ANCHOR + '\n\necho\necho "== Jerkgram v1.2L Build123 final identity =="\n' + "\n".join(line(name) + " ghostbase-final/GhostBase.ipa" for name in FINAL_ORDERED)
         text = text.replace(FINAL_ANCHOR, block, 1)
+
+    # Build124 credential hook: insert private Telegram API material only after
+    # the active configuration repository has been created, and verify it
+    # before Bazel sees that configuration.
+    text = patch_telegram_api_probe(text)
+
     PROBE.write_text(text, encoding="utf-8")
     print("[Build123 probe hook] GREEN")
 
