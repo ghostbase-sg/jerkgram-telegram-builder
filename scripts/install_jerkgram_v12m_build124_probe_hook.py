@@ -33,6 +33,7 @@ APPLY_ORDERED = (
     "apply_jerkgram_v12m_build124_single_forward1.py",
     "apply_jerkgram_v12m_build124_sensitive_settings1.py",
     "apply_jerkgram_v12m_build124_archive_import_runtime1.py",
+    "apply_jerkgram_v12m_build124_archive_export_runtime1.py",
     "apply_jerkgram_v12m_build124_protected_forward1.py",
     "apply_jerkgram_v12m_build124_deleted_entities1.py",
     "apply_jerkgram_v12m_build124_edit_history1.py",
@@ -50,6 +51,7 @@ VERIFY_ORDERED = (
     "verify_jerkgram_v12m_build124_single_forward1.py",
     "verify_jerkgram_v12m_build124_sensitive_settings1.py",
     "verify_jerkgram_v12m_build124_archive_import_runtime1.py",
+    "verify_jerkgram_v12m_build124_archive_export_runtime1.py",
     "verify_jerkgram_v12m_build124_protected_forward1.py",
     "verify_jerkgram_v12m_build124_deleted_entities1.py",
     "verify_jerkgram_v12m_build124_edit_history1.py",
@@ -132,6 +134,11 @@ def patch_probe(text: str) -> str:
         text.index("apply_jerkgram_v12m_build124_onetime_persistence1.py")
         < text.index("apply_jerkgram_v12m_build124_onetime_viewed1.py"),
         "one-time persistence must precede viewed-state overlay",
+    )
+    require(
+        text.index("apply_jerkgram_v12m_build124_archive_import_runtime1.py")
+        < text.index("apply_jerkgram_v12m_build124_archive_export_runtime1.py"),
+        "archive import runtime overlay must precede export reliability overlay",
     )
 
     if FINAL_MARKER not in text:
