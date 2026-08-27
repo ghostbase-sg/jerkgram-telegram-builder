@@ -15,11 +15,11 @@ def validate_credentials(api_id: str, api_hash: str) -> tuple[str, str]:
     api_id = (api_id or "").strip()
     api_hash = (api_hash or "").strip()
     if not api_id or not api_hash:
-        raise ValueError("TELEGRAM_API_ID and TELEGRAM_API_HASH must both be present")
+        raise ValueError("JERKGRAM_TELEGRAM_API_ID and JERKGRAM_TELEGRAM_API_HASH must both be present")
     if not api_id.isdigit() or int(api_id) <= 0:
-        raise ValueError("TELEGRAM_API_ID must be a positive decimal integer")
+        raise ValueError("JERKGRAM_TELEGRAM_API_ID must be a positive decimal integer")
     if not API_HASH_FORMAT_RE.fullmatch(api_hash):
-        raise ValueError("TELEGRAM_API_HASH must be exactly 32 hexadecimal characters")
+        raise ValueError("JERKGRAM_TELEGRAM_API_HASH must be exactly 32 hexadecimal characters")
     return api_id, api_hash.lower()
 
 
@@ -44,8 +44,8 @@ def main() -> None:
     args = parser.parse_args()
 
     api_id, api_hash = validate_credentials(
-        os.environ.get("TELEGRAM_API_ID", ""),
-        os.environ.get("TELEGRAM_API_HASH", ""),
+        os.environ.get("JERKGRAM_TELEGRAM_API_ID", ""),
+        os.environ.get("JERKGRAM_TELEGRAM_API_HASH", ""),
     )
     path = Path(args.variables)
     if not path.is_file():
@@ -55,8 +55,6 @@ def main() -> None:
     updated = patch_variables(original, api_id, api_hash)
     path.write_text(updated, encoding="utf-8")
 
-    # Never print either credential. GitHub Actions also masks secret values, but
-    # this script deliberately keeps them out of logs entirely.
     print("[Jerkgram Telegram API] credentials injected into active build configuration")
 
 
