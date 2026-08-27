@@ -9,6 +9,7 @@ import re
 API_ID_RE = re.compile(r'(?m)^telegram_api_id\s*=\s*"[^"]*"\s*$')
 API_HASH_RE = re.compile(r'(?m)^telegram_api_hash\s*=\s*"[^"]*"\s*$')
 API_HASH_FORMAT_RE = re.compile(r'^[0-9a-fA-F]{32}$')
+EXPECTED_API_ID = "22732185"
 
 
 def validate_credentials(api_id: str, api_hash: str) -> tuple[str, str]:
@@ -18,6 +19,8 @@ def validate_credentials(api_id: str, api_hash: str) -> tuple[str, str]:
         raise ValueError("JERKGRAM_TELEGRAM_API_ID and JERKGRAM_TELEGRAM_API_HASH must both be present")
     if not api_id.isdigit() or int(api_id) <= 0:
         raise ValueError("JERKGRAM_TELEGRAM_API_ID must be a positive decimal integer")
+    if api_id != EXPECTED_API_ID:
+        raise ValueError("JERKGRAM_TELEGRAM_API_ID does not match the approved Build124 canary identity")
     if not API_HASH_FORMAT_RE.fullmatch(api_hash):
         raise ValueError("JERKGRAM_TELEGRAM_API_HASH must be exactly 32 hexadecimal characters")
     return api_id, api_hash.lower()
