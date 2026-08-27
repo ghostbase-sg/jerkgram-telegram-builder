@@ -50,7 +50,11 @@ class Build124ProfileMoreTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_text(self.fixture())
         self.assertIn("if case .multiLine = item.textBehavior, displayMore", result)
-        self.assertLess(result.index("if case .multiLine = item.textBehavior, displayMore"), result.index("TextNodeCutout(bottomRight:"))
+        self.assertIn("TextNodeCutout(bottomRight:", result)
+        self.assertLess(
+            result.index("if case .multiLine = item.textBehavior, displayMore"),
+            result.index("TextNodeCutout(bottomRight:")
+        )
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()
