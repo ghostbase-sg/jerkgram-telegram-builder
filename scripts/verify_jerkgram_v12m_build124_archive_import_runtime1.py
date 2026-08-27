@@ -32,7 +32,7 @@ def main() -> None:
     require(background_start < zip_start, "ZIP listing still runs before background queue")
     require(background_start < data_start, "archive payload reads still run before background queue")
 
-    action_start = import_text.index("TextAlertAction(\n                                    type: .defaultAction")
+    action_start = import_text.index("title: strings.importSettings")
     transaction_start = import_text.index("JerkgramArchiveTransaction.apply", action_start)
     action_background = import_text.index("Queue.concurrentDefaultQueue().async", action_start)
     require(action_background < transaction_start, "ArchiveTransaction.apply still runs on alert action/UI thread")
