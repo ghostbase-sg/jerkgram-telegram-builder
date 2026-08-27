@@ -62,6 +62,10 @@ class Build123ReleaseRecoveryTests(unittest.TestCase):
         self.assertIn("originalEntities: previousEntities", source)
         self.assertNotIn("text = text.replace(old, new)", source)
 
+    def test_portable_forward_imports_postbox_message_types(self):
+        source = MESSAGE.read_text(encoding="utf-8")
+        self.assertIn('"import Foundation\\nimport Postbox\\n"', source)
+
     def test_deleted_entity_patcher_keeps_each_swift_binding_in_scope(self):
         spec = importlib.util.spec_from_file_location("build123_message_fidelity", MESSAGE)
         module = importlib.util.module_from_spec(spec)
@@ -100,6 +104,41 @@ class Build123ReleaseRecoveryTests(unittest.TestCase):
             self.assertIn("originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []", result)
             self.assertIn("originalText: previousMessage.text", result)
             self.assertIn("originalEntities: previousEntities", result)
+
+    def test_deleted_entity_patcher_repairs_marked_legacy_bad_scope(self):
+        spec = importlib.util.spec_from_file_location("build123_message_scope_repair", MESSAGE)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / "AccountStateManagementUtils.swift"
+            deleted = root / "DeleteMessagesInteractively.swift"
+            state.write_text('''
+                                originalText: originalText,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0,
+                                // MARK: Jerkgram v1.2L BUILD123_DELETED_ENTITY_SNAPSHOT1
+                                originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []
+                            )
+                                originalText: previousMessage.text,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0,
+                                // MARK: Jerkgram v1.2L BUILD123_DELETED_ENTITY_SNAPSHOT1
+                                originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []
+                            )
+''', encoding="utf-8")
+            deleted.write_text("// BUILD123_DELETED_ENTITY_SNAPSHOT1", encoding="utf-8")
+            module.STATE = state
+            module.DELETE = deleted
+            module.patch_deleted_entities()
+            result = state.read_text(encoding="utf-8")
+            self.assertIn("originalText: previousMessage.text", result)
+            self.assertIn("originalEntities: previousEntities", result)
+            self.assertEqual(result.count("originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []"), 1)
 
     def test_profile_links_groups_description_and_login_have_explicit_owners(self):
         source = PROFILE.read_text(encoding="utf-8")

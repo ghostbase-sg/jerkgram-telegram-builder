@@ -287,6 +287,26 @@ def patch_deleted_entities() -> None:
         text = replace_once(text, history_old, history_new, "edit history original entity snapshot")
         STATE.write_text(text, encoding="utf-8")
 
+    legacy_bad_history = '''                                originalText: previousMessage.text,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0,
+                                // MARK: Jerkgram v1.2L BUILD123_DELETED_ENTITY_SNAPSHOT1
+                                originalEntities: currentMessage.textEntitiesAttribute?.entities ?? []
+                            )'''
+    repaired_history = '''                                originalText: previousMessage.text,
+                                editHistoryTexts: [],
+                                editHistoryDates: [],
+                                isDeleted: false,
+                                deletedAt: 0,
+                                // MARK: Jerkgram v1.2L BUILD123_DELETED_ENTITY_SNAPSHOT1
+                                originalEntities: previousEntities
+                            )'''
+    if legacy_bad_history in text:
+        text = replace_once(text, legacy_bad_history, repaired_history, "legacy edit history entity scope repair")
+        STATE.write_text(text, encoding="utf-8")
+
     text = DELETE.read_text(encoding="utf-8")
     if marker not in text:
         old = '''                        updatedAttributes.append(GhostBaseMessageAttribute(originalText: currentMessage.text, editHistoryTexts: [], editHistoryDates: [], isDeleted: true, deletedAt: currentMessage.timestamp))'''
@@ -395,6 +415,14 @@ private struct GhostBaseEditHistoryVersion: Equatable {
 
 def patch_forward_send() -> None:
     text = FORWARD.read_text(encoding="utf-8")
+    if "import Postbox\n" not in text:
+        text = replace_once(
+            text,
+            "import Foundation\n",
+            "import Foundation\nimport Postbox\n",
+            "portable forward Postbox import",
+        )
+        FORWARD.write_text(text, encoding="utf-8")
     if "BUILD123_PORTABLE_FORWARD1" in text:
         if "canUsePortableCopy" not in text:
             old = '''                        let hideAuthor = forwardOptions?.hideNames == true || options?.hideNames == true

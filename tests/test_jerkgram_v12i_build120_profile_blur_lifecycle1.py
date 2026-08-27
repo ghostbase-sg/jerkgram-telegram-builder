@@ -41,6 +41,22 @@ class Build120ProfileBlurLifecycleTests(unittest.TestCase):
         self.assertIn("true", source)
         self.assertIn("blurred:", source)
         self.assertIn("false", source)
+        self.assertIn("BUILD123_PROFILE_FINAL_CACHE1", source)
+        self.assertIn("BUILD123_PROFILE_COMPLETE_EMISSION1", source)
+        self.assertIn("completeOnly: Bool = false", source)
+        self.assertIn("if case .complete = dataType", source)
+        self.assertIn("completeOnly: true", source)
+        self.assertIn("raced_guard", source)
+        self.assertIn("avatar-final-v2:", source)
+
+    def test_profile_patch_filters_typed_emission_before_image_decode(self) -> None:
+        source = APPLY.read_text(encoding="utf-8")
+        replacement_position = source.index("complete_data_owner =")
+        filter_position = source.index("|> filter { value in", replacement_position)
+        decode_position = source.index("|> mapToSignal { data -> Signal<(UIImage, UIImage)?, NoError> in", filter_position)
+        self.assertLess(filter_position, decode_position)
+        self.assertIn("guard let (_, dataType) = value", source[filter_position:decode_position])
+        self.assertIn("if case .complete = dataType", source[filter_position:decode_position])
 
     def test_profile_verifier_guards_cold_reopen_invariants(self) -> None:
         source = VERIFY.read_text(encoding="utf-8")
@@ -52,6 +68,11 @@ class Build120ProfileBlurLifecycleTests(unittest.TestCase):
             "BUILD114_SOURCE_LUMINANCE1",
             "self.blurView.alpha = 1.0",
             "AVATAR_REOPEN_NO_GREY1",
+            "BUILD123_PROFILE_FINAL_CACHE1",
+            "BUILD123_PROFILE_COMPLETE_EMISSION1",
+            "completeOnly: true",
+            "if case .complete = dataType",
+            "avatar-final-v2:",
         ):
             self.assertIn(token, source)
         self.assertIn("REMOVED_BUILD113_MARK not in text", source)

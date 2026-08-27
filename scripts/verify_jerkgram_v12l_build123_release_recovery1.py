@@ -45,6 +45,7 @@ def main() -> None:
     require("BUILD123_PORTABLE_MENU_RESTRICTIONS1" in history and "$0 is TelegramMediaPaidContent" in history and "$0 is TelegramMediaAction" in history, "portable menu restrictions missing")
     forward = read("submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift")
     require("BUILD123_PORTABLE_FORWARD1" in forward, "portable forward builder missing")
+    require("import Postbox\n" in forward, "portable forward Postbox types are not imported")
     require("messages.contains(where: { $0.isCopyProtected() })" in forward, "protected forward fallback missing")
     require("canUsePortableCopy" in forward and "$0 is TelegramMediaPaidContent" in forward, "portable forwarding restrictions missing")
 

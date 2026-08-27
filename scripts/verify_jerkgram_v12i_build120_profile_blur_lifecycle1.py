@@ -15,6 +15,7 @@ BG = ROOT / (
     "PeerInfoScreen/Sources/"
     "GhostBaseProfileFullscreenBackground.swift"
 )
+AVATAR = ROOT / "submodules/AvatarNode/Sources/PeerAvatar.swift"
 
 PIPELINE_MARK = "GhostBase v1.1T BUILD97_STATIC_AVATAR_PIPELINE1"
 BUILD120_MARK = "Jerkgram v1.2I BUILD120_PROFILE_COLDSTART1"
@@ -22,6 +23,8 @@ BUILD106_MARK = "GhostBase v1.1U BUILD106_STATIC_AVATAR_BLUR1"
 BUILD114_MARK = "Jerkgram v1.2C BUILD114_SOURCE_LUMINANCE1"
 REMOVED_BUILD113_MARK = "Jerkgram v1.2B BUILD113_STATIC_AVATAR_BLUR_OWNER1"
 CACHE_MARK = "GhostBase v1.1T AVATAR_REOPEN_NO_GREY1"
+FINAL_CACHE_MARK = "Jerkgram v1.2L BUILD123_PROFILE_FINAL_CACHE1"
+COMPLETE_EMISSION_MARK = "Jerkgram v1.2L BUILD123_PROFILE_COMPLETE_EMISSION1"
 
 
 def require(value: bool, message: str) -> None:
@@ -31,9 +34,11 @@ def require(value: bool, message: str) -> None:
 
 def main() -> None:
     require(BG.is_file(), "profile background source missing: " + str(BG))
+    require(AVATAR.is_file(), "Telegram avatar source missing: " + str(AVATAR))
     text = BG.read_text(encoding="utf-8")
+    avatar_source = AVATAR.read_text(encoding="utf-8")
 
-    for token in (PIPELINE_MARK, BUILD120_MARK, BUILD106_MARK, BUILD114_MARK, CACHE_MARK):
+    for token in (PIPELINE_MARK, BUILD120_MARK, BUILD106_MARK, BUILD114_MARK, CACHE_MARK, FINAL_CACHE_MARK):
         require(token in text, "owner missing: " + token)
     require(
         REMOVED_BUILD113_MARK not in text,
@@ -49,6 +54,18 @@ def main() -> None:
     require("synchronousLoad: true" in avatar, "Build120 synchronous cold-start load missing")
     require("synchronousLoad: false" not in avatar, "synchronousLoad false survived in static avatar owner")
     require(avatar.count(BUILD120_MARK) == 1, "Build120 cold-start owner count != 1")
+    require("completeOnly: true" in avatar, "profile pipeline does not request complete-only avatar emissions")
+    require("completedResourcePath(representation.resource)" not in avatar, "racy post-decode MediaBox guard survived")
+    require("avatar-final-v2:" in text, "poisoned legacy avatar disk-cache key remains active")
+
+    require(COMPLETE_EMISSION_MARK in avatar_source, "typed complete-only AvatarNode owner missing")
+    require("completeOnly: Bool = false" in avatar_source, "source-compatible complete-only API missing")
+    filter_start = avatar_source.find("        |> filter { value in")
+    decode_start = avatar_source.find("        |> mapToSignal { data -> Signal<(UIImage, UIImage)?, NoError> in", filter_start)
+    require(filter_start >= 0 and decode_start > filter_start, "typed emission filter must precede UIImage decode")
+    typed_filter = avatar_source[filter_start:decode_start]
+    require("guard let (_, dataType) = value" in typed_filter, "PeerAvatarImageType is erased before filtering")
+    require("if case .complete = dataType" in typed_filter, "complete-only filter does not reject .blurred")
 
     blur_start = text.find("            // MARK: " + BUILD106_MARK + "\n")
     require(blur_start >= 0, "Build114-restored Build106 blur owner start missing")
@@ -69,6 +86,7 @@ def main() -> None:
     print("[Build120 profile blur verify] Build114-restored Build106 blur alpha owner is retained")
     print("[Build120 profile blur verify] obsolete Build113 systemMaterial override is absent")
     print("[Build120 profile blur verify] RAM/disk reopen cache remains intact")
+    print("[Build120 profile blur verify] only completed avatar resources can enter reopen cache")
 
 
 if __name__ == "__main__":
