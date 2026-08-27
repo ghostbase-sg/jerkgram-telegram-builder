@@ -21,8 +21,8 @@ jobs:
       PROF_B64: ${{ secrets.PROF_B64 }}
       P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
       KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-      TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
-      TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+      JERKGRAM_TELEGRAM_API_ID: ${{ secrets.JERKGRAM_TELEGRAM_API_ID }}
+      JERKGRAM_TELEGRAM_API_HASH: ${{ secrets.JERKGRAM_TELEGRAM_API_HASH }}
 
     steps:
       - name: Checkout builder
