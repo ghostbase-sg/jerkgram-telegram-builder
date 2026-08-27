@@ -76,6 +76,8 @@ jobs:
             scripts/verify_jerkgram_v12m_build124_sensitive_settings1.py \
             scripts/apply_jerkgram_v12m_build124_archive_import_runtime1.py \
             scripts/verify_jerkgram_v12m_build124_archive_import_runtime1.py \
+            scripts/apply_jerkgram_v12m_build124_archive_export_runtime1.py \
+            scripts/verify_jerkgram_v12m_build124_archive_export_runtime1.py \
             scripts/apply_jerkgram_v12m_build124_protected_forward1.py \
             scripts/verify_jerkgram_v12m_build124_protected_forward1.py \
             scripts/apply_jerkgram_v12m_build124_deleted_entities1.py \
@@ -117,6 +119,7 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12m_build124_single_forward1
           python3 -m unittest tests.test_jerkgram_v12m_build124_sensitive_settings1
           python3 -m unittest tests.test_jerkgram_v12m_build124_archive_import_runtime1
+          python3 -m unittest tests.test_jerkgram_v12m_build124_archive_export_runtime1
           python3 -m unittest tests.test_jerkgram_v12m_build124_protected_forward1
           python3 -m unittest tests.test_jerkgram_v12m_build124_deleted_entities1
           python3 -m unittest tests.test_jerkgram_v12m_build124_edit_history1
