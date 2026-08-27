@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-import importlib
+import importlib.util
+import unittest
 
-from scripts.apply_jerkgram_v12m_build124_onetime_persistence1 import (
-    patch_autoremove_text,
-    patch_voice_file_text,
-)
 
+REPO = Path(__file__).resolve().parents[1]
+PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_onetime_persistence1.py"
 
 AUTOREMOVE_FIXTURE = '''                                var updatedAttributes = currentMessage.attributes
                                 for i in 0 ..< updatedAttributes.count {
@@ -37,47 +36,45 @@ VOICE_FIXTURE = '''                var isConsumed: Bool?
 '''
 
 
-def test_autoremove_keeps_view_once_identity_without_rearming_timestamp_operation():
-    updated = patch_autoremove_text(AUTOREMOVE_FIXTURE)
+class Build124OneTimePersistenceTests(unittest.TestCase):
+    def load_patch(self):
+        spec = importlib.util.spec_from_file_location("build124_onetime_persistence", PATCH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
 
-    assert "BUILD124_PERSISTENT_ONETIME_MARKER1" in updated
-    assert "currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout" in updated
-    assert "AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)" in updated
+    def test_autoremove_keeps_view_once_identity_without_rearming_timestamp_operation(self):
+        module = self.load_patch()
+        updated = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_MARKER1", updated)
+        self.assertIn("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
+        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)", updated)
+        self.assertIn("updatedAttributes.remove(at: i)", updated)
+        self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)
 
-    # Ordinary autoclear messages still follow Telegram's stock removal path.
-    assert "updatedAttributes.remove(at: i)" in updated
+    def test_voice_keeps_one_time_visual_after_consumption_but_preserves_consumed_state(self):
+        module = self.load_patch()
+        updated = module.patch_voice_file_text(VOICE_FIXTURE)
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1", updated)
+        self.assertIn("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
+        self.assertIn("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual", updated)
+        self.assertIn("isConsumed = attribute.consumed", updated)
+        self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)
 
-    # Never falsify the consumed/read state just to preserve the one-time look.
-    assert "ConsumableContentMessageAttribute(consumed: false)" not in updated
+    def test_build124_onetime_patch_is_idempotent(self):
+        module = self.load_patch()
+        once_auto = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
+        self.assertEqual(once_auto, module.patch_autoremove_text(once_auto))
+        once_voice = module.patch_voice_file_text(VOICE_FIXTURE)
+        self.assertEqual(once_voice, module.patch_voice_file_text(once_voice))
 
-
-def test_voice_keeps_one_time_visual_after_consumption_but_preserves_consumed_state():
-    updated = patch_voice_file_text(VOICE_FIXTURE)
-
-    assert "BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1" in updated
-    assert "arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout" in updated
-    assert "if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in updated
-    assert "isConsumed = attribute.consumed" in updated
-    assert "ConsumableContentMessageAttribute(consumed: false)" not in updated
-
-
-def test_build124_onetime_patch_is_idempotent():
-    once_auto = patch_autoremove_text(AUTOREMOVE_FIXTURE)
-    twice_auto = patch_autoremove_text(once_auto)
-    assert twice_auto == once_auto
-
-    once_voice = patch_voice_file_text(VOICE_FIXTURE)
-    twice_voice = patch_voice_file_text(once_voice)
-    assert twice_voice == once_voice
+    def test_patch_targets_only_materialized_official_owners(self):
+        source = PATCH.read_text(encoding="utf-8")
+        self.assertIn("submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift", source)
+        self.assertIn("submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift", source)
+        self.assertNotIn("apply_ghostbase_v10p_sh1_ot1_combined.py", source)
+        self.assertNotIn("apply_ghostbase_v10q_sh2_ot2_combined.py", source)
 
 
-def test_patch_targets_only_materialized_official_owners():
-    module = importlib.import_module("scripts.apply_jerkgram_v12m_build124_onetime_persistence1")
-    source = Path(module.__file__).read_text(encoding="utf-8")
-
-    assert "submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift" in source
-    assert "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift" in source
-
-    # Build124 is a late overlay; do not rewrite historical OT1/OT2 scripts.
-    assert "apply_ghostbase_v10p_sh1_ot1_combined.py" not in source
-    assert "apply_ghostbase_v10q_sh2_ot2_combined.py" not in source
+if __name__ == "__main__":
+    unittest.main()
