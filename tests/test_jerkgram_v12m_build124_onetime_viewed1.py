@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-import importlib
+import importlib.util
+import unittest
 
-from scripts.apply_jerkgram_v12m_build124_onetime_viewed1 import (
-    patch_media_text,
-    patch_voice_text,
-)
 
+REPO = Path(__file__).resolve().parents[1]
+PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_onetime_viewed1.py"
 
 MEDIA_FIXTURE = '''            if let remainingTime {
                 if remainingTime == viewOnceTimeout {
@@ -31,39 +30,45 @@ VOICE_FIXTURE = '''                        // MARK: Jerkgram v1.2M BUILD124_PERS
 '''
 
 
-def test_outgoing_photo_video_badge_preserves_one_time_effect_and_adds_viewed_state():
-    updated = patch_media_text(MEDIA_FIXTURE)
+class Build124OneTimeViewedTests(unittest.TestCase):
+    def load_patch(self):
+        spec = importlib.util.spec_from_file_location("build124_onetime_viewed", PATCH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
 
-    assert "BUILD124_OUTGOING_ONETIME_VIEWED_MEDIA1" in updated
-    assert "ConsumableContentMessageAttribute" in updated
-    assert "attribute.consumed" in updated
-    assert "!message.flags.contains(.Incoming)" in updated
-    assert 'jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"' in updated
-    assert 'iconName: "Chat/Message/SecretMediaOnce"' in updated
+    def test_outgoing_photo_video_badge_preserves_one_time_effect_and_adds_viewed_state(self):
+        module = self.load_patch()
+        updated = module.patch_media_text(MEDIA_FIXTURE)
+        self.assertIn("BUILD124_OUTGOING_ONETIME_VIEWED_MEDIA1", updated)
+        self.assertIn("ConsumableContentMessageAttribute", updated)
+        self.assertIn("attribute.consumed", updated)
+        self.assertIn("!message.flags.contains(.Incoming)", updated)
+        self.assertIn('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"', updated)
+        self.assertIn('iconName: "Chat/Message/SecretMediaOnce"', updated)
+
+    def test_outgoing_voice_indicator_keeps_one_time_dot_and_adds_viewed_check(self):
+        module = self.load_patch()
+        updated = module.patch_voice_text(VOICE_FIXTURE)
+        self.assertIn("BUILD124_OUTGOING_ONETIME_VIEWED_VOICE1", updated)
+        self.assertIn("jerkgramKeepConsumedOneTimeVisual && attribute.consumed", updated)
+        self.assertIn("context.fillEllipse", updated)
+        self.assertIn("context.strokePath()", updated)
+        self.assertIn("isConsumed = attribute.consumed", updated)
+
+    def test_viewed_patch_is_idempotent(self):
+        module = self.load_patch()
+        once_media = module.patch_media_text(MEDIA_FIXTURE)
+        self.assertEqual(once_media, module.patch_media_text(once_media))
+        once_voice = module.patch_voice_text(VOICE_FIXTURE)
+        self.assertEqual(once_voice, module.patch_voice_text(once_voice))
+
+    def test_circle_keeps_telegram_native_seen_state_owner(self):
+        source = PATCH.read_text(encoding="utf-8")
+        self.assertNotIn("ChatMessageInteractiveInstantVideoNode", source)
+        self.assertIn("ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift", source)
+        self.assertIn("ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift", source)
 
 
-def test_outgoing_voice_indicator_keeps_one_time_dot_and_adds_viewed_check():
-    updated = patch_voice_text(VOICE_FIXTURE)
-
-    assert "BUILD124_OUTGOING_ONETIME_VIEWED_VOICE1" in updated
-    assert "jerkgramKeepConsumedOneTimeVisual && attribute.consumed" in updated
-    assert "context.fillEllipse" in updated
-    assert "context.strokePath()" in updated
-    assert "isConsumed = attribute.consumed" in updated
-
-
-def test_viewed_patch_is_idempotent():
-    once_media = patch_media_text(MEDIA_FIXTURE)
-    assert patch_media_text(once_media) == once_media
-
-    once_voice = patch_voice_text(VOICE_FIXTURE)
-    assert patch_voice_text(once_voice) == once_voice
-
-
-def test_circle_keeps_telegram_native_seen_state_owner():
-    module = importlib.import_module("scripts.apply_jerkgram_v12m_build124_onetime_viewed1")
-    source = Path(module.__file__).read_text(encoding="utf-8")
-
-    assert "ChatMessageInteractiveInstantVideoNode" not in source
-    assert "ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift" in source
-    assert "ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift" in source
+if __name__ == "__main__":
+    unittest.main()
