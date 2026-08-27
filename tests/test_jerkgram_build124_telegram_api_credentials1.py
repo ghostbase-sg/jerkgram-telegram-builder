@@ -24,6 +24,9 @@ class TelegramApiCredentialsTests(unittest.TestCase):
     def official_variables(self):
         return '''telegram_bundle_id = "ph.telegra.Telegraph"\ntelegram_api_id = "8"\ntelegram_api_hash = "7245de8e747a0d6fbe11f7cc14fcc0bb"\ntelegram_team_id = "C67CF9S4VU"\n'''
 
+    def official_build_config_owner(self):
+        return '''#import <BuildConfig/BuildConfig.h>\n\n@implementation BuildConfig\n\n- (instancetype _Nonnull)initWithBaseAppBundleId:(NSString * _Nonnull)baseAppBundleId {\n    self = [super init];\n    if (self != nil) {\n        _apiId = APP_CONFIG_API_ID;\n        _apiHash = @(APP_CONFIG_API_HASH);\n        _appCenterId = @(APP_CONFIG_APP_CENTER_ID);\n    }\n    return self;\n}\n\n@end\n'''
+
     def test_replaces_only_api_credentials(self):
         module = self.load_module()
         result = module.patch_variables(self.official_variables(), EXPECTED_API_ID, TEST_API_HASH)
@@ -33,6 +36,20 @@ class TelegramApiCredentialsTests(unittest.TestCase):
         self.assertIn('telegram_team_id = "C67CF9S4VU"', result)
         self.assertNotIn('telegram_api_id = "8"', result)
         self.assertNotIn('telegram_api_hash = "7245de8e747a0d6fbe11f7cc14fcc0bb"', result)
+
+    def test_build_config_owner_embeds_nonsecret_api_id_proof_from_same_macro(self):
+        module = self.load_module()
+        result = module.patch_build_config_owner(self.official_build_config_owner())
+        self.assertIn("JERKGRAM_BUILD124_API_ID=", result)
+        self.assertIn("JERKGRAM_BUILD124_STRINGIFY(APP_CONFIG_API_ID)", result)
+        self.assertIn("__attribute__((used))", result)
+        self.assertIn("_apiId = APP_CONFIG_API_ID;", result)
+        self.assertNotIn(TEST_API_HASH, result)
+
+    def test_build_config_owner_proof_is_idempotent(self):
+        module = self.load_module()
+        once = module.patch_build_config_owner(self.official_build_config_owner())
+        self.assertEqual(once, module.patch_build_config_owner(once))
 
     def test_rejects_missing_credentials(self):
         module = self.load_module()
