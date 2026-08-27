@@ -25,10 +25,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    expected_id = (os.environ.get("TELEGRAM_API_ID") or "").strip()
-    expected_hash = (os.environ.get("TELEGRAM_API_HASH") or "").strip().lower()
-    require(bool(expected_id), "TELEGRAM_API_ID is missing")
-    require(bool(expected_hash), "TELEGRAM_API_HASH is missing")
+    expected_id = (os.environ.get("JERKGRAM_TELEGRAM_API_ID") or "").strip()
+    expected_hash = (os.environ.get("JERKGRAM_TELEGRAM_API_HASH") or "").strip().lower()
+    require(bool(expected_id), "JERKGRAM_TELEGRAM_API_ID is missing")
+    require(bool(expected_hash), "JERKGRAM_TELEGRAM_API_HASH is missing")
 
     path = Path(args.variables)
     require(path.is_file(), "active variables.bzl is missing")
@@ -39,7 +39,6 @@ def main() -> None:
     require(values["telegram_api_id"] != OFFICIAL_API_ID, "Official Telegram api_id is still active")
     require(values["telegram_api_hash"].lower() != OFFICIAL_API_HASH, "Official Telegram api_hash is still active")
 
-    # Deliberately report only boolean state. Never echo values.
     print("[Jerkgram Telegram API verify] GREEN")
     print("[Jerkgram Telegram API verify] private credentials are active; secret values were not logged")
 
