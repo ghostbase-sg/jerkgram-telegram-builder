@@ -7,6 +7,8 @@ import re
 
 
 ASSIGN_RE = re.compile(r'(?m)^(telegram_api_id|telegram_api_hash)\s*=\s*"([^"]*)"\s*$')
+API_HASH_FORMAT_RE = re.compile(r'^[0-9a-fA-F]{32}$')
+EXPECTED_API_ID = "22732185"
 OFFICIAL_API_ID = "8"
 OFFICIAL_API_HASH = "7245de8e747a0d6fbe11f7cc14fcc0bb"
 
@@ -29,6 +31,8 @@ def main() -> None:
     expected_hash = (os.environ.get("JERKGRAM_TELEGRAM_API_HASH") or "").strip().lower()
     require(bool(expected_id), "JERKGRAM_TELEGRAM_API_ID is missing")
     require(bool(expected_hash), "JERKGRAM_TELEGRAM_API_HASH is missing")
+    require(expected_id == EXPECTED_API_ID, "configured API ID is not the approved Build124 canary identity")
+    require(API_HASH_FORMAT_RE.fullmatch(expected_hash) is not None, "configured API hash has an invalid shape")
 
     path = Path(args.variables)
     require(path.is_file(), "active variables.bzl is missing")
@@ -36,11 +40,12 @@ def main() -> None:
     require(set(values) == {"telegram_api_id", "telegram_api_hash"}, "API assignments are missing or duplicated")
     require(values["telegram_api_id"] == expected_id, "active telegram_api_id does not match the configured secret")
     require(values["telegram_api_hash"].lower() == expected_hash, "active telegram_api_hash does not match the configured secret")
+    require(values["telegram_api_id"] == EXPECTED_API_ID, "active telegram_api_id is not the approved Build124 canary identity")
     require(values["telegram_api_id"] != OFFICIAL_API_ID, "Official Telegram api_id is still active")
     require(values["telegram_api_hash"].lower() != OFFICIAL_API_HASH, "Official Telegram api_hash is still active")
 
     print("[Jerkgram Telegram API verify] GREEN")
-    print("[Jerkgram Telegram API verify] private credentials are active; secret values were not logged")
+    print("[Jerkgram Telegram API verify] approved canary credentials are active; secret values were not logged")
 
 
 if __name__ == "__main__":
