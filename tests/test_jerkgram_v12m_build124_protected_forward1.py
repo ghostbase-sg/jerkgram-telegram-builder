@@ -95,8 +95,8 @@ extension ChatControllerImpl {
         self.assertIn("LocalFileReferenceMediaResource", result)
         self.assertIn("Namespaces.Media.LocalFile", result)
         self.assertIn("Namespaces.Media.LocalImage", result)
-        self.assertIn("fetchedMediaResource", result)
-        self.assertIn(".complete(waitUntilFetchStatus: true)", result)
+        self.assertIn("context.engine.resources.fetch", result)
+        self.assertIn("waitUntilFetchStatus: true", result)
         self.assertNotIn("let mediaReference = message.media.first.map { AnyMediaReference.standalone(media: $0) }", result)
 
     def test_channel_author_uses_telegram_author_semantics(self):
