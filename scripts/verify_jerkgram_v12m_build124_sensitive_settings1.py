@@ -9,7 +9,7 @@ SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCont
 CONSUME = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift"
 AUTOREMOVE = ROOT / "submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift"
 FORWARD = ROOT / "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift"
-STANDALONE = ROOT / "submodules/TelegramUI/Sources/StandaloneSendMessage.swift"
+STANDALONE = ROOT / "submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_SENSITIVE_SETTINGS_SYNC1"
 
 
