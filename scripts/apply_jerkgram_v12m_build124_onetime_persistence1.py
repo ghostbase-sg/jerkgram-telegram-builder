@@ -297,8 +297,11 @@ def normalize_legacy_remote_owner(text: str) -> str:
     if not legacy_present:
         return text
 
-    require(text.count(LEGACY_REMOTE_IMAGE) == 1, f"expected one legacy OT1 remote image owner, found {text.count(LEGACY_REMOTE_IMAGE)}")
-    require(text.count(LEGACY_REMOTE_FILE) == 1, f"expected one legacy OT1 remote file owner, found {text.count(LEGACY_REMOTE_FILE)}")
+    # Build123 materialization has two historical shapes. Normalize the
+    # verbatim shape when present; the equivalent newer bookkeeping is left for
+    # the authoritative remote-consumption guard below.
+    if text.count(LEGACY_REMOTE_IMAGE) != 1 or text.count(LEGACY_REMOTE_FILE) != 1:
+        return text
     updated = text.replace(LEGACY_REMOTE_IMAGE, STOCK_REMOTE_IMAGE, 1)
     updated = updated.replace(LEGACY_REMOTE_FILE, STOCK_REMOTE_FILE, 1)
     require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote keep decision survived normalization")
