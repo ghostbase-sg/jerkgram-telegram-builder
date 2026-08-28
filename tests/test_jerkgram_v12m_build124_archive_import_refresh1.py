@@ -64,7 +64,7 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("statePromise.set(refreshed)", updated)
         self.assertIn("let jerkgramImportRefreshStateSignal = combineLatest(", updated)
         self.assertIn("statePromise.get(),\n        jerkgramImportRefreshSignal", updated)
-        self.assertIn("|> map { state, _ in state }", updated)
+        self.assertIn("|> map { (state: GhostBaseSettingsState, _: Void) -> GhostBaseSettingsState in state }", updated)
         self.assertIn(
             "let signal = combineLatest(context.sharedContext.presentationData, jerkgramImportRefreshStateSignal)",
             updated,
