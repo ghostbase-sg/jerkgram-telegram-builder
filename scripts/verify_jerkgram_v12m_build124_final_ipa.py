@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+import os
 from pathlib import Path
 import sys
 
+import verify_jerkgram_build124_telegram_api_ipa1 as api_verify
 import verify_jerkgram_v12k_build122_final_ipa as base
 
 
@@ -16,10 +18,15 @@ def main() -> None:
         else "work/swiftgram-src/ghostbase-final/GhostBase.ipa"
     ).resolve()
 
-    # Build124 source overlays are deliberately not materialized in the
-    # recovery canary. Their API-marker verifier therefore cannot describe
-    # this IPA; preserve the complete, independently green Build122/124
-    # topology verification instead.
+    # Keep the private API IPA gate wired for normal Build124 materializations.
+    # The recovery canary intentionally materializes the verified Build123
+    # source base, where this marker was never introduced.
+    if os.environ.get("JERKGRAM_BUILD124_SOURCE_OVERLAYS") == "materialized":
+        api_verify.verify_ipa_credentials(
+            ipa,
+            os.environ.get("JERKGRAM_TELEGRAM_API_HASH", ""),
+        )
+
     base.main()
 
 
