@@ -160,6 +160,58 @@ REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeepO
 REMOTE_EXPIRE_CONDITION = '''if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {'''
 REMOTE_EXPIRE_CONDITION_PERSISTENT = '''if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout) {'''
 
+LEGACY_REMOTE_IMAGE = '''                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+                                    if ghostBaseOT1KeepOutgoingTimerLocal {
+                                        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
+                                        UserDefaults.standard.set("consumeImage", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                    } else {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                    }
+                                } else if let file = updatedMedia[i] as? TelegramMediaFile {
+'''
+
+STOCK_REMOTE_IMAGE = '''                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                } else if let file = updatedMedia[i] as? TelegramMediaFile {
+'''
+
+LEGACY_REMOTE_FILE = '''                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
+                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+
+                                    if file.isInstantVideo {
+                                        if !(ghostBaseKeepVoiceCircleLocal || ghostBaseOT1KeepOutgoingTimerLocal) {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                        } else {
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
+                                            UserDefaults.standard.set("consumeInstantVideo", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                        }
+                                    } else if file.isVoice {
+                                        if !(ghostBaseKeepVoiceCircleLocal || ghostBaseOT1KeepOutgoingTimerLocal) {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                        } else {
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
+                                            UserDefaults.standard.set("consumeVoice", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                        }
+                                    } else {
+                                        if !ghostBaseOT1KeepOutgoingTimerLocal {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                        } else {
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
+                                            UserDefaults.standard.set("consumeFile", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                        }
+                                    }
+'''
+
+STOCK_REMOTE_FILE = '''                                    if file.isInstantVideo {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                    } else if file.isVoice {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                    } else {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                    }
+'''
+
 OLD_VOICE = '''                var isConsumed: Bool?
                 
                 var consumableContentIcon: UIImage?
@@ -237,6 +289,26 @@ def replace_autoremove_media_owner(text: str) -> str:
     return text
 
 
+def normalize_legacy_remote_owner(text: str) -> str:
+    legacy_present = (
+        "ghostBaseOT1KeepOutgoingTimerLocal" in text
+        or "GhostBase.OT1.OutgoingKeepBlocked.Count" in text
+        or "GhostBase.OT1.OutgoingKeepPath" in text
+    )
+    if not legacy_present:
+        return text
+
+    require(text.count(LEGACY_REMOTE_IMAGE) == 1, f"expected one legacy OT1 remote image owner, found {text.count(LEGACY_REMOTE_IMAGE)}")
+    require(text.count(LEGACY_REMOTE_FILE) == 1, f"expected one legacy OT1 remote file owner, found {text.count(LEGACY_REMOTE_FILE)}")
+    updated = text.replace(LEGACY_REMOTE_IMAGE, STOCK_REMOTE_IMAGE, 1)
+    updated = updated.replace(LEGACY_REMOTE_FILE, STOCK_REMOTE_FILE, 1)
+    require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote keep decision survived normalization")
+    require("ghostBaseKeepVoiceCircleLocal" not in updated, "legacy voice/circle remote keep decision survived normalization")
+    require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived normalization")
+    require("GhostBase.OT1.OutgoingKeepPath" not in updated, "legacy OT1 remote path diagnostics survived normalization")
+    return updated
+
+
 def patch_autoremove_text(text: str) -> str:
     if MEDIA_MARKER in text and AUTOREMOVE_MARKER in text:
         return text
@@ -272,15 +344,18 @@ def patch_autoremove_text(text: str) -> str:
 
 
 def patch_remote_consumed_text(text: str) -> str:
-    if REMOTE_MARKER in text:
-        return text
+    updated = normalize_legacy_remote_owner(text)
+    if REMOTE_MARKER in updated:
+        require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote decision survived an existing Build124 owner")
+        require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived an existing Build124 owner")
+        return updated
 
-    require(text.count(REMOTE_DECISION_ANCHOR) == 1, f"expected one remote-consume countdown owner, found {text.count(REMOTE_DECISION_ANCHOR)}")
-    require(text.count(REMOTE_AUTOREMOVE_ASSIGNMENT) == 1, f"expected one remote autoremove assignment, found {text.count(REMOTE_AUTOREMOVE_ASSIGNMENT)}")
-    require(text.count(REMOTE_AUTOCLEAR_ASSIGNMENT) == 1, f"expected one remote autoclear assignment, found {text.count(REMOTE_AUTOCLEAR_ASSIGNMENT)}")
-    require(text.count(REMOTE_EXPIRE_CONDITION) == 2, f"expected two remote media-expiration owners, found {text.count(REMOTE_EXPIRE_CONDITION)}")
+    require(updated.count(REMOTE_DECISION_ANCHOR) == 1, f"expected one remote-consume countdown owner, found {updated.count(REMOTE_DECISION_ANCHOR)}")
+    require(updated.count(REMOTE_AUTOREMOVE_ASSIGNMENT) == 1, f"expected one remote autoremove assignment, found {updated.count(REMOTE_AUTOREMOVE_ASSIGNMENT)}")
+    require(updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT) == 1, f"expected one remote autoclear assignment, found {updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT)}")
+    require(updated.count(REMOTE_EXPIRE_CONDITION) == 2, f"expected two remote media-expiration owners, found {updated.count(REMOTE_EXPIRE_CONDITION)}")
 
-    updated = text.replace(REMOTE_DECISION_ANCHOR, REMOTE_DECISION, 1)
+    updated = updated.replace(REMOTE_DECISION_ANCHOR, REMOTE_DECISION, 1)
     updated = updated.replace(REMOTE_AUTOREMOVE_ASSIGNMENT, REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_AUTOCLEAR_ASSIGNMENT, REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_EXPIRE_CONDITION, REMOTE_EXPIRE_CONDITION_PERSISTENT, 2)
@@ -290,6 +365,10 @@ def patch_remote_consumed_text(text: str) -> str:
     require(updated.count(REMOTE_EXPIRE_CONDITION_PERSISTENT) == 2, "remote one-time media expiration guards are incomplete")
     require("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "remote autoremove view-once countdown is still armed")
     require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "remote autoclear view-once countdown is still armed")
+    require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote keep decision survived Build124 replacement")
+    require("ghostBaseKeepVoiceCircleLocal" not in updated, "legacy voice/circle remote keep decision survived Build124 replacement")
+    require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived Build124 replacement")
+    require("GhostBase.OT1.OutgoingKeepPath" not in updated, "legacy OT1 remote path diagnostics survived Build124 replacement")
     return updated
 
 
@@ -322,7 +401,7 @@ def main() -> None:
 
     print("[Build124 one-time persistence] GREEN")
     print("[Build124 one-time persistence] retained one-time media stays real across remote consumption and managed autoremove")
-    print("[Build124 one-time persistence] legacy OT1 managed-autoremove owner is collapsed into the single Build124 owner")
+    print("[Build124 one-time persistence] legacy OT1 autoremove and remote-consume owners collapse into the single Build124 owners")
     print("[Build124 one-time persistence] view-once countdown remains unscheduled when persistence is enabled")
     print("[Build124 one-time persistence] consumed voice keeps the one-time visual while preserving consumed=true")
 
