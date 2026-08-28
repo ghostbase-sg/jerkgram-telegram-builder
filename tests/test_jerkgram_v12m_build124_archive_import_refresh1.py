@@ -25,7 +25,7 @@ private func ghostBaseSettingsEntries(
     return []
 }
 
-public func ghostBaseSettingsController(
+private func ghostBaseSettingsPageController(
     context: AccountContext,
     initialPage: GhostBaseSettingsPage = .root
 ) -> ViewController {
@@ -78,8 +78,16 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
     def test_multiline_controller_signature_does_not_drive_helper_anchor(self):
         module = self.load_patch()
         updated = module.patch_settings_refresh_text(SETTINGS_FIXTURE)
-        self.assertIn("public func ghostBaseSettingsController(\n    context: AccountContext,", updated)
+        self.assertIn("private func ghostBaseSettingsPageController(\n    context: AccountContext,", updated)
         self.assertIn("BUILD124_ARCHIVE_IMPORT_REFRESH1", updated)
+
+    def test_refresh_bridge_uses_private_settings_page_state_owner(self):
+        module = self.load_patch()
+        updated = module.patch_settings_refresh_text(SETTINGS_FIXTURE)
+        self.assertIn(
+            "let signal = combineLatest(context.sharedContext.presentationData, jerkgramImportRefreshStateSignal)",
+            updated,
+        )
 
     def test_refresh_bridge_handles_a_state_signal_declared_before_atomic_owner(self):
         module = self.load_patch()
