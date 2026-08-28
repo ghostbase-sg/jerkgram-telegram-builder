@@ -128,7 +128,7 @@ def patch_settings_refresh_text(text: str) -> str:
     setup_marker = "    |> map { state, _ in state }\n"
     setup_start = text.index("    let jerkgramImportRefreshStateSignal = combineLatest(")
     setup_end = text.index(setup_marker, setup_start) + len(setup_marker)
-    controller_start, controller_end = balanced_region(text, "public func ghostBaseSettingsController(")
+    controller_start, controller_end = balanced_region(text, "private func ghostBaseSettingsPageController(")
     controller_text = text[controller_start:controller_end]
     state_get = "statePromise.get()"
     require(controller_text.count(state_get) >= 1, "settings controller no longer consumes statePromise.get()")
