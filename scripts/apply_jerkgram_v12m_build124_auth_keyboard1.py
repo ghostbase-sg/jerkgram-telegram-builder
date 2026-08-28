@@ -41,15 +41,26 @@ def patch_phone_layout(text: str) -> str:
         "ghostBaseSafeLoginInfoFrame" in text,
         "Safe Login info frame owner missing",
     )
+    require(
+        "if let inputHeight = layout.inputHeight, !inputHeight.isZero" in text,
+        "Telegram input-height inset owner missing",
+    )
 
+    # Safe Login v0.8H owns the extra inset and v0.8H.1 deliberately reduces
+    # it to zero. Build124 is later than both overlays, so anchor to that real
+    # materialized owner rather than the pre-Safe-Login Telegram line.
+    safe_login_inset_owner = """        let ghostBaseSafeLoginExtraBottomInset: CGFloat = 0.0
+        let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset
+"""
     text = replace_once(
         text,
-        "        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0\n",
+        safe_login_inset_owner,
         """        // MARK: Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1
         let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0
-        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
+        let ghostBaseSafeLoginExtraBottomInset: CGFloat = 0.0
+        let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset
 """,
-        "keyboard state",
+        "materialized Safe Login keyboard state",
     )
 
     old_animation = """        if layout.size.width > 320.0 {
@@ -147,6 +158,8 @@ def patch_phone_layout(text: str) -> str:
     for proof in (
         MARKER,
         "let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0",
+        "if let inputHeight = layout.inputHeight, !inputHeight.isZero",
+        "let ghostBaseSafeLoginExtraBottomInset: CGFloat = 0.0",
         "if !jerkgramKeyboardVisible {",
         "self.hasOtherAccounts && !jerkgramKeyboardVisible",
         "ghostBaseSafeLoginInfoFrame.minY - 10.0",
