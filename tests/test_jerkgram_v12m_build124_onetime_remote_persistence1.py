@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import importlib.util
+import unittest
+
+
+REPO = Path(__file__).resolve().parents[1]
+PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_persistence1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_onetime_persistence1.py"
+
+REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        let countdownBeginTime = consumeDate ?? timestamp
+        
+        for i in 0 ..< updatedAttributes.count {
+            if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
+                if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
+                    updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
+                    updateMessage = true
+                                 
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                    } else {
+                        if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {
+                            for i in 0 ..< updatedMedia.count {
+                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
+                if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
+                    updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
+                    updateMessage = true
+                    
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                    } else {
+                        for i in 0 ..< updatedMedia.count {
+                            if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {
+                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+'''
+
+
+class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
+    def load_patch(self):
+        spec = importlib.util.spec_from_file_location("build124_onetime_persistence", PATCH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_remote_consume_preserves_media_and_disarms_view_once_countdown(self):
+        module = self.load_patch()
+        updated = module.patch_remote_consumed_text(REMOTE_FIXTURE)
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
+        self.assertIn('GhostBase.ProtectedContent.OneTimeSave', updated)
+        self.assertIn("message.id.peerId.namespace != Namespaces.Peer.SecretChat", updated)
+        self.assertIn("message.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
+        self.assertEqual(updated.count("if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout"), 2)
+        self.assertIn("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", updated)
+        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", updated)
+        self.assertIn("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)", updated)
+        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)", updated)
+
+    def test_remote_consume_patch_is_idempotent(self):
+        module = self.load_patch()
+        once = module.patch_remote_consumed_text(REMOTE_FIXTURE)
+        self.assertEqual(once, module.patch_remote_consumed_text(once))
+
+    def test_remote_consume_owner_is_in_materialized_official_telegramcore(self):
+        source = PATCH.read_text(encoding="utf-8")
+        self.assertIn("submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift", source)
+
+    def test_source_verifier_requires_remote_persistence_owner(self):
+        source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", source)
+        self.assertIn("remote.count(REMOTE_MARKER) == 1", source)
+        self.assertIn('remote.count("if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout") == 2', source)
+        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", source)
+
+
+if __name__ == "__main__":
+    unittest.main()
