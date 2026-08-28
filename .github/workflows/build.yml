@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build124
+name: Jerkgram 12.9.2 Build124 Canary
 
 on:
   workflow_dispatch:
@@ -63,6 +63,7 @@ jobs:
             scripts/install_jerkgram_v12l_build123_probe_hook.py \
             scripts/apply_jerkgram_build124_telegram_api_credentials1.py \
             scripts/verify_jerkgram_build124_telegram_api_credentials1.py \
+            scripts/verify_jerkgram_build124_telegram_api_ipa1.py \
             scripts/install_jerkgram_build124_telegram_api_probe_hook1.py \
             scripts/apply_jerkgram_v12m_build124_profile_edit_glass1.py \
             scripts/verify_jerkgram_v12m_build124_profile_edit_glass1.py \
@@ -113,6 +114,9 @@ jobs:
           # materialized-source verifiers execute inside the probe before Bazel.
           python3 -m unittest tests.test_jerkgram_build124_telegram_api_credentials1
           python3 -m unittest tests.test_jerkgram_build124_telegram_api_probe_hook1
+          python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_credentials1
+          python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_wiring1
+          python3 -m unittest tests.test_jerkgram_v12m_build124_canary_publication1
           python3 -m unittest tests.test_jerkgram_v12m_build124_profile_edit_glass1
           python3 -m unittest tests.test_jerkgram_v12m_build124_profile_more1
           python3 -m unittest tests.test_jerkgram_v12m_build124_links_glass1
@@ -147,18 +151,18 @@ jobs:
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
-      - name: Publish Jerkgram artifact
+      - name: Publish Jerkgram Build124 canary artifact
         if: success()
         run: |
           set -e
           python3 scripts/jerkgram_publish_build124_artifact.py
 
-      - name: Upload Jerkgram build
+      - name: Upload Jerkgram Build124 canary
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-build124
+          name: Jerkgram-Build124-canary
           path: |
-            artifacts/Jerkgram-build124.ipa
-            artifacts/Jerkgram-build124-info.txt
+            artifacts/Jerkgram-Build124-canary.ipa
+            artifacts/Jerkgram-Build124-canary-info.txt
           if-no-files-found: error
