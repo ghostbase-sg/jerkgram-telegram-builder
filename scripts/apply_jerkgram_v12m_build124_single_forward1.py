@@ -9,6 +9,7 @@ SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCont
 MENU = ROOT / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift"
 STATE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_FORWARD_SETTING_OWNER1"
 MENU_MARKER = "// MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_ACCOUNT_SCOPE1"
+BUILD123_MENU_MARKER = "BUILD123_PORTABLE_MENU_RESTRICTIONS1"
 
 
 def require(value: bool, message: str) -> None:
@@ -23,18 +24,20 @@ NEW_STATE = '''        GhostBaseKey.showEditHistory: .bool(state.showEditHistory
         GhostBaseKey.forwardWithoutAuthor: .bool(state.forwardWithoutAuthor),
         ghostBaseSendTextStyleKey: .string(state.sendTextStyle),'''
 
+# Build108 canonicalized the legacy GhostBase defaults namespace to jerkgram.*.
+# Build123 then replaced the permission gate below this load, but deliberately
+# left the load/default itself intact. Match that exact materialized owner.
 OLD_MENU = '''        let ghostBaseForwardWithoutAuthor = (
             UserDefaults.standard.object(
-                forKey: "GhostBase.Messages.ForwardWithoutAuthor"
+                forKey: "jerkgram.Messages.ForwardWithoutAuthor"
             ) as? Bool
         ) ?? true
-
-        // MARK: Jerkgram v1.2L BUILD123_PORTABLE_MENU_RESTRICTIONS1'''
+'''
 NEW_MENU = '''        // MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_ACCOUNT_SCOPE1
-        // The Settings owner is per-account. A single-message context menu must
-        // resolve the same scoped value instead of a stale global projection.
-        // Keep the legacy key only as migration/default fallback.
-        let legacyForwardWithoutAuthorKey = "GhostBase.Messages.ForwardWithoutAuthor"
+        // Settings are account-scoped since Build118. Resolve the same value
+        // for focused single-message actions, with the canonical jerkgram.*
+        // key retained only as migration/default fallback.
+        let legacyForwardWithoutAuthorKey = "jerkgram.Messages.ForwardWithoutAuthor"
         let scopedForwardWithoutAuthorKey = "jerkgram.account.\\(context.account.peerId.toInt64()).setting.\\(legacyForwardWithoutAuthorKey)"
         let defaults = UserDefaults.standard
         let ghostBaseForwardWithoutAuthor = (
@@ -42,8 +45,7 @@ NEW_MENU = '''        // MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_ACCOUNT_SC
         ) ?? (
             defaults.object(forKey: legacyForwardWithoutAuthorKey) as? Bool
         ) ?? true
-
-        // MARK: Jerkgram v1.2L BUILD123_PORTABLE_MENU_RESTRICTIONS1'''
+'''
 
 
 def patch_state_text(text: str) -> str:
@@ -56,9 +58,11 @@ def patch_state_text(text: str) -> str:
 def patch_menu_text(text: str) -> str:
     if MENU_MARKER in text:
         return text
-    require("BUILD123_PORTABLE_MENU_RESTRICTIONS1" in text or "data.messageActions.options.contains(.forward) survived portable gate" in text, "Build123 portable single-message gate missing")
-    require(text.count(OLD_MENU) == 1, f"single context setting anchor count is {text.count(OLD_MENU)}")
-    return text.replace(OLD_MENU, NEW_MENU, 1)
+    require(text.count(BUILD123_MENU_MARKER) == 1 or "data.messageActions.options.contains(.forward) survived portable gate" in text, "Build123 portable single-message gate missing")
+    require(text.count(OLD_MENU) == 1, f"canonical Build123 single context setting owner count is {text.count(OLD_MENU)}")
+    updated = text.replace(OLD_MENU, NEW_MENU, 1)
+    require(BUILD123_MENU_MARKER in updated or "data.messageActions.options.contains(.forward) survived portable gate" in updated, "Build123 portable restrictions were lost")
+    return updated
 
 
 def main() -> None:

@@ -21,7 +21,7 @@ class Build124SingleForwardTests(unittest.TestCase):
     def menu_fixture(self) -> str:
         return '''        let ghostBaseForwardWithoutAuthor = (
             UserDefaults.standard.object(
-                forKey: "GhostBase.Messages.ForwardWithoutAuthor"
+                forKey: "jerkgram.Messages.ForwardWithoutAuthor"
             ) as? Bool
         ) ?? true
 
@@ -49,12 +49,13 @@ class Build124SingleForwardTests(unittest.TestCase):
         self.assertIn("BUILD124_SINGLE_FORWARD_ACCOUNT_SCOPE1", result)
         self.assertIn("context.account.peerId.toInt64()", result)
         self.assertIn("jerkgram.account.", result)
-        self.assertIn("GhostBase.Messages.ForwardWithoutAuthor", result)
+        self.assertIn("jerkgram.Messages.ForwardWithoutAuthor", result)
         scoped_lookup = "defaults.object(forKey: scopedForwardWithoutAuthorKey)"
         legacy_lookup = "defaults.object(forKey: legacyForwardWithoutAuthorKey)"
         self.assertIn(scoped_lookup, result)
         self.assertIn(legacy_lookup, result)
         self.assertLess(result.index(scoped_lookup), result.index(legacy_lookup))
+        self.assertIn(") ?? true", result)
 
     def test_single_action_remains_independent_of_telegram_forward_permission(self):
         module = self.load_patch()
@@ -63,6 +64,13 @@ class Build124SingleForwardTests(unittest.TestCase):
         self.assertIn("messages.allSatisfy", result)
         self.assertIn("Namespaces.Peer.SecretChat", result)
         self.assertIn("TelegramMediaPaidContent", result)
+        self.assertIn("BUILD123_PORTABLE_MENU_RESTRICTIONS1", result)
+
+    def test_pre_build108_legacy_owner_is_rejected(self):
+        module = self.load_patch()
+        legacy = self.menu_fixture().replace("jerkgram.Messages.ForwardWithoutAuthor", "GhostBase.Messages.ForwardWithoutAuthor")
+        with self.assertRaises(RuntimeError):
+            module.patch_menu_text(legacy)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()
