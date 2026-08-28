@@ -50,8 +50,8 @@ NEW = '''private func jerkgramPersistChangedSettings(
     // OFF, and protected one-time media can be replaced with expired content
     // immediately after One-Time Save was switched ON.
     //
-    // UserDefaults.set updates the in-process defaults domain; deliberately do
-    // not call synchronize() or perform any forced filesystem flush here.
+    // UserDefaults.set updates the in-process defaults domain; deliberately
+    // avoid any forced defaults/filesystem synchronization here.
     let jerkgramSynchronousRuntimeSettingKeys: Set<String> = [
         GhostBaseKey.scheduledSend,
         GhostBaseKey.protectedEnabled,
