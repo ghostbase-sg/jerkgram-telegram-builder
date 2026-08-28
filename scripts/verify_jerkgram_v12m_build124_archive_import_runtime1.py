@@ -63,7 +63,9 @@ def main() -> None:
     require("GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)" in settings_text, "settings refresh does not reload persisted account state")
     require("stateValue.modify { _ in refreshed }" in settings_text, "settings Atomic state is not refreshed after import")
     require("statePromise.set(refreshed)" in settings_text, "settings UI promise is not refreshed after import")
-    require("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)" in settings_text, "settings refresh signal is not retained by controller state pipeline")
+    require("let stateSignal = combineLatest" in settings_text, "existing Build123 settings state pipeline was not preserved")
+    require("combineLatest(stateSignal, jerkgramImportRefreshSignal)" in settings_text, "settings refresh signal is not retained by controller state pipeline")
+    require("|> map { value, _ in value }" in settings_text, "settings refresh wrapper does not preserve the completed Build123 state value")
 
     require("Queue.mainQueue().async" in import_text, "import confirmation/error UI is not marshalled to main queue")
     require("controller.present(alert, in: .window(.root), with: nil)" in import_text, "import UI presentation missing")

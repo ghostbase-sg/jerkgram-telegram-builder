@@ -115,18 +115,29 @@ def patch_settings_refresh_text(text: str) -> str:
 '''
     text = text.replace(state_anchor, refresh_setup, 1)
 
-    old_combine = "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())\n"
-    new_combine = "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)\n"
-    require(text.count(old_combine) == 1, f"settings state combineLatest anchor count: {text.count(old_combine)}")
-    text = text.replace(old_combine, new_combine, 1)
+    # Build123 may already compose additional signals into the Settings state
+    # pipeline. Do not rewrite its combineLatest arity or map closure. Retain
+    # the import observer by wrapping the completed state signal instead.
+    page_start, page_end = balanced_region(text, "private func ghostBaseSettingsPageController(")
+    page = text[page_start:page_end]
+    signal_anchor = "    let signal = combineLatest"
+    require(page.count(signal_anchor) == 1, f"settings state signal anchor count: {page.count(signal_anchor)}")
+    page = page.replace(signal_anchor, "    let stateSignal = combineLatest", 1)
 
-    old_map = "    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
-    new_map = "    |> map { presentationData, state, _ -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
-    require(text.count(old_map) == 1, f"settings state map anchor count: {text.count(old_map)}")
-    text = text.replace(old_map, new_map, 1)
+    controller_state_anchor = "        state: signal\n"
+    require(page.count(controller_state_anchor) == 1, f"settings controller state anchor count: {page.count(controller_state_anchor)}")
+    controller_state = '''        state: (
+            combineLatest(stateSignal, jerkgramImportRefreshSignal)
+            |> map { value, _ in value }
+        )
+'''
+    page = page.replace(controller_state_anchor, controller_state, 1)
+    text = text[:page_start] + page + text[page_end:]
 
     require(REFRESH_MARKER in text, "settings refresh marker missing after patch")
     require("ActionDisposable" in text, "settings refresh observer is not lifecycle-bound")
+    require("let stateSignal = combineLatest" in text, "existing Settings state pipeline was not preserved")
+    require("combineLatest(stateSignal, jerkgramImportRefreshSignal)" in text, "refresh signal is not retained by controller state")
     return text
 
 

@@ -34,12 +34,25 @@ private func ghostBaseSettingsPageController(
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
 
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    // Build123 may already compose unrelated runtime data here. Build124 must
+    // preserve this pipeline instead of assuming a two-signal combineLatest.
+    let auxiliarySignal = Signal<Int, NoError>.single(1)
+    let signal = combineLatest(
+        context.sharedContext.presentationData,
+        statePromise.get(),
+        auxiliarySignal
+    )
     |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, auxiliary -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        _ = auxiliary
         fatalError()
     }
-    return ItemListController(context: context, state: signal)
+
+    let controller = ItemListController(
+        context: context,
+        state: signal
+    )
+    return controller
 }
 '''
 
@@ -62,11 +75,21 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("stateValue.modify", updated)
         self.assertIn("statePromise.set(refreshed)", updated)
         self.assertIn("jerkgramImportRefreshSignal", updated)
-        self.assertIn("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)", updated)
+        self.assertIn("let stateSignal = combineLatest(", updated)
+        self.assertIn("combineLatest(stateSignal, jerkgramImportRefreshSignal)", updated)
+        self.assertIn("|> map { value, _ in value }", updated)
         self.assertLess(
             updated.index("BUILD124_ARCHIVE_IMPORT_REFRESH1"),
             updated.index("private func ghostBaseSettingsPageController("),
         )
+
+    def test_existing_build123_state_pipeline_is_preserved_verbatim_except_local_name(self):
+        module = self.load_patch()
+        updated = module.patch_settings_refresh_text(SETTINGS_FIXTURE)
+        self.assertIn("        statePromise.get(),\n        auxiliarySignal\n    )", updated)
+        self.assertIn("|> map { presentationData, state, auxiliary ->", updated)
+        self.assertNotIn("presentationData, state, _ ->", updated)
+        self.assertNotIn("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)", updated)
 
     def test_success_path_notifies_only_after_persisted_settings_are_projected(self):
         module = self.load_patch()
