@@ -119,6 +119,10 @@ REMOTE_DECISION_ANCHOR = '''        let timestamp = Int32(CFAbsoluteTimeGetCurre
         
         for i in 0 ..< updatedAttributes.count {
 '''
+# v0.8I.2 rewrites this whole Swift owner through clean(), whose rstrip()
+# removes indentation from whitespace-only lines. That is the canonical
+# pre-Build124 materialized form, not a different semantic owner.
+REMOTE_DECISION_ANCHOR_V08I2 = "\n".join(line.rstrip() for line in REMOTE_DECISION_ANCHOR.splitlines()) + "\n"
 
 REMOTE_DECISION = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         let countdownBeginTime = consumeDate ?? timestamp
@@ -426,12 +430,19 @@ def patch_remote_consumed_text(text: str) -> str:
         require(not any(key in updated for key in LEGACY_REMOTE_PATH_KEYS), "legacy OT1 remote path diagnostics survived an existing Build124 owner")
         return updated
 
-    require(updated.count(REMOTE_DECISION_ANCHOR) == 1, f"expected one remote-consume countdown owner, found {updated.count(REMOTE_DECISION_ANCHOR)}")
+    stock_anchor_count = updated.count(REMOTE_DECISION_ANCHOR)
+    v08i2_anchor_count = updated.count(REMOTE_DECISION_ANCHOR_V08I2)
+    require(
+        stock_anchor_count + v08i2_anchor_count == 1,
+        "expected one stock or v0.8I.2-cleaned remote-consume countdown owner, "
+        f"found stock={stock_anchor_count} v08i2={v08i2_anchor_count}",
+    )
+    decision_anchor = REMOTE_DECISION_ANCHOR if stock_anchor_count == 1 else REMOTE_DECISION_ANCHOR_V08I2
     require(updated.count(REMOTE_AUTOREMOVE_ASSIGNMENT) == 1, f"expected one remote autoremove assignment, found {updated.count(REMOTE_AUTOREMOVE_ASSIGNMENT)}")
     require(updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT) == 1, f"expected one remote autoclear assignment, found {updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT)}")
     require(updated.count(REMOTE_EXPIRE_CONDITION) == 2, f"expected two remote media-expiration owners, found {updated.count(REMOTE_EXPIRE_CONDITION)}")
 
-    updated = updated.replace(REMOTE_DECISION_ANCHOR, REMOTE_DECISION, 1)
+    updated = updated.replace(decision_anchor, REMOTE_DECISION, 1)
     updated = updated.replace(REMOTE_AUTOREMOVE_ASSIGNMENT, REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_AUTOCLEAR_ASSIGNMENT, REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_EXPIRE_CONDITION, REMOTE_EXPIRE_CONDITION_PERSISTENT, 2)
