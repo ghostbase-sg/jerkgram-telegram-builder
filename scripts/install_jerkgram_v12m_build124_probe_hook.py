@@ -23,7 +23,11 @@ BAZEL_ANCHOR = '"$BAZEL_BIN" build'
 API_APPLY = "apply_jerkgram_build124_telegram_api_credentials1.py"
 API_VERIFY = "verify_jerkgram_build124_telegram_api_credentials1.py"
 
-# No Build124 runtime overlay is quarantined: every listed fix must be\n# materialized into the candidate IPA.\nCANARY_QUARANTINE = frozenset()\n\n# Late Build124 overlays. Every item here operates on the already-materialized
+# No Build124 runtime overlay is quarantined: every listed fix must be
+# materialized into the candidate IPA.
+CANARY_QUARANTINE = frozenset()
+
+# Late Build124 overlays. Every item here operates on the already-materialized
 # Build123 tree. Keep dependency-sensitive pairs explicit instead of relying on
 # filesystem ordering.
 APPLY_ORDERED = (
