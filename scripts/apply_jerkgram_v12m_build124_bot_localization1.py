@@ -87,8 +87,20 @@ def patch_auth_sources(files: dict[str, str]) -> dict[str, str]:
 
     if "phoneNode" in result:
         text = result["phoneNode"]
-        text = text.replace('NSAttributedString(string: "Войти как бот — Экспериментально",', 'NSAttributedString(string: strings.jerkgram.botLoginButton,')
+        localized_button = "strings.jerkgram.botLoginButton"
+        if localized_button not in text:
+            old_experimental = 'NSAttributedString(string: "Войти как бот — Экспериментально",'
+            botsafe2_button = '                string: "Войти как бот",'
+            if old_experimental in text:
+                text = text.replace(old_experimental, 'NSAttributedString(string: strings.jerkgram.botLoginButton,', 1)
+            elif "GhostBase v1.0ZF BOTSAFE2 first-screen button" in text and botsafe2_button in text:
+                require(text.count(botsafe2_button) == 1, f"BOTSAFE2 bot-login title owner count: {text.count(botsafe2_button)}")
+                text = text.replace(botsafe2_button, '                string: strings.jerkgram.botLoginButton,', 1)
+            else:
+                require(False, "phone-entry bot login title owner missing")
         text = text.replace('self.ghostBaseBotLoginNode.accessibilityLabel = "Войти как бот"', 'self.ghostBaseBotLoginNode.accessibilityLabel = strings.jerkgram.botLoginAccessibility')
+        require(localized_button in text, "phone-entry bot login button was not localized")
+        require("strings.jerkgram.botLoginAccessibility" in text, "phone-entry bot login accessibility label was not localized")
         result["phoneNode"] = text
 
     if "controller" in result:
@@ -158,8 +170,11 @@ def main() -> None:
     ACTIONS.write_text(auth["actions"], encoding="utf-8")
     SETTINGS.write_text(patch_settings(SETTINGS.read_text(encoding="utf-8")), encoding="utf-8")
 
+    phone_node = PHONE_NODE.read_text(encoding="utf-8")
+    require("strings.jerkgram.botLoginButton" in phone_node, "phone-entry bot login button missing after materialization")
+    require("strings.jerkgram.botLoginAccessibility" in phone_node, "phone-entry bot login accessibility missing after materialization")
+
     combined = "\n".join(path.read_text(encoding="utf-8") for path in (PASSWORD_NODE, PHONE_NODE, PHONE_CONTROLLER, ACTIONS, SETTINGS))
-    require("strings.jerkgram.botLoginButton" in combined, "localized bot login button missing")
     require("botAlreadyAdded" in combined, "localized duplicate bot message missing")
     require("botLogoutTitle" in combined, "localized bot logout missing")
     require("botCapabilityTitle" in combined and "botDifferenceAction" in combined, "localized bot diagnostics missing")
