@@ -114,6 +114,7 @@ jobs:
           # materialized-source verifiers execute inside the probe before Bazel.
           python3 -m unittest tests.test_jerkgram_build124_telegram_api_credentials1
           python3 -m unittest tests.test_jerkgram_build124_telegram_api_probe_hook1
+          python3 -m unittest tests.test_jerkgram_build124_telegram_api_source_owner1
           python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_credentials1
           python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_wiring1
           python3 -m unittest tests.test_jerkgram_v12m_build124_canary_publication1
