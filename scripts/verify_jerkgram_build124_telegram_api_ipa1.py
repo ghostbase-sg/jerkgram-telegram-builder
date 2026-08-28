@@ -36,6 +36,20 @@ def normalized_relative(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
+def bundle_executable(bundle: Path, root: Path, label: str) -> tuple[Path, str]:
+    info_path = bundle / "Info.plist"
+    require(info_path.is_file(), f"{label} Info.plist is missing")
+    info = load_plist(info_path)
+    executable_name = info.get("CFBundleExecutable")
+    require(
+        isinstance(executable_name, str) and executable_name,
+        f"{label} CFBundleExecutable is missing",
+    )
+    executable = bundle / executable_name
+    require(executable.is_file(), f"{label} executable is missing")
+    return executable, normalized_relative(executable, root)
+
+
 def verify_ipa_credentials(ipa: Path, expected_hash: str) -> CredentialVerificationResult:
     ipa = Path(ipa).resolve()
     expected_hash = (expected_hash or "").strip().lower()
@@ -52,16 +66,20 @@ def verify_ipa_credentials(ipa: Path, expected_hash: str) -> CredentialVerificat
         apps = [path for path in payload.glob("*.app") if path.is_dir()]
         require(len(apps) == 1, "expected exactly one main app")
         app = apps[0]
-        main_info = load_plist(app / "Info.plist")
-        executable_name = main_info.get("CFBundleExecutable")
-        require(isinstance(executable_name, str) and executable_name, "main CFBundleExecutable is missing")
-        main_executable = app / executable_name
-        require(main_executable.is_file(), "main executable is missing")
+        main_executable, main_relative = bundle_executable(app, root, "main app")
+
+        executable_owners = {main_relative}
+        plugins_root = app / "PlugIns"
+        if plugins_root.is_dir():
+            for extension in sorted(plugins_root.glob("*.appex")):
+                if not extension.is_dir():
+                    continue
+                _, extension_relative = bundle_executable(extension, root, extension.name)
+                executable_owners.add(extension_relative)
 
         expected_hash_bytes = expected_hash.encode("ascii")
-        main_relative = normalized_relative(main_executable, root)
-        private_hash_owners: list[str] = []
-        api_id_owners: list[tuple[str, str]] = []
+        private_hash_owners: set[str] = set()
+        api_id_owners: dict[str, str] = {}
 
         for path in sorted(app.rglob("*")):
             if not path.is_file():
@@ -73,24 +91,38 @@ def verify_ipa_credentials(ipa: Path, expected_hash: str) -> CredentialVerificat
             require(OFFICIAL_API_HASH not in lowered, f"Official Telegram sample API hash remains in {relative}")
 
             if expected_hash_bytes in lowered:
-                private_hash_owners.append(relative)
+                private_hash_owners.add(relative)
 
-            for match in API_ID_OWNER_RE.finditer(data):
-                api_id_owners.append((relative, match.group(1).decode("ascii")))
+            matches = list(API_ID_OWNER_RE.finditer(data))
+            if matches:
+                require(len(matches) == 1, f"compiled API ID owner marker is duplicated in {relative}")
+                api_id = matches[0].group(1).decode("ascii")
+                require(
+                    api_id == EXPECTED_API_ID,
+                    f"compiled API ID owner has the wrong Build124 canary identity in {relative}",
+                )
+                api_id_owners[relative] = api_id
 
-        require(len(api_id_owners) == 1, "compiled API ID owner marker is missing or duplicated")
-        marker_owner, api_id = api_id_owners[0]
-        require(marker_owner == main_relative, f"compiled API ID owner marker is outside the main executable: {marker_owner}")
-        require(api_id == EXPECTED_API_ID, f"compiled API ID owner has the wrong Build124 canary identity in {marker_owner}")
-
+        marker_owners = set(api_id_owners)
+        require(main_relative in marker_owners, "compiled API ID owner marker is missing from the main executable")
         require(main_relative in private_hash_owners, "configured API hash is missing from the main compiled credential owner")
-        unexpected_hash_owners = [owner for owner in private_hash_owners if owner != main_relative]
+
+        non_executable_markers = sorted(marker_owners - executable_owners)
         require(
-            not unexpected_hash_owners,
-            "configured API hash escaped the compiled credential owner into " + ", ".join(unexpected_hash_owners),
+            not non_executable_markers,
+            "compiled API ID owner marker escaped bundle executables into " + ", ".join(non_executable_markers),
+        )
+        non_executable_hashes = sorted(private_hash_owners - executable_owners)
+        require(
+            not non_executable_hashes,
+            "configured API hash escaped bundle executables into " + ", ".join(non_executable_hashes),
+        )
+        require(
+            marker_owners == private_hash_owners,
+            "compiled API ID/hash owner sets do not match",
         )
 
-        return CredentialVerificationResult(api_id=api_id, hash_owner=main_relative)
+        return CredentialVerificationResult(api_id=EXPECTED_API_ID, hash_owner=main_relative)
 
 
 def main() -> None:
