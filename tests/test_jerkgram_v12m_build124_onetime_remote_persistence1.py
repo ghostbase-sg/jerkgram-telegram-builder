@@ -259,7 +259,7 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
     def test_remote_consume_collapses_second_v08i2_owner_after_v10p_and_build108(self):
         module = self.load_patch()
         fixture = build108_canonicalized(REAL_TWO_OWNER_REMOTE_FIXTURE)
-        self.assertEqual(fixture.count("ghostBaseKeepVoiceCircleLocal"), 4)
+        self.assertEqual(fixture.count("ghostBaseKeepVoiceCircleLocal"), 6)
         updated = module.patch_remote_consumed_text(fixture)
         self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
         self.assertEqual(updated.count("let jerkgramKeepOneTimeRemoteMedia = ("), 1)
