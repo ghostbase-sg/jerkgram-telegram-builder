@@ -7,6 +7,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_persistence1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_onetime_persistence1.py"
 
 AUTOREMOVE_FIXTURE = '''                                var updatedMedia = currentMessage.media
                                 for i in 0 ..< updatedMedia.count {
@@ -108,6 +109,15 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         self.assertIn("submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift", source)
         self.assertNotIn("apply_ghostbase_v10p_sh1_ot1_combined.py", source)
         self.assertNotIn("apply_ghostbase_v10q_sh2_ot2_combined.py", source)
+
+    def test_source_verifier_enforces_real_media_persistence_owner_and_order(self):
+        source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_MEDIA1", source)
+        self.assertIn('autoremove.count(MEDIA_MARKER) == 1', source)
+        self.assertIn('"if !jerkgramKeepOneTimeIdentity {" in autoremove', source)
+        self.assertIn('autoremove.count("let jerkgramKeepOneTimeIdentity = (") == 1', source)
+        self.assertIn('autoremove.index("let jerkgramKeepOneTimeIdentity = (") < autoremove.index("var updatedMedia = currentMessage.media")', source)
+        self.assertIn('autoremove.index("var updatedMedia = currentMessage.media") < autoremove.index("var updatedAttributes = currentMessage.attributes")', source)
 
 
 if __name__ == "__main__":
