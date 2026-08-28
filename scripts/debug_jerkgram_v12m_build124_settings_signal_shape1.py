@@ -10,7 +10,7 @@ TARGET = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsContro
 def balanced_region(text: str, token: str) -> str:
     start = text.find(token)
     if start < 0:
-        raise RuntimeError("[Build124 settings diagnostic] controller missing")
+        raise RuntimeError("[Build124 settings diagnostic] block missing: " + token)
     brace = text.find("{", start)
     depth = 0
     in_string = False
@@ -33,30 +33,32 @@ def balanced_region(text: str, token: str) -> str:
             depth -= 1
             if depth == 0:
                 return text[start:index + 1]
-    raise RuntimeError("[Build124 settings diagnostic] controller unbalanced")
+    raise RuntimeError("[Build124 settings diagnostic] block unbalanced: " + token)
 
 
 def main() -> None:
     if not TARGET.is_file():
         raise RuntimeError(f"[Build124 settings diagnostic] materialized settings owner missing: {TARGET}")
-    region = balanced_region(TARGET.read_text(encoding="utf-8"), "public func ghostBaseSettingsController(")
-    needles = (
-        "statePromise",
-        "stateValue",
-        "Signal<",
-        "let signal",
-        "combineLatest",
-        "ItemListController",
-        "controller =",
-        "return controller",
-        "|>",
-    )
-    print("[Build124 settings diagnostic] BEGIN")
-    for number, raw in enumerate(region.splitlines(), 1):
-        line = raw.strip()
-        if any(needle in line for needle in needles):
-            print(f"[Build124 settings diagnostic] {number}: {line}")
-    print("[Build124 settings diagnostic] END")
+    text = TARGET.read_text(encoding="utf-8")
+
+    print("[Build124 settings diagnostic] PUBLIC BEGIN")
+    public_region = balanced_region(text, "public func ghostBaseSettingsController(")
+    for number, raw in enumerate(public_region.splitlines(), 1):
+        print(f"[Build124 settings diagnostic] PUBLIC {number}: {raw.strip()}")
+    print("[Build124 settings diagnostic] PUBLIC END")
+
+    anchor = "let stateValue = Atomic(value: initialState)"
+    pos = text.find(anchor)
+    if pos < 0:
+        raise RuntimeError("[Build124 settings diagnostic] stateValue owner missing")
+    lines = text.splitlines()
+    line_index = text[:pos].count("\n")
+    start = max(0, line_index - 35)
+    end = min(len(lines), line_index + 70)
+    print("[Build124 settings diagnostic] STATE OWNER BEGIN")
+    for idx in range(start, end):
+        print(f"[Build124 settings diagnostic] STATE {idx + 1}: {lines[idx].strip()}")
+    print("[Build124 settings diagnostic] STATE OWNER END")
 
 
 if __name__ == "__main__":
