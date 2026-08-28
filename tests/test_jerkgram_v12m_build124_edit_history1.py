@@ -63,6 +63,16 @@ class Build124EditHistoryTests(unittest.TestCase):
         self.assertIn("date: editEventDate", result)
         self.assertNotIn("previousVersionDate", result)
 
+    def test_history_accepts_the_materialized_compact_edit_date_owner(self):
+        module = self.load_patch()
+        compact = '''                    if ghostBaseSaveEditHistory && previousMessage.text != message.text && !previousMessage.text.isEmpty {
+                        let editDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editDate) {'''
+        result = module.patch_state_text(compact)
+        self.assertIn("BUILD124_EDIT_EVENT_DATE1", result)
+        self.assertIn("date: editEventDate", result)
+        self.assertNotIn("let editDate =", result)
+
     def test_one_edit_produces_one_history_version_not_old_plus_current(self):
         module = self.load_patch()
         result = module.patch_menu_text(self.menu_fixture())
