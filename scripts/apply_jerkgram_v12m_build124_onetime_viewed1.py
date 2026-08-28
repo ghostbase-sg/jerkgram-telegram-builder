@@ -47,11 +47,12 @@ NEW_MEDIA = '''            if let remainingTime {
             }
 '''
 
+# TRANSCRIPTION1 removed the old isConsumed local from this node. Build124
+# persistence already owns the real attribute.consumed state, so the viewed
+# overlay only replaces the outgoing icon branch inside that marked owner.
 OLD_VOICE_OUTGOING = '''                            } else {
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
-                        }
-                        isConsumed = attribute.consumed
 '''
 
 NEW_VOICE_OUTGOING = '''                            } else {
@@ -78,8 +79,6 @@ NEW_VOICE_OUTGOING = '''                            } else {
                                     consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                                 }
                             }
-                        }
-                        isConsumed = attribute.consumed
 '''
 
 
@@ -104,11 +103,21 @@ def patch_voice_text(text: str) -> str:
     if VOICE_MARKER in text:
         return text
     require(PERSISTENT_VOICE_MARKER in text, "persistent one-time voice visual must be applied before viewed-state overlay")
-    require(text.count(OLD_VOICE_OUTGOING) == 1, f"expected one outgoing consumable voice icon owner, found {text.count(OLD_VOICE_OUTGOING)}")
-    updated = text.replace(OLD_VOICE_OUTGOING, NEW_VOICE_OUTGOING, 1)
+
+    marker_index = text.index(PERSISTENT_VOICE_MARKER)
+    prefix = text[:marker_index]
+    persistent_region = text[marker_index:]
+    require(
+        persistent_region.count(OLD_VOICE_OUTGOING) == 1,
+        f"expected one outgoing consumable voice icon owner after persistence marker, found {persistent_region.count(OLD_VOICE_OUTGOING)}",
+    )
+    persistent_region = persistent_region.replace(OLD_VOICE_OUTGOING, NEW_VOICE_OUTGOING, 1)
+    updated = prefix + persistent_region
+
     require(VOICE_MARKER in updated, "outgoing voice viewed marker missing after patch")
     require("jerkgramKeepConsumedOneTimeVisual && attribute.consumed" in updated, "viewed voice state is not tied to the real consumed bit")
-    require("isConsumed = attribute.consumed" in updated, "real consumed state was lost")
+    require("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in updated, "persistent voice owner lost Telegram consumed-state semantics")
+    require("ConsumableContentMessageAttribute(consumed: false)" not in updated, "voice consumed state must never be falsified")
     return updated
 
 
