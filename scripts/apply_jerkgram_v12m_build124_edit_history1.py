@@ -48,6 +48,13 @@ NEW_STATE = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVE
                             inlineStickerFiles: previousInlineStickerFiles
                         ) {'''
 
+OLD_STATE_COMPACT = '''                        let editDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editDate) {'''
+
+NEW_STATE_COMPACT = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
+                        let editEventDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editEventDate) {'''
+
 OLD_FALLBACK = '''        if result.isEmpty, let originalText = attribute.originalText, originalText != message.text {
             result.append(GhostBaseEditHistoryVersion(index: result.count, text: originalText, timestamp: 0.0, entities: attribute.originalEntities, inlineStickerFiles: []))
         }'''
@@ -96,8 +103,10 @@ NEW_CURRENT = '''    // MARK: Jerkgram v1.2M BUILD124_HISTORY_NO_CURRENT_DUP1
 def patch_state_text(text: str) -> str:
     if STATE_MARKER in text:
         return text
-    require(text.count(OLD_STATE) == 1, f"edit-event date owner count is {text.count(OLD_STATE)}")
-    return text.replace(OLD_STATE, NEW_STATE, 1)
+    if text.count(OLD_STATE) == 1:
+        return text.replace(OLD_STATE, NEW_STATE, 1)
+    require(text.count(OLD_STATE_COMPACT) == 1, f"edit-event date owner count is {text.count(OLD_STATE)} / compact {text.count(OLD_STATE_COMPACT)}")
+    return text.replace(OLD_STATE_COMPACT, NEW_STATE_COMPACT, 1)
 
 
 def patch_menu_text(text: str) -> str:
