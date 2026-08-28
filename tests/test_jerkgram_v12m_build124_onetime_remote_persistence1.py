@@ -157,6 +157,10 @@ LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurren
 '''
 
 
+def build108_canonicalized(text: str) -> str:
+    return text.replace('"GhostBase.', '"jerkgram.')
+
+
 class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
     def load_patch(self):
         spec = importlib.util.spec_from_file_location("build124_onetime_persistence", PATCH)
@@ -172,6 +176,14 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         self.assertIn("if !jerkgramKeepOneTimeIdentity {", updated)
         self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
         self.assertNotIn("GhostBase.OT1.AutoremoveKeepBlocked.Count", updated)
+
+    def test_build124_replaces_build108_canonicalized_ot1_managed_autoremove_owner(self):
+        module = self.load_patch()
+        updated = module.patch_autoremove_text(build108_canonicalized(LEGACY_AUTOREMOVE_FIXTURE))
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_MEDIA1", updated)
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_MARKER1", updated)
+        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
+        self.assertNotIn("jerkgram.OT1.AutoremoveKeepBlocked.Count", updated)
 
     def test_remote_consume_preserves_media_and_disarms_view_once_countdown(self):
         module = self.load_patch()
@@ -199,6 +211,16 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         self.assertIn("TelegramMediaExpiredContent(data: .videoMessage)", updated)
         self.assertIn("TelegramMediaExpiredContent(data: .voiceMessage)", updated)
         self.assertIn("TelegramMediaExpiredContent(data: .file)", updated)
+
+    def test_remote_consume_collapses_build108_canonicalized_v10p_ot1_owner(self):
+        module = self.load_patch()
+        updated = module.patch_remote_consumed_text(build108_canonicalized(LEGACY_REMOTE_FIXTURE))
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
+        self.assertEqual(updated.count("let jerkgramKeepOneTimeRemoteMedia = ("), 1)
+        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
+        self.assertNotIn("ghostBaseKeepVoiceCircleLocal", updated)
+        self.assertNotIn("jerkgram.OT1.OutgoingKeepBlocked.Count", updated)
+        self.assertNotIn("jerkgram.OT1.OutgoingKeepPath", updated)
 
     def test_remote_consume_patch_is_idempotent(self):
         module = self.load_patch()
