@@ -23,6 +23,22 @@ BAZEL_ANCHOR = '"$BAZEL_BIN" build'
 API_APPLY = "apply_jerkgram_build124_telegram_api_credentials1.py"
 API_VERIFY = "verify_jerkgram_build124_telegram_api_credentials1.py"
 
+# These late overlays use owners that were reshaped by the Build123 materialization
+# chain. Keep their contracts visible in the generated probe, but do not execute
+# them until the canonical preflight can materialize and verify their real owners.
+CANARY_QUARANTINE = frozenset((
+    "apply_jerkgram_v12m_build124_bot_localization1.py",
+    "verify_jerkgram_v12m_build124_bot_localization1.py",
+    "apply_jerkgram_v12m_build124_lifecycle_freeze1.py",
+    "verify_jerkgram_v12m_build124_lifecycle_freeze1.py",
+    "apply_jerkgram_v12m_build124_onetime_persistence1.py",
+    "verify_jerkgram_v12m_build124_onetime_persistence1.py",
+    "apply_jerkgram_v12m_build124_onetime_viewed1.py",
+    "verify_jerkgram_v12m_build124_onetime_viewed1.py",
+    "apply_jerkgram_v12m_build124_settings_redesign1.py",
+    "verify_jerkgram_v12m_build124_settings_redesign1.py",
+))
+
 # Late Build124 overlays. Every item here operates on the already-materialized
 # Build123 tree. Keep dependency-sensitive pairs explicit instead of relying on
 # filesystem ordering.
@@ -77,6 +93,8 @@ def require(value: bool, message: str) -> None:
 
 
 def line(name: str, argument: str | None = None) -> str:
+    if name in CANARY_QUARANTINE:
+        return "# CANARY_QUARANTINED " + name
     result = "python3 ../../scripts/" + name
     if argument:
         result += " " + argument
