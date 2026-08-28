@@ -8,6 +8,7 @@ ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOU
 AUTOREMOVE_TARGET = ROOT / "submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift"
 VOICE_TARGET = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift"
 
+MEDIA_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_MEDIA1"
 AUTOREMOVE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_MARKER1"
 VOICE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1"
 
@@ -28,11 +29,28 @@ def main() -> None:
     autoremove = AUTOREMOVE_TARGET.read_text(encoding="utf-8")
     voice = VOICE_TARGET.read_text(encoding="utf-8")
 
+    require(autoremove.count(MEDIA_MARKER) == 1, "persistent one-time media marker must exist exactly once")
     require(autoremove.count(AUTOREMOVE_MARKER) == 1, "persistent one-time marker must exist exactly once")
     require(voice.count(VOICE_MARKER) == 1, "persistent one-time voice marker must exist exactly once")
 
     require("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout" in autoremove, "managed autoremove is not restricted to genuine view-once messages")
     require("currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat" in autoremove, "secret chats must stay on Telegram stock semantics")
+    require("if !jerkgramKeepOneTimeIdentity {" in autoremove, "retained one-time media is still replaced by ExpiredContent")
+    require(autoremove.count("let jerkgramKeepOneTimeIdentity = (") == 1, "one-time persistence decision must have exactly one owner")
+    require("var updatedMedia = currentMessage.media" in autoremove, "Telegram media owner is missing")
+    require("var updatedAttributes = currentMessage.attributes" in autoremove, "Telegram attribute owner is missing")
+    require(
+        autoremove.index("let jerkgramKeepOneTimeIdentity = (") < autoremove.index("var updatedMedia = currentMessage.media"),
+        "one-time persistence decision runs after Telegram media expiration",
+    )
+    require(
+        autoremove.index("var updatedMedia = currentMessage.media") < autoremove.index("var updatedAttributes = currentMessage.attributes"),
+        "one-time media/attribute owner order changed unexpectedly",
+    )
+    require("TelegramMediaExpiredContent(data: .image)" in autoremove, "stock image expiration fallback was lost")
+    require("TelegramMediaExpiredContent(data: .videoMessage)" in autoremove, "stock instant-video expiration fallback was lost")
+    require("TelegramMediaExpiredContent(data: .voiceMessage)" in autoremove, "stock voice expiration fallback was lost")
+    require("TelegramMediaExpiredContent(data: .file)" in autoremove, "stock file expiration fallback was lost")
     require("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)" in autoremove, "persistent one-time identity is not disarmed")
     require("updatedAttributes.remove(at: i)" in autoremove, "stock autoclear removal fallback was lost")
 
@@ -45,7 +63,7 @@ def main() -> None:
     require("ConsumableContentMessageAttribute(consumed: false)" not in combined, "consumed/read state must never be falsified")
 
     print("[verify Build124 one-time persistence] SOURCE VERIFIED")
-    print("[verify Build124 one-time persistence] view-once marker persists with countdownBeginTime=nil; voice visual persists while consumed state remains real")
+    print("[verify Build124 one-time persistence] real view-once media persists; marker remains disarmed; voice visual persists while consumed state remains real")
 
 
 if __name__ == "__main__":
