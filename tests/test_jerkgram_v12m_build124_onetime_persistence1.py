@@ -6,6 +6,7 @@ import unittest
 
 from tests.test_jerkgram_v12m_build124_onetime_remote_persistence1 import Build124OneTimeRemotePersistenceTests
 from tests.test_jerkgram_v12m_build124_onetime_whitespace_anchor1 import Build124OneTimeWhitespaceAnchorTests
+from tests.test_jerkgram_v12m_build124_onetime_voice_transcription_owner1 import Build124OneTimeVoiceTranscriptionOwnerTests
 
 
 REPO = Path(__file__).resolve().parents[1]
