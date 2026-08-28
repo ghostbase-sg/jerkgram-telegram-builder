@@ -212,11 +212,30 @@ STOCK_REMOTE_FILE = '''                                    if file.isInstantVide
                                     }
 '''
 
+# v0.8I.2 patched two file owners. v10p's replace_once() upgraded only the
+# first into the OT1-combined owner above, so one standalone voice/circle owner
+# survives until Build124 and must be collapsed as well.
+LEGACY_REMOTE_VOICE_CIRCLE_FILE = '''                                    // MARK: GhostBase v0.8I.2 voice/circle local keep
+                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
+                                    if file.isInstantVideo {
+                                        if !ghostBaseKeepVoiceCircleLocal {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                        }
+                                    } else if file.isVoice {
+                                        if !ghostBaseKeepVoiceCircleLocal {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                        }
+                                    } else {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                    }
+'''
+
 # Build108 canonicalizes quoted legacy UserDefaults namespaces after the v10p
 # OT1 overlays have materialized. Variable/control-flow owners survive, while
 # every quoted "GhostBase.*" key becomes "jerkgram.*".
 BUILD108_LEGACY_REMOTE_IMAGE = LEGACY_REMOTE_IMAGE.replace('"GhostBase.', '"jerkgram.')
 BUILD108_LEGACY_REMOTE_FILE = LEGACY_REMOTE_FILE.replace('"GhostBase.', '"jerkgram.')
+BUILD108_LEGACY_REMOTE_VOICE_CIRCLE_FILE = LEGACY_REMOTE_VOICE_CIRCLE_FILE.replace('"GhostBase.', '"jerkgram.')
 LEGACY_AUTOREMOVE_DIAGNOSTIC_KEYS = (
     "GhostBase.OT1.AutoremoveKeepBlocked.Count",
     "jerkgram.OT1.AutoremoveKeepBlocked.Count",
@@ -308,38 +327,55 @@ def replace_autoremove_media_owner(text: str) -> str:
 
 
 def normalize_legacy_remote_owner(text: str) -> str:
-    legacy_present = (
-        "ghostBaseOT1KeepOutgoingTimerLocal" in text
-        or any(key in text for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS)
-        or any(key in text for key in LEGACY_REMOTE_PATH_KEYS)
-    )
-    if not legacy_present:
-        return text
-
-    legacy_image_count = text.count(LEGACY_REMOTE_IMAGE)
-    legacy_file_count = text.count(LEGACY_REMOTE_FILE)
-    build108_image_count = text.count(BUILD108_LEGACY_REMOTE_IMAGE)
-    build108_file_count = text.count(BUILD108_LEGACY_REMOTE_FILE)
-
-    legacy_pair = legacy_image_count == 1 and legacy_file_count == 1
-    build108_pair = build108_image_count == 1 and build108_file_count == 1
-    require(not (legacy_pair and build108_pair), "both pre-Build108 and Build108 OT1 remote owners are present")
-    require(
-        legacy_pair or build108_pair,
-        "expected one complete legacy OT1 remote owner pair, "
-        f"found legacyImage={legacy_image_count} legacyFile={legacy_file_count} "
-        f"build108Image={build108_image_count} build108File={build108_file_count}",
+    updated = text
+    ot1_present = (
+        "ghostBaseOT1KeepOutgoingTimerLocal" in updated
+        or any(key in updated for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS)
+        or any(key in updated for key in LEGACY_REMOTE_PATH_KEYS)
     )
 
-    if build108_pair:
-        image_owner = BUILD108_LEGACY_REMOTE_IMAGE
-        file_owner = BUILD108_LEGACY_REMOTE_FILE
-    else:
-        image_owner = LEGACY_REMOTE_IMAGE
-        file_owner = LEGACY_REMOTE_FILE
+    if ot1_present:
+        legacy_image_count = updated.count(LEGACY_REMOTE_IMAGE)
+        legacy_file_count = updated.count(LEGACY_REMOTE_FILE)
+        build108_image_count = updated.count(BUILD108_LEGACY_REMOTE_IMAGE)
+        build108_file_count = updated.count(BUILD108_LEGACY_REMOTE_FILE)
 
-    updated = text.replace(image_owner, STOCK_REMOTE_IMAGE, 1)
-    updated = updated.replace(file_owner, STOCK_REMOTE_FILE, 1)
+        legacy_pair = legacy_image_count == 1 and legacy_file_count == 1
+        build108_pair = build108_image_count == 1 and build108_file_count == 1
+        require(not (legacy_pair and build108_pair), "both pre-Build108 and Build108 OT1 remote owners are present")
+        require(
+            legacy_pair or build108_pair,
+            "expected one complete legacy OT1 remote owner pair, "
+            f"found legacyImage={legacy_image_count} legacyFile={legacy_file_count} "
+            f"build108Image={build108_image_count} build108File={build108_file_count}",
+        )
+
+        if build108_pair:
+            image_owner = BUILD108_LEGACY_REMOTE_IMAGE
+            file_owner = BUILD108_LEGACY_REMOTE_FILE
+        else:
+            image_owner = LEGACY_REMOTE_IMAGE
+            file_owner = LEGACY_REMOTE_FILE
+
+        updated = updated.replace(image_owner, STOCK_REMOTE_IMAGE, 1)
+        updated = updated.replace(file_owner, STOCK_REMOTE_FILE, 1)
+
+    # After v10p has consumed one of the two v0.8I.2 owners, exactly one
+    # standalone voice/circle owner may remain. Accept either namespace form,
+    # but never a mixed/duplicated owner set.
+    if "ghostBaseKeepVoiceCircleLocal" in updated:
+        legacy_voice_count = updated.count(LEGACY_REMOTE_VOICE_CIRCLE_FILE)
+        build108_voice_count = updated.count(BUILD108_LEGACY_REMOTE_VOICE_CIRCLE_FILE)
+        require(not (legacy_voice_count and build108_voice_count), "both pre-Build108 and Build108 standalone voice/circle owners are present")
+        require(
+            (legacy_voice_count == 1 and build108_voice_count == 0)
+            or (legacy_voice_count == 0 and build108_voice_count == 1),
+            "expected one standalone v0.8I.2 voice/circle owner after OT1 normalization, "
+            f"found legacy={legacy_voice_count} build108={build108_voice_count}",
+        )
+        voice_owner = BUILD108_LEGACY_REMOTE_VOICE_CIRCLE_FILE if build108_voice_count == 1 else LEGACY_REMOTE_VOICE_CIRCLE_FILE
+        updated = updated.replace(voice_owner, STOCK_REMOTE_FILE, 1)
+
     require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote keep decision survived normalization")
     require("ghostBaseKeepVoiceCircleLocal" not in updated, "legacy voice/circle remote keep decision survived normalization")
     require(not any(key in updated for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS), "legacy OT1 remote diagnostics survived normalization")
@@ -385,6 +421,7 @@ def patch_remote_consumed_text(text: str) -> str:
     updated = normalize_legacy_remote_owner(text)
     if REMOTE_MARKER in updated:
         require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote decision survived an existing Build124 owner")
+        require("ghostBaseKeepVoiceCircleLocal" not in updated, "legacy voice/circle decision survived an existing Build124 owner")
         require(not any(key in updated for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS), "legacy OT1 remote diagnostics survived an existing Build124 owner")
         require(not any(key in updated for key in LEGACY_REMOTE_PATH_KEYS), "legacy OT1 remote path diagnostics survived an existing Build124 owner")
         return updated
