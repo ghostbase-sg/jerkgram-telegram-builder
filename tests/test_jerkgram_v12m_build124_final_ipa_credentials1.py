@@ -52,7 +52,7 @@ class Build124FinalIpaCredentialTests(unittest.TestCase):
                     archive.write(path, path.relative_to(root / "payload"))
         return ipa
 
-    def good_main(self) -> bytes:
+    def good_owner(self) -> bytes:
         return (
             b"MachO-fixture\x00"
             + f"JERKGRAM_BUILD124_API_ID={EXPECTED_API_ID}".encode("ascii")
@@ -61,10 +61,22 @@ class Build124FinalIpaCredentialTests(unittest.TestCase):
             + b"\x00"
         )
 
-    def test_accepts_expected_macro_derived_owner_and_hash_only_in_main_executable(self):
+    def test_accepts_expected_macro_derived_owner_and_hash_in_main_executable(self):
         module = self.load_verifier()
         with tempfile.TemporaryDirectory() as directory:
-            ipa = self.build_ipa(Path(directory), main_bytes=self.good_main())
+            ipa = self.build_ipa(Path(directory), main_bytes=self.good_owner())
+            result = module.verify_ipa_credentials(ipa, TEST_API_HASH)
+        self.assertEqual(result.api_id, EXPECTED_API_ID)
+        self.assertEqual(result.hash_owner, "Payload/Telegram.app/Telegram")
+
+    def test_accepts_same_compiled_build_config_credentials_in_extension_executable(self):
+        module = self.load_verifier()
+        with tempfile.TemporaryDirectory() as directory:
+            ipa = self.build_ipa(
+                Path(directory),
+                main_bytes=self.good_owner(),
+                extension_bytes=self.good_owner(),
+            )
             result = module.verify_ipa_credentials(ipa, TEST_API_HASH)
         self.assertEqual(result.api_id, EXPECTED_API_ID)
         self.assertEqual(result.hash_owner, "Payload/Telegram.app/Telegram")
@@ -84,9 +96,9 @@ class Build124FinalIpaCredentialTests(unittest.TestCase):
         module = self.load_verifier()
         for location in ("main", "resource", "extension"):
             with self.subTest(location=location), tempfile.TemporaryDirectory() as directory:
-                kwargs = {"main_bytes": self.good_main()}
+                kwargs = {"main_bytes": self.good_owner()}
                 kwargs[f"{location}_bytes"] = (
-                    self.good_main() + OFFICIAL_API_HASH.encode("ascii")
+                    self.good_owner() + OFFICIAL_API_HASH.encode("ascii")
                     if location == "main"
                     else OFFICIAL_API_HASH.encode("ascii")
                 )
@@ -94,16 +106,29 @@ class Build124FinalIpaCredentialTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     module.verify_ipa_credentials(ipa, TEST_API_HASH)
 
-    def test_private_hash_is_allowed_only_in_exact_main_executable_owner(self):
+    def test_rejects_private_hash_in_non_executable_resource(self):
         module = self.load_verifier()
-        for location in ("resource", "extension"):
-            with self.subTest(location=location), tempfile.TemporaryDirectory() as directory:
-                kwargs = {"main_bytes": self.good_main()}
-                kwargs[f"{location}_bytes"] = TEST_API_HASH.encode("ascii")
-                ipa = self.build_ipa(Path(directory), **kwargs)
-                with self.assertRaises(RuntimeError) as raised:
-                    module.verify_ipa_credentials(ipa, TEST_API_HASH)
-                self.assertNotIn(TEST_API_HASH, str(raised.exception))
+        with tempfile.TemporaryDirectory() as directory:
+            ipa = self.build_ipa(
+                Path(directory),
+                main_bytes=self.good_owner(),
+                resource_bytes=TEST_API_HASH.encode("ascii"),
+            )
+            with self.assertRaises(RuntimeError) as raised:
+                module.verify_ipa_credentials(ipa, TEST_API_HASH)
+        self.assertNotIn(TEST_API_HASH, str(raised.exception))
+
+    def test_rejects_extension_hash_without_matching_compiled_api_id_owner(self):
+        module = self.load_verifier()
+        with tempfile.TemporaryDirectory() as directory:
+            ipa = self.build_ipa(
+                Path(directory),
+                main_bytes=self.good_owner(),
+                extension_bytes=TEST_API_HASH.encode("ascii"),
+            )
+            with self.assertRaises(RuntimeError) as raised:
+                module.verify_ipa_credentials(ipa, TEST_API_HASH)
+        self.assertNotIn(TEST_API_HASH, str(raised.exception))
 
     def test_requires_private_hash_in_main_executable_without_echoing_it(self):
         module = self.load_verifier()
