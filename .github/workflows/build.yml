@@ -95,6 +95,8 @@ jobs:
             scripts/verify_jerkgram_v12m_build124_onetime_persistence1.py \
             scripts/apply_jerkgram_v12m_build124_onetime_viewed1.py \
             scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py \
+            scripts/apply_jerkgram_v12m_build124_settings_redesign1.py \
+            scripts/verify_jerkgram_v12m_build124_settings_redesign1.py \
             scripts/install_jerkgram_v12m_build124_probe_hook.py \
             scripts/verify_jerkgram_v12m_build124_wiring1.py \
             scripts/jerkgram_finalize_build124_identity.py \
@@ -124,6 +126,7 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12m_build124_single_forward1
           python3 -m unittest tests.test_jerkgram_v12m_build124_sensitive_settings1
           python3 -m unittest tests.test_jerkgram_v12m_build124_archive_import_runtime1
+          python3 -m unittest tests.test_jerkgram_v12m_build124_archive_import_refresh1
           python3 -m unittest tests.test_jerkgram_v12m_build124_archive_export_runtime1
           python3 -m unittest tests.test_jerkgram_v12m_build124_protected_forward1
           python3 -m unittest tests.test_jerkgram_v12m_build124_deleted_entities1
@@ -133,6 +136,7 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12m_build124_lifecycle_freeze1
           python3 -m unittest tests.test_jerkgram_v12m_build124_onetime_persistence1
           python3 -m unittest tests.test_jerkgram_v12m_build124_onetime_viewed1
+          python3 -m unittest tests.test_jerkgram_v12m_build124_settings_redesign1
           python3 -m unittest tests.test_jerkgram_v12m_build124_wiring1
 
           # Canonical materialization chain. Build124 root installer invokes the
