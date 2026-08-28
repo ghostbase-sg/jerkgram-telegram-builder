@@ -78,13 +78,14 @@ def main() -> None:
     require("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout" in voice, "voice visual is not restricted to genuine view-once messages")
     require("arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat" in voice, "voice override must not affect secret chats")
     require("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in voice, "consumed one-time voice visual is not retained")
-    require("isConsumed = attribute.consumed" in voice, "real consumed state must remain authoritative")
+    require("attribute.consumed" in voice, "real consumed state must remain authoritative")
+    require("ConsumableContentMessageAttribute(consumed: false)" not in voice, "voice visual must never falsify consumed state")
 
     combined = autoremove + "\n" + remote + "\n" + voice
     require("ConsumableContentMessageAttribute(consumed: false)" not in combined, "consumed/read state must never be falsified")
 
     print("[verify Build124 one-time persistence] SOURCE VERIFIED")
-    print("[verify Build124 one-time persistence] real view-once media persists across remote consumption and managed autoremove; countdown stays disarmed; legacy OT1 owners are absent; consumed state remains real")
+    print("[verify Build124 one-time persistence] real view-once media persists across remote consumption and managed autoremove; countdown stays disarmed; post-TRANSCRIPTION1 voice UI reads consumed state directly")
 
 
 if __name__ == "__main__":
