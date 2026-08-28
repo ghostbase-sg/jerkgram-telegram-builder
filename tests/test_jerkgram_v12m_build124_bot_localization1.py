@@ -60,6 +60,17 @@ class Build124BotLocalizationTests(unittest.TestCase):
         self.assertIn("ghostBaseBotCapabilityReport(strings: strings)", result)
         self.assertIn("ghostBaseBotDifferenceReport(strings: strings)", result)
 
+    def test_debug_bot_surfaces_accept_build115_semantic_owners(self):
+        module = self.load_patch()
+        source = '''private func ghostBaseBotCapabilityReport() -> String {\n    let report = defaults.string(forKey: "Report") ?? "Результатов пока нет."\n    return """\n    Status: \\(status)\n    Updated: \\(updated)\n\n    \\(report)\n    """\n}\nprivate func ghostBaseBotDifferenceReport() -> String {\n    let report = defaults.string(forKey: "Report") ?? "Результатов пока нет."\n    return """\n    Status: \\(status)\n    Updated: \\(updated)\n\n    \\(report)\n    """\n}\nstrings.researchBotCapabilityHeader\nstrings.researchBotCapability\nghostBaseBotCapabilityReport()\nstrings.researchBotDifference\nghostBaseBotDifferenceReport()\n'''
+        result = module.patch_settings(source)
+        self.assertIn("strings.jerkgram.botCapabilityTitle", result)
+        self.assertIn("strings.jerkgram.botCapabilityAction", result)
+        self.assertIn("strings.jerkgram.botDifferenceAction", result)
+        self.assertNotIn("strings.researchBotCapabilityHeader", result)
+        self.assertNotIn("strings.researchBotCapability\n", result)
+        self.assertNotIn("strings.researchBotDifference", result)
+
     def test_patch_is_idempotent(self):
         module = self.load_patch()
         source = "public struct JerkgramStrings { public let languageCode: String }\n"
