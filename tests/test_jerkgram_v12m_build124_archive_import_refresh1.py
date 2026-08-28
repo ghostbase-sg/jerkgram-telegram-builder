@@ -62,8 +62,17 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)", updated)
         self.assertIn("stateValue.modify", updated)
         self.assertIn("statePromise.set(refreshed)", updated)
-        self.assertIn("jerkgramImportRefreshSignal", updated)
-        self.assertIn("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)", updated)
+        self.assertIn("let jerkgramImportRefreshStateSignal = combineLatest(", updated)
+        self.assertIn("statePromise.get(),\n        jerkgramImportRefreshSignal", updated)
+        self.assertIn("|> map { state, _ in state }", updated)
+        self.assertIn(
+            "let signal = combineLatest(context.sharedContext.presentationData, jerkgramImportRefreshStateSignal)",
+            updated,
+        )
+        self.assertNotIn(
+            "combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)",
+            updated,
+        )
         self.assertLess(updated.index("BUILD124_ARCHIVE_IMPORT_REFRESH1"), updated.index("private func ghostBaseSettingsEntries("))
 
     def test_multiline_controller_signature_does_not_drive_helper_anchor(self):
