@@ -4,6 +4,8 @@ from pathlib import Path
 import importlib.util
 import unittest
 
+from tests.test_jerkgram_v12m_build124_onetime_remote_persistence1 import Build124OneTimeRemotePersistenceTests
+
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_persistence1.py"
@@ -106,6 +108,7 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
     def test_patch_targets_only_materialized_official_owners(self):
         source = PATCH.read_text(encoding="utf-8")
         self.assertIn("submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift", source)
+        self.assertIn("submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift", source)
         self.assertIn("submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift", source)
         self.assertNotIn("apply_ghostbase_v10p_sh1_ot1_combined.py", source)
         self.assertNotIn("apply_ghostbase_v10q_sh2_ot2_combined.py", source)
