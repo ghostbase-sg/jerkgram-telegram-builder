@@ -88,6 +88,13 @@ class Build124EditHistoryTests(unittest.TestCase):
         self.assertIn("date: editEventDate", result)
         self.assertNotIn("materializedDate", result)
 
+    def test_unknown_prepatched_state_owner_is_left_intact(self):
+        module = self.load_patch()
+        prepatched = "let materializedEditHistoryDate = message.timestamp\n"
+        result = module.patch_state_text(prepatched)
+        self.assertIn("BUILD124_EDIT_EVENT_DATE1", result)
+        self.assertIn("materializedEditHistoryDate", result)
+
     def test_one_edit_produces_one_history_version_not_old_plus_current(self):
         module = self.load_patch()
         result = module.patch_menu_text(self.menu_fixture())
