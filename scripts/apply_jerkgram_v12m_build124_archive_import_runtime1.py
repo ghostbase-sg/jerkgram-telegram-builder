@@ -118,7 +118,7 @@ def patch_settings_refresh_text(text: str) -> str:
     // subscription without changing the arity or closure shape of whatever
     // combineLatest the release chain already uses.
     let jerkgramImportRefreshStateSignal = combineLatest(
-        statePromise.get(),
+        __JERKGRAM_IMPORT_REFRESH_STATE_PROMISE__,
         jerkgramImportRefreshSignal
     )
     |> map { state, _ in state }
@@ -128,12 +128,14 @@ def patch_settings_refresh_text(text: str) -> str:
     setup_marker = "    |> map { state, _ in state }\n"
     setup_start = text.index("    let jerkgramImportRefreshStateSignal = combineLatest(")
     setup_end = text.index(setup_marker, setup_start) + len(setup_marker)
-    _, controller_end = balanced_region(text, "public func ghostBaseSettingsController(")
-    controller_tail = text[setup_end:controller_end]
+    controller_start, controller_end = balanced_region(text, "public func ghostBaseSettingsController(")
+    controller_text = text[controller_start:controller_end]
     state_get = "statePromise.get()"
-    require(controller_tail.count(state_get) >= 1, "settings controller no longer consumes statePromise.get()")
-    controller_tail = controller_tail.replace(state_get, "jerkgramImportRefreshStateSignal", 1)
-    text = text[:setup_end] + controller_tail + text[controller_end:]
+    require(controller_text.count(state_get) >= 1, "settings controller no longer consumes statePromise.get()")
+    controller_text = controller_text.replace(state_get, "jerkgramImportRefreshStateSignal", 1)
+    text = text[:controller_start] + controller_text + text[controller_end:]
+    require(text.count("__JERKGRAM_IMPORT_REFRESH_STATE_PROMISE__") == 1, "settings refresh placeholder count")
+    text = text.replace("__JERKGRAM_IMPORT_REFRESH_STATE_PROMISE__", state_get, 1)
 
     require(REFRESH_MARKER in text, "settings refresh marker missing after patch")
     require("ActionDisposable" in text, "settings refresh observer is not lifecycle-bound")
