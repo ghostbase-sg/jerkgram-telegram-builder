@@ -19,10 +19,11 @@ class Build124BotLocalizationTests(unittest.TestCase):
         source = "public struct JerkgramStrings { public let languageCode: String }\n"
         result = module.patch_strings(source)
         self.assertIn("BUILD124_BOT_LOCALIZATION1", result)
-        self.assertIn("public var botLoginButton", result)
+        self.assertIn("public extension JerkgramStrings", result)
+        self.assertIn("var botLoginButton", result)
         self.assertIn("Log in as Bot — Experimental", result)
         self.assertIn("Войти как бот — Экспериментально", result)
-        self.assertIn("public var botAlreadyAdded", result)
+        self.assertIn("var botAlreadyAdded", result)
         self.assertIn("already added to Jerkgram", result)
         self.assertNotIn("added to GhostBase", result)
 
