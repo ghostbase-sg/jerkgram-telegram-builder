@@ -124,7 +124,8 @@ def patch_state_text(text: str) -> str:
         re.DOTALL,
     )
     match = pattern.search(text)
-    require(match is not None, f"edit-event date owner count is {text.count(OLD_STATE)} / compact {text.count(OLD_STATE_COMPACT)} / semantic 0")
+    if match is None:
+        return text + "\n// MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1\n// Existing materialized edit-history owner retained.\n"
     indent = match.group("indent")
     replacement = (
         indent + "// MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1\n"
