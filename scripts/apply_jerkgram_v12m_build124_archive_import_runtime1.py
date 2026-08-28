@@ -106,10 +106,11 @@ def patch_settings_refresh_text(text: str) -> str:
 
     state_anchor = "    let stateValue = Atomic(value: initialState)\n"
     require(text.count(state_anchor) == 1, f"settings Atomic anchor count: {text.count(state_anchor)}")
-    refresh_setup = state_anchor + r'''    let jerkgramImportRefreshSignal = jerkgramSettingsImportRefreshSignal(
+    refresh_setup = state_anchor + r'''    let accountPeerId = context.account.peerId.toInt64()
+    let jerkgramImportRefreshSignal = jerkgramSettingsImportRefreshSignal(
         accountPeerId: accountPeerId,
         reload: {
-            let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)
+            let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId)
             stateValue.modify { _ in refreshed }
             statePromise.set(refreshed)
         }
@@ -121,7 +122,7 @@ def patch_settings_refresh_text(text: str) -> str:
         __JERKGRAM_IMPORT_REFRESH_STATE_PROMISE__,
         jerkgramImportRefreshSignal
     )
-    |> map { state, _ in state }
+    |> map { (state: GhostBaseSettingsState, _: Void) -> GhostBaseSettingsState in state }
 '''
     text = text.replace(state_anchor, refresh_setup, 1)
 
