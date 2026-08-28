@@ -42,6 +42,7 @@ APPLY_ORDERED = (
     "apply_jerkgram_v12m_build124_lifecycle_freeze1.py",
     "apply_jerkgram_v12m_build124_onetime_persistence1.py",
     "apply_jerkgram_v12m_build124_onetime_viewed1.py",
+    "apply_jerkgram_v12m_build124_settings_redesign_compat1.py",
     "apply_jerkgram_v12m_build124_settings_redesign1.py",
 )
 
@@ -146,6 +147,11 @@ def patch_probe(text: str) -> str:
         text.index("apply_jerkgram_v12m_build124_archive_import_runtime1.py")
         < text.index("apply_jerkgram_v12m_build124_settings_redesign1.py"),
         "settings redesign must preserve the archive-import live refresh bridge",
+    )
+    require(
+        text.index("apply_jerkgram_v12m_build124_settings_redesign_compat1.py")
+        < text.index("apply_jerkgram_v12m_build124_settings_redesign1.py"),
+        "settings mutable-entry compatibility must precede the redesign overlay",
     )
 
     if FINAL_MARKER not in text:
