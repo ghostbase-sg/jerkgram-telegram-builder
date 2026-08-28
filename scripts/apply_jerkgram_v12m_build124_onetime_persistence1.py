@@ -278,7 +278,6 @@ def replace_autoremove_media_owner(text: str) -> str:
         require(end >= 0, "legacy OT1 managed-autoremove owner has no attribute boundary")
         segment = text[start:end]
         require("ghostBaseOT1KeepOutgoingTimerLocal" in segment, "legacy OT1 keep decision missing")
-        require("GhostBase.OT1.AutoremoveKeepBlocked.Count" in segment, "legacy OT1 diagnostics missing")
         require("TelegramMediaExpiredContent(data: .image)" in segment, "legacy OT1 image fallback missing")
         require("TelegramMediaExpiredContent(data: .videoMessage)" in segment, "legacy OT1 instant-video fallback missing")
         require("TelegramMediaExpiredContent(data: .voiceMessage)" in segment, "legacy OT1 voice fallback missing")
