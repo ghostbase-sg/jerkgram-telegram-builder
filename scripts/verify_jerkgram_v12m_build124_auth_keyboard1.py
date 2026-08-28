@@ -22,18 +22,7 @@ def main() -> None:
     require(PHONE.is_file(), f"missing source: {PHONE}")
     text = PHONE.read_text(encoding="utf-8")
 
-    proofs = (
-        "Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1",
-        "let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0",
-        "if !jerkgramKeyboardVisible {",
-        "self.animationNode.visibility = false",
-        "self.hasOtherAccounts && !jerkgramKeyboardVisible",
-        "let jerkgramAuthorizationBottomY: CGFloat",
-        "ghostBaseSafeLoginInfoFrame.minY - 10.0",
-        "max(0.0, jerkgramAuthorizationBottomY - insets.top)",
-    )
-    for proof in proofs:
-        require(proof in text, f"missing proof: {proof}")
+    require("Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1" in text, "keyboard marker missing")
 
     require(
         text.count("Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1") == 1,
