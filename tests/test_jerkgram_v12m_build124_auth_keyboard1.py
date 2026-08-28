@@ -79,6 +79,13 @@ class Build124AuthKeyboardTests(unittest.TestCase):
         result = module.patch_phone_layout(self.fixture())
         self.assertIn("layout.size.height - insets.bottom - additionalBottomInset", result)
 
+    def test_prepatched_materialized_auth_owner_is_left_intact(self):
+        module = self.load_patch()
+        source = "// MARK: GhostBase v0.8H Safe Login layout\nlet ghostBaseSafeLoginInfoFrame = CGRect.zero\n"
+        result = module.patch_phone_layout(source)
+        self.assertIn("BUILD124_AUTH_KEYBOARD1", result)
+        self.assertIn("ghostBaseSafeLoginInfoFrame", result)
+
     def test_patch_is_idempotent(self):
         module = self.load_patch()
         once = module.patch_phone_layout(self.fixture())
