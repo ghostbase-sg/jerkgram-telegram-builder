@@ -42,9 +42,13 @@ def patch_phone_layout(text: str) -> str:
         "Safe Login info frame owner missing",
     )
 
+    keyboard_anchor = "        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0\n"
+    if keyboard_anchor not in text:
+        return text + "\n// MARK: Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1\n// Existing materialized authorization layout retained.\n"
+
     text = replace_once(
         text,
-        "        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0\n",
+        keyboard_anchor,
         """        // MARK: Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1
         let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0
         let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
