@@ -77,7 +77,6 @@ private func jerkgramSettingsImportRefreshSignal(
                     return
                 }
                 reload()
-                subscriber.putNext(())
             }
         )
         return ActionDisposable {
@@ -98,9 +97,8 @@ def patch_settings_refresh_text(text: str) -> str:
     )
 
     # Do not anchor to the formatting of the public controller declaration.
-    # The release chain may wrap its parameter list across lines while keeping
-    # the same owner. The entries builder is a stable single owner reused by
-    # Build123 and the later Build124 settings-redesign overlay.
+    # The entries builder is a stable single owner reused by Build123 and the
+    # later Build124 settings-redesign overlay.
     helper_anchor = "private func ghostBaseSettingsEntries("
     require(text.count(helper_anchor) == 1, f"settings entries owner anchor count: {text.count(helper_anchor)}")
     helper_start = text.index(helper_anchor)
@@ -116,21 +114,30 @@ def patch_settings_refresh_text(text: str) -> str:
             statePromise.set(refreshed)
         }
     )
+    // Retain the import observer through the controller's existing state
+    // subscription without changing the arity or closure shape of whatever
+    // combineLatest the release chain already uses.
+    let jerkgramImportRefreshStateSignal = combineLatest(
+        statePromise.get(),
+        jerkgramImportRefreshSignal
+    )
+    |> map { state, _ in state }
 '''
     text = text.replace(state_anchor, refresh_setup, 1)
 
-    old_combine = "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())\n"
-    new_combine = "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)\n"
-    require(text.count(old_combine) == 1, f"settings state combineLatest anchor count: {text.count(old_combine)}")
-    text = text.replace(old_combine, new_combine, 1)
-
-    old_map = "    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
-    new_map = "    |> map { presentationData, state, _ -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
-    require(text.count(old_map) == 1, f"settings state map anchor count: {text.count(old_map)}")
-    text = text.replace(old_map, new_map, 1)
+    setup_marker = "    |> map { state, _ in state }\n"
+    setup_start = text.index("    let jerkgramImportRefreshStateSignal = combineLatest(")
+    setup_end = text.index(setup_marker, setup_start) + len(setup_marker)
+    _, controller_end = balanced_region(text, "public func ghostBaseSettingsController(")
+    controller_tail = text[setup_end:controller_end]
+    state_get = "statePromise.get()"
+    require(controller_tail.count(state_get) >= 1, "settings controller no longer consumes statePromise.get()")
+    controller_tail = controller_tail.replace(state_get, "jerkgramImportRefreshStateSignal", 1)
+    text = text[:setup_end] + controller_tail + text[controller_end:]
 
     require(REFRESH_MARKER in text, "settings refresh marker missing after patch")
     require("ActionDisposable" in text, "settings refresh observer is not lifecycle-bound")
+    require("jerkgramImportRefreshStateSignal" in text, "settings refresh state bridge missing")
     return text
 
 
