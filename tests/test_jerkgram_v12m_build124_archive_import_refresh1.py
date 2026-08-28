@@ -81,6 +81,31 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("public func ghostBaseSettingsController(\n    context: AccountContext,", updated)
         self.assertIn("BUILD124_ARCHIVE_IMPORT_REFRESH1", updated)
 
+    def test_refresh_bridge_handles_a_state_signal_declared_before_atomic_owner(self):
+        module = self.load_patch()
+        early_signal_fixture = SETTINGS_FIXTURE.replace(
+            "    let statePromise = ValuePromise(initialState, ignoreRepeated: true)\n"
+            "    let stateValue = Atomic(value: initialState)\n\n"
+            "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())\n",
+            "    let statePromise = ValuePromise(initialState, ignoreRepeated: true)\n\n"
+            "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())\n",
+        ).replace(
+            "    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
+            "        fatalError()\n"
+            "    }\n"
+            "    return ItemListController(context: context, state: signal)\n",
+            "    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
+            "        fatalError()\n"
+            "    }\n"
+            "    let stateValue = Atomic(value: initialState)\n"
+            "    return ItemListController(context: context, state: signal)\n",
+        )
+        updated = module.patch_settings_refresh_text(early_signal_fixture)
+        self.assertIn(
+            "let signal = combineLatest(context.sharedContext.presentationData, jerkgramImportRefreshStateSignal)",
+            updated,
+        )
+
     def test_success_path_notifies_only_after_persisted_settings_are_projected(self):
         module = self.load_patch()
         replacement = module.REPLACEMENT
