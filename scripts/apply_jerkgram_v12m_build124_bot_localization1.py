@@ -142,6 +142,14 @@ def patch_settings(text: str) -> str:
     \\(report)
     """'''
     text = text.replace(report_template, 'return strings.jerkgram.botDiagnosticReport(status: status, updated: updated, report: report)')
+
+    # Build115 canonicalizes these late research labels before Build124 runs.
+    # Consume the semantic owners as the primary path, while retaining the
+    # legacy literals below for older materialization orders and unit fixtures.
+    text = text.replace('strings.researchBotCapabilityHeader', 'strings.jerkgram.botCapabilityTitle')
+    text = text.replace('strings.researchBotCapability', 'strings.jerkgram.botCapabilityAction')
+    text = text.replace('strings.researchBotDifference', 'strings.jerkgram.botDifferenceAction')
+
     text = text.replace('"Bot Account Capability Probe"', 'strings.jerkgram.botCapabilityTitle')
     text = text.replace('"Проверить RPC bot-аккаунта"', 'strings.jerkgram.botCapabilityAction')
     text = text.replace('"Проверить RPC бот-аккаунта"', 'strings.jerkgram.botCapabilityAction')
