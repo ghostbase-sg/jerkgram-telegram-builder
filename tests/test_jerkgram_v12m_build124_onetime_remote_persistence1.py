@@ -82,6 +82,8 @@ REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + N
         }
 '''
 
+# Exact v10p composition shape: replace_once() changed only the first
+# remote image/file owner. The second autoclear-image owner stayed stock.
 LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         let countdownBeginTime = consumeDate ?? timestamp
         
@@ -144,13 +146,7 @@ LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurren
                         for i in 0 ..< updatedMedia.count {
                             if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {
                                 if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
-                                    if ghostBaseOT1KeepOutgoingTimerLocal {
-                                        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
-                                        UserDefaults.standard.set("consumeImage", forKey: "GhostBase.OT1.OutgoingKeepPath")
-                                    } else {
-                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                                    }
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
                                 }
                             }
                         }
@@ -190,7 +186,7 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         self.assertIn("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)", updated)
         self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)", updated)
 
-    def test_remote_consume_collapses_legacy_ot1_owner(self):
+    def test_remote_consume_collapses_real_v10p_ot1_owner(self):
         module = self.load_patch()
         updated = module.patch_remote_consumed_text(LEGACY_REMOTE_FIXTURE)
         self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
@@ -219,6 +215,8 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         self.assertIn("remote.count(REMOTE_MARKER) == 1", source)
         self.assertIn('remote.count("if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout") == 2', source)
         self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", source)
+        self.assertIn('"ghostBaseOT1KeepOutgoingTimerLocal" not in remote', source)
+        self.assertIn('"GhostBase.OT1.OutgoingKeepBlocked.Count" not in remote', source)
 
 
 if __name__ == "__main__":
