@@ -9,6 +9,39 @@ REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_persistence1.py"
 VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_onetime_persistence1.py"
 
+LEGACY_AUTOREMOVE_FIXTURE = '''                                var updatedMedia = currentMessage.media
+                                let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+
+                                for i in 0 ..< updatedMedia.count {
+                                    if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                        if ghostBaseOT1KeepOutgoingTimerLocal {
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count")
+                                            UserDefaults.standard.set("managedAutoremoveImage", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                        } else {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                        }
+                                    } else if let file = updatedMedia[i] as? TelegramMediaFile {
+                                        if ghostBaseOT1KeepOutgoingTimerLocal {
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count")
+                                            UserDefaults.standard.set(file.isInstantVideo ? "managedAutoremoveInstantVideo" : (file.isVoice ? "managedAutoremoveVoice" : "managedAutoremoveFile"), forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                        } else if file.isInstantVideo {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                        } else if file.isVoice {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                        } else {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                        }
+                                    }
+                                }
+                                var updatedAttributes = currentMessage.attributes
+                                for i in 0 ..< updatedAttributes.count {
+                                    if let _ = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
+                                        updatedAttributes.remove(at: i)
+                                        break
+                                    }
+                                }
+'''
+
 REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         let countdownBeginTime = consumeDate ?? timestamp
         
@@ -56,6 +89,15 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
+
+    def test_build124_replaces_legacy_ot1_managed_autoremove_owner(self):
+        module = self.load_patch()
+        updated = module.patch_autoremove_text(LEGACY_AUTOREMOVE_FIXTURE)
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_MEDIA1", updated)
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_MARKER1", updated)
+        self.assertIn("if !jerkgramKeepOneTimeIdentity {", updated)
+        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
+        self.assertNotIn("GhostBase.OT1.AutoremoveKeepBlocked.Count", updated)
 
     def test_remote_consume_preserves_media_and_disarms_view_once_countdown(self):
         module = self.load_patch()
