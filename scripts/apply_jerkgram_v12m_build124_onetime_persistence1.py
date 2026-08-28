@@ -6,10 +6,12 @@ import os
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 AUTOREMOVE_TARGET = ROOT / "submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift"
+REMOTE_TARGET = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift"
 VOICE_TARGET = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift"
 
 MEDIA_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_MEDIA1"
 AUTOREMOVE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_MARKER1"
+REMOTE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_REMOTE1"
 VOICE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1"
 
 
@@ -107,6 +109,52 @@ NEW_AUTOCLEAR = '''                                var updatedAttributes = curre
                                 }
 '''
 
+REMOTE_DECISION_ANCHOR = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        let countdownBeginTime = consumeDate ?? timestamp
+        
+        for i in 0 ..< updatedAttributes.count {
+'''
+
+REMOTE_DECISION = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        let countdownBeginTime = consumeDate ?? timestamp
+        
+        // MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_REMOTE1
+        // A remote read receipt is the real consumed=true owner for outgoing
+        // one-time media. Preserve the media and keep the view-once timeout
+        // unscheduled when OneTimeSave is enabled; Secret Chats stay stock.
+        let jerkgramKeepOneTimeRemoteMedia = (
+            ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
+            && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
+            && message.id.peerId.namespace != Namespaces.Peer.SecretChat
+            && message.minAutoremoveOrClearTimeout == viewOnceTimeout
+        )
+        
+        for i in 0 ..< updatedAttributes.count {
+'''
+
+REMOTE_AUTOREMOVE_ASSIGNMENT = '''                    updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
+'''
+
+REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeepOneTimeRemoteMedia && attribute.timeout == viewOnceTimeout {
+                        updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)
+                    } else {
+                        updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
+                    }
+'''
+
+REMOTE_AUTOCLEAR_ASSIGNMENT = '''                    updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
+'''
+
+REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeepOneTimeRemoteMedia && attribute.timeout == viewOnceTimeout {
+                        updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)
+                    } else {
+                        updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
+                    }
+'''
+
+REMOTE_EXPIRE_CONDITION = '''if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {'''
+REMOTE_EXPIRE_CONDITION_PERSISTENT = '''if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout) {'''
+
 OLD_VOICE = '''                var isConsumed: Bool?
                 
                 var consumableContentIcon: UIImage?
@@ -192,6 +240,28 @@ def patch_autoremove_text(text: str) -> str:
     return updated
 
 
+def patch_remote_consumed_text(text: str) -> str:
+    if REMOTE_MARKER in text:
+        return text
+
+    require(text.count(REMOTE_DECISION_ANCHOR) == 1, f"expected one remote-consume countdown owner, found {text.count(REMOTE_DECISION_ANCHOR)}")
+    require(text.count(REMOTE_AUTOREMOVE_ASSIGNMENT) == 1, f"expected one remote autoremove assignment, found {text.count(REMOTE_AUTOREMOVE_ASSIGNMENT)}")
+    require(text.count(REMOTE_AUTOCLEAR_ASSIGNMENT) == 1, f"expected one remote autoclear assignment, found {text.count(REMOTE_AUTOCLEAR_ASSIGNMENT)}")
+    require(text.count(REMOTE_EXPIRE_CONDITION) == 2, f"expected two remote media-expiration owners, found {text.count(REMOTE_EXPIRE_CONDITION)}")
+
+    updated = text.replace(REMOTE_DECISION_ANCHOR, REMOTE_DECISION, 1)
+    updated = updated.replace(REMOTE_AUTOREMOVE_ASSIGNMENT, REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT, 1)
+    updated = updated.replace(REMOTE_AUTOCLEAR_ASSIGNMENT, REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT, 1)
+    updated = updated.replace(REMOTE_EXPIRE_CONDITION, REMOTE_EXPIRE_CONDITION_PERSISTENT, 2)
+
+    require(REMOTE_MARKER in updated, "remote one-time persistence marker missing after patch")
+    require(updated.count("let jerkgramKeepOneTimeRemoteMedia = (") == 1, "remote one-time persistence decision must have one owner")
+    require(updated.count(REMOTE_EXPIRE_CONDITION_PERSISTENT) == 2, "remote one-time media expiration guards are incomplete")
+    require("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "remote autoremove view-once countdown is still armed")
+    require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "remote autoclear view-once countdown is still armed")
+    return updated
+
+
 def patch_voice_file_text(text: str) -> str:
     if VOICE_MARKER in text:
         return text
@@ -204,19 +274,24 @@ def patch_voice_file_text(text: str) -> str:
 
 def main() -> None:
     require(AUTOREMOVE_TARGET.is_file(), f"target missing: {AUTOREMOVE_TARGET}")
+    require(REMOTE_TARGET.is_file(), f"target missing: {REMOTE_TARGET}")
     require(VOICE_TARGET.is_file(), f"target missing: {VOICE_TARGET}")
 
     autoremove_original = AUTOREMOVE_TARGET.read_text(encoding="utf-8")
+    remote_original = REMOTE_TARGET.read_text(encoding="utf-8")
     voice_original = VOICE_TARGET.read_text(encoding="utf-8")
 
     autoremove_updated = patch_autoremove_text(autoremove_original)
+    remote_updated = patch_remote_consumed_text(remote_original)
     voice_updated = patch_voice_file_text(voice_original)
 
     AUTOREMOVE_TARGET.write_text(autoremove_updated, encoding="utf-8")
+    REMOTE_TARGET.write_text(remote_updated, encoding="utf-8")
     VOICE_TARGET.write_text(voice_updated, encoding="utf-8")
 
     print("[Build124 one-time persistence] GREEN")
-    print("[Build124 one-time persistence] retained one-time media stays real and keeps its identity without rearming autoremove")
+    print("[Build124 one-time persistence] retained one-time media stays real across remote consumption and managed autoremove")
+    print("[Build124 one-time persistence] view-once countdown remains unscheduled when persistence is enabled")
     print("[Build124 one-time persistence] consumed voice keeps the one-time visual while preserving consumed=true")
 
 
