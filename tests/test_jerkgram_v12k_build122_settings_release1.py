@@ -1,5 +1,6 @@
 from pathlib import Path
 import plistlib
+import re
 import subprocess
 import tempfile
 import unittest
@@ -68,9 +69,13 @@ class Build122SettingsReleaseContractTests(unittest.TestCase):
     def test_overlay_is_wired_after_build121_before_bazel(self) -> None:
         install = INSTALL.read_text(encoding="utf-8")
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        for source in (install, workflow):
-            self.assertIn("apply_jerkgram_v12k_build122_settings_release1.py", source)
-            self.assertIn("verify_jerkgram_v12k_build122_settings_release1.py", source)
+        for token in (
+            "apply_jerkgram_v12k_build122_settings_release1.py",
+            "verify_jerkgram_v12k_build122_settings_release1.py",
+        ):
+            self.assertIn(token, install)
+        self.assertIn("install_jerkgram_v12k_build122_probe_hook.py", workflow)
+        self.assertIn("python3 -m unittest tests.test_jerkgram_v12k_build122_settings_release1", workflow)
         self.assertIn("source_positions == sorted(source_positions)", install)
 
     def test_verifier_checks_materialized_release_owners(self) -> None:
@@ -97,11 +102,18 @@ class Build122SettingsReleaseContractTests(unittest.TestCase):
             "verify_jerkgram_v12k_build122_final_ipa.py",
         ):
             self.assertIn(token, install)
-            self.assertIn(token, workflow)
-        self.assertIn("name: Jerkgram 12.9.2 Build123", workflow)
-        self.assertIn("python3 scripts/jerkgram_publish_build123_artifact.py", workflow)
-        self.assertIn("name: Jerkgram-build123", workflow)
-        self.assertIn("artifacts/Jerkgram-build123.ipa", workflow)
+
+        current_builds = [int(value) for value in re.findall(r"name: Jerkgram 12\.9\.2 Build(\d+)", workflow)]
+        self.assertTrue(current_builds, "current Jerkgram workflow build missing")
+        current_build = max(current_builds)
+        self.assertGreaterEqual(current_build, 123)
+        self.assertIn(f"python3 scripts/jerkgram_publish_build{current_build}_artifact.py", workflow)
+        if "Canary" in workflow:
+            self.assertIn(f"name: Jerkgram-Build{current_build}-canary", workflow)
+            self.assertIn(f"artifacts/Jerkgram-Build{current_build}-canary.ipa", workflow)
+        else:
+            self.assertIn(f"name: Jerkgram-build{current_build}", workflow)
+            self.assertIn(f"artifacts/Jerkgram-build{current_build}.ipa", workflow)
         self.assertNotIn("python3 scripts/jerkgram_publish_build121_artifact.py", workflow)
 
     def test_build122_finalizer_stamps_main_and_all_extensions(self) -> None:

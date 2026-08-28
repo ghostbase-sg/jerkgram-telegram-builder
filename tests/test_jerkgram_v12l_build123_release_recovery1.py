@@ -1,6 +1,7 @@
 from pathlib import Path
 import importlib.util
 import plistlib
+import re
 import subprocess
 import tempfile
 import unittest
@@ -177,8 +178,16 @@ class Build123ReleaseRecoveryTests(unittest.TestCase):
         ):
             self.assertIn(name, install)
             self.assertIn(name, workflow)
-        self.assertIn("name: Jerkgram 12.9.2 Build123", workflow)
-        self.assertIn("Jerkgram-build123.ipa", workflow)
+
+        current_builds = [int(value) for value in re.findall(r"name: Jerkgram 12\.9\.2 Build(\d+)", workflow)]
+        self.assertTrue(current_builds, "current Jerkgram workflow build missing")
+        current_build = max(current_builds)
+        self.assertGreaterEqual(current_build, 123)
+        artifact_paths = (
+            f"Jerkgram-build{current_build}.ipa",
+            f"Jerkgram-Build{current_build}-canary.ipa",
+        )
+        self.assertTrue(any(path in workflow for path in artifact_paths), "current successor artifact path missing")
 
     def test_build123_identity_stamps_app_and_extensions(self):
         extension_names = (

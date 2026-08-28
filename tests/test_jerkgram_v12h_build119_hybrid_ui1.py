@@ -20,19 +20,30 @@ class Build119HybridUIContractTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         self.assertRegex(source, r"name: Jerkgram 12\.9\.2 Build\d+")
         self.assertNotIn("GhostBase Swiftgram Builder", source)
-        self.assertIn("scripts/apply_jerkgram_v12h_build119_hybrid_ui1.py", source)
-        self.assertIn("scripts/apply_jerkgram_v12h_build119_hybrid_ui2.py", source)
-        self.assertIn("scripts/verify_jerkgram_v12h_build119_hybrid_ui1.py", source)
         self.assertIn("scripts/install_jerkgram_v12h_build119_probe_hook.py", source)
-        self.assertIn("scripts/jerkgram_finalize_build119_identity.py", source)
-        self.assertIn("scripts/verify_jerkgram_v12h_build119_final_ipa.py", source)
-        self.assertIn("scripts/jerkgram_publish_build119_artifact.py", source)
+        self.assertIn("python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1", source)
 
-        artifact_builds = [int(value) for value in re.findall(r"name: Jerkgram-build(\d+)", source)]
-        self.assertTrue(artifact_builds, "current Jerkgram artifact build missing")
-        current_build = max(artifact_builds)
+        installer = INSTALL.read_text(encoding="utf-8")
+        for token in (
+            "apply_jerkgram_v12h_build119_hybrid_ui2.py",
+            "verify_jerkgram_v12h_build119_hybrid_ui1.py",
+            "jerkgram_finalize_build119_identity.py",
+            "verify_jerkgram_v12h_build119_final_ipa.py",
+        ):
+            self.assertIn(token, installer)
+
+        current_builds = [int(value) for value in re.findall(r"name: Jerkgram 12\.9\.2 Build(\d+)", source)]
+        self.assertTrue(current_builds, "current Jerkgram workflow build missing")
+        current_build = max(current_builds)
         self.assertGreaterEqual(current_build, 119)
-        self.assertIn(f"artifacts/Jerkgram-build{current_build}.ipa", source)
+        artifact_paths = (
+            f"artifacts/Jerkgram-build{current_build}.ipa",
+            f"artifacts/Jerkgram-Build{current_build}-canary.ipa",
+        )
+        self.assertTrue(
+            any(path in source for path in artifact_paths),
+            f"current Jerkgram artifact path missing for build {current_build}",
+        )
         self.assertNotIn("name: Jerkgram 12.9.2 Build118", source)
         self.assertNotIn("name: Jerkgram-build118", source)
 

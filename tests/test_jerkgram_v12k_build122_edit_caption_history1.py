@@ -25,12 +25,15 @@ class Build122EditCaptionHistoryTests(unittest.TestCase):
         self.assertIn("timestamp: Double(message.timestamp)", source)
 
     def test_overlay_and_verifier_are_wired(self) -> None:
+        install = INSTALL.read_text(encoding="utf-8")
+        workflow = WORKFLOW.read_text(encoding="utf-8")
         for name in (
             "apply_jerkgram_v12k_build122_edit_caption_history1.py",
             "verify_jerkgram_v12k_build122_edit_caption_history1.py",
         ):
-            self.assertIn(name, INSTALL.read_text(encoding="utf-8"))
-            self.assertIn(name, WORKFLOW.read_text(encoding="utf-8"))
+            self.assertIn(name, install)
+        self.assertIn("install_jerkgram_v12k_build122_probe_hook.py", workflow)
+        self.assertIn("python3 -m unittest tests.test_jerkgram_v12k_build122_edit_caption_history1", workflow)
         self.assertTrue(VERIFY.is_file())
 
 

@@ -139,15 +139,19 @@ class Build120ProfileBlurLifecycleTests(unittest.TestCase):
 
     def test_workflow_retains_build120_contract_in_newer_builds(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("tests/test_jerkgram_v12i_build120_profile_blur_lifecycle1.py", workflow)
         self.assertIn("python3 -m unittest tests.test_jerkgram_v12i_build120_profile_blur_lifecycle1", workflow)
-        self.assertIn("apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py", workflow)
-        self.assertIn("verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py", workflow)
-        self.assertIn("apply_jerkgram_v12i_build120_sticker_alpha1.py", workflow)
-        self.assertIn("verify_jerkgram_v12i_build120_sticker_alpha1.py", workflow)
         self.assertIn("install_jerkgram_v12i_build120_probe_hook.py", workflow)
-        self.assertIn("jerkgram_finalize_build120_identity.py", workflow)
-        self.assertIn("verify_jerkgram_v12i_build120_final_ipa.py", workflow)
+
+        installer = HOOK.read_text(encoding="utf-8")
+        for token in (
+            "apply_jerkgram_v12i_build120_profile_blur_lifecycle1.py",
+            "verify_jerkgram_v12i_build120_profile_blur_lifecycle1.py",
+            "apply_jerkgram_v12i_build120_sticker_alpha1.py",
+            "verify_jerkgram_v12i_build120_sticker_alpha1.py",
+            "jerkgram_finalize_build120_identity.py",
+            "verify_jerkgram_v12i_build120_final_ipa.py",
+        ):
+            self.assertIn(token, installer)
 
 
 if __name__ == "__main__":
