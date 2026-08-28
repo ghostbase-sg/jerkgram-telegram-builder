@@ -6,7 +6,7 @@ import unittest
 
 
 REPO = Path(__file__).resolve().parents[1]
-PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_onetime_viewed1.py"
+PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_viewed1.py"
 
 MEDIA_FIXTURE = '''            if let remainingTime {
                 if remainingTime == viewOnceTimeout {
@@ -43,7 +43,8 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertIn("BUILD124_OUTGOING_ONETIME_VIEWED_MEDIA1", updated)
         self.assertIn("ConsumableContentMessageAttribute", updated)
         self.assertIn("attribute.consumed", updated)
-        self.assertIn("!message.flags.contains(.Incoming)", updated)
+        self.assertIn("!message.effectivelyIncoming(context.account.peerId)", updated)
+        self.assertNotIn("!message.flags.contains(.Incoming)", updated)
         self.assertIn('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"', updated)
         self.assertIn('iconName: "Chat/Message/SecretMediaOnce"', updated)
 
