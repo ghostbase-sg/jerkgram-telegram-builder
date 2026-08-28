@@ -62,7 +62,9 @@ class Build124LifecycleFreezeTests(unittest.TestCase):
     def test_lifecycle_observers_never_sync_flush(self):
         module = self.load_patch()
         result = module.patch_text(self.fixture())
-        observer_region = result[result.index("private static let lifecycleObservers"):result.index("@discardableResult")]
+        start = result.index("private static let lifecycleObservers")
+        end = result.index("private static func requestLifecycleFlush()", start)
+        observer_region = result[start:end]
         self.assertIn("BUILD124_NONBLOCKING_LIFECYCLE_FLUSH1", result)
         self.assertNotIn("flushSynchronously()", observer_region)
         self.assertEqual(observer_region.count("requestLifecycleFlush()"), 2)
