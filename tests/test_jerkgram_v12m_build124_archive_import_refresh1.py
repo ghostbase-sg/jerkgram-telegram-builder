@@ -9,14 +9,26 @@ PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_archive_import_runtime1.py"
 SETTINGS_FIXTURE = '''import Foundation
 import SwiftSignalKit
 
+// MARK: Jerkgram v1.2L BUILD123_ACCOUNT_SETTINGS_OWNER1
 private struct GhostBaseSettingsState: Equatable {
     static func load(accountPeerId: Int64, mirrorLegacy: Bool) -> GhostBaseSettingsState {
         return GhostBaseSettingsState()
     }
 }
 
-public func ghostBaseSettingsController(context: AccountContext, initialPage: GhostBaseSettingsPage = .root) -> ViewController {
-    // MARK: Jerkgram v1.2L BUILD123_ACCOUNT_SETTINGS_SCOPE1
+public func ghostBaseSettingsController(
+    context: AccountContext
+) -> ViewController {
+    return ghostBaseSettingsPageController(
+        context: context,
+        page: .root
+    )
+}
+
+private func ghostBaseSettingsPageController(
+    context: AccountContext,
+    page: GhostBaseSettingsPage
+) -> ViewController {
     let accountPeerId = context.account.peerId.toInt64()
     let initialState = GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -51,6 +63,10 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("statePromise.set(refreshed)", updated)
         self.assertIn("jerkgramImportRefreshSignal", updated)
         self.assertIn("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)", updated)
+        self.assertLess(
+            updated.index("BUILD124_ARCHIVE_IMPORT_REFRESH1"),
+            updated.index("private func ghostBaseSettingsPageController("),
+        )
 
     def test_success_path_notifies_only_after_persisted_settings_are_projected(self):
         module = self.load_patch()

@@ -97,8 +97,8 @@ def patch_settings_refresh_text(text: str) -> str:
         "Build123 account-scoped settings owner missing",
     )
 
-    controller_anchor = "public func ghostBaseSettingsController(context: AccountContext"
-    require(text.count(controller_anchor) == 1, f"settings controller anchor count: {text.count(controller_anchor)}")
+    controller_anchor = "private func ghostBaseSettingsPageController(\n    context: AccountContext,"
+    require(text.count(controller_anchor) == 1, f"settings page controller anchor count: {text.count(controller_anchor)}")
     controller_start = text.index(controller_anchor)
     text = text[:controller_start] + SETTINGS_REFRESH_HELPER + text[controller_start:]
 
