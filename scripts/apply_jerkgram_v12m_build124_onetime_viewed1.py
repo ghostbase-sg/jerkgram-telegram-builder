@@ -31,7 +31,7 @@ NEW_MEDIA = '''            if let remainingTime {
                         ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
                         && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                         && message.id.peerId.namespace != Namespaces.Peer.SecretChat
-                        && !message.flags.contains(.Incoming)
+                        && !message.effectivelyIncoming(context.account.peerId)
                         && message.attributes.contains(where: { attribute in
                             if let attribute = attribute as? ConsumableContentMessageAttribute {
                                 return attribute.consumed
@@ -94,6 +94,7 @@ def patch_media_text(text: str) -> str:
     require(text.count(OLD_MEDIA) == 1, f"expected one view-once media badge owner, found {text.count(OLD_MEDIA)}")
     updated = text.replace(OLD_MEDIA, NEW_MEDIA, 1)
     require(MEDIA_MARKER in updated, "outgoing media viewed marker missing after patch")
+    require("!message.effectivelyIncoming(context.account.peerId)" in updated, "outgoing media viewed state is not using Telegram effective direction semantics")
     require('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"' in updated, "viewed media badge state missing")
     require('iconName: "Chat/Message/SecretMediaOnce"' in updated, "one-time media effect icon was lost")
     return updated
