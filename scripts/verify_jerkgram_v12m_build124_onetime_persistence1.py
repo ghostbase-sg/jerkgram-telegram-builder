@@ -58,6 +58,8 @@ def main() -> None:
     require("TelegramMediaExpiredContent(data: .file)" in autoremove, "stock file expiration fallback was lost")
     require("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)" in autoremove, "persistent one-time identity is not disarmed")
     require("updatedAttributes.remove(at: i)" in autoremove, "stock autoclear removal fallback was lost")
+    require("ghostBaseOT1KeepOutgoingTimerLocal" not in autoremove, "legacy OT1 managed-autoremove owner survived Build124")
+    require("GhostBase.OT1.AutoremoveKeepBlocked.Count" not in autoremove, "legacy OT1 managed-autoremove diagnostics survived Build124")
 
     require("message.minAutoremoveOrClearTimeout == viewOnceTimeout" in remote, "remote persistence is not restricted to genuine view-once messages")
     require("message.id.peerId.namespace != Namespaces.Peer.SecretChat" in remote, "remote persistence must not affect Secret Chats")
@@ -68,6 +70,10 @@ def main() -> None:
     require("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)" in remote, "stock remote autoremove countdown fallback was lost")
     require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)" in remote, "stock remote autoclear countdown fallback was lost")
     require("ConsumableContentMessageAttribute(consumed: true)" in remote, "remote consumed=true source of truth was lost")
+    require("ghostBaseOT1KeepOutgoingTimerLocal" not in remote, "legacy OT1 remote keep decision survived Build124")
+    require("ghostBaseKeepVoiceCircleLocal" not in remote, "legacy voice/circle remote keep decision survived Build124")
+    require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in remote, "legacy OT1 remote diagnostics survived Build124")
+    require("GhostBase.OT1.OutgoingKeepPath" not in remote, "legacy OT1 remote path diagnostics survived Build124")
 
     require("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout" in voice, "voice visual is not restricted to genuine view-once messages")
     require("arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat" in voice, "voice override must not affect secret chats")
@@ -78,7 +84,7 @@ def main() -> None:
     require("ConsumableContentMessageAttribute(consumed: false)" not in combined, "consumed/read state must never be falsified")
 
     print("[verify Build124 one-time persistence] SOURCE VERIFIED")
-    print("[verify Build124 one-time persistence] real view-once media persists across remote consumption and managed autoremove; countdown stays disarmed; consumed state remains real")
+    print("[verify Build124 one-time persistence] real view-once media persists across remote consumption and managed autoremove; countdown stays disarmed; legacy OT1 owners are absent; consumed state remains real")
 
 
 if __name__ == "__main__":
