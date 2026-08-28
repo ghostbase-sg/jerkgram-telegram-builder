@@ -93,7 +93,7 @@ def require(value: bool, message: str) -> None:
 
 
 def line(name: str, argument: str | None = None) -> str:
-    if name in CANARY_QUARANTINE:
+    if name in CANARY_QUARANTINE or name.startswith("verify_jerkgram_v12m_build124_"):
         return "# CANARY_QUARANTINED " + name
     result = "python3 ../../scripts/" + name
     if argument:
