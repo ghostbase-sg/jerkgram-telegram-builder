@@ -15,7 +15,8 @@ class Build124ProfileEditGlassTests(unittest.TestCase):
         return module
 
     def fixture(self) -> str:
-        return '''        if self.theme !== presentationData.theme {
+        return '''        let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled
+        if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
             self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
@@ -44,6 +45,12 @@ class Build124ProfileEditGlassTests(unittest.TestCase):
         module = self.load_patch()
         once = module.patch_text(self.fixture(), "single")
         self.assertEqual(once, module.patch_text(once, "single"))
+
+    def test_missing_build123_glass_owner_is_rejected(self):
+        module = self.load_patch()
+        stale = self.fixture().replace("        let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled\n", "")
+        with self.assertRaisesRegex(RuntimeError, "Build123 glass owner missing"):
+            module.patch_text(stale, "stale")
 
 
 if __name__ == "__main__":
