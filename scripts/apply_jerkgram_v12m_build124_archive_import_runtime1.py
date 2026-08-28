@@ -6,7 +6,9 @@ import os
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 TARGET = ROOT / "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift"
+SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_ARCHIVE_IMPORT_BACKGROUND1"
+REFRESH_MARKER = "// MARK: Jerkgram v1.2M BUILD124_ARCHIVE_IMPORT_REFRESH1"
 
 
 def require(value: bool, message: str) -> None:
@@ -44,6 +46,88 @@ def balanced_region(text: str, token: str) -> tuple[int, int]:
                 return start, i + 1
         i += 1
     raise RuntimeError("[Build124 archive import runtime] unbalanced Swift function")
+
+
+SETTINGS_REFRESH_HELPER = r'''// MARK: Jerkgram v1.2M BUILD124_ARCHIVE_IMPORT_REFRESH1
+private let jerkgramSettingsDidImportNotification = Notification.Name("JerkgramSettingsDidImport")
+
+func jerkgramNotifySettingsImported(accountPeerId: Int64) {
+    NotificationCenter.default.post(
+        name: jerkgramSettingsDidImportNotification,
+        object: nil,
+        userInfo: ["accountPeerId": NSNumber(value: accountPeerId)]
+    )
+}
+
+private func jerkgramSettingsImportRefreshSignal(
+    accountPeerId: Int64,
+    reload: @escaping () -> Void
+) -> Signal<Void, NoError> {
+    return Signal { subscriber in
+        // Seed combineLatest immediately. The observer itself is retained only
+        // by the controller state signal and is removed with that subscription.
+        subscriber.putNext(())
+        let observer = NotificationCenter.default.addObserver(
+            forName: jerkgramSettingsDidImportNotification,
+            object: nil,
+            queue: OperationQueue.main,
+            using: { notification in
+                guard let rawAccountPeerId = notification.userInfo?["accountPeerId"] as? NSNumber,
+                      rawAccountPeerId.int64Value == accountPeerId else {
+                    return
+                }
+                reload()
+                subscriber.putNext(())
+            }
+        )
+        return ActionDisposable {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+}
+
+'''
+
+
+def patch_settings_refresh_text(text: str) -> str:
+    if REFRESH_MARKER in text:
+        return text
+    require(
+        "BUILD123_ACCOUNT_SETTINGS_SCOPE1" in text or "BUILD123_ACCOUNT_SETTINGS_OWNER1" in text,
+        "Build123 account-scoped settings owner missing",
+    )
+
+    controller_anchor = "public func ghostBaseSettingsController(context: AccountContext"
+    require(text.count(controller_anchor) == 1, f"settings controller anchor count: {text.count(controller_anchor)}")
+    controller_start = text.index(controller_anchor)
+    text = text[:controller_start] + SETTINGS_REFRESH_HELPER + text[controller_start:]
+
+    state_anchor = "    let stateValue = Atomic(value: initialState)\n"
+    require(text.count(state_anchor) == 1, f"settings Atomic anchor count: {text.count(state_anchor)}")
+    refresh_setup = state_anchor + r'''    let jerkgramImportRefreshSignal = jerkgramSettingsImportRefreshSignal(
+        accountPeerId: accountPeerId,
+        reload: {
+            let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)
+            stateValue.modify { _ in refreshed }
+            statePromise.set(refreshed)
+        }
+    )
+'''
+    text = text.replace(state_anchor, refresh_setup, 1)
+
+    old_combine = "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())\n"
+    new_combine = "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)\n"
+    require(text.count(old_combine) == 1, f"settings state combineLatest anchor count: {text.count(old_combine)}")
+    text = text.replace(old_combine, new_combine, 1)
+
+    old_map = "    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
+    new_map = "    |> map { presentationData, state, _ -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
+    require(text.count(old_map) == 1, f"settings state map anchor count: {text.count(old_map)}")
+    text = text.replace(old_map, new_map, 1)
+
+    require(REFRESH_MARKER in text, "settings refresh marker missing after patch")
+    require("ActionDisposable" in text, "settings refresh observer is not lifecycle-bound")
+    return text
 
 
 REPLACEMENT = r'''// MARK: Jerkgram v1.2M BUILD124_ARCHIVE_IMPORT_BACKGROUND1
@@ -214,6 +298,9 @@ public func jerkgramPresentArchiveImport(
                                                 )
                                                 try JerkgramRetentionRuntime.save(retention)
                                                 jerkgramProjectImportedSettingsToActiveDefaults(settings)
+                                                Queue.mainQueue().async {
+                                                    jerkgramNotifySettingsImported(accountPeerId: accountPeerId)
+                                                }
                                             } catch {
                                                 jerkgramPresentArchiveImportError(
                                                     context: context,
@@ -246,7 +333,18 @@ public func jerkgramPresentArchiveImport(
 
 def patch_text(text: str) -> str:
     if MARKER in text:
-        return text
+        if "jerkgramNotifySettingsImported(accountPeerId: accountPeerId)" in text:
+            return text
+        old = "                                                jerkgramProjectImportedSettingsToActiveDefaults(settings)\n"
+        require(text.count(old) == 1, "existing Build124 import projection anchor missing during refresh upgrade")
+        return text.replace(
+            old,
+            old
+            + "                                                Queue.mainQueue().async {\n"
+            + "                                                    jerkgramNotifySettingsImported(accountPeerId: accountPeerId)\n"
+            + "                                                }\n",
+            1,
+        )
     token = "public func jerkgramPresentArchiveImport("
     start, end = balanced_region(text, token)
     updated = text[:start] + REPLACEMENT + text[end:]
@@ -262,12 +360,20 @@ def patch_text(text: str) -> str:
 
 def main() -> None:
     require(TARGET.is_file(), f"materialized archive flow missing: {TARGET}")
-    original = TARGET.read_text(encoding="utf-8")
-    updated = patch_text(original)
-    TARGET.write_text(updated, encoding="utf-8")
+    require(SETTINGS.is_file(), f"materialized settings owner missing: {SETTINGS}")
+
+    archive_original = TARGET.read_text(encoding="utf-8")
+    archive_updated = patch_text(archive_original)
+    TARGET.write_text(archive_updated, encoding="utf-8")
+
+    settings_original = SETTINGS.read_text(encoding="utf-8")
+    settings_updated = patch_settings_refresh_text(settings_original)
+    SETTINGS.write_text(settings_updated, encoding="utf-8")
+
     print("[Build124 archive import runtime] GREEN")
     print("[Build124 archive import runtime] ZIP/decode and ArchiveTransaction.apply run off the UI thread")
     print("[Build124 archive import runtime] imported critical runtime settings project immediately to active defaults")
+    print("[Build124 archive import runtime] open account-scoped Settings controllers reload after successful import")
 
 
 if __name__ == "__main__":
