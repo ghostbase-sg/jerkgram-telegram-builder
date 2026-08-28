@@ -1,6 +1,5 @@
 from pathlib import Path
 import importlib.util
-import tempfile
 import unittest
 
 
@@ -16,13 +15,13 @@ class Build124EditHistoryTests(unittest.TestCase):
         return module
 
     def state_fixture(self) -> str:
-        return '''                        // The stored text belongs to the previous version, so its
-                        // timestamp must also come from the previous version.
+        return '''                        // Build123 may evolve comments around this owner.
                         let previousVersionDate = (
                             previousMessage.attributes.first(
                                 where: { $0 is EditedMessageAttribute }
                             ) as? EditedMessageAttribute
                         )?.date ?? previousMessage.timestamp
+                        // Entity/sticker fidelity is an independent Build123 owner.
                         if let updatedAttribute = attribute?.withAddedEditVersion(
                             text: previousMessage.text,
                             date: previousVersionDate,
@@ -62,6 +61,13 @@ class Build124EditHistoryTests(unittest.TestCase):
         self.assertIn("message.attributes.first", result)
         self.assertIn("date: editEventDate", result)
         self.assertNotIn("previousVersionDate", result)
+
+    def test_state_patch_does_not_depend_on_surrounding_comments_or_remove_build123_fidelity(self):
+        module = self.load_patch()
+        result = module.patch_state_text(self.state_fixture())
+        self.assertIn("Build123 may evolve comments around this owner", result)
+        self.assertIn("entities: previousEntities", result)
+        self.assertIn("inlineStickerFiles: previousInlineStickerFiles", result)
 
     def test_one_edit_produces_one_history_version_not_old_plus_current(self):
         module = self.load_patch()
