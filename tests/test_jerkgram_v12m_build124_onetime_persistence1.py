@@ -6,9 +6,23 @@ import unittest
 
 
 REPO = Path(__file__).resolve().parents[1]
-PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_onetime_persistence1.py"
+PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_persistence1.py"
 
-AUTOREMOVE_FIXTURE = '''                                var updatedAttributes = currentMessage.attributes
+AUTOREMOVE_FIXTURE = '''                                var updatedMedia = currentMessage.media
+                                for i in 0 ..< updatedMedia.count {
+                                    if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                    } else if let file = updatedMedia[i] as? TelegramMediaFile {
+                                        if file.isInstantVideo {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                        } else if file.isVoice {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                        } else {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                        }
+                                    }
+                                }
+                                var updatedAttributes = currentMessage.attributes
                                 for i in 0 ..< updatedAttributes.count {
                                     if let _ = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
                                         updatedAttributes.remove(at: i)
@@ -51,6 +65,26 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         self.assertIn("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)", updated)
         self.assertIn("updatedAttributes.remove(at: i)", updated)
         self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)
+
+    def test_autoremove_preserves_real_media_before_expired_content_replacement(self):
+        module = self.load_patch()
+        updated = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_MEDIA1", updated)
+        self.assertIn("var updatedMedia = currentMessage.media", updated)
+        self.assertIn("if !jerkgramKeepOneTimeIdentity {", updated)
+        self.assertIn("TelegramMediaExpiredContent(data: .image)", updated)
+        self.assertIn("TelegramMediaExpiredContent(data: .videoMessage)", updated)
+        self.assertIn("TelegramMediaExpiredContent(data: .voiceMessage)", updated)
+        self.assertIn("TelegramMediaExpiredContent(data: .file)", updated)
+        self.assertLess(updated.index("let jerkgramKeepOneTimeIdentity"), updated.index("var updatedMedia = currentMessage.media"))
+        self.assertLess(updated.index("var updatedMedia = currentMessage.media"), updated.index("var updatedAttributes = currentMessage.attributes"))
+
+    def test_persistence_guard_remains_non_secret_and_view_once_only(self):
+        module = self.load_patch()
+        updated = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
+        self.assertIn("currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat", updated)
+        self.assertIn("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
+        self.assertIn('GhostBase.ProtectedContent.OneTimeSave', updated)
 
     def test_voice_keeps_one_time_visual_after_consumption_but_preserves_consumed_state(self):
         module = self.load_patch()
