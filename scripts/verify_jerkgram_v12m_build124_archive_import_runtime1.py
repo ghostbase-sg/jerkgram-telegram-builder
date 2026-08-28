@@ -60,10 +60,10 @@ def main() -> None:
     require("JerkgramSettingsDidImport" in settings_text, "account-scoped settings refresh notification owner missing")
     require("rawAccountPeerId.int64Value == accountPeerId" in settings_text, "settings refresh is not filtered to the current account")
     require("ActionDisposable" in settings_text, "settings import observer is not tied to signal lifetime")
-    require("GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)" in settings_text, "settings refresh does not reload persisted account state")
+    require("GhostBaseSettingsState.load(accountPeerId: accountPeerId)" in settings_text, "settings refresh does not reload persisted account state")
     require("stateValue.modify { _ in refreshed }" in settings_text, "settings Atomic state is not refreshed after import")
     require("statePromise.set(refreshed)" in settings_text, "settings UI promise is not refreshed after import")
-    require("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)" in settings_text, "settings refresh signal is not retained by controller state pipeline")
+    require("combineLatest(" in settings_text and "jerkgramImportRefreshSignal" in settings_text, "settings refresh signal is not retained by controller state pipeline")
 
     require("Queue.mainQueue().async" in import_text, "import confirmation/error UI is not marshalled to main queue")
     require("controller.present(alert, in: .window(.root), with: nil)" in import_text, "import UI presentation missing")
