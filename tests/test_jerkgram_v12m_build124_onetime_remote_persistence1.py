@@ -83,7 +83,9 @@ REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + N
 '''
 
 # Exact v10p composition shape: replace_once() changed only the first
-# remote image/file owner. The second autoclear-image owner stayed stock.
+# remote image/file owner. The second autoclear-image owner stayed stock in
+# this compact fixture; REAL_TWO_OWNER_REMOTE_FIXTURE restores the second
+# v0.8I.2 voice/circle owner that exists in materialized source.
 LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         let countdownBeginTime = consumeDate ?? timestamp
         
@@ -156,6 +158,38 @@ LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurren
         }
 '''
 
+SECOND_STOCK_IMAGE_ONLY = '''                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                }
+                            }
+'''
+
+SECOND_V08I2_IMAGE_FILE = '''                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                } else if let file = updatedMedia[i] as? TelegramMediaFile {
+                                    // MARK: GhostBase v0.8I.2 voice/circle local keep
+                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
+                                    if file.isInstantVideo {
+                                        if !ghostBaseKeepVoiceCircleLocal {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                        }
+                                    } else if file.isVoice {
+                                        if !ghostBaseKeepVoiceCircleLocal {
+                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                        }
+                                    } else {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                    }
+                                }
+                            }
+'''
+
+REAL_TWO_OWNER_REMOTE_FIXTURE = LEGACY_REMOTE_FIXTURE.replace(
+    SECOND_STOCK_IMAGE_ONLY,
+    SECOND_V08I2_IMAGE_FILE,
+    1,
+)
+
 
 def build108_canonicalized(text: str) -> str:
     return text.replace('"GhostBase.', '"jerkgram.')
@@ -215,6 +249,18 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
     def test_remote_consume_collapses_build108_canonicalized_v10p_ot1_owner(self):
         module = self.load_patch()
         updated = module.patch_remote_consumed_text(build108_canonicalized(LEGACY_REMOTE_FIXTURE))
+        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
+        self.assertEqual(updated.count("let jerkgramKeepOneTimeRemoteMedia = ("), 1)
+        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
+        self.assertNotIn("ghostBaseKeepVoiceCircleLocal", updated)
+        self.assertNotIn("jerkgram.OT1.OutgoingKeepBlocked.Count", updated)
+        self.assertNotIn("jerkgram.OT1.OutgoingKeepPath", updated)
+
+    def test_remote_consume_collapses_second_v08i2_owner_after_v10p_and_build108(self):
+        module = self.load_patch()
+        fixture = build108_canonicalized(REAL_TWO_OWNER_REMOTE_FIXTURE)
+        self.assertEqual(fixture.count("ghostBaseKeepVoiceCircleLocal"), 4)
+        updated = module.patch_remote_consumed_text(fixture)
         self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
         self.assertEqual(updated.count("let jerkgramKeepOneTimeRemoteMedia = ("), 1)
         self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
