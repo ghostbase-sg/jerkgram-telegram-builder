@@ -50,7 +50,11 @@ class Build124SingleForwardTests(unittest.TestCase):
         self.assertIn("context.account.peerId.toInt64()", result)
         self.assertIn("jerkgram.account.", result)
         self.assertIn("GhostBase.Messages.ForwardWithoutAuthor", result)
-        self.assertLess(result.index("scopedForwardWithoutAuthorKey"), result.index("legacyForwardWithoutAuthorKey"))
+        scoped_lookup = "defaults.object(forKey: scopedForwardWithoutAuthorKey)"
+        legacy_lookup = "defaults.object(forKey: legacyForwardWithoutAuthorKey)"
+        self.assertIn(scoped_lookup, result)
+        self.assertIn(legacy_lookup, result)
+        self.assertLess(result.index(scoped_lookup), result.index(legacy_lookup))
 
     def test_single_action_remains_independent_of_telegram_forward_permission(self):
         module = self.load_patch()
