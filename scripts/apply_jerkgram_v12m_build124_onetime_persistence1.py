@@ -212,6 +212,24 @@ STOCK_REMOTE_FILE = '''                                    if file.isInstantVide
                                     }
 '''
 
+# Build108 canonicalizes quoted legacy UserDefaults namespaces after the v10p
+# OT1 overlays have materialized. Variable/control-flow owners survive, while
+# every quoted "GhostBase.*" key becomes "jerkgram.*".
+BUILD108_LEGACY_REMOTE_IMAGE = LEGACY_REMOTE_IMAGE.replace('"GhostBase.', '"jerkgram.')
+BUILD108_LEGACY_REMOTE_FILE = LEGACY_REMOTE_FILE.replace('"GhostBase.', '"jerkgram.')
+LEGACY_AUTOREMOVE_DIAGNOSTIC_KEYS = (
+    "GhostBase.OT1.AutoremoveKeepBlocked.Count",
+    "jerkgram.OT1.AutoremoveKeepBlocked.Count",
+)
+LEGACY_REMOTE_DIAGNOSTIC_KEYS = (
+    "GhostBase.OT1.OutgoingKeepBlocked.Count",
+    "jerkgram.OT1.OutgoingKeepBlocked.Count",
+)
+LEGACY_REMOTE_PATH_KEYS = (
+    "GhostBase.OT1.OutgoingKeepPath",
+    "jerkgram.OT1.OutgoingKeepPath",
+)
+
 OLD_VOICE = '''                var isConsumed: Bool?
                 
                 var consumableContentIcon: UIImage?
@@ -278,7 +296,7 @@ def replace_autoremove_media_owner(text: str) -> str:
         require(end >= 0, "legacy OT1 managed-autoremove owner has no attribute boundary")
         segment = text[start:end]
         require("ghostBaseOT1KeepOutgoingTimerLocal" in segment, "legacy OT1 keep decision missing")
-        require("GhostBase.OT1.AutoremoveKeepBlocked.Count" in segment, "legacy OT1 diagnostics missing")
+        require(any(key in segment for key in LEGACY_AUTOREMOVE_DIAGNOSTIC_KEYS), "legacy OT1 diagnostics missing")
         require("TelegramMediaExpiredContent(data: .image)" in segment, "legacy OT1 image fallback missing")
         require("TelegramMediaExpiredContent(data: .videoMessage)" in segment, "legacy OT1 instant-video fallback missing")
         require("TelegramMediaExpiredContent(data: .voiceMessage)" in segment, "legacy OT1 voice fallback missing")
@@ -292,20 +310,40 @@ def replace_autoremove_media_owner(text: str) -> str:
 def normalize_legacy_remote_owner(text: str) -> str:
     legacy_present = (
         "ghostBaseOT1KeepOutgoingTimerLocal" in text
-        or "GhostBase.OT1.OutgoingKeepBlocked.Count" in text
-        or "GhostBase.OT1.OutgoingKeepPath" in text
+        or any(key in text for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS)
+        or any(key in text for key in LEGACY_REMOTE_PATH_KEYS)
     )
     if not legacy_present:
         return text
 
-    require(text.count(LEGACY_REMOTE_IMAGE) == 1, f"expected one legacy OT1 remote image owner, found {text.count(LEGACY_REMOTE_IMAGE)}")
-    require(text.count(LEGACY_REMOTE_FILE) == 1, f"expected one legacy OT1 remote file owner, found {text.count(LEGACY_REMOTE_FILE)}")
-    updated = text.replace(LEGACY_REMOTE_IMAGE, STOCK_REMOTE_IMAGE, 1)
-    updated = updated.replace(LEGACY_REMOTE_FILE, STOCK_REMOTE_FILE, 1)
+    legacy_image_count = text.count(LEGACY_REMOTE_IMAGE)
+    legacy_file_count = text.count(LEGACY_REMOTE_FILE)
+    build108_image_count = text.count(BUILD108_LEGACY_REMOTE_IMAGE)
+    build108_file_count = text.count(BUILD108_LEGACY_REMOTE_FILE)
+
+    legacy_pair = legacy_image_count == 1 and legacy_file_count == 1
+    build108_pair = build108_image_count == 1 and build108_file_count == 1
+    require(not (legacy_pair and build108_pair), "both pre-Build108 and Build108 OT1 remote owners are present")
+    require(
+        legacy_pair or build108_pair,
+        "expected one complete legacy OT1 remote owner pair, "
+        f"found legacyImage={legacy_image_count} legacyFile={legacy_file_count} "
+        f"build108Image={build108_image_count} build108File={build108_file_count}",
+    )
+
+    if build108_pair:
+        image_owner = BUILD108_LEGACY_REMOTE_IMAGE
+        file_owner = BUILD108_LEGACY_REMOTE_FILE
+    else:
+        image_owner = LEGACY_REMOTE_IMAGE
+        file_owner = LEGACY_REMOTE_FILE
+
+    updated = text.replace(image_owner, STOCK_REMOTE_IMAGE, 1)
+    updated = updated.replace(file_owner, STOCK_REMOTE_FILE, 1)
     require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote keep decision survived normalization")
     require("ghostBaseKeepVoiceCircleLocal" not in updated, "legacy voice/circle remote keep decision survived normalization")
-    require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived normalization")
-    require("GhostBase.OT1.OutgoingKeepPath" not in updated, "legacy OT1 remote path diagnostics survived normalization")
+    require(not any(key in updated for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS), "legacy OT1 remote diagnostics survived normalization")
+    require(not any(key in updated for key in LEGACY_REMOTE_PATH_KEYS), "legacy OT1 remote path diagnostics survived normalization")
     return updated
 
 
@@ -339,7 +377,7 @@ def patch_autoremove_text(text: str) -> str:
     require(updated.count("let jerkgramKeepOneTimeIdentity = (") == 1, "one-time persistence decision must have one owner")
     require(updated.index("let jerkgramKeepOneTimeIdentity = (") < updated.index("var updatedMedia = currentMessage.media"), "one-time persistence decision runs after media expiration")
     require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 managed-autoremove decision survived Build124 replacement")
-    require("GhostBase.OT1.AutoremoveKeepBlocked.Count" not in updated, "legacy OT1 managed-autoremove diagnostics survived Build124 replacement")
+    require(not any(key in updated for key in LEGACY_AUTOREMOVE_DIAGNOSTIC_KEYS), "legacy OT1 managed-autoremove diagnostics survived Build124 replacement")
     return updated
 
 
@@ -347,7 +385,8 @@ def patch_remote_consumed_text(text: str) -> str:
     updated = normalize_legacy_remote_owner(text)
     if REMOTE_MARKER in updated:
         require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote decision survived an existing Build124 owner")
-        require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived an existing Build124 owner")
+        require(not any(key in updated for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS), "legacy OT1 remote diagnostics survived an existing Build124 owner")
+        require(not any(key in updated for key in LEGACY_REMOTE_PATH_KEYS), "legacy OT1 remote path diagnostics survived an existing Build124 owner")
         return updated
 
     require(updated.count(REMOTE_DECISION_ANCHOR) == 1, f"expected one remote-consume countdown owner, found {updated.count(REMOTE_DECISION_ANCHOR)}")
@@ -367,8 +406,8 @@ def patch_remote_consumed_text(text: str) -> str:
     require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "remote autoclear view-once countdown is still armed")
     require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote keep decision survived Build124 replacement")
     require("ghostBaseKeepVoiceCircleLocal" not in updated, "legacy voice/circle remote keep decision survived Build124 replacement")
-    require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived Build124 replacement")
-    require("GhostBase.OT1.OutgoingKeepPath" not in updated, "legacy OT1 remote path diagnostics survived Build124 replacement")
+    require(not any(key in updated for key in LEGACY_REMOTE_DIAGNOSTIC_KEYS), "legacy OT1 remote diagnostics survived Build124 replacement")
+    require(not any(key in updated for key in LEGACY_REMOTE_PATH_KEYS), "legacy OT1 remote path diagnostics survived Build124 replacement")
     return updated
 
 
