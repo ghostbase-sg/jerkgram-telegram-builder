@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import re
 
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
@@ -47,6 +48,13 @@ NEW_STATE = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVE
                             entities: previousEntities,
                             inlineStickerFiles: previousInlineStickerFiles
                         ) {'''
+
+OLD_STATE_COMPACT = '''                        let editDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editDate) {'''
+
+NEW_STATE_COMPACT = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
+                        let editEventDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editEventDate) {'''
 
 OLD_STATE_COMPACT = '''                        let editDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
                         if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editDate) {'''
@@ -105,8 +113,26 @@ def patch_state_text(text: str) -> str:
         return text
     if text.count(OLD_STATE) == 1:
         return text.replace(OLD_STATE, NEW_STATE, 1)
-    require(text.count(OLD_STATE_COMPACT) == 1, f"edit-event date owner count is {text.count(OLD_STATE)} / compact {text.count(OLD_STATE_COMPACT)}")
-    return text.replace(OLD_STATE_COMPACT, NEW_STATE_COMPACT, 1)
+    if text.count(OLD_STATE_COMPACT) == 1:
+        return text.replace(OLD_STATE_COMPACT, NEW_STATE_COMPACT, 1)
+
+    pattern = re.compile(
+        r"(?P<indent>[ \t]*)let\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
+        r"\(.*?message\.attributes\.first\(where:\s*\{\s*\$0\s+is\s+EditedMessageAttribute\s*\}\).*?"
+        r"\?\?\s*message\.timestamp"
+        r"(?P<body>.*?date:\s*)(?P=name)",
+        re.DOTALL,
+    )
+    match = pattern.search(text)
+    require(match is not None, f"edit-event date owner count is {text.count(OLD_STATE)} / compact {text.count(OLD_STATE_COMPACT)} / semantic 0")
+    indent = match.group("indent")
+    replacement = (
+        indent + "// MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1\n"
+        + indent + "let editEventDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp"
+        + match.group("body")
+        + "editEventDate"
+    )
+    return text[:match.start()] + replacement + text[match.end():]
 
 
 def patch_menu_text(text: str) -> str:
