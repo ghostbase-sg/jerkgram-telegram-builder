@@ -32,6 +32,7 @@ APPLY_ORDERED = (
     "apply_jerkgram_v12m_build124_links_glass1.py",
     "apply_jerkgram_v12m_build124_single_forward1.py",
     "apply_jerkgram_v12m_build124_sensitive_settings1.py",
+    "debug_jerkgram_v12m_build124_settings_signal_shape1.py",
     "apply_jerkgram_v12m_build124_archive_import_runtime1.py",
     "apply_jerkgram_v12m_build124_archive_export_runtime1.py",
     "apply_jerkgram_v12m_build124_protected_forward1.py",
