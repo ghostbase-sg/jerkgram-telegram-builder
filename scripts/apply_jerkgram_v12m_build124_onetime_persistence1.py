@@ -31,6 +31,11 @@ OLD_MEDIA = '''                                var updatedMedia = currentMessage
                                 }
 '''
 
+LEGACY_OT1_MEDIA_START = '''                                var updatedMedia = currentMessage.media
+                                let ghostBaseOT1KeepOutgoingTimerLocal = '''
+ATTRIBUTES_START = '''                                var updatedAttributes = currentMessage.attributes
+'''
+
 NEW_MEDIA = '''                                // MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_MEDIA1
                                 // Decide before Telegram replaces one-time media with ExpiredContent.
                                 // Secret chats deliberately remain on Telegram's native lifecycle.
@@ -207,6 +212,31 @@ def require(value: bool, message: str) -> None:
         raise RuntimeError("[Build124 one-time persistence] " + message)
 
 
+def replace_autoremove_media_owner(text: str) -> str:
+    stock_count = text.count(OLD_MEDIA)
+    legacy_count = text.count(LEGACY_OT1_MEDIA_START)
+    require(not (stock_count and legacy_count), "both stock and legacy OT1 managed-autoremove owners are present")
+
+    if stock_count == 1:
+        return text.replace(OLD_MEDIA, NEW_MEDIA, 1)
+
+    if legacy_count == 1:
+        start = text.index(LEGACY_OT1_MEDIA_START)
+        end = text.find(ATTRIBUTES_START, start)
+        require(end >= 0, "legacy OT1 managed-autoremove owner has no attribute boundary")
+        segment = text[start:end]
+        require("ghostBaseOT1KeepOutgoingTimerLocal" in segment, "legacy OT1 keep decision missing")
+        require("GhostBase.OT1.AutoremoveKeepBlocked.Count" in segment, "legacy OT1 diagnostics missing")
+        require("TelegramMediaExpiredContent(data: .image)" in segment, "legacy OT1 image fallback missing")
+        require("TelegramMediaExpiredContent(data: .videoMessage)" in segment, "legacy OT1 instant-video fallback missing")
+        require("TelegramMediaExpiredContent(data: .voiceMessage)" in segment, "legacy OT1 voice fallback missing")
+        require("TelegramMediaExpiredContent(data: .file)" in segment, "legacy OT1 file fallback missing")
+        return text[:start] + NEW_MEDIA + text[end:]
+
+    require(stock_count == 1 or legacy_count == 1, f"expected one stock or legacy OT1 managed-autoremove media owner, found stock={stock_count} legacy={legacy_count}")
+    return text
+
+
 def patch_autoremove_text(text: str) -> str:
     if MEDIA_MARKER in text and AUTOREMOVE_MARKER in text:
         return text
@@ -224,8 +254,7 @@ def patch_autoremove_text(text: str) -> str:
         updated = updated.replace(OLD_BUILD124_AUTOCLEAR, NEW_AUTOCLEAR, 1)
 
     if MEDIA_MARKER not in updated:
-        require(updated.count(OLD_MEDIA) == 1, f"expected one managed-autoremove media owner, found {updated.count(OLD_MEDIA)}")
-        updated = updated.replace(OLD_MEDIA, NEW_MEDIA, 1)
+        updated = replace_autoremove_media_owner(updated)
 
     if AUTOREMOVE_MARKER not in updated:
         require(updated.count(OLD_AUTOCLEAR) == 1, f"expected one managed-autoremove autoclear owner, found {updated.count(OLD_AUTOCLEAR)}")
@@ -237,6 +266,8 @@ def patch_autoremove_text(text: str) -> str:
     require("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)" in updated, "disarmed persistent one-time attribute missing")
     require(updated.count("let jerkgramKeepOneTimeIdentity = (") == 1, "one-time persistence decision must have one owner")
     require(updated.index("let jerkgramKeepOneTimeIdentity = (") < updated.index("var updatedMedia = currentMessage.media"), "one-time persistence decision runs after media expiration")
+    require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 managed-autoremove decision survived Build124 replacement")
+    require("GhostBase.OT1.AutoremoveKeepBlocked.Count" not in updated, "legacy OT1 managed-autoremove diagnostics survived Build124 replacement")
     return updated
 
 
@@ -291,6 +322,7 @@ def main() -> None:
 
     print("[Build124 one-time persistence] GREEN")
     print("[Build124 one-time persistence] retained one-time media stays real across remote consumption and managed autoremove")
+    print("[Build124 one-time persistence] legacy OT1 managed-autoremove owner is collapsed into the single Build124 owner")
     print("[Build124 one-time persistence] view-once countdown remains unscheduled when persistence is enabled")
     print("[Build124 one-time persistence] consumed voice keeps the one-time visual while preserving consumed=true")
 
