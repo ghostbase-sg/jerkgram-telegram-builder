@@ -15,7 +15,17 @@ class Build124AuthKeyboardTests(unittest.TestCase):
         return module
 
     def fixture(self) -> str:
-        return '''        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
+        # Match the actual pre-Build124 owner after Official Telegram 12.9.2,
+        # Safe Login v0.8H and Safe Login polish v0.8H.1 have materialized.
+        return '''        var insets = layout.insets(options: [])
+        insets.top = layout.statusBarHeight ?? 20.0
+        if let inputHeight = layout.inputHeight, !inputHeight.isZero {
+            insets.bottom = max(inputHeight, insets.bottom)
+        }
+        
+        let titleInset: CGFloat = layout.size.width > 320.0 ? 18.0 : 0.0
+        let ghostBaseSafeLoginExtraBottomInset: CGFloat = 0.0
+        let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset
         
         var items: [AuthorizationLayoutItem] = [
             AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: titleInset, maxValue: titleInset), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
@@ -50,18 +60,24 @@ class Build124AuthKeyboardTests(unittest.TestCase):
         let ghostBaseSafeLoginInfoFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: ghostBaseSafeLoginButtonFrame.minY - 6.0 - ghostBaseSafeLoginInfoSize.height), size: ghostBaseSafeLoginInfoSize)
         transition.updateFrame(node: self.ghostBaseSafeLoginNode, frame: ghostBaseSafeLoginButtonFrame)
         transition.updateFrame(node: self.ghostBaseSafeLoginInfoNode, frame: ghostBaseSafeLoginInfoFrame)
-        self.ghostBaseSafeLoginNode.isHidden = self.proceedNode.isHidden
-        self.ghostBaseSafeLoginInfoNode.isHidden = self.proceedNode.isHidden
+        self.ghostBaseSafeLoginNode.isHidden = true
+        self.ghostBaseSafeLoginInfoNode.isHidden = true
         
         self.animationNode.updateLayout(size: animationSize)
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
 '''
 
-    def test_keyboard_mode_removes_nonessential_items(self):
+    def test_materialized_safe_login_owner_is_supported(self):
         module = self.load_patch()
         result = module.patch_phone_layout(self.fixture())
         self.assertIn("BUILD124_AUTH_KEYBOARD1", result)
+        self.assertIn("let ghostBaseSafeLoginExtraBottomInset: CGFloat = 0.0", result)
+        self.assertIn("let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset", result)
+
+    def test_keyboard_mode_removes_nonessential_items(self):
+        module = self.load_patch()
+        result = module.patch_phone_layout(self.fixture())
         self.assertIn("let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0", result)
         self.assertIn("if !jerkgramKeyboardVisible {", result)
         self.assertIn("self.animationNode.isHidden = true", result)
@@ -78,6 +94,7 @@ class Build124AuthKeyboardTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_phone_layout(self.fixture())
         self.assertIn("layout.size.height - insets.bottom - additionalBottomInset", result)
+        self.assertIn("if let inputHeight = layout.inputHeight, !inputHeight.isZero", result)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()
