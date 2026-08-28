@@ -27,6 +27,7 @@ class Build124CanaryPublicationTests(unittest.TestCase):
     def test_new_api_ipa_gates_are_part_of_ci(self):
         source = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('scripts/verify_jerkgram_build124_telegram_api_ipa1.py', source)
+        self.assertIn('tests.test_jerkgram_build124_telegram_api_source_owner1', source)
         self.assertIn('tests.test_jerkgram_v12m_build124_final_ipa_credentials1', source)
         self.assertIn('tests.test_jerkgram_v12m_build124_final_ipa_wiring1', source)
         self.assertIn('tests.test_jerkgram_v12m_build124_canary_publication1', source)
