@@ -15,7 +15,20 @@ private struct GhostBaseSettingsState: Equatable {
     }
 }
 
-public func ghostBaseSettingsController(context: AccountContext, initialPage: GhostBaseSettingsPage = .root) -> ViewController {
+// Stable Build123/Build124 settings entries owner. Keep the public controller
+// declaration deliberately multiline so this fixture catches regressions back
+// to formatting-sensitive controller anchors.
+private func ghostBaseSettingsEntries(
+    presentationData: PresentationData,
+    state: GhostBaseSettingsState
+) -> [Any] {
+    return []
+}
+
+public func ghostBaseSettingsController(
+    context: AccountContext,
+    initialPage: GhostBaseSettingsPage = .root
+) -> ViewController {
     // MARK: Jerkgram v1.2L BUILD123_ACCOUNT_SETTINGS_SCOPE1
     let accountPeerId = context.account.peerId.toInt64()
     let initialState = GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)
@@ -51,6 +64,13 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("statePromise.set(refreshed)", updated)
         self.assertIn("jerkgramImportRefreshSignal", updated)
         self.assertIn("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)", updated)
+        self.assertLess(updated.index("BUILD124_ARCHIVE_IMPORT_REFRESH1"), updated.index("private func ghostBaseSettingsEntries("))
+
+    def test_multiline_controller_signature_does_not_drive_helper_anchor(self):
+        module = self.load_patch()
+        updated = module.patch_settings_refresh_text(SETTINGS_FIXTURE)
+        self.assertIn("public func ghostBaseSettingsController(\n    context: AccountContext,", updated)
+        self.assertIn("BUILD124_ARCHIVE_IMPORT_REFRESH1", updated)
 
     def test_success_path_notifies_only_after_persisted_settings_are_projected(self):
         module = self.load_patch()
