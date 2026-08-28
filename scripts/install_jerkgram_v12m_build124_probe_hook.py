@@ -42,6 +42,7 @@ APPLY_ORDERED = (
     "apply_jerkgram_v12m_build124_lifecycle_freeze1.py",
     "apply_jerkgram_v12m_build124_onetime_persistence1.py",
     "apply_jerkgram_v12m_build124_onetime_viewed1.py",
+    "apply_jerkgram_v12m_build124_settings_redesign1.py",
 )
 
 VERIFY_ORDERED = (
@@ -60,6 +61,7 @@ VERIFY_ORDERED = (
     "verify_jerkgram_v12m_build124_lifecycle_freeze1.py",
     "verify_jerkgram_v12m_build124_onetime_persistence1.py",
     "verify_jerkgram_v12m_build124_onetime_viewed1.py",
+    "verify_jerkgram_v12m_build124_settings_redesign1.py",
 )
 
 FINAL_ORDERED = (
@@ -139,6 +141,11 @@ def patch_probe(text: str) -> str:
         text.index("apply_jerkgram_v12m_build124_archive_import_runtime1.py")
         < text.index("apply_jerkgram_v12m_build124_archive_export_runtime1.py"),
         "archive import runtime overlay must precede export reliability overlay",
+    )
+    require(
+        text.index("apply_jerkgram_v12m_build124_archive_import_runtime1.py")
+        < text.index("apply_jerkgram_v12m_build124_settings_redesign1.py"),
+        "settings redesign must preserve the archive-import live refresh bridge",
     )
 
     if FINAL_MARKER not in text:
