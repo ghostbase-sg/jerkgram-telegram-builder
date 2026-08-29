@@ -87,7 +87,7 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         updated = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
         self.assertIn("currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat", updated)
         self.assertIn("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
-        self.assertIn('GhostBase.ProtectedContent.OneTimeSave', updated)
+        self.assertIn('jerkgram.ProtectedContent.OneTimeSave', updated)
 
     def test_voice_keeps_one_time_visual_after_consumption_but_preserves_consumed_state(self):
         module = self.load_patch()
