@@ -49,6 +49,7 @@ class Build125ProfileEditTests(unittest.TestCase):
         self.assertIn("itemBlocksBackgroundColor.withAlphaComponent", result)
         self.assertIn("? 0.18 : 0.14", result)
         self.assertNotIn("UIColor(\n                    white", result)
+        self.assertNotIn("let isDark =", result)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()

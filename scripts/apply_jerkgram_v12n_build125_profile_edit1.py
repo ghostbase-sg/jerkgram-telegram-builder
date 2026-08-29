@@ -71,6 +71,11 @@ def patch_text(text: str, label: str) -> str:
             and "? 0.18 : 0.14" in tail,
             f"{label}: translucent field color owner missing",
         )
+    unused_is_dark = re.compile(
+        r"\n\s*let isDark\s*=\s*presentationData\s*\.theme\s*\.overallDarkAppearance\s*\n"
+    )
+    tail, removed = unused_is_dark.subn("\n", tail, count=1)
+    require(removed == 1, f"{label}: obsolete profile color temporary missing")
     return text[:start] + tail
 
 
