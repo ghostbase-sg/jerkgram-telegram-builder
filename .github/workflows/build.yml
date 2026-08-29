@@ -167,6 +167,7 @@ jobs:
             work/swiftgram-src/submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift
             work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+            work/swiftgram-src/submodules/JerkgramCore/Sources/JerkgramStore.swift
             work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
             work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift
             work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
