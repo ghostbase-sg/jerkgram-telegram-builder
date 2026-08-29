@@ -56,26 +56,23 @@ def patch_text(text: str, label: str) -> str:
     matches = color.findall(tail)
     if len(matches) == 1:
         tail = color.sub(
-            '''            self.backgroundNode.isOpaque = false
-            self.backgroundNode.backgroundColor =
-                presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(
-                    presentationData.theme.overallDarkAppearance ? 0.18 : 0.14
-                )''',
+            '''            // Keep this node as a tint only. `itemBlocksBackgroundColor`
+            // is an opaque list surface on Telegram 12.9.2 even after alpha is
+            // applied, which is why the bio still looked like a solid black card.
+            self.backgroundNode.isOpaque = false
+            self.backgroundNode.backgroundColor = presentationData.theme.overallDarkAppearance
+                ? UIColor.white.withAlphaComponent(0.055)
+                : UIColor.black.withAlphaComponent(0.045)''',
             tail,
             count=1,
         )
     else:
         require(
             "self.backgroundNode.isOpaque = false" in tail
-            and "itemBlocksBackgroundColor.withAlphaComponent" in tail
-            and "? 0.18 : 0.14" in tail,
+            and "UIColor.white.withAlphaComponent(0.055)" in tail
+            and "UIColor.black.withAlphaComponent(0.045)" in tail,
             f"{label}: translucent field color owner missing",
         )
-    unused_is_dark = re.compile(
-        r"\n\s*let isDark\s*=\s*presentationData\s*\.theme\s*\.overallDarkAppearance\s*\n"
-    )
-    tail, removed = unused_is_dark.subn("\n", tail, count=1)
-    require(removed == 1, f"{label}: obsolete profile color temporary missing")
     return text[:start] + tail
 
 

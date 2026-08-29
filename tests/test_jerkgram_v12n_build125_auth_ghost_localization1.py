@@ -13,9 +13,11 @@ SPEC.loader.exec_module(MODULE)
 
 class Build125AuthGhostLocalizationTests(unittest.TestCase):
     def test_replaces_both_login_labels_with_string_owner(self):
-        owner = '''return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"\nlet info = NSAttributedString(string: "Включите до входа, чтобы оставаться невидимым с первой сессии.")\n'''
+        owner = '''return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"\nlet info = NSAttributedString(string: "Включите до входа, чтобы оставаться невидимым с первой сессии.")\nlet bot = NSAttributedString(string: "Войти как бот")\nself.ghostBaseBotLoginNode.accessibilityLabel = "Войти как бот"\n'''
         patched = MODULE.patch_phone(owner)
         self.assertIn('Locale.current.languageCode == "ru"', patched)
+        self.assertIn('"Log in as bot"', patched)
+        self.assertIn(MODULE.BOT_MARKER, patched)
         self.assertNotIn("strings.jerkgram", patched)
         self.assertIn(MODULE.MARKER, patched)
 

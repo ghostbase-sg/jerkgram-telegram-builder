@@ -17,7 +17,9 @@ let linksFrame = CGRect(
 '''
         result = module.patch_text(source)
         self.assertIn("BUILD125_LINKS_LOCAL_CARD_BOUNDS1", result)
-        self.assertIn("min(300.0", result)
+        self.assertIn("BUILD125_LINKS_REMOVE_VIEWPORT_CARD2", result)
+        self.assertIn("height: 1.0", result)
+        self.assertNotIn("min(300.0", result)
         self.assertNotIn("height: max(1.0, self.listNode.bounds.size.height", result)
 
     def test_patch_is_idempotent(self):

@@ -22,8 +22,9 @@ def main() -> None:
         require(text.count("BUILD125_PROFILE_EDIT_GLASS_OWNER1") == 1, f"{path.name}: Build125 visual owner missing")
         require("GhostBaseGlassStyle.isEnabled" in text, f"{path.name}: profile Glass switch not used")
         require("GhostBaseProfileBlurSettings\n                .loadEnabled()" not in text, f"{path.name}: stale independent toggle survived")
-        require("itemBlocksBackgroundColor.withAlphaComponent" in text, f"{path.name}: translucent theme surface missing")
-        require("? 0.18 : 0.14" in text, f"{path.name}: Build125 translucency contract missing")
+        require("UIColor.white.withAlphaComponent(0.055)" in text, f"{path.name}: dark translucent tint missing")
+        require("UIColor.black.withAlphaComponent(0.045)" in text, f"{path.name}: light translucent tint missing")
+        require("itemBlocksBackgroundColor.withAlphaComponent" not in text, f"{path.name}: opaque list card survived")
         require("self.backgroundNode.isOpaque = false" in text, f"{path.name}: field remains opaque")
     print("[Build125 profile edit verify] GREEN")
 

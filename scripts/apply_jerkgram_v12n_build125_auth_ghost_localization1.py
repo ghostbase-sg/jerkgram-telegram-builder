@@ -8,6 +8,7 @@ ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOU
 PHONE = ROOT / "submodules/AuthorizationUI/Sources/AuthorizationSequencePhoneEntryControllerNode.swift"
 STRINGS = ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
 MARKER = "// MARK: Jerkgram v1.2N BUILD125_AUTH_GHOST_LOCALIZATION1"
+BOT_MARKER = "// MARK: Jerkgram v1.2N BUILD125_AUTH_BOT_LOGIN_LOCALIZATION2"
 
 
 def require(value: bool, message: str) -> None:
@@ -54,6 +55,22 @@ def patch_phone(text: str) -> str:
             text = text.replace(old, new, 1)
             changed += 1
     require(changed == 2, f"expected Ghost Mode title and hint owners, patched {changed}")
+    # This is a distinct visible control from Ghost Mode. It stayed Russian in
+    # the published IPA because the first localisation pass only covered the
+    # Safe Login title and its hint.
+    if BOT_MARKER not in text:
+        require(text.count('string: "Войти как бот"') == 1, "bot-login title owner missing")
+        require(text.count('self.ghostBaseBotLoginNode.accessibilityLabel = "Войти как бот"') == 1, "bot-login accessibility owner missing")
+        text = text.replace(
+            'string: "Войти как бот"',
+            'string: (Locale.current.languageCode == "ru" ? "Войти как бот" : "Log in as bot")',
+            1,
+        ).replace(
+            'self.ghostBaseBotLoginNode.accessibilityLabel = "Войти как бот"',
+            'self.ghostBaseBotLoginNode.accessibilityLabel = Locale.current.languageCode == "ru" ? "Войти как бот" : "Log in as bot"',
+            1,
+        )
+        text += "\n" + BOT_MARKER + "\n"
     return text + "\n" + MARKER + "\n"
 
 

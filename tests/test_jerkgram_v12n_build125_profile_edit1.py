@@ -43,13 +43,13 @@ class Build125ProfileEditTests(unittest.TestCase):
         self.assertIn("GhostBaseGlassStyle.isEnabled", result)
         self.assertNotIn("GhostBaseProfileBlurSettings", result)
 
-    def test_uses_theme_card_color_with_alpha_not_a_black_fill(self):
+    def test_uses_translucent_tint_not_the_opaque_list_card(self):
         module = self.load_patch()
         result = module.patch_text(self.owner_fixture(), "bio")
-        self.assertIn("itemBlocksBackgroundColor.withAlphaComponent", result)
-        self.assertIn("? 0.18 : 0.14", result)
-        self.assertNotIn("UIColor(\n                    white", result)
-        self.assertNotIn("let isDark =", result)
+        self.assertIn("UIColor.white.withAlphaComponent(0.055)", result)
+        self.assertIn("UIColor.black.withAlphaComponent(0.045)", result)
+        self.assertNotIn("itemBlocksBackgroundColor.withAlphaComponent", result)
+        self.assertEqual(result.count("let isDark ="), 1)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()
@@ -75,11 +75,11 @@ class Build125ProfileEditTests(unittest.TestCase):
                         ? 0.13
                         : 0.16
                 )''',
-            '''            self.backgroundNode.isOpaque = false
-            self.backgroundNode.backgroundColor =
-                presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(
-                    presentationData.theme.overallDarkAppearance ? 0.18 : 0.14
-                )''',
+            '''            let isDark = presentationData.theme.overallDarkAppearance
+            self.backgroundNode.isOpaque = false
+            self.backgroundNode.backgroundColor = isDark
+                ? UIColor.white.withAlphaComponent(0.055)
+                : UIColor.black.withAlphaComponent(0.045)''',
         )
         result = module.patch_text(already_materialized, "bio")
         self.assertIn("BUILD125_PROFILE_EDIT_GLASS_OWNER1", result)
