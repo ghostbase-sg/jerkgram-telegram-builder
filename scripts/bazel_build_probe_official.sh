@@ -628,6 +628,21 @@ python3 ../../scripts/verify_jerkgram_v12m_build124_lifecycle_freeze1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_persistence1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_settings_redesign1.py
+
+echo
+echo "== Jerkgram v1.2N Build125 release owners =="
+python3 ../../scripts/apply_jerkgram_v12n_build125_profile_edit1.py
+python3 ../../scripts/apply_jerkgram_v12n_build125_single_forward1.py
+python3 ../../scripts/apply_jerkgram_v12n_build125_circle_viewed1.py
+python3 ../../scripts/apply_jerkgram_v12n_build125_links_bounds1.py
+python3 ../../scripts/apply_jerkgram_v12n_build125_protected_cache1.py
+python3 ../../scripts/apply_jerkgram_v12n_build125_auth_ghost_localization1.py
+python3 ../../scripts/verify_jerkgram_v12n_build125_profile_edit1.py
+python3 ../../scripts/verify_jerkgram_v12n_build125_single_forward1.py
+python3 ../../scripts/verify_jerkgram_v12n_build125_circle_viewed1.py
+python3 ../../scripts/verify_jerkgram_v12n_build125_links_bounds1.py
+python3 ../../scripts/verify_jerkgram_v12n_build125_protected_cache1.py
+python3 ../../scripts/verify_jerkgram_v12n_build125_auth_ghost_localization1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -746,8 +761,8 @@ echo "== Jerkgram v1.2L Build123 final identity =="
 python3 ../../scripts/jerkgram_finalize_build123_identity.py ghostbase-final/GhostBase.ipa
 python3 ../../scripts/verify_jerkgram_v12l_build123_final_ipa.py ghostbase-final/GhostBase.ipa
 
-# JERKGRAM_V12M_BUILD124_FINAL_IDENTITY_HOOK
+# JERKGRAM_V12N_BUILD125_FINAL_IDENTITY_HOOK
 echo
-echo "== Jerkgram v1.2M Build124 final identity =="
-python3 ../../scripts/jerkgram_finalize_build124_identity.py ghostbase-final/GhostBase.ipa
-python3 ../../scripts/verify_jerkgram_v12m_build124_final_ipa.py ghostbase-final/GhostBase.ipa
+echo "== Jerkgram v1.2N Build125 final identity =="
+python3 ../../scripts/jerkgram_finalize_build125_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12n_build125_final_ipa.py ghostbase-final/GhostBase.ipa

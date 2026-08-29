@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build124 Canary
+name: Jerkgram 12.9.2 Build125 Canary
 
 on:
   workflow_dispatch:
@@ -98,11 +98,23 @@ jobs:
             scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py \
             scripts/apply_jerkgram_v12m_build124_settings_redesign1.py \
             scripts/verify_jerkgram_v12m_build124_settings_redesign1.py \
+            scripts/apply_jerkgram_v12n_build125_profile_edit1.py \
+            scripts/verify_jerkgram_v12n_build125_profile_edit1.py \
+            scripts/apply_jerkgram_v12n_build125_single_forward1.py \
+            scripts/verify_jerkgram_v12n_build125_single_forward1.py \
+            scripts/apply_jerkgram_v12n_build125_circle_viewed1.py \
+            scripts/verify_jerkgram_v12n_build125_circle_viewed1.py \
+            scripts/apply_jerkgram_v12n_build125_links_bounds1.py \
+            scripts/verify_jerkgram_v12n_build125_links_bounds1.py \
+            scripts/apply_jerkgram_v12n_build125_protected_cache1.py \
+            scripts/verify_jerkgram_v12n_build125_protected_cache1.py \
+            scripts/apply_jerkgram_v12n_build125_auth_ghost_localization1.py \
+            scripts/verify_jerkgram_v12n_build125_auth_ghost_localization1.py \
             scripts/install_jerkgram_v12m_build124_probe_hook.py \
             scripts/verify_jerkgram_v12m_build124_wiring1.py \
-            scripts/jerkgram_finalize_build124_identity.py \
-            scripts/verify_jerkgram_v12m_build124_final_ipa.py \
-            scripts/jerkgram_publish_build124_artifact.py
+            scripts/jerkgram_finalize_build125_identity.py \
+            scripts/verify_jerkgram_v12n_build125_final_ipa.py \
+            scripts/jerkgram_publish_build125_artifact.py
 
           # Preserve the established late-release regression gates.
           python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
@@ -120,7 +132,7 @@ jobs:
           python3 -m unittest tests.test_jerkgram_build124_telegram_api_source_owner1
           python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_credentials1
           python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_wiring1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_canary_publication1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_canary_publication1
           python3 -m unittest tests.test_jerkgram_v12m_build124_profile_edit_glass1
           python3 -m unittest tests.test_jerkgram_v12m_build124_profile_more1
           python3 -m unittest tests.test_jerkgram_v12m_build124_links_glass1
@@ -139,6 +151,12 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12m_build124_onetime_viewed1
           python3 -m unittest tests.test_jerkgram_v12m_build124_settings_redesign1
           python3 -m unittest tests.test_jerkgram_v12m_build124_wiring1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_profile_edit1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_single_forward1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_circle_viewed1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_links_bounds1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_protected_cache1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_auth_ghost_localization1
 
           # Canonical materialization chain. Build124 root installer invokes the
           # Build123 base installer itself, then appends all Build124 late
@@ -157,11 +175,11 @@ jobs:
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
-      - name: Upload materialized Build124 diagnostic owners
+      - name: Upload materialized Build125 diagnostic owners
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Build124-materialized-owner-diagnostics
+          name: Build125-materialized-owner-diagnostics
           path: |
             work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift
             work/swiftgram-src/submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift
@@ -177,18 +195,18 @@ jobs:
             work/swiftgram-src/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
           if-no-files-found: warn
 
-      - name: Publish Jerkgram Build124 canary artifact
+      - name: Publish Jerkgram Build125 canary artifact
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build124_artifact.py
+          python3 scripts/jerkgram_publish_build125_artifact.py
 
-      - name: Upload Jerkgram Build124 canary
+      - name: Upload Jerkgram Build125 canary
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Build124-canary
+          name: Jerkgram-Build125-canary
           path: |
-            artifacts/Jerkgram-Build124-canary.ipa
-            artifacts/Jerkgram-Build124-canary-info.txt
+            artifacts/Jerkgram-Build125-canary.ipa
+            artifacts/Jerkgram-Build125-canary-info.txt
           if-no-files-found: error
