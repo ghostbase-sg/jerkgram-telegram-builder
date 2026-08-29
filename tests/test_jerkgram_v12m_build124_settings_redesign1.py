@@ -174,6 +174,25 @@ class Build124SettingsRedesignTests(unittest.TestCase):
         self.assertNotIn("aboutBuild119Summary", about)
         self.assertIn("build124AboutSummary", about)
 
+    def test_debug_research_entries_accumulator_gets_a_summary(self):
+        module = self.load_patch()
+        settings = SETTINGS_FIXTURE.replace(
+            '''    if page == .debugResearch {
+        return [
+            .header(0, strings.debugResearch),
+            .action(0, 1, strings.researchHiddenGiftsProbe, "", "researchHiddenGifts")
+        ]
+    }''',
+            '''    if page == .debugResearch {
+        entries.append(.header(debug, strings.debugResearch))
+        entries.append(.researchAction(debug, 1, strings.researchHiddenGiftsProbe, "researchHiddenGifts"))
+    }''',
+        )
+        updated = module.patch_settings_text(settings)
+        debug = module.block_text(updated, "if page == .debugResearch {")
+        self.assertIn("BUILD124_SETTINGS_PAGE_SUMMARY1", debug)
+        self.assertIn("entries.append(.info(-1, strings.build124DiagnosticsSummary))", debug)
+
     def test_stars_keeps_draft_save_cancel_but_uses_glass_surface(self):
         module = self.load_patch()
         updated = module.patch_stars_text(STARS_FIXTURE)
