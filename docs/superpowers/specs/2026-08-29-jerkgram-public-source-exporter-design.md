@@ -23,6 +23,7 @@ The exporter is initially standalone. It accepts an explicit materialized-tree p
 - fully materialized source tree
 - Jerkgram version
 - build number
+- optional public source tag (defaults to `v<version>`)
 - optional Stable IPA path
 - explicit output directory
 - public-source policy file
@@ -68,9 +69,10 @@ Do not redact or rewrite source automatically. Failure requires correcting the r
 
 ### Symlinks
 
-- preserve safe relative symlinks whose resolved target remains inside the materialized tree
-- reject absolute symlinks
-- reject relative symlinks that escape the materialized tree
+- preserve retained relative symlinks only when their resolved target remains inside the materialized tree
+- reject retained absolute symlinks
+- reject retained relative symlinks that escape the materialized tree
+- explicitly excluded generated symlinks such as root `bazel-*` may point outside the tree; they are recorded for private audit and are never copied into the public source snapshot
 
 ### Manifests
 
@@ -108,6 +110,7 @@ Public release metadata contains only:
 
 - Jerkgram version
 - build number
+- public source tag
 - upstream repository/tag/commit
 - source archive filename + SHA-256
 - optional Stable IPA filename + SHA-256
@@ -124,9 +127,12 @@ python3 scripts/jerkgram_export_public_source.py \
   --materialized-tree work/swiftgram-src \
   --version 1.0.0 \
   --build-number 124 \
+  --source-tag v1.0.0 \
   --output artifacts/public-source \
   [--ipa artifacts/Jerkgram-1.0.0.ipa]
 ```
+
+`--source-tag` is optional and defaults to `v<version>`.
 
 Verifier:
 
