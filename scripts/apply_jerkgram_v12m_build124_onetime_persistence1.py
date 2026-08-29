@@ -351,11 +351,12 @@ def patch_remote_consumed_text(text: str) -> str:
     if REMOTE_MARKER in updated:
         return updated
 
-    # Match the actual Build123 materialized owner rather than its whitespace.
+    # Anchor only the actual Telegram countdown prelude; whitespace between
+    # the lines is non-semantic and varies across upstream formatting.
     decision = re.search(
-        r"(?m)^(?P<indent>[ \\t]*)let timestamp = Int32\\(CFAbsoluteTimeGetCurrent\\(\\) \\+ NSTimeIntervalSince1970\\)\\n"
-        r"(?P=indent)let countdownBeginTime = consumeDate \\?\\? timestamp\\n"
-        r"(?P<gap>[ \\t]*\\n)(?P=indent)for i in 0 \\.\\.\\< updatedAttributes.count \\{",
+        r"(?m)^(?P<indent>[ \t]*)let timestamp = Int32\(CFAbsoluteTimeGetCurrent\(\) \+ NSTimeIntervalSince1970\)\n"
+        r"(?P=indent)let countdownBeginTime = consumeDate \?\? timestamp\n"
+        r"[ \t]*\n(?P=indent)for i in 0 \.\.< updatedAttributes.count \{",
         updated,
     )
     require(decision is not None, "remote-consume countdown owner missing")
