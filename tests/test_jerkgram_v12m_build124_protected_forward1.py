@@ -112,6 +112,18 @@ extension ChatControllerImpl {
         result = module.patch_text(self.fixture())
         self.assertIn("if !hideAuthor, let author = message.forwardInfo?.author ?? message.effectiveAuthor", result)
 
+    def test_materialized_portable_gate_rejects_secret_chats(self):
+        module = self.load_patch()
+        materialized = self.fixture().replace(
+            "            message.id.peerId.namespace != Namespaces.Peer.SecretChat\n",
+            "            !message.media.contains(where: { $0 is TelegramMediaPaidContent })\n",
+        )
+        result = module.patch_text(materialized)
+        self.assertIn(
+            "message.id.peerId.namespace != Namespaces.Peer.SecretChat",
+            result,
+        )
+
     def test_portable_copy_waits_for_media_before_commit(self):
         module = self.load_patch()
         result = module.patch_text(self.fixture())
