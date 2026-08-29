@@ -7,6 +7,7 @@ import os
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 TARGET = ROOT / "submodules/JerkgramCore/Sources/JerkgramStore.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_NONBLOCKING_LIFECYCLE_FLUSH1"
+COOPERATIVE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_COOPERATIVE_LIFECYCLE_DRAIN1"
 
 
 OLD_OBSERVERS = '''    private static let lifecycleObservers: [NSObjectProtocol] = [
@@ -44,12 +45,16 @@ NEW_OBSERVERS = '''    // MARK: Jerkgram v1.2M BUILD124_NONBLOCKING_LIFECYCLE_FL
         ),
     ]
 
+    // MARK: Jerkgram v1.2M BUILD124_COOPERATIVE_LIFECYCLE_DRAIN1
     private static func requestLifecycleFlush() {
         _ = self.lifecycleObservers
         self.queue.async {
-            while !self.pendingEvents.isEmpty {
-                guard self.flush(scheduleContinuation: false) else { break }
-            }
+            // Do one normal bounded batch only. `flush()` schedules a later
+            // continuation when necessary; draining the complete backlog in
+            // one lifecycle task monopolises disk I/O during app resume.
+            guard !self.pendingEvents.isEmpty, !self.flushScheduled else { return }
+            self.flushScheduled = true
+            _ = self.flush()
         }
     }
 '''
@@ -61,8 +66,33 @@ def require(value: bool, message: str) -> None:
 
 
 def patch_text(text: str) -> str:
-    if MARKER in text:
+    if COOPERATIVE_MARKER in text:
         return text
+    if MARKER in text:
+        old_request = '''    private static func requestLifecycleFlush() {
+        _ = self.lifecycleObservers
+        self.queue.async {
+            while !self.pendingEvents.isEmpty {
+                guard self.flush(scheduleContinuation: false) else { break }
+            }
+        }
+    }
+'''
+        new_request = '''    // MARK: Jerkgram v1.2M BUILD124_COOPERATIVE_LIFECYCLE_DRAIN1
+    private static func requestLifecycleFlush() {
+        _ = self.lifecycleObservers
+        self.queue.async {
+            // Do one normal bounded batch only. `flush()` schedules a later
+            // continuation when necessary; draining the complete backlog in
+            // one lifecycle task monopolises disk I/O during app resume.
+            guard !self.pendingEvents.isEmpty, !self.flushScheduled else { return }
+            self.flushScheduled = true
+            _ = self.flush()
+        }
+    }
+'''
+        require(text.count(old_request) == 1, "existing lifecycle drain owner missing")
+        return text.replace(old_request, new_request, 1)
     require(text.count(OLD_OBSERVERS) == 1, f"expected one Build118 lifecycle observer owner, found {text.count(OLD_OBSERVERS)}")
     require("public static func flushSynchronously()" in text, "Build118 synchronous flush bridge missing")
     updated = text.replace(OLD_OBSERVERS, NEW_OBSERVERS, 1)

@@ -76,14 +76,18 @@ class Build124LifecycleFreezeTests(unittest.TestCase):
         self.assertNotIn("flushSynchronously()", observer_region)
         self.assertEqual(observer_region.count("requestLifecycleFlush()"), 2)
 
-    def test_lifecycle_flush_is_dispatched_to_utility_queue(self):
+    def test_lifecycle_flush_is_dispatched_as_a_bounded_cooperative_batch(self):
         module = self.load_patch()
         result = module.patch_text(self.fixture())
+        self.assertIn("BUILD124_COOPERATIVE_LIFECYCLE_DRAIN1", result)
         start = result.index("private static func requestLifecycleFlush()")
         end = result.index("@discardableResult", start)
         block = result[start:end]
         self.assertIn("self.queue.async", block)
-        self.assertIn("while !self.pendingEvents.isEmpty", block)
+        self.assertIn("guard !self.pendingEvents.isEmpty, !self.flushScheduled else { return }", block)
+        self.assertIn("self.flushScheduled = true", block)
+        self.assertIn("_ = self.flush()", block)
+        self.assertNotIn("while !self.pendingEvents.isEmpty", block)
         self.assertNotIn("self.queue.sync", block)
 
     def test_existing_explicit_sync_bridge_is_not_broadened(self):

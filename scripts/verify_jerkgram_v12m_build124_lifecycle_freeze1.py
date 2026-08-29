@@ -7,6 +7,7 @@ import os
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 TARGET = ROOT / "submodules/JerkgramCore/Sources/JerkgramStore.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_NONBLOCKING_LIFECYCLE_FLUSH1"
+COOPERATIVE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_COOPERATIVE_LIFECYCLE_DRAIN1"
 
 
 def require(value: bool, message: str) -> None:
@@ -33,6 +34,7 @@ def main() -> None:
     require(TARGET.is_file(), f"target missing: {TARGET}")
     text = TARGET.read_text(encoding="utf-8")
     require(MARKER in text, "Build124 lifecycle marker missing")
+    require(COOPERATIVE_MARKER in text, "cooperative lifecycle drain marker missing")
 
     observer_start = text.index("private static let lifecycleObservers")
     request_start = text.index("private static func requestLifecycleFlush()", observer_start)
@@ -42,7 +44,10 @@ def main() -> None:
 
     request_block = request_lifecycle_block(text)
     require("self.queue.async" in request_block, "lifecycle request is not dispatched to capture queue")
-    require("while !self.pendingEvents.isEmpty" in request_block, "async request does not drain pending capture events")
+    require("guard !self.pendingEvents.isEmpty, !self.flushScheduled else { return }" in request_block, "lifecycle request is not bounded")
+    require("self.flushScheduled = true" in request_block, "lifecycle request does not hand off a normal flush")
+    require("_ = self.flush()" in request_block, "lifecycle request does not start a bounded flush")
+    require("while !self.pendingEvents.isEmpty" not in request_block, "lifecycle request still drains an unbounded backlog")
     require("self.queue.sync" not in request_block, "async lifecycle request still blocks its caller")
 
     require(text.count("public static func flushSynchronously()") == 1, "explicit synchronous bridge changed unexpectedly")
