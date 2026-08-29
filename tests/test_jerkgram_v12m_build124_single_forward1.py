@@ -1,5 +1,6 @@
 from pathlib import Path
 import importlib.util
+import tempfile
 import unittest
 
 
@@ -78,6 +79,22 @@ class Build124SingleForwardTests(unittest.TestCase):
         menu = module.patch_menu_text(self.menu_fixture())
         self.assertEqual(state, module.patch_state_text(state))
         self.assertEqual(menu, module.patch_menu_text(menu))
+
+    def test_main_materializes_the_menu_patch(self):
+        module = self.load_patch()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            settings = root / "GhostBaseSettingsController.swift"
+            menu = root / "ChatInterfaceStateContextMenus.swift"
+            settings.write_text(self.state_fixture(), encoding="utf-8")
+            menu.write_text(self.menu_fixture(), encoding="utf-8")
+            module.SETTINGS = settings
+            module.MENU = menu
+            module.main()
+            self.assertIn(
+                "BUILD124_SINGLE_FORWARD_ACCOUNT_SCOPE1",
+                menu.read_text(encoding="utf-8"),
+            )
 
 
 if __name__ == "__main__":
