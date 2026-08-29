@@ -55,6 +55,35 @@ class Build125ProfileEditTests(unittest.TestCase):
         once = module.patch_text(self.owner_fixture(), "bio")
         self.assertEqual(once, module.patch_text(once, "bio"))
 
+    def test_accepts_previously_materialized_glass_toggle_without_marker(self):
+        module = self.load_patch()
+        already_materialized = self.owner_fixture().replace(
+            '''        let ghostBaseGlassEnabled =
+            GhostBaseProfileBlurSettings
+                .loadEnabled() != nil''',
+            '''        let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled''',
+        ).replace(
+            '''            self.backgroundNode.backgroundColor =
+                UIColor(
+                    white:
+                        isDark
+                        ? 0.0
+                        : 1.0,
+                    alpha:
+                        isDark
+                        ? 0.13
+                        : 0.16
+                )''',
+            '''            self.backgroundNode.isOpaque = false
+            self.backgroundNode.backgroundColor =
+                presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(
+                    presentationData.theme.overallDarkAppearance ? 0.18 : 0.14
+                )''',
+        )
+        result = module.patch_text(already_materialized, "bio")
+        self.assertIn("BUILD125_PROFILE_EDIT_GLASS_OWNER1", result)
+        self.assertEqual(result.count("GhostBaseGlassStyle.isEnabled"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

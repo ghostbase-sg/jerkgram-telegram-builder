@@ -28,15 +28,23 @@ def patch_text(text: str, label: str) -> str:
     toggle = '''        let ghostBaseGlassEnabled =
             GhostBaseProfileBlurSettings
                 .loadEnabled() != nil'''
-    require(tail.count(toggle) == 1, f"{label}: stale profile-specific glass toggle missing")
-    tail = tail.replace(
-        toggle,
-        '''        // MARK: Jerkgram v1.2N BUILD125_PROFILE_EDIT_GLASS_OWNER1
+    replacement_toggle = '''        // MARK: Jerkgram v1.2N BUILD125_PROFILE_EDIT_GLASS_OWNER1
         // Edit-profile fields must follow the visible profile Glass setting,
         // not a separate persisted flag which leaves the bio opaque.
-        let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled''',
-        1,
-    )
+        let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled'''
+    if tail.count(toggle) == 1:
+        tail = tail.replace(toggle, replacement_toggle, 1)
+    elif tail.count("let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled") == 1:
+        # Some Build124 materializations already migrated the toggle before
+        # Build125 was installed. Continue from that real owner instead of
+        # treating an equivalent state as a fatal historical-anchor mismatch.
+        tail = tail.replace(
+            "let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled",
+            replacement_toggle,
+            1,
+        )
+    else:
+        require(False, f"{label}: profile Glass toggle owner missing")
     color = re.compile(
         r"            self\.backgroundNode\.backgroundColor =\n"
         r"                UIColor\(\n"
@@ -45,16 +53,24 @@ def patch_text(text: str, label: str) -> str:
         r"                \)",
         re.DOTALL,
     )
-    require(len(color.findall(tail)) == 1, f"{label}: opaque legacy field color owner missing")
-    tail = color.sub(
-        '''            self.backgroundNode.isOpaque = false
+    matches = color.findall(tail)
+    if len(matches) == 1:
+        tail = color.sub(
+            '''            self.backgroundNode.isOpaque = false
             self.backgroundNode.backgroundColor =
                 presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(
                     presentationData.theme.overallDarkAppearance ? 0.18 : 0.14
                 )''',
-        tail,
-        count=1,
-    )
+            tail,
+            count=1,
+        )
+    else:
+        require(
+            "self.backgroundNode.isOpaque = false" in tail
+            and "itemBlocksBackgroundColor.withAlphaComponent" in tail
+            and "? 0.18 : 0.14" in tail,
+            f"{label}: translucent field color owner missing",
+        )
     return text[:start] + tail
 
 
