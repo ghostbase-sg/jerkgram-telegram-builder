@@ -275,6 +275,27 @@ def replace_helper(text: str) -> str:
     return text[:start] + HELPER + text[end:]
 
 
+def patch_portable_secret_chat_guard(text: str) -> str:
+    guard = "message.id.peerId.namespace != Namespaces.Peer.SecretChat"
+    if guard in text:
+        return text
+
+    anchor = "let canUsePortableCopy = messages.allSatisfy { message in\n"
+    require(text.count(anchor) == 1, f"portable-copy gate count is {text.count(anchor)}")
+    body_start = text.index(anchor) + len(anchor)
+    body_content = body_start
+    while body_content < len(text) and text[body_content] in " \t":
+        body_content += 1
+    require(body_content > body_start, "portable-copy gate body indentation missing")
+    indent = text[body_start:body_content]
+    return (
+        text[:body_start]
+        + indent + guard + "\n"
+        + indent + "&& "
+        + text[body_content:]
+    )
+
+
 def patch_portable_branch(text: str) -> str:
     variable_anchor = "var result: [EnqueueMessage] = []"
     require(text.count(variable_anchor) >= 1, "forward result owner missing")
@@ -349,6 +370,7 @@ def patch_text(text: str) -> str:
         return text
     require("BUILD123_PORTABLE_FORWARD1" in text, "Build123 portable forward prerequisite missing")
     text = replace_helper(text)
+    text = patch_portable_secret_chat_guard(text)
     text = patch_portable_branch(text)
     text = patch_commit_resolution(text)
     for proof in (
@@ -359,6 +381,7 @@ def patch_text(text: str) -> str:
         "context.engine.resources.fetch",
         "waitUntilFetchStatus: true",
         "message.forwardInfo?.author ?? message.effectiveAuthor",
+        "message.id.peerId.namespace != Namespaces.Peer.SecretChat",
         "var jerkgramPortableMessagesSignal: Signal<[EnqueueMessage], NoError>?",
         "let commitResolved",
     ):
