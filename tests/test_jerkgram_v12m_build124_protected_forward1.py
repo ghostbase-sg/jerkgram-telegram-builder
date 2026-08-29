@@ -135,6 +135,16 @@ extension ChatControllerImpl {
         self.assertIn("deliverOnMainQueue", result)
         self.assertLess(result.index("jerkgramPortableMessagesSignal"), result.index("let commitResolved"))
 
+    def test_commit_wrapper_keeps_schedule_closure_and_when_online_inside_switch(self):
+        module = self.load_patch()
+        result = module.patch_text(self.fixture())
+        start = result.index("let commitResolved")
+        end = result.index("if let jerkgramPortableMessagesSignal", start)
+        commit_region = result[start:end]
+        self.assertIn("case .schedule:", commit_region)
+        self.assertIn("})", commit_region)
+        self.assertIn("case .whenOnline:", commit_region)
+
     def test_patch_is_idempotent(self):
         module = self.load_patch()
         once = module.patch_text(self.fixture())
