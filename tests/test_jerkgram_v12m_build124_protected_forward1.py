@@ -5,6 +5,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_protected_forward1.py"
+VERIFY = REPO / "scripts/verify_jerkgram_v12m_build124_protected_forward1.py"
 
 
 class Build124ProtectedForwardTests(unittest.TestCase):
@@ -127,6 +128,13 @@ extension ChatControllerImpl {
         once = module.patch_text(self.fixture())
         self.assertEqual(once, module.patch_text(once))
         self.assertEqual(once.count("BUILD124_PROTECTED_FORWARD_LOCAL_COPY1"), 1)
+
+    def test_verifier_tracks_engine_resource_fetch_and_complete_data(self):
+        source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn('"context.engine.resources.fetch"', source)
+        self.assertIn('"waitUntilFetchStatus: true"', source)
+        self.assertNotIn('"fetchedMediaResource("', source)
+        self.assertNotIn('".complete(waitUntilFetchStatus: true)"', source)
 
 
 if __name__ == "__main__":
