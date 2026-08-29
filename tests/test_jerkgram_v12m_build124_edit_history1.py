@@ -88,6 +88,34 @@ class Build124EditHistoryTests(unittest.TestCase):
         self.assertIn("date: editEventDate", result)
         self.assertNotIn("materializedDate", result)
 
+    def test_history_accepts_materialized_owner_with_attribute_setup_between_date_and_use(self):
+        module = self.load_patch()
+        materialized = '''                        // The stored text belongs to the previous version, so its
+                        // timestamp must also come from the previous version.
+                        let previousVersionDate = (
+                            previousMessage.attributes.first(
+                                where: { $0 is EditedMessageAttribute }
+                            ) as? EditedMessageAttribute
+                        )?.date ?? previousMessage.timestamp
+                        var attribute = previousMessage.attributes.first(
+                            where: { $0 is GhostBaseMessageAttribute }
+                        ) as? GhostBaseMessageAttribute
+
+                        if attribute == nil {
+                            attribute = GhostBaseMessageAttribute(originalText: previousMessage.text)
+                        }
+
+                        if let updatedAttribute = attribute?.withAddedEditVersion(
+                            text: previousMessage.text,
+                            date: previousVersionDate,
+                            entities: previousEntities,
+                            inlineStickerFiles: previousInlineStickerFiles
+                        ) {'''
+        result = module.patch_state_text(materialized)
+        self.assertIn("BUILD124_EDIT_EVENT_DATE1", result)
+        self.assertIn("date: editEventDate", result)
+        self.assertNotIn("previousVersionDate", result)
+
     def test_unknown_prepatched_state_owner_is_left_intact(self):
         module = self.load_patch()
         prepatched = "let materializedEditHistoryDate = message.timestamp\n"
