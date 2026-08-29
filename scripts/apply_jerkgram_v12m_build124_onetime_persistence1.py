@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import re
 
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
@@ -352,12 +353,20 @@ def patch_remote_consumed_text(text: str) -> str:
         require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived an existing Build124 owner")
         return updated
 
-    require(updated.count(REMOTE_DECISION_ANCHOR) == 1, f"expected one remote-consume countdown owner, found {updated.count(REMOTE_DECISION_ANCHOR)}")
+    # Match the actual Build123 materialized owner rather than its whitespace.
+    decision = re.search(
+        r"(?m)^(?P<indent>[ \\t]*)let timestamp = Int32\\(CFAbsoluteTimeGetCurrent\\(\\) \\+ NSTimeIntervalSince1970\\)\\n"
+        r"(?P=indent)let countdownBeginTime = consumeDate \\?\\? timestamp\\n"
+        r"(?P<gap>\\n)(?P=indent)for i in 0 \\.\\.\\< updatedAttributes.count \\{",
+        updated,
+    )
+    require(decision is not None, "remote-consume countdown owner missing")
     require(updated.count(REMOTE_AUTOREMOVE_ASSIGNMENT) == 1, f"expected one remote autoremove assignment, found {updated.count(REMOTE_AUTOREMOVE_ASSIGNMENT)}")
     require(updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT) == 1, f"expected one remote autoclear assignment, found {updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT)}")
     require(updated.count(REMOTE_EXPIRE_CONDITION) == 2, f"expected two remote media-expiration owners, found {updated.count(REMOTE_EXPIRE_CONDITION)}")
 
-    updated = updated.replace(REMOTE_DECISION_ANCHOR, REMOTE_DECISION, 1)
+    loop_start = decision.end() - len("for i in 0 ..< updatedAttributes.count {")
+    updated = updated[:decision.start()] + REMOTE_DECISION + updated[loop_start:]
     updated = updated.replace(REMOTE_AUTOREMOVE_ASSIGNMENT, REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_AUTOCLEAR_ASSIGNMENT, REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_EXPIRE_CONDITION, REMOTE_EXPIRE_CONDITION_PERSISTENT, 2)
