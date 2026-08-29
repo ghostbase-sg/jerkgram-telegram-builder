@@ -20,12 +20,14 @@ def main() -> None:
     for path in FILES:
         text = path.read_text(encoding="utf-8")
         require(text.count("BUILD125_PROFILE_EDIT_GLASS_OWNER1") == 1, f"{path.name}: Build125 visual owner missing")
-        require("GhostBaseGlassStyle.isEnabled" in text, f"{path.name}: profile Glass switch not used")
-        require("GhostBaseProfileBlurSettings\n                .loadEnabled()" not in text, f"{path.name}: stale independent toggle survived")
-        require("UIColor.white.withAlphaComponent(0.055)" in text, f"{path.name}: dark translucent tint missing")
-        require("UIColor.black.withAlphaComponent(0.045)" in text, f"{path.name}: light translucent tint missing")
-        require("itemBlocksBackgroundColor.withAlphaComponent" not in text, f"{path.name}: opaque list card survived")
-        require("self.backgroundNode.isOpaque = false" in text, f"{path.name}: field remains opaque")
+        owner = text[text.index("BUILD125_PROFILE_EDIT_GLASS_OWNER1"):]
+        owner = owner[:owner.index("        } else {")]
+        require("GhostBaseGlassStyle.isEnabled" in owner, f"{path.name}: profile Glass switch not used")
+        require("GhostBaseProfileBlurSettings\n                .loadEnabled()" not in owner, f"{path.name}: stale independent toggle survived")
+        require("UIColor.white.withAlphaComponent(0.055)" in owner, f"{path.name}: dark translucent tint missing")
+        require("UIColor.black.withAlphaComponent(0.045)" in owner, f"{path.name}: light translucent tint missing")
+        require("itemBlocksBackgroundColor.withAlphaComponent" not in owner, f"{path.name}: opaque list card survived")
+        require("self.backgroundNode.isOpaque = false" in owner, f"{path.name}: field remains opaque")
     print("[Build125 profile edit verify] GREEN")
 
 
