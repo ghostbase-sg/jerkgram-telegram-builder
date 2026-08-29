@@ -60,18 +60,18 @@ NEW = '''        // MARK: Jerkgram v1.2D BUILD115_LINKS_READABILITY_OWNER1
                 var distanceToTop: CGFloat = -100.0
                 var distanceToBottom: CGFloat = -100.0
                 if case let .known(topOffset) = self.listNode.visibleContentOffset() {
-                    distanceToTop = -topOffset + self.listNode.insets.top
+                    distanceToTop = -CGFloat(topOffset) + self.listNode.insets.top
                 }
                 if case let .known(bottomOffset) = self.listNode.visibleBottomContentOffset() {
-                    distanceToBottom = -bottomOffset + self.listNode.insets.bottom
+                    distanceToBottom = -CGFloat(bottomOffset) + self.listNode.insets.bottom
                 }
                 distanceToTop = max(-100.0, distanceToTop)
                 distanceToBottom = max(-100.0, distanceToBottom)
                 let linksFrame = CGRect(
                     x: sideInset + 16.0,
                     y: distanceToTop,
-                    width: max(1.0, self.listNode.visibleSize.width - (sideInset + 16.0) * 2.0),
-                    height: max(1.0, self.listNode.visibleSize.height - distanceToTop - distanceToBottom)
+                    width: max(1.0, self.listNode.bounds.size.width - (sideInset + 16.0) * 2.0),
+                    height: max(1.0, self.listNode.bounds.size.height - distanceToTop - distanceToBottom)
                 )
                 transition.updateFrame(view: self.glassBackgroundView, frame: linksFrame)
                 self.glassBackgroundView.layer.cornerRadius = 16.0
