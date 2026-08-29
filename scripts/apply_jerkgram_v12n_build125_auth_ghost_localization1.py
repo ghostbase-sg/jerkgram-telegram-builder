@@ -43,10 +43,10 @@ def patch_phone(text: str) -> str:
     if MARKER in text:
         return text
     replacements = {
-        'return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"': 'return strings.jerkgram.authGhostModeStatus(enabled: enabled)',
-        'return enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF"': 'return strings.jerkgram.authGhostModeStatus(enabled: enabled)',
-        'string: "Включите до входа, чтобы оставаться невидимым с первой сессии."': 'string: strings.jerkgram.authGhostModeHint',
-        'string: "Enable before login to stay invisible from the first session."': 'string: strings.jerkgram.authGhostModeHint',
+        'return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"': 'return Locale.current.languageCode == "ru" ? (enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ") : (enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF")',
+        'return enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF"': 'return Locale.current.languageCode == "ru" ? (enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ") : (enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF")',
+        'string: "Включите до входа, чтобы оставаться невидимым с первой сессии."': 'string: (Locale.current.languageCode == "ru" ? "Включите до входа, чтобы оставаться невидимым с первой сессии." : "Enable before login to stay invisible from the first session.")',
+        'string: "Enable before login to stay invisible from the first session."': 'string: (Locale.current.languageCode == "ru" ? "Включите до входа, чтобы оставаться невидимым с первой сессии." : "Enable before login to stay invisible from the first session.")',
     }
     changed = 0
     for old, new in replacements.items():
