@@ -142,6 +142,19 @@ python3 scripts/verify_jerkgram_public_source.py \
   --export-dir artifacts/public-source
 ```
 
+## Known release integration blocker
+
+The current Build124 build path creates `work/swiftgram-src/build-input/configuration-repository/variables.bzl` and then injects the private Jerkgram Telegram API credentials into that generated configuration before compilation.
+
+This is intentionally incompatible with a public-source export taken after credential injection: the exporter scans the complete materialized tree before applying exclusions and will fail when the injected credential values are present, even though `build-input/configuration-repository/` is excluded from the public snapshot as generated local configuration.
+
+Before the first Stable public-source release, the release path must therefore do one of the following without changing the compiled production code:
+
+1. freeze and export the final source snapshot at a boundary before private credentials are written into the materialized tree, while proving that no source mutation occurs between that snapshot and compilation other than generated private configuration; or
+2. move private credential injection completely outside the materialized source tree and supply it as external build configuration.
+
+The second option is preferred because it gives a cleaner source/IPA provenance boundary and avoids using exclusion as a secrecy mechanism.
+
 ## CI integration boundary
 
 No automatic CI integration in v1. The exporter becomes a release workflow step only after the exact final-source boundary immediately preceding compilation is frozen and a source/IPA provenance check is demonstrated on a real Stable candidate.
