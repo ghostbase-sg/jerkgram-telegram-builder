@@ -77,7 +77,7 @@ def main() -> None:
     require("UserDefaults.standard.object(forKey: \"jerkgram.ProtectedContent.Enabled\")" in voice, "voice visual is not bound to the active protected-content setting")
     require("arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat" in voice, "voice override must not affect secret chats")
     require("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in voice, "consumed one-time voice visual is not retained")
-    require("isConsumed = attribute.consumed" in voice, "real consumed state must remain authoritative")
+    require("attribute.consumed" in voice, "real consumed state owner must remain authoritative")
 
     combined = autoremove + "\n" + remote + "\n" + voice
     require("ConsumableContentMessageAttribute(consumed: false)" not in combined, "consumed/read state must never be falsified")
