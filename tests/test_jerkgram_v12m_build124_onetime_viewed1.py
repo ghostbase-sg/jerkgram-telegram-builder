@@ -44,7 +44,7 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertIn("BUILD124_OUTGOING_ONETIME_VIEWED_MEDIA1", updated)
         self.assertIn("ConsumableContentMessageAttribute", updated)
         self.assertIn("attribute.consumed", updated)
-        self.assertIn("!message.effectivelyIncoming(context.account.peerId)", updated)
+        self.assertIn("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false", updated)
         self.assertNotIn("!message.flags.contains(.Incoming)", updated)
         self.assertIn('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"', updated)
         self.assertIn('iconName: "Chat/Message/SecretMediaOnce"', updated)
@@ -74,6 +74,8 @@ class Build124OneTimeViewedTests(unittest.TestCase):
 
     def test_verifier_tracks_direct_consumed_state_without_stale_local_alias(self):
         source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false", source)
+        self.assertNotIn("!message.effectivelyIncoming(context.account.peerId)", source)
         self.assertIn('"ConsumableContentMessageAttribute(consumed: false)" not in voice', source)
         self.assertNotIn('"isConsumed = attribute.consumed"', source)
 
