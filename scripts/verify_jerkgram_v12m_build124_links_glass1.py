@@ -27,7 +27,14 @@ def main() -> None:
     require("UIVisualEffectView" in owner, "Links-local material view missing")
     require(".systemMaterialDark" in owner and ".systemMaterialLight" in owner, "theme-aware Links material missing")
     require("let linksFrame = CGRect" in owner, "bounded Links-card frame missing")
-    require("visibleContentOffset" in owner and "visibleBottomContentOffset" in owner, "Links-card frame is not tied to list content")
+    require(
+        "visibleContentOffset" in owner
+        and "self.listNode.bounds.size.width" in owner
+        and "self.listNode.bounds.size.height" in owner
+        and "self.listNode.insets.bottom" in owner,
+        "Links-card frame is not tied to the protocol-safe list geometry",
+    )
+    require("visibleBottomContentOffset" not in owner, "Links overlay calls an unavailable list API")
     require("0.26 * lightness" not in owner, "old whole-pane dimming formula survived")
     require("self.backgroundColor = .clear" in owner and "self.listNode.backgroundColor = .clear" in owner, "whole-pane fallback is not transparent")
 

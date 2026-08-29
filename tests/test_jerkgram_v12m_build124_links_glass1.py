@@ -5,6 +5,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_links_glass1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_links_glass1.py"
 
 
 class Build124LinksGlassTests(unittest.TestCase):
@@ -93,6 +94,12 @@ class Build124LinksGlassTests(unittest.TestCase):
         twice = module.patch_text(once)
         self.assertEqual(once, twice)
         self.assertEqual(once.count("BUILD124_LINKS_INTRINSIC_MATERIAL1"), 1)
+
+    def test_verifier_uses_the_protocol_safe_links_contract(self):
+        verifier = VERIFY.read_text(encoding="utf-8")
+        self.assertIn("visibleContentOffset", verifier)
+        self.assertIn("self.listNode.bounds.size", verifier)
+        self.assertIn('"visibleBottomContentOffset" not in owner', verifier)
 
 
 if __name__ == "__main__":
