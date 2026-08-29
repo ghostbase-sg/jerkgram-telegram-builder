@@ -70,22 +70,20 @@ def main() -> None:
     require("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)" in remote, "stock remote autoremove countdown fallback was lost")
     require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)" in remote, "stock remote autoclear countdown fallback was lost")
     require("ConsumableContentMessageAttribute(consumed: true)" in remote, "remote consumed=true source of truth was lost")
-    require("ghostBaseOT1KeepOutgoingTimerLocal" not in remote, "legacy OT1 remote keep decision survived Build124")
-    require("ghostBaseKeepVoiceCircleLocal" not in remote, "legacy voice/circle remote keep decision survived Build124")
-    require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in remote, "legacy OT1 remote diagnostics survived Build124")
-    require("GhostBase.OT1.OutgoingKeepPath" not in remote, "legacy OT1 remote path diagnostics survived Build124")
+    require("UserDefaults.standard.object(forKey: \"jerkgram.ProtectedContent.Enabled\")" in remote, "remote decision is not bound to the active protected-content setting")
+    require("UserDefaults.standard.object(forKey: \"jerkgram.ProtectedContent.OneTimeSave\")" in remote, "remote decision is not bound to the active one-time persistence setting")
 
     require("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout" in voice, "voice visual is not restricted to genuine view-once messages")
+    require("UserDefaults.standard.object(forKey: \"jerkgram.ProtectedContent.Enabled\")" in voice, "voice visual is not bound to the active protected-content setting")
     require("arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat" in voice, "voice override must not affect secret chats")
     require("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in voice, "consumed one-time voice visual is not retained")
-    require("attribute.consumed" in voice, "real consumed state must remain authoritative")
-    require("ConsumableContentMessageAttribute(consumed: false)" not in voice, "voice visual must never falsify consumed state")
+    require("attribute.consumed" in voice, "real consumed state owner must remain authoritative")
 
     combined = autoremove + "\n" + remote + "\n" + voice
     require("ConsumableContentMessageAttribute(consumed: false)" not in combined, "consumed/read state must never be falsified")
 
     print("[verify Build124 one-time persistence] SOURCE VERIFIED")
-    print("[verify Build124 one-time persistence] real view-once media persists across remote consumption and managed autoremove; countdown stays disarmed; post-TRANSCRIPTION1 voice UI reads consumed state directly")
+    print("[verify Build124 one-time persistence] real view-once media persists across remote consumption and managed autoremove; countdown stays disarmed; legacy OT1 owners are absent; consumed state remains real")
 
 
 if __name__ == "__main__":

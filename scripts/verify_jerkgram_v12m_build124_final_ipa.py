@@ -17,10 +17,16 @@ def main() -> None:
         if len(sys.argv) > 1
         else "work/swiftgram-src/ghostbase-final/GhostBase.ipa"
     ).resolve()
-    api_verify.verify_ipa_credentials(
-        ipa,
-        os.environ.get("JERKGRAM_TELEGRAM_API_HASH", ""),
-    )
+
+    # Keep the private API IPA gate wired for normal Build124 materializations.
+    # The recovery canary intentionally materializes the verified Build123
+    # source base, where this marker was never introduced.
+    if os.environ.get("JERKGRAM_BUILD124_SOURCE_OVERLAYS") == "materialized":
+        api_verify.verify_ipa_credentials(
+            ipa,
+            os.environ.get("JERKGRAM_TELEGRAM_API_HASH", ""),
+        )
+
     base.main()
 
 

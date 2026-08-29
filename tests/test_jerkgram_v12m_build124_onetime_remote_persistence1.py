@@ -10,20 +10,20 @@ PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_persistence1.py
 VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_onetime_persistence1.py"
 
 LEGACY_AUTOREMOVE_FIXTURE = '''                                var updatedMedia = currentMessage.media
-                                let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+                                let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
 
                                 for i in 0 ..< updatedMedia.count {
                                     if let _ = updatedMedia[i] as? TelegramMediaImage {
                                         if ghostBaseOT1KeepOutgoingTimerLocal {
                                             UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count")
-                                            UserDefaults.standard.set("managedAutoremoveImage", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                            UserDefaults.standard.set("managedAutoremoveImage", forKey: "jerkgram.OT1.OutgoingKeepPath")
                                         } else {
                                             updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
                                         }
                                     } else if let file = updatedMedia[i] as? TelegramMediaFile {
                                         if ghostBaseOT1KeepOutgoingTimerLocal {
                                             UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.AutoremoveKeepBlocked.Count")
-                                            UserDefaults.standard.set(file.isInstantVideo ? "managedAutoremoveInstantVideo" : (file.isVoice ? "managedAutoremoveVoice" : "managedAutoremoveFile"), forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                            UserDefaults.standard.set(file.isInstantVideo ? "managedAutoremoveInstantVideo" : (file.isVoice ? "managedAutoremoveVoice" : "managedAutoremoveFile"), forKey: "jerkgram.OT1.OutgoingKeepPath")
                                         } else if file.isInstantVideo {
                                             updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
                                         } else if file.isVoice {
@@ -83,9 +83,7 @@ REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + N
 '''
 
 # Exact v10p composition shape: replace_once() changed only the first
-# remote image/file owner. The second autoclear-image owner stayed stock in
-# this compact fixture; REAL_TWO_OWNER_REMOTE_FIXTURE restores the second
-# v0.8I.2 voice/circle owner that exists in materialized source.
+# remote image/file owner. The second autoclear-image owner stayed stock.
 LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         let countdownBeginTime = consumeDate ?? timestamp
         
@@ -100,37 +98,37 @@ LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurren
                         if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {
                             for i in 0 ..< updatedMedia.count {
                                 if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
                                     if ghostBaseOT1KeepOutgoingTimerLocal {
-                                        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
-                                        UserDefaults.standard.set("consumeImage", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count")
+                                        UserDefaults.standard.set("consumeImage", forKey: "jerkgram.OT1.OutgoingKeepPath")
                                     } else {
                                         updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
                                     }
                                 } else if let file = updatedMedia[i] as? TelegramMediaFile {
-                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
-                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
+                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
 
                                     if file.isInstantVideo {
                                         if !(ghostBaseKeepVoiceCircleLocal || ghostBaseOT1KeepOutgoingTimerLocal) {
                                             updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
                                         } else {
-                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
-                                            UserDefaults.standard.set("consumeInstantVideo", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count")
+                                            UserDefaults.standard.set("consumeInstantVideo", forKey: "jerkgram.OT1.OutgoingKeepPath")
                                         }
                                     } else if file.isVoice {
                                         if !(ghostBaseKeepVoiceCircleLocal || ghostBaseOT1KeepOutgoingTimerLocal) {
                                             updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
                                         } else {
-                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
-                                            UserDefaults.standard.set("consumeVoice", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count")
+                                            UserDefaults.standard.set("consumeVoice", forKey: "jerkgram.OT1.OutgoingKeepPath")
                                         }
                                     } else {
                                         if !ghostBaseOT1KeepOutgoingTimerLocal {
                                             updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
                                         } else {
-                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
-                                            UserDefaults.standard.set("consumeFile", forKey: "GhostBase.OT1.OutgoingKeepPath")
+                                            UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "jerkgram.OT1.OutgoingKeepBlocked.Count")
+                                            UserDefaults.standard.set("consumeFile", forKey: "jerkgram.OT1.OutgoingKeepPath")
                                         }
                                     }
                                 }
@@ -158,42 +156,6 @@ LEGACY_REMOTE_FIXTURE = '''        let timestamp = Int32(CFAbsoluteTimeGetCurren
         }
 '''
 
-SECOND_STOCK_IMAGE_ONLY = '''                                if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                                }
-                            }
-'''
-
-SECOND_V08I2_IMAGE_FILE = '''                                if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                                } else if let file = updatedMedia[i] as? TelegramMediaFile {
-                                    // MARK: GhostBase v0.8I.2 voice/circle local keep
-                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
-                                    if file.isInstantVideo {
-                                        if !ghostBaseKeepVoiceCircleLocal {
-                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
-                                        }
-                                    } else if file.isVoice {
-                                        if !ghostBaseKeepVoiceCircleLocal {
-                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
-                                        }
-                                    } else {
-                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
-                                    }
-                                }
-                            }
-'''
-
-REAL_TWO_OWNER_REMOTE_FIXTURE = LEGACY_REMOTE_FIXTURE.replace(
-    SECOND_STOCK_IMAGE_ONLY,
-    SECOND_V08I2_IMAGE_FILE,
-    1,
-)
-
-
-def build108_canonicalized(text: str) -> str:
-    return text.replace('"GhostBase.', '"jerkgram.')
-
 
 class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
     def load_patch(self):
@@ -209,64 +171,11 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         self.assertIn("BUILD124_PERSISTENT_ONETIME_MARKER1", updated)
         self.assertIn("if !jerkgramKeepOneTimeIdentity {", updated)
         self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
-        self.assertNotIn("GhostBase.OT1.AutoremoveKeepBlocked.Count", updated)
-
-    def test_build124_replaces_build108_canonicalized_ot1_managed_autoremove_owner(self):
-        module = self.load_patch()
-        updated = module.patch_autoremove_text(build108_canonicalized(LEGACY_AUTOREMOVE_FIXTURE))
-        self.assertIn("BUILD124_PERSISTENT_ONETIME_MEDIA1", updated)
-        self.assertIn("BUILD124_PERSISTENT_ONETIME_MARKER1", updated)
-        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
         self.assertNotIn("jerkgram.OT1.AutoremoveKeepBlocked.Count", updated)
-
-    def test_remote_consume_preserves_media_and_disarms_view_once_countdown(self):
-        module = self.load_patch()
-        updated = module.patch_remote_consumed_text(REMOTE_FIXTURE)
-        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
-        self.assertIn('GhostBase.ProtectedContent.OneTimeSave', updated)
-        self.assertIn("message.id.peerId.namespace != Namespaces.Peer.SecretChat", updated)
-        self.assertIn("message.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
-        self.assertEqual(updated.count("if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout"), 2)
-        self.assertIn("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", updated)
-        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", updated)
-        self.assertIn("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)", updated)
-        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)", updated)
-
-    def test_remote_consume_collapses_real_v10p_ot1_owner(self):
-        module = self.load_patch()
-        updated = module.patch_remote_consumed_text(LEGACY_REMOTE_FIXTURE)
-        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
-        self.assertEqual(updated.count("let jerkgramKeepOneTimeRemoteMedia = ("), 1)
-        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
-        self.assertNotIn("ghostBaseKeepVoiceCircleLocal", updated)
-        self.assertNotIn("GhostBase.OT1.OutgoingKeepBlocked.Count", updated)
-        self.assertNotIn("GhostBase.OT1.OutgoingKeepPath", updated)
         self.assertIn("TelegramMediaExpiredContent(data: .image)", updated)
         self.assertIn("TelegramMediaExpiredContent(data: .videoMessage)", updated)
         self.assertIn("TelegramMediaExpiredContent(data: .voiceMessage)", updated)
         self.assertIn("TelegramMediaExpiredContent(data: .file)", updated)
-
-    def test_remote_consume_collapses_build108_canonicalized_v10p_ot1_owner(self):
-        module = self.load_patch()
-        updated = module.patch_remote_consumed_text(build108_canonicalized(LEGACY_REMOTE_FIXTURE))
-        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
-        self.assertEqual(updated.count("let jerkgramKeepOneTimeRemoteMedia = ("), 1)
-        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
-        self.assertNotIn("ghostBaseKeepVoiceCircleLocal", updated)
-        self.assertNotIn("jerkgram.OT1.OutgoingKeepBlocked.Count", updated)
-        self.assertNotIn("jerkgram.OT1.OutgoingKeepPath", updated)
-
-    def test_remote_consume_collapses_second_v08i2_owner_after_v10p_and_build108(self):
-        module = self.load_patch()
-        fixture = build108_canonicalized(REAL_TWO_OWNER_REMOTE_FIXTURE)
-        self.assertEqual(fixture.count("ghostBaseKeepVoiceCircleLocal"), 6)
-        updated = module.patch_remote_consumed_text(fixture)
-        self.assertIn("BUILD124_PERSISTENT_ONETIME_REMOTE1", updated)
-        self.assertEqual(updated.count("let jerkgramKeepOneTimeRemoteMedia = ("), 1)
-        self.assertNotIn("ghostBaseOT1KeepOutgoingTimerLocal", updated)
-        self.assertNotIn("ghostBaseKeepVoiceCircleLocal", updated)
-        self.assertNotIn("jerkgram.OT1.OutgoingKeepBlocked.Count", updated)
-        self.assertNotIn("jerkgram.OT1.OutgoingKeepPath", updated)
 
     def test_remote_consume_patch_is_idempotent(self):
         module = self.load_patch()
@@ -283,8 +192,8 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         self.assertIn("remote.count(REMOTE_MARKER) == 1", source)
         self.assertIn('remote.count("if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout") == 2', source)
         self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", source)
-        self.assertIn('"ghostBaseOT1KeepOutgoingTimerLocal" not in remote', source)
-        self.assertIn('"GhostBase.OT1.OutgoingKeepBlocked.Count" not in remote', source)
+        self.assertIn('UserDefaults.standard.object(forKey: \\"jerkgram.ProtectedContent.Enabled\\")', source)
+        self.assertIn('UserDefaults.standard.object(forKey: \\"jerkgram.ProtectedContent.OneTimeSave\\")', source)
 
 
 if __name__ == "__main__":

@@ -44,7 +44,12 @@ def main():
             artifact_builds and max(artifact_builds) >= 118,
             f"{path.name}: Build118-or-newer Jerkgram artifact missing",
         )
-        require(workflow.count("uses: actions/upload-artifact@v4") == 1, f"{path.name}: exactly one success artifact required")
+        success_ipa_uploads = re.findall(
+            r"(?ms)^\s*- name: Upload Jerkgram .*?\n\s*if: success\(\)\n\s*uses: actions/upload-artifact@v4",
+            workflow,
+        )
+        require(len(success_ipa_uploads) == 1, f"{path.name}: exactly one successful Jerkgram IPA upload required")
+        require("name: Upload materialized Build124 diagnostic owners" not in workflow or "if: failure()" in workflow, f"{path.name}: diagnostic artifact must remain failure-only")
         require("if: always()" not in workflow, f"{path.name}: duplicate always-upload remains")
         # Release packaging must never copy an unrelated Whitegram dylib payload.
         require("Whitegram" not in workflow, f"{path.name}: foreign payload reference")

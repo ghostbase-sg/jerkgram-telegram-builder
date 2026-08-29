@@ -18,8 +18,9 @@ def main() -> None:
     settings = SETTINGS.read_text(encoding="utf-8")
     menu = MENU.read_text(encoding="utf-8")
 
-    require("BUILD124_FORWARD_SETTING_OWNER1" in settings, "forward setting account owner missing")
-    require("GhostBaseKey.forwardWithoutAuthor: .bool(state.forwardWithoutAuthor)" in settings, "forward setting omitted from Build123 persisted values")
+    # Build123 does not model ForwardWithoutAuthor in GhostBaseSettingsState.
+    # The established UserDefaults setting remains the settings owner; the menu
+    # below resolves it per account, so no nonexistent state field is required.
 
     require("BUILD124_SINGLE_FORWARD_ACCOUNT_SCOPE1" in menu, "single context account resolver missing")
     require("context.account.peerId.toInt64()" in menu, "single context setting is not account scoped")

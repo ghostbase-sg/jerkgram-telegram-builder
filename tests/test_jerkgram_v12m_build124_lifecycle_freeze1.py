@@ -5,11 +5,18 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_lifecycle_freeze1.py"
+VERIFY = REPO / "scripts/verify_jerkgram_v12m_build124_lifecycle_freeze1.py"
 
 
 class Build124LifecycleFreezeTests(unittest.TestCase):
     def load_patch(self):
         spec = importlib.util.spec_from_file_location("build124_lifecycle_freeze", PATCH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def load_verifier(self):
+        spec = importlib.util.spec_from_file_location("build124_lifecycle_freeze_verify", VERIFY)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
@@ -85,6 +92,24 @@ class Build124LifecycleFreezeTests(unittest.TestCase):
         self.assertEqual(result.count("public static func flushSynchronously()"), 1)
         sync_start = result.index("public static func flushSynchronously()")
         self.assertIn("self.queue.sync(execute: drain)", result[sync_start:])
+
+    def test_verifier_limits_async_check_to_request_function_body(self):
+        module = self.load_verifier()
+        materialized = '''    private static func requestLifecycleFlush() {
+        self.queue.async {
+            while !self.pendingEvents.isEmpty {
+                guard self.flush(scheduleContinuation: false) else { break }
+            }
+        }
+    }
+
+    public static func readyIndexRecords() {
+        self.queue.sync { loadIndex() }
+    }
+'''
+        block = module.request_lifecycle_block(materialized)
+        self.assertIn("self.queue.async", block)
+        self.assertNotIn("self.queue.sync", block)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()

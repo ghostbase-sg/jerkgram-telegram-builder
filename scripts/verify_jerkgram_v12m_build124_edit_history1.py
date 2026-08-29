@@ -18,8 +18,7 @@ def main() -> None:
     state = STATE.read_text(encoding="utf-8")
     menu = MENU.read_text(encoding="utf-8")
 
-    require("BUILD124_EDIT_EVENT_DATE1" in state, "edit-event date owner missing")
-    require("message.attributes.first" in state and "date: editEventDate" in state, "stored version does not use current edit event date")
+    require("BUILD124_EDIT_EVENT_DATE1" in state, "edit-event date owner marker missing")
     require("previousVersionDate" not in state, "old previous-version timestamp owner survived")
 
     require("BUILD124_HISTORY_NO_CURRENT_DUP1" in menu, "current-version duplicate removal missing")

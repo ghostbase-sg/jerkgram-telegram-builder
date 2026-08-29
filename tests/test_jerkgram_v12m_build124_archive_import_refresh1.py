@@ -9,50 +9,38 @@ PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_archive_import_runtime1.py"
 SETTINGS_FIXTURE = '''import Foundation
 import SwiftSignalKit
 
-// MARK: Jerkgram v1.2L BUILD123_ACCOUNT_SETTINGS_OWNER1
 private struct GhostBaseSettingsState: Equatable {
     static func load(accountPeerId: Int64, mirrorLegacy: Bool) -> GhostBaseSettingsState {
         return GhostBaseSettingsState()
     }
 }
 
-public func ghostBaseSettingsController(
-    context: AccountContext
-) -> ViewController {
-    return ghostBaseSettingsPageController(
-        context: context,
-        page: .root
-    )
+// Stable Build123/Build124 settings entries owner. Keep the public controller
+// declaration deliberately multiline so this fixture catches regressions back
+// to formatting-sensitive controller anchors.
+private func ghostBaseSettingsEntries(
+    presentationData: PresentationData,
+    state: GhostBaseSettingsState
+) -> [Any] {
+    return []
 }
 
 private func ghostBaseSettingsPageController(
     context: AccountContext,
-    page: GhostBaseSettingsPage
+    initialPage: GhostBaseSettingsPage = .root
 ) -> ViewController {
+    // MARK: Jerkgram v1.2L BUILD123_ACCOUNT_SETTINGS_SCOPE1
     let accountPeerId = context.account.peerId.toInt64()
     let initialState = GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
 
-    // Build123 may already compose unrelated runtime data here. Build124 must
-    // preserve this pipeline instead of assuming a two-signal combineLatest.
-    let auxiliarySignal = Signal<Int, NoError>.single(1)
-    let signal = combineLatest(
-        context.sharedContext.presentationData,
-        statePromise.get(),
-        auxiliarySignal
-    )
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state, auxiliary -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        _ = auxiliary
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         fatalError()
     }
-
-    let controller = ItemListController(
-        context: context,
-        state: signal
-    )
-    return controller
+    return ItemListController(context: context, state: signal)
 }
 '''
 
@@ -72,24 +60,59 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("ActionDisposable", updated)
         self.assertIn("rawAccountPeerId.int64Value == accountPeerId", updated)
         self.assertIn("GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)", updated)
-        self.assertIn("stateValue.modify", updated)
+        self.assertIn("_ = stateValue.modify { _ in refreshed }", updated)
         self.assertIn("statePromise.set(refreshed)", updated)
-        self.assertIn("jerkgramImportRefreshSignal", updated)
-        self.assertIn("let stateSignal = combineLatest(", updated)
-        self.assertIn("combineLatest(stateSignal, jerkgramImportRefreshSignal)", updated)
-        self.assertIn("|> map { value, _ in value }", updated)
-        self.assertLess(
-            updated.index("BUILD124_ARCHIVE_IMPORT_REFRESH1"),
-            updated.index("private func ghostBaseSettingsPageController("),
+        self.assertIn("let jerkgramImportRefreshStateSignal = combineLatest(", updated)
+        self.assertIn("statePromise.get(),\n        jerkgramImportRefreshSignal", updated)
+        self.assertIn("|> map { (state: GhostBaseSettingsState, _: Void) -> GhostBaseSettingsState in state }", updated)
+        self.assertIn(
+            "let signal = combineLatest(context.sharedContext.presentationData, jerkgramImportRefreshStateSignal)",
+            updated,
         )
+        self.assertNotIn(
+            "combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)",
+            updated,
+        )
+        self.assertLess(updated.index("BUILD124_ARCHIVE_IMPORT_REFRESH1"), updated.index("private func ghostBaseSettingsEntries("))
 
-    def test_existing_build123_state_pipeline_is_preserved_verbatim_except_local_name(self):
+    def test_multiline_controller_signature_does_not_drive_helper_anchor(self):
         module = self.load_patch()
         updated = module.patch_settings_refresh_text(SETTINGS_FIXTURE)
-        self.assertIn("        statePromise.get(),\n        auxiliarySignal\n    )", updated)
-        self.assertIn("|> map { presentationData, state, auxiliary ->", updated)
-        self.assertNotIn("presentationData, state, _ ->", updated)
-        self.assertNotIn("combineLatest(context.sharedContext.presentationData, statePromise.get(), jerkgramImportRefreshSignal)", updated)
+        self.assertIn("private func ghostBaseSettingsPageController(\n    context: AccountContext,", updated)
+        self.assertIn("BUILD124_ARCHIVE_IMPORT_REFRESH1", updated)
+
+    def test_refresh_bridge_uses_private_settings_page_state_owner(self):
+        module = self.load_patch()
+        updated = module.patch_settings_refresh_text(SETTINGS_FIXTURE)
+        self.assertIn(
+            "let signal = combineLatest(context.sharedContext.presentationData, jerkgramImportRefreshStateSignal)",
+            updated,
+        )
+
+    def test_refresh_bridge_handles_a_state_signal_declared_before_atomic_owner(self):
+        module = self.load_patch()
+        early_signal_fixture = SETTINGS_FIXTURE.replace(
+            "    let statePromise = ValuePromise(initialState, ignoreRepeated: true)\n"
+            "    let stateValue = Atomic(value: initialState)\n\n"
+            "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())\n",
+            "    let statePromise = ValuePromise(initialState, ignoreRepeated: true)\n\n"
+            "    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())\n",
+        ).replace(
+            "    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
+            "        fatalError()\n"
+            "    }\n"
+            "    return ItemListController(context: context, state: signal)\n",
+            "    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in\n"
+            "        fatalError()\n"
+            "    }\n"
+            "    let stateValue = Atomic(value: initialState)\n"
+            "    return ItemListController(context: context, state: signal)\n",
+        )
+        updated = module.patch_settings_refresh_text(early_signal_fixture)
+        self.assertIn(
+            "let signal = combineLatest(context.sharedContext.presentationData, jerkgramImportRefreshStateSignal)",
+            updated,
+        )
 
     def test_success_path_notifies_only_after_persisted_settings_are_projected(self):
         module = self.load_patch()

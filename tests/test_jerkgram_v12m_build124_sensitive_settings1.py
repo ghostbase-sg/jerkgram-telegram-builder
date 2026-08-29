@@ -5,6 +5,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_sensitive_settings1.py"
+VERIFY = REPO / "scripts/verify_jerkgram_v12m_build124_sensitive_settings1.py"
 
 FIXTURE = '''// MARK: Jerkgram v1.2L BUILD123_ACCOUNT_SETTINGS_OWNER1
 private func jerkgramPersistChangedSettings(
@@ -86,6 +87,15 @@ class Build124SensitiveSettingsTests(unittest.TestCase):
         module = self.load_patch()
         once = module.patch_text(FIXTURE)
         self.assertEqual(once, module.patch_text(once))
+
+    def test_verifier_tracks_canonical_jerkgram_runtime_keys(self):
+        source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn('"jerkgram.ProtectedContent.Enabled"', source)
+        self.assertIn('"jerkgram.ProtectedContent.OneTimeSave"', source)
+        self.assertIn('"jerkgram.GhostMode.ScheduledSend"', source)
+        self.assertNotIn('"GhostBase.ProtectedContent.Enabled"', source)
+        self.assertNotIn('"GhostBase.ProtectedContent.OneTimeSave"', source)
+        self.assertNotIn('"GhostBase.GhostMode.ScheduledSend"', source)
 
 
 if __name__ == "__main__":

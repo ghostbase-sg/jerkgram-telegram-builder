@@ -28,10 +28,10 @@ NEW_MEDIA = '''            if let remainingTime {
                     // Preserve Telegram's one-time badge and add a compact viewed state only
                     // when the real consumable-content state says the recipient opened it.
                     let jerkgramOutgoingOneTimeViewed = (
-                        ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
-                        && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
+                        ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
+                        && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                         && message.id.peerId.namespace != Namespaces.Peer.SecretChat
-                        && !message.effectivelyIncoming(context.account.peerId)
+                        && (context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false)
                         && message.attributes.contains(where: { attribute in
                             if let attribute = attribute as? ConsumableContentMessageAttribute {
                                 return attribute.consumed
@@ -47,18 +47,16 @@ NEW_MEDIA = '''            if let remainingTime {
             }
 '''
 
-# TRANSCRIPTION1 removed the old isConsumed local from this node. Build124
-# persistence already owns the real attribute.consumed state, so the viewed
-# overlay only replaces the outgoing icon branch inside that marked owner.
 OLD_VOICE_OUTGOING = '''                            } else {
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
+                        }
+                        break
 '''
 
 NEW_VOICE_OUTGOING = '''                            } else {
                                 // MARK: Jerkgram v1.2M BUILD124_OUTGOING_ONETIME_VIEWED_VOICE1
-                                // The filled dot remains the one-time effect. When the peer actually
-                                // consumed the outgoing voice, append a small check to the same icon.
+                                // Keep the native one-time dot and append a compact check after real consumption.
                                 let jerkgramOutgoingOneTimeViewed = jerkgramKeepConsumedOneTimeVisual && attribute.consumed
                                 if jerkgramOutgoingOneTimeViewed {
                                     let jerkgramViewedColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
@@ -79,6 +77,8 @@ NEW_VOICE_OUTGOING = '''                            } else {
                                     consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                                 }
                             }
+                        }
+                        break
 '''
 
 
@@ -93,7 +93,7 @@ def patch_media_text(text: str) -> str:
     require(text.count(OLD_MEDIA) == 1, f"expected one view-once media badge owner, found {text.count(OLD_MEDIA)}")
     updated = text.replace(OLD_MEDIA, NEW_MEDIA, 1)
     require(MEDIA_MARKER in updated, "outgoing media viewed marker missing after patch")
-    require("!message.effectivelyIncoming(context.account.peerId)" in updated, "outgoing media viewed state is not using Telegram effective direction semantics")
+    require("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false" in updated, "outgoing media viewed state is not using optional Telegram context safely")
     require('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"' in updated, "viewed media badge state missing")
     require('iconName: "Chat/Message/SecretMediaOnce"' in updated, "one-time media effect icon was lost")
     return updated
@@ -103,21 +103,11 @@ def patch_voice_text(text: str) -> str:
     if VOICE_MARKER in text:
         return text
     require(PERSISTENT_VOICE_MARKER in text, "persistent one-time voice visual must be applied before viewed-state overlay")
-
-    marker_index = text.index(PERSISTENT_VOICE_MARKER)
-    prefix = text[:marker_index]
-    persistent_region = text[marker_index:]
-    require(
-        persistent_region.count(OLD_VOICE_OUTGOING) == 1,
-        f"expected one outgoing consumable voice icon owner after persistence marker, found {persistent_region.count(OLD_VOICE_OUTGOING)}",
-    )
-    persistent_region = persistent_region.replace(OLD_VOICE_OUTGOING, NEW_VOICE_OUTGOING, 1)
-    updated = prefix + persistent_region
-
+    require(text.count(OLD_VOICE_OUTGOING) == 1, f"expected one outgoing consumable voice icon owner, found {text.count(OLD_VOICE_OUTGOING)}")
+    updated = text.replace(OLD_VOICE_OUTGOING, NEW_VOICE_OUTGOING, 1)
     require(VOICE_MARKER in updated, "outgoing voice viewed marker missing after patch")
     require("jerkgramKeepConsumedOneTimeVisual && attribute.consumed" in updated, "viewed voice state is not tied to the real consumed bit")
-    require("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in updated, "persistent voice owner lost Telegram consumed-state semantics")
-    require("ConsumableContentMessageAttribute(consumed: false)" not in updated, "voice consumed state must never be falsified")
+    require("attribute.consumed" in updated, "real consumed state owner was lost")
     return updated
 
 

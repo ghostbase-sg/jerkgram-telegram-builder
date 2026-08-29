@@ -14,6 +14,21 @@ def require(value: bool, message: str) -> None:
         raise RuntimeError("[Build124 lifecycle freeze verify] " + message)
 
 
+def request_lifecycle_block(text: str) -> str:
+    signature = "private static func requestLifecycleFlush()"
+    start = text.index(signature)
+    brace = text.index("{", start + len(signature))
+    depth = 0
+    for index in range(brace, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:index + 1]
+    raise RuntimeError("[Build124 lifecycle freeze verify] request function is unbalanced")
+
+
 def main() -> None:
     require(TARGET.is_file(), f"target missing: {TARGET}")
     text = TARGET.read_text(encoding="utf-8")
@@ -25,8 +40,7 @@ def main() -> None:
     require(observer_block.count("requestLifecycleFlush()") == 2, "both lifecycle observers must use the async request")
     require("flushSynchronously()" not in observer_block, "lifecycle observer still performs synchronous flush")
 
-    request_end = text.index("@discardableResult", request_start)
-    request_block = text[request_start:request_end]
+    request_block = request_lifecycle_block(text)
     require("self.queue.async" in request_block, "lifecycle request is not dispatched to capture queue")
     require("while !self.pendingEvents.isEmpty" in request_block, "async request does not drain pending capture events")
     require("self.queue.sync" not in request_block, "async lifecycle request still blocks its caller")

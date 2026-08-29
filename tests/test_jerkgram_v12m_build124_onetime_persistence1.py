@@ -5,8 +5,6 @@ import importlib.util
 import unittest
 
 from tests.test_jerkgram_v12m_build124_onetime_remote_persistence1 import Build124OneTimeRemotePersistenceTests
-from tests.test_jerkgram_v12m_build124_onetime_whitespace_anchor1 import Build124OneTimeWhitespaceAnchorTests
-from tests.test_jerkgram_v12m_build124_onetime_voice_transcription_owner1 import Build124OneTimeVoiceTranscriptionOwnerTests
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -36,9 +34,7 @@ AUTOREMOVE_FIXTURE = '''                                var updatedMedia = curre
                                 }
 '''
 
-VOICE_FIXTURE = '''                var isConsumed: Bool?
-                
-                var consumableContentIcon: UIImage?
+VOICE_FIXTURE = '''                var consumableContentIcon: UIImage?
                 for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
                         if !attribute.consumed {
@@ -48,7 +44,6 @@ VOICE_FIXTURE = '''                var isConsumed: Bool?
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
-                        isConsumed = attribute.consumed
                         break
                     }
                 }
@@ -89,7 +84,7 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         updated = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
         self.assertIn("currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat", updated)
         self.assertIn("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
-        self.assertIn('GhostBase.ProtectedContent.OneTimeSave', updated)
+        self.assertIn('jerkgram.ProtectedContent.OneTimeSave', updated)
 
     def test_voice_keeps_one_time_visual_after_consumption_but_preserves_consumed_state(self):
         module = self.load_patch()
@@ -97,7 +92,7 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         self.assertIn("BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1", updated)
         self.assertIn("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
         self.assertIn("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual", updated)
-        self.assertIn("isConsumed = attribute.consumed", updated)
+        self.assertIn("attribute.consumed", updated)
         self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)
 
     def test_build124_onetime_patch_is_idempotent(self):

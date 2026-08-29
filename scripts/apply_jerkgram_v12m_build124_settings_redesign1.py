@@ -183,15 +183,25 @@ def add_page_summary(block: str, expression: str) -> str:
         r'(?m)^(?P<indent>[ \t]*)(?:return|var\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*:\s*\[[^\]]+\])?\s*=)\s*\[\s*$',
         block,
     )
-    require(match is not None, "page entries array anchor missing")
-    indent = match.group("indent") + "    "
+    if match is not None:
+        indent = match.group("indent") + "    "
+        insertion = (
+            match.group(0)
+            + "\n"
+            + indent + PAGE_MARKER + "\n"
+            + indent + ".info(-1, " + expression + "),"
+        )
+        return block[:match.start()] + insertion + block[match.end():]
+
+    append_match = re.search(r'(?m)^(?P<indent>[ \t]*)entries\.append\(', block)
+    require(append_match is not None, "page entries array anchor missing")
     insertion = (
-        match.group(0)
-        + "\n"
-        + indent + PAGE_MARKER + "\n"
-        + indent + ".info(-1, " + expression + "),"
+        append_match.group("indent")
+        + PAGE_MARKER + "\n"
+        + append_match.group("indent")
+        + "entries.append(.info(-1, " + expression + "))\n"
     )
-    return block[:match.start()] + insertion + block[match.end():]
+    return block[:append_match.start()] + insertion + block[append_match.start():]
 
 
 def patch_settings_text(text: str) -> str:
@@ -334,7 +344,10 @@ def patch_time_machine_text(text: str) -> str:
         text = text[:filter_start] + filter_block + text[filter_slice_end:]
 
     require("Queue.concurrentDefaultQueue().async" in text, "Time Machine off-main loading disappeared")
-    require("eventPage(limit: 250)" in text, "Time Machine bounded paging disappeared")
+    require(
+        re.search(r"eventPage\s*\([^)]*\blimit\s*:\s*250\b", text, re.DOTALL) is not None,
+        "Time Machine bounded paging disappeared",
+    )
     return text
 
 

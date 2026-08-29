@@ -101,7 +101,8 @@ class Build119HybridUIContractTests(unittest.TestCase):
         self.assertIn("max(artifact_builds) >= 118", source)
         self.assertIn("Build118-or-newer Jerkgram artifact missing", source)
         self.assertNotIn('require("Jerkgram-build118" in workflow', source)
-        self.assertIn('workflow.count("uses: actions/upload-artifact@v4") == 1', source)
+        self.assertIn("success_ipa_uploads = re.findall(", source)
+        self.assertIn("exactly one successful Jerkgram IPA upload required", source)
         self.assertIn('"Whitegram" not in workflow', source)
 
     def test_settings_overlay_replaces_permanent_stars_input_with_route(self) -> None:

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import re
 
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
@@ -113,7 +114,10 @@ def main() -> None:
     require("build124TimeMachineSummary" in time_machine and "build119TimeMachineSummary" not in time_machine, "Time Machine still uses Build119 summary identity")
     require("systemStyle: .glass" in time_machine, "Time Machine filters/summary lost glass material")
     require("Queue.concurrentDefaultQueue().async" in time_machine, "Time Machine loading moved off its background queue owner")
-    require("eventPage(limit: 250)" in time_machine, "Time Machine bounded paging disappeared")
+    require(
+        re.search(r"eventPage\s*\([^)]*\blimit\s*:\s*250\b", time_machine, re.DOTALL) is not None,
+        "Time Machine bounded paging disappeared",
+    )
     require("loadMore" in time_machine, "Time Machine load-more behavior disappeared")
 
     print("[verify Build124 settings redesign] SOURCE VERIFIED")

@@ -5,6 +5,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_protected_forward1.py"
+VERIFY = REPO / "scripts/verify_jerkgram_v12m_build124_protected_forward1.py"
 
 
 class Build124ProtectedForwardTests(unittest.TestCase):
@@ -111,6 +112,18 @@ extension ChatControllerImpl {
         result = module.patch_text(self.fixture())
         self.assertIn("if !hideAuthor, let author = message.forwardInfo?.author ?? message.effectiveAuthor", result)
 
+    def test_materialized_portable_gate_rejects_secret_chats(self):
+        module = self.load_patch()
+        materialized = self.fixture().replace(
+            "            message.id.peerId.namespace != Namespaces.Peer.SecretChat\n",
+            "            !message.media.contains(where: { $0 is TelegramMediaPaidContent })\n",
+        )
+        result = module.patch_text(materialized)
+        self.assertIn(
+            "message.id.peerId.namespace != Namespaces.Peer.SecretChat",
+            result,
+        )
+
     def test_portable_copy_waits_for_media_before_commit(self):
         module = self.load_patch()
         result = module.patch_text(self.fixture())
@@ -122,11 +135,28 @@ extension ChatControllerImpl {
         self.assertIn("deliverOnMainQueue", result)
         self.assertLess(result.index("jerkgramPortableMessagesSignal"), result.index("let commitResolved"))
 
+    def test_commit_wrapper_keeps_schedule_closure_and_when_online_inside_switch(self):
+        module = self.load_patch()
+        result = module.patch_text(self.fixture())
+        start = result.index("let commitResolved")
+        end = result.index("if let jerkgramPortableMessagesSignal", start)
+        commit_region = result[start:end]
+        self.assertIn("case .schedule:", commit_region)
+        self.assertIn("})", commit_region)
+        self.assertIn("case .whenOnline:", commit_region)
+
     def test_patch_is_idempotent(self):
         module = self.load_patch()
         once = module.patch_text(self.fixture())
         self.assertEqual(once, module.patch_text(once))
         self.assertEqual(once.count("BUILD124_PROTECTED_FORWARD_LOCAL_COPY1"), 1)
+
+    def test_verifier_tracks_engine_resource_fetch_and_complete_data(self):
+        source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn('"context.engine.resources.fetch"', source)
+        self.assertIn('"waitUntilFetchStatus: true"', source)
+        self.assertNotIn('"fetchedMediaResource("', source)
+        self.assertNotIn('".complete(waitUntilFetchStatus: true)"', source)
 
 
 if __name__ == "__main__":

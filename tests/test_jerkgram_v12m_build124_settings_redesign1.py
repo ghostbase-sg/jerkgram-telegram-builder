@@ -141,7 +141,11 @@ case let .filter(_, _, title, value, kind):
     )
 strings.build119TimeMachineSummary(results.count, state.kinds.count, state.senderPeerId != nil)
 Queue.concurrentDefaultQueue().async {
-    let page = try eventStore.eventPage(limit: 250)
+    let page = try eventStore.eventPage(
+        accountPeerId: accountPeerId,
+        chatPeerId: chatPeerId,
+        limit: 250
+    )
 }
 '''
 
@@ -174,6 +178,25 @@ class Build124SettingsRedesignTests(unittest.TestCase):
         self.assertNotIn("aboutBuild119Summary", about)
         self.assertIn("build124AboutSummary", about)
 
+    def test_debug_research_entries_accumulator_gets_a_summary(self):
+        module = self.load_patch()
+        settings = SETTINGS_FIXTURE.replace(
+            '''    if page == .debugResearch {
+        return [
+            .header(0, strings.debugResearch),
+            .action(0, 1, strings.researchHiddenGiftsProbe, "", "researchHiddenGifts")
+        ]
+    }''',
+            '''    if page == .debugResearch {
+        entries.append(.header(debug, strings.debugResearch))
+        entries.append(.researchAction(debug, 1, strings.researchHiddenGiftsProbe, "researchHiddenGifts"))
+    }''',
+        )
+        updated = module.patch_settings_text(settings)
+        debug = module.block_text(updated, "if page == .debugResearch {")
+        self.assertIn("BUILD124_SETTINGS_PAGE_SUMMARY1", debug)
+        self.assertIn("entries.append(.info(-1, strings.build124DiagnosticsSummary))", debug)
+
     def test_stars_keeps_draft_save_cancel_but_uses_glass_surface(self):
         module = self.load_patch()
         updated = module.patch_stars_text(STARS_FIXTURE)
@@ -199,7 +222,8 @@ class Build124SettingsRedesignTests(unittest.TestCase):
         self.assertNotIn("build119TimeMachineSummary", updated)
         self.assertIn("systemStyle: .glass", updated)
         self.assertIn("Queue.concurrentDefaultQueue().async", updated)
-        self.assertIn("eventPage(limit: 250)", updated)
+        self.assertIn("eventPage(", updated)
+        self.assertIn("limit: 250", updated)
 
     def test_strings_cover_every_internal_surface_in_ru_and_en(self):
         module = self.load_patch()

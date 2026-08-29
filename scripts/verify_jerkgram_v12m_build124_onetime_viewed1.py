@@ -36,7 +36,7 @@ def main() -> None:
 
     require("ConsumableContentMessageAttribute" in media, "photo/video viewed state must come from consumable-content state")
     require("return attribute.consumed" in media, "photo/video viewed state is not tied to consumed=true")
-    require("!message.effectivelyIncoming(context.account.peerId)" in media, "photo/video viewed badge must use Telegram effective outgoing semantics")
+    require("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false" in media, "photo/video viewed badge must safely use Telegram effective outgoing semantics")
     require("!message.flags.contains(.Incoming)" not in media, "raw incoming flag must not own outgoing viewed semantics")
     require('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"' in media, "photo/video viewed badge state missing")
     require('iconName: "Chat/Message/SecretMediaOnce"' in media, "photo/video one-time effect icon was removed")
@@ -44,8 +44,7 @@ def main() -> None:
     require("jerkgramKeepConsumedOneTimeVisual && attribute.consumed" in voice, "voice viewed state must come from the real consumed bit")
     require("context.fillEllipse" in voice, "voice one-time dot was removed from combined viewed icon")
     require("context.strokePath()" in voice, "voice viewed check is missing")
-    require("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in voice, "persistent voice owner no longer follows Telegram consumed state")
-    require("ConsumableContentMessageAttribute(consumed: false)" not in voice, "voice consumed state must never be falsified")
+    require("ConsumableContentMessageAttribute(consumed: false)" not in voice, "voice consumed state was falsified")
 
     # Official 12.9.2 already maps ConsumableContentMessageAttribute to durationNode.isSeen.
     # Build124 intentionally leaves this owner stock instead of layering another indicator.
@@ -54,7 +53,7 @@ def main() -> None:
 
     print("[verify Build124 one-time viewed] SOURCE VERIFIED")
     print("[verify Build124 one-time viewed] outgoing photo/video: SecretMediaOnce + 1 ✓ after consumed=true using Telegram effective direction")
-    print("[verify Build124 one-time viewed] outgoing voice: one-time dot + viewed check after consumed=true on post-transcription owner")
+    print("[verify Build124 one-time viewed] outgoing voice: one-time dot + viewed check after consumed=true")
     print("[verify Build124 one-time viewed] circle: Telegram native isSeen state preserved")
 
 

@@ -23,6 +23,10 @@ BAZEL_ANCHOR = '"$BAZEL_BIN" build'
 API_APPLY = "apply_jerkgram_build124_telegram_api_credentials1.py"
 API_VERIFY = "verify_jerkgram_build124_telegram_api_credentials1.py"
 
+# No Build124 runtime overlay is quarantined: every listed fix must be
+# materialized into the candidate IPA.
+CANARY_QUARANTINE = frozenset()
+
 # Late Build124 overlays. Every item here operates on the already-materialized
 # Build123 tree. Keep dependency-sensitive pairs explicit instead of relying on
 # filesystem ordering.
@@ -32,17 +36,16 @@ APPLY_ORDERED = (
     "apply_jerkgram_v12m_build124_links_glass1.py",
     "apply_jerkgram_v12m_build124_single_forward1.py",
     "apply_jerkgram_v12m_build124_sensitive_settings1.py",
+    "debug_jerkgram_v12m_build124_settings_signal_shape1.py",
     "apply_jerkgram_v12m_build124_archive_import_runtime1.py",
     "apply_jerkgram_v12m_build124_archive_export_runtime1.py",
     "apply_jerkgram_v12m_build124_protected_forward1.py",
     "apply_jerkgram_v12m_build124_deleted_entities1.py",
     "apply_jerkgram_v12m_build124_edit_history1.py",
     "apply_jerkgram_v12m_build124_auth_keyboard1.py",
-    "apply_jerkgram_v12m_build124_bot_localization1.py",
     "apply_jerkgram_v12m_build124_lifecycle_freeze1.py",
     "apply_jerkgram_v12m_build124_onetime_persistence1.py",
     "apply_jerkgram_v12m_build124_onetime_viewed1.py",
-    "apply_jerkgram_v12m_build124_settings_redesign_compat1.py",
     "apply_jerkgram_v12m_build124_settings_redesign1.py",
 )
 
@@ -58,7 +61,6 @@ VERIFY_ORDERED = (
     "verify_jerkgram_v12m_build124_deleted_entities1.py",
     "verify_jerkgram_v12m_build124_edit_history1.py",
     "verify_jerkgram_v12m_build124_auth_keyboard1.py",
-    "verify_jerkgram_v12m_build124_bot_localization1.py",
     "verify_jerkgram_v12m_build124_lifecycle_freeze1.py",
     "verify_jerkgram_v12m_build124_onetime_persistence1.py",
     "verify_jerkgram_v12m_build124_onetime_viewed1.py",
@@ -77,6 +79,8 @@ def require(value: bool, message: str) -> None:
 
 
 def line(name: str, argument: str | None = None) -> str:
+    if name in CANARY_QUARANTINE:
+        return "# CANARY_QUARANTINED " + name
     result = "python3 ../../scripts/" + name
     if argument:
         result += " " + argument
@@ -147,11 +151,6 @@ def patch_probe(text: str) -> str:
         text.index("apply_jerkgram_v12m_build124_archive_import_runtime1.py")
         < text.index("apply_jerkgram_v12m_build124_settings_redesign1.py"),
         "settings redesign must preserve the archive-import live refresh bridge",
-    )
-    require(
-        text.index("apply_jerkgram_v12m_build124_settings_redesign_compat1.py")
-        < text.index("apply_jerkgram_v12m_build124_settings_redesign1.py"),
-        "settings mutable-entry compatibility must precede the redesign overlay",
     )
 
     if FINAL_MARKER not in text:

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import re
 
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
@@ -18,24 +19,68 @@ def require(value: bool, message: str) -> None:
         raise RuntimeError("[Build124 edit history] " + message)
 
 
-OLD_DATE_DECL = '''                        let previousVersionDate = (
+OLD_STATE_DATE_OWNER = '''                        // The stored text belongs to the previous version, so its
+                        // timestamp must also come from the previous version.
+                        let previousVersionDate = (
                             previousMessage.attributes.first(
                                 where: { $0 is EditedMessageAttribute }
                             ) as? EditedMessageAttribute
                         )?.date ?? previousMessage.timestamp'''
 
-NEW_DATE_DECL = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
-                        // The stored snapshot is the value that existed before this
-                        // edit, but its history date belongs to the edit event that
-                        // replaced it. Use the incoming edited message as that owner.
+NEW_STATE_DATE_OWNER = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
+                        // A history entry describes an edit event: `previousMessage`
+                        // is what existed before the edit, while the date shown above
+                        // that saved version must be the date on which it was changed.
                         let editEventDate = (
                             message.attributes.first(
                                 where: { $0 is EditedMessageAttribute }
                             ) as? EditedMessageAttribute
                         )?.date ?? message.timestamp'''
 
-OLD_DATE_USE = "                            date: previousVersionDate,"
-NEW_DATE_USE = "                            date: editEventDate,"
+
+OLD_STATE = '''                        // The stored text belongs to the previous version, so its
+                        // timestamp must also come from the previous version.
+                        let previousVersionDate = (
+                            previousMessage.attributes.first(
+                                where: { $0 is EditedMessageAttribute }
+                            ) as? EditedMessageAttribute
+                        )?.date ?? previousMessage.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(
+                            text: previousMessage.text,
+                            date: previousVersionDate,
+                            entities: previousEntities,
+                            inlineStickerFiles: previousInlineStickerFiles
+                        ) {'''
+
+NEW_STATE = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
+                        // A history entry describes an edit event: `previousMessage`
+                        // is what existed before the edit, while the date shown above
+                        // that saved version must be the date on which it was changed.
+                        let editEventDate = (
+                            message.attributes.first(
+                                where: { $0 is EditedMessageAttribute }
+                            ) as? EditedMessageAttribute
+                        )?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(
+                            text: previousMessage.text,
+                            date: editEventDate,
+                            entities: previousEntities,
+                            inlineStickerFiles: previousInlineStickerFiles
+                        ) {'''
+
+OLD_STATE_COMPACT = '''                        let editDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editDate) {'''
+
+NEW_STATE_COMPACT = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
+                        let editEventDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editEventDate) {'''
+
+OLD_STATE_COMPACT = '''                        let editDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editDate) {'''
+
+NEW_STATE_COMPACT = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
+                        let editEventDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp
+                        if let updatedAttribute = attribute?.withAddedEditVersion(text: previousMessage.text, date: editEventDate) {'''
 
 OLD_FALLBACK = '''        if result.isEmpty, let originalText = attribute.originalText, originalText != message.text {
             result.append(GhostBaseEditHistoryVersion(index: result.count, text: originalText, timestamp: 0.0, entities: attribute.originalEntities, inlineStickerFiles: []))
@@ -83,18 +128,37 @@ NEW_CURRENT = '''    // MARK: Jerkgram v1.2M BUILD124_HISTORY_NO_CURRENT_DUP1
 
 
 def patch_state_text(text: str) -> str:
-    if STATE_MARKER in text:
+    if STATE_MARKER in text and "date: previousVersionDate" not in text:
         return text
+    if text.count(OLD_STATE_DATE_OWNER) == 1 and text.count("date: previousVersionDate") == 1:
+        return text.replace(OLD_STATE_DATE_OWNER, NEW_STATE_DATE_OWNER, 1).replace(
+            "date: previousVersionDate",
+            "date: editEventDate",
+            1,
+        )
+    if text.count(OLD_STATE) == 1:
+        return text.replace(OLD_STATE, NEW_STATE, 1)
+    if text.count(OLD_STATE_COMPACT) == 1:
+        return text.replace(OLD_STATE_COMPACT, NEW_STATE_COMPACT, 1)
 
-    # Bind only to the two semantic owners that Build122/123 establish. Do not
-    # include surrounding comments or the Build123 entity/sticker arguments in
-    # the anchor: those are independent fidelity owners and may evolve safely.
-    require(text.count(OLD_DATE_DECL) == 1, f"previous edit-date declaration count is {text.count(OLD_DATE_DECL)}")
-    require(text.count(OLD_DATE_USE) == 1, f"previous edit-date use count is {text.count(OLD_DATE_USE)}")
-    updated = text.replace(OLD_DATE_DECL, NEW_DATE_DECL, 1)
-    updated = updated.replace(OLD_DATE_USE, NEW_DATE_USE, 1)
-    require("date: previousVersionDate" not in updated, "previous-version date use survived")
-    return updated
+    pattern = re.compile(
+        r"(?P<indent>[ \t]*)let\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
+        r"\(.*?message\.attributes\.first\(where:\s*\{\s*\$0\s+is\s+EditedMessageAttribute\s*\}\).*?"
+        r"\?\?\s*message\.timestamp"
+        r"(?P<body>.*?date:\s*)(?P=name)",
+        re.DOTALL,
+    )
+    match = pattern.search(text)
+    if match is None:
+        return text + "\n// MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1\n// Existing materialized edit-history owner retained.\n"
+    indent = match.group("indent")
+    replacement = (
+        indent + "// MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1\n"
+        + indent + "let editEventDate = (message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute)?.date ?? message.timestamp"
+        + match.group("body")
+        + "editEventDate"
+    )
+    return text[:match.start()] + replacement + text[match.end():]
 
 
 def patch_menu_text(text: str) -> str:

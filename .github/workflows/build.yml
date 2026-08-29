@@ -157,6 +157,26 @@ jobs:
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
+      - name: Upload materialized Build124 diagnostic owners
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build124-materialized-owner-diagnostics
+          path: |
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+            work/swiftgram-src/submodules/JerkgramCore/Sources/JerkgramStore.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift
+            work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+            work/swiftgram-src/submodules/SettingsUI/Sources/Jerkgram/JerkgramStarsEditorController.swift
+            work/swiftgram-src/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
+            work/swiftgram-src/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+          if-no-files-found: warn
+
       - name: Publish Jerkgram Build124 canary artifact
         if: success()
         run: |

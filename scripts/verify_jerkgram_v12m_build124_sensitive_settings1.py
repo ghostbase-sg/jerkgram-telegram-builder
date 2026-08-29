@@ -54,12 +54,12 @@ def main() -> None:
     require("!jerkgramSynchronousRuntimeSettingKeys.contains($0.key)" in settings, "sensitive-key exclusion filter missing")
     require("synchronize()" not in settings, "forced UserDefaults disk synchronize must not exist")
 
-    protected_key = '"GhostBase.ProtectedContent.Enabled"'
-    one_time_key = '"GhostBase.ProtectedContent.OneTimeSave"'
+    protected_key = '"jerkgram.ProtectedContent.Enabled"'
+    one_time_key = '"jerkgram.ProtectedContent.OneTimeSave"'
     require(protected_key in consume and one_time_key in consume, "consume owner no longer reads protected one-time runtime state")
     require(protected_key in autoremove and one_time_key in autoremove, "autoremove owner no longer reads protected one-time runtime state")
 
-    scheduled_key = '"GhostBase.GhostMode.ScheduledSend"'
+    scheduled_key = '"jerkgram.GhostMode.ScheduledSend"'
     require(scheduled_key in forward, "forward Scheduled Send consumer missing")
     require(scheduled_key in standalone, "standalone Scheduled Send consumer missing")
 

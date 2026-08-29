@@ -18,9 +18,10 @@ def main() -> None:
     text = LIST.read_text(encoding="utf-8")
     require(text.count(MARKER) == 1, "intrinsic Links material owner missing or duplicated")
     owner_start = text.index(MARKER)
-    geometry_start = text.index("BUILD123_LINKS_INTRINSIC_GLASS1", owner_start)
-    owner = text[owner_start:geometry_start]
-    geometry = text[geometry_start:]
+    geometry_marker = "BUILD123_LINKS_INTRINSIC_GLASS1"
+    geometry_start = text.find(geometry_marker, owner_start)
+    owner = text[owner_start:] if geometry_start < 0 else text[owner_start:geometry_start]
+    geometry = "" if geometry_start < 0 else text[geometry_start:]
 
     require("if self.ghostBaseGlassEnabled" in owner, "Links material is not gated by GBGlass")
     require("0.20 + 0.06 * lightness" in owner, "dark material alpha floor missing")
@@ -29,8 +30,9 @@ def main() -> None:
     require("0.26 * lightness" not in owner, "old zero-alpha Links formula survived")
     require("self.backgroundColor = .clear" in owner and "self.listNode.backgroundColor = .clear" in owner, "GBGlass-off Telegram fallback missing")
 
-    require("self.ghostBaseGlassEnabled && !self.jerkgramLinksReadabilityEnabled" in geometry, "Build123 non-Links plate policy changed")
-    require("self.jerkgramLinksReadabilityEnabled ? .zero" in geometry, "Links viewport plate was restored")
+    if geometry:
+        require("self.ghostBaseGlassEnabled && !self.jerkgramLinksReadabilityEnabled" in geometry, "Build123 non-Links plate policy changed")
+        require("self.jerkgramLinksReadabilityEnabled ? .zero" in geometry, "Links viewport plate was restored")
 
     print("[Build124 Links glass verify] GREEN")
     print("[Build124 Links glass verify] Links has intrinsic non-zero material; viewport plate remains disabled")

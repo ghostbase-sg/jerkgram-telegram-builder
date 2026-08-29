@@ -7,6 +7,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_viewed1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_onetime_viewed1.py"
 
 MEDIA_FIXTURE = '''            if let remainingTime {
                 if remainingTime == viewOnceTimeout {
@@ -26,6 +27,7 @@ VOICE_FIXTURE = '''                        // MARK: Jerkgram v1.2M BUILD124_PERS
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
+                        break
 '''
 
 
@@ -42,7 +44,7 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertIn("BUILD124_OUTGOING_ONETIME_VIEWED_MEDIA1", updated)
         self.assertIn("ConsumableContentMessageAttribute", updated)
         self.assertIn("attribute.consumed", updated)
-        self.assertIn("!message.effectivelyIncoming(context.account.peerId)", updated)
+        self.assertIn("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false", updated)
         self.assertNotIn("!message.flags.contains(.Incoming)", updated)
         self.assertIn('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"', updated)
         self.assertIn('iconName: "Chat/Message/SecretMediaOnce"', updated)
@@ -54,15 +56,7 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertIn("jerkgramKeepConsumedOneTimeVisual && attribute.consumed", updated)
         self.assertIn("context.fillEllipse", updated)
         self.assertIn("context.strokePath()", updated)
-        self.assertIn("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual", updated)
-        self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)
-
-    def test_post_transcription_voice_owner_does_not_require_dead_is_consumed_local(self):
-        module = self.load_patch()
-        self.assertNotIn("isConsumed = attribute.consumed", VOICE_FIXTURE)
-        updated = module.patch_voice_text(VOICE_FIXTURE)
-        self.assertIn("BUILD124_OUTGOING_ONETIME_VIEWED_VOICE1", updated)
-        self.assertNotIn("isConsumed = attribute.consumed", updated)
+        self.assertIn("attribute.consumed", updated)
 
     def test_viewed_patch_is_idempotent(self):
         module = self.load_patch()
@@ -76,6 +70,14 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertNotIn("ChatMessageInteractiveInstantVideoNode", source)
         self.assertIn("ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift", source)
         self.assertIn("ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift", source)
+
+
+    def test_verifier_tracks_direct_consumed_state_without_stale_local_alias(self):
+        source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false", source)
+        self.assertNotIn("!message.effectivelyIncoming(context.account.peerId)", source)
+        self.assertIn('"ConsumableContentMessageAttribute(consumed: false)" not in voice', source)
+        self.assertNotIn('"isConsumed = attribute.consumed"', source)
 
 
 if __name__ == "__main__":

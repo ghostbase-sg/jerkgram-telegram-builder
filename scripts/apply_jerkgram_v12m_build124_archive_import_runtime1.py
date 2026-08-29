@@ -77,7 +77,6 @@ private func jerkgramSettingsImportRefreshSignal(
                     return
                 }
                 reload()
-                subscriber.putNext(())
             }
         )
         return ActionDisposable {
@@ -97,47 +96,48 @@ def patch_settings_refresh_text(text: str) -> str:
         "Build123 account-scoped settings owner missing",
     )
 
-    controller_anchor = "private func ghostBaseSettingsPageController(\n    context: AccountContext,"
-    require(text.count(controller_anchor) == 1, f"settings page controller anchor count: {text.count(controller_anchor)}")
-    controller_start = text.index(controller_anchor)
-    text = text[:controller_start] + SETTINGS_REFRESH_HELPER + text[controller_start:]
+    # Do not anchor to the formatting of the public controller declaration.
+    # The entries builder is a stable single owner reused by Build123 and the
+    # later Build124 settings-redesign overlay.
+    helper_anchor = "private func ghostBaseSettingsEntries("
+    require(text.count(helper_anchor) == 1, f"settings entries owner anchor count: {text.count(helper_anchor)}")
+    helper_start = text.index(helper_anchor)
+    text = text[:helper_start] + SETTINGS_REFRESH_HELPER + text[helper_start:]
 
     state_anchor = "    let stateValue = Atomic(value: initialState)\n"
     require(text.count(state_anchor) == 1, f"settings Atomic anchor count: {text.count(state_anchor)}")
-    refresh_setup = state_anchor + r'''    let jerkgramImportRefreshSignal = jerkgramSettingsImportRefreshSignal(
+    refresh_setup = state_anchor + r'''    let accountPeerId = context.account.peerId.toInt64()
+    let jerkgramImportRefreshSignal = jerkgramSettingsImportRefreshSignal(
         accountPeerId: accountPeerId,
         reload: {
-            let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)
-            stateValue.modify { _ in refreshed }
+            let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId)
+            _ = stateValue.modify { _ in refreshed }
             statePromise.set(refreshed)
         }
     )
+    // Retain the import observer through the controller's existing state
+    // subscription without changing the arity or closure shape of whatever
+    // combineLatest the release chain already uses.
+    let jerkgramImportRefreshStateSignal = combineLatest(
+        __JERKGRAM_IMPORT_REFRESH_STATE_PROMISE__,
+        jerkgramImportRefreshSignal
+    )
+    |> map { (state: GhostBaseSettingsState, _: Void) -> GhostBaseSettingsState in state }
 '''
     text = text.replace(state_anchor, refresh_setup, 1)
 
-    # Build123 may already compose additional signals into the Settings state
-    # pipeline. Do not rewrite its combineLatest arity or map closure. Retain
-    # the import observer by wrapping the completed state signal instead.
-    page_start, page_end = balanced_region(text, "private func ghostBaseSettingsPageController(")
-    page = text[page_start:page_end]
-    signal_anchor = "    let signal = combineLatest"
-    require(page.count(signal_anchor) == 1, f"settings state signal anchor count: {page.count(signal_anchor)}")
-    page = page.replace(signal_anchor, "    let stateSignal = combineLatest", 1)
-
-    controller_state_anchor = "        state: signal\n"
-    require(page.count(controller_state_anchor) == 1, f"settings controller state anchor count: {page.count(controller_state_anchor)}")
-    controller_state = '''        state: (
-            combineLatest(stateSignal, jerkgramImportRefreshSignal)
-            |> map { value, _ in value }
-        )
-'''
-    page = page.replace(controller_state_anchor, controller_state, 1)
-    text = text[:page_start] + page + text[page_end:]
+    controller_start, controller_end = balanced_region(text, "private func ghostBaseSettingsPageController(")
+    controller_text = text[controller_start:controller_end]
+    state_get = "statePromise.get()"
+    require(controller_text.count(state_get) >= 1, "settings controller no longer consumes statePromise.get()")
+    controller_text = controller_text.replace(state_get, "jerkgramImportRefreshStateSignal", 1)
+    text = text[:controller_start] + controller_text + text[controller_end:]
+    require(text.count("__JERKGRAM_IMPORT_REFRESH_STATE_PROMISE__") == 1, "settings refresh placeholder count")
+    text = text.replace("__JERKGRAM_IMPORT_REFRESH_STATE_PROMISE__", state_get, 1)
 
     require(REFRESH_MARKER in text, "settings refresh marker missing after patch")
     require("ActionDisposable" in text, "settings refresh observer is not lifecycle-bound")
-    require("let stateSignal = combineLatest" in text, "existing Settings state pipeline was not preserved")
-    require("combineLatest(stateSignal, jerkgramImportRefreshSignal)" in text, "refresh signal is not retained by controller state")
+    require("jerkgramImportRefreshStateSignal" in text, "settings refresh state bridge missing")
     return text
 
 
