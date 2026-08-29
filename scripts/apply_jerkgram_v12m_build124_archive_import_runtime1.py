@@ -111,7 +111,7 @@ def patch_settings_refresh_text(text: str) -> str:
         accountPeerId: accountPeerId,
         reload: {
             let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId)
-            stateValue.modify { _ in refreshed }
+            _ = stateValue.modify { _ in refreshed }
             statePromise.set(refreshed)
         }
     )
