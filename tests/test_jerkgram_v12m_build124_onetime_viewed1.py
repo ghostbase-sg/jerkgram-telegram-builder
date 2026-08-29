@@ -26,7 +26,7 @@ VOICE_FIXTURE = '''                        // MARK: Jerkgram v1.2M BUILD124_PERS
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
-                        isConsumed = attribute.consumed
+                        break
 '''
 
 
@@ -55,7 +55,7 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertIn("jerkgramKeepConsumedOneTimeVisual && attribute.consumed", updated)
         self.assertIn("context.fillEllipse", updated)
         self.assertIn("context.strokePath()", updated)
-        self.assertIn("isConsumed = attribute.consumed", updated)
+        self.assertIn("attribute.consumed", updated)
 
     def test_viewed_patch_is_idempotent(self):
         module = self.load_patch()
