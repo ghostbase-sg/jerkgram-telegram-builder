@@ -183,15 +183,25 @@ def add_page_summary(block: str, expression: str) -> str:
         r'(?m)^(?P<indent>[ \t]*)(?:return|var\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*:\s*\[[^\]]+\])?\s*=)\s*\[\s*$',
         block,
     )
-    require(match is not None, "page entries array anchor missing")
-    indent = match.group("indent") + "    "
+    if match is not None:
+        indent = match.group("indent") + "    "
+        insertion = (
+            match.group(0)
+            + "\n"
+            + indent + PAGE_MARKER + "\n"
+            + indent + ".info(-1, " + expression + "),"
+        )
+        return block[:match.start()] + insertion + block[match.end():]
+
+    append_match = re.search(r'(?m)^(?P<indent>[ \t]*)entries\.append\(', block)
+    require(append_match is not None, "page entries array anchor missing")
     insertion = (
-        match.group(0)
-        + "\n"
-        + indent + PAGE_MARKER + "\n"
-        + indent + ".info(-1, " + expression + "),"
+        append_match.group("indent")
+        + PAGE_MARKER + "\n"
+        + append_match.group("indent")
+        + "entries.append(.info(-1, " + expression + "))\n"
     )
-    return block[:match.start()] + insertion + block[match.end():]
+    return block[:append_match.start()] + insertion + block[append_match.start():]
 
 
 def patch_settings_text(text: str) -> str:
