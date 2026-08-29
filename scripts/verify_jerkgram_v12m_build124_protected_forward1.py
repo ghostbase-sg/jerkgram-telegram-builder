@@ -25,8 +25,8 @@ def main() -> None:
     require("LocalFileReferenceMediaResource" in text, "fresh local file resource missing")
     require("Namespaces.Media.LocalFile" in text, "fresh local file media id missing")
     require("Namespaces.Media.LocalImage" in text, "fresh local image media id missing")
-    require("fetchedMediaResource(" in text, "source-media fetch owner missing")
-    require(".complete(waitUntilFetchStatus: true)" in text, "full resource wait missing")
+    require("context.engine.resources.fetch" in text, "source-media fetch owner missing")
+    require("waitUntilFetchStatus: true" in text, "full resource wait missing")
     require(
         "let mediaReference = message.media.first.map { AnyMediaReference.standalone(media: $0) }" not in text,
         "Build123 original-cloud standalone shortcut is still active",
