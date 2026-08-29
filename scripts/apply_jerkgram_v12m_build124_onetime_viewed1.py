@@ -28,8 +28,8 @@ NEW_MEDIA = '''            if let remainingTime {
                     // Preserve Telegram's one-time badge and add a compact viewed state only
                     // when the real consumable-content state says the recipient opened it.
                     let jerkgramOutgoingOneTimeViewed = (
-                        ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
-                        && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
+                        ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
+                        && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                         && message.id.peerId.namespace != Namespaces.Peer.SecretChat
                         && !message.effectivelyIncoming(context.account.peerId)
                         && message.attributes.contains(where: { attribute in
@@ -51,13 +51,12 @@ OLD_VOICE_OUTGOING = '''                            } else {
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
-                        isConsumed = attribute.consumed
+                        break
 '''
 
 NEW_VOICE_OUTGOING = '''                            } else {
                                 // MARK: Jerkgram v1.2M BUILD124_OUTGOING_ONETIME_VIEWED_VOICE1
-                                // The filled dot remains the one-time effect. When the peer actually
-                                // consumed the outgoing voice, append a small check to the same icon.
+                                // Keep the native one-time dot and append a compact check after real consumption.
                                 let jerkgramOutgoingOneTimeViewed = jerkgramKeepConsumedOneTimeVisual && attribute.consumed
                                 if jerkgramOutgoingOneTimeViewed {
                                     let jerkgramViewedColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
@@ -79,7 +78,7 @@ NEW_VOICE_OUTGOING = '''                            } else {
                                 }
                             }
                         }
-                        isConsumed = attribute.consumed
+                        break
 '''
 
 
@@ -108,7 +107,7 @@ def patch_voice_text(text: str) -> str:
     updated = text.replace(OLD_VOICE_OUTGOING, NEW_VOICE_OUTGOING, 1)
     require(VOICE_MARKER in updated, "outgoing voice viewed marker missing after patch")
     require("jerkgramKeepConsumedOneTimeVisual && attribute.consumed" in updated, "viewed voice state is not tied to the real consumed bit")
-    require("isConsumed = attribute.consumed" in updated, "real consumed state was lost")
+    require("attribute.consumed" in updated, "real consumed state owner was lost")
     return updated
 
 
