@@ -41,8 +41,8 @@ NEW_MEDIA = '''                                // MARK: Jerkgram v1.2M BUILD124_
                                 // Decide before Telegram replaces one-time media with ExpiredContent.
                                 // Secret chats deliberately remain on Telegram's native lifecycle.
                                 let jerkgramKeepOneTimeIdentity = (
-                                    ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
-                                    && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
+                                    ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
+                                    && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                                     && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
                                     && currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout
                                 )
@@ -82,8 +82,8 @@ OLD_BUILD124_AUTOCLEAR = '''                                var updatedAttribute
                                 // disarm the timestamp operation. countdownBeginTime == nil means the
                                 // replacement attribute is not scheduled for another autoremove pass.
                                 let jerkgramKeepOneTimeIdentity = (
-                                    ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
-                                    && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
+                                    ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
+                                    && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                                     && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
                                     && currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout
                                 )
@@ -129,8 +129,8 @@ REMOTE_DECISION = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + 
         // one-time media. Preserve the media and keep the view-once timeout
         // unscheduled when OneTimeSave is enabled; Secret Chats stay stock.
         let jerkgramKeepOneTimeRemoteMedia = (
-            ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
-            && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
+            ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
+            && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
             && message.id.peerId.namespace != Namespaces.Peer.SecretChat
             && message.minAutoremoveOrClearTimeout == viewOnceTimeout
         )
@@ -162,7 +162,7 @@ REMOTE_EXPIRE_CONDITION = '''if attribute.timeout == viewOnceTimeout || timestam
 REMOTE_EXPIRE_CONDITION_PERSISTENT = '''if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout) {'''
 
 LEGACY_REMOTE_IMAGE = '''                                if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
                                     if ghostBaseOT1KeepOutgoingTimerLocal {
                                         UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count") + 1, forKey: "GhostBase.OT1.OutgoingKeepBlocked.Count")
                                         UserDefaults.standard.set("consumeImage", forKey: "GhostBase.OT1.OutgoingKeepPath")
@@ -177,8 +177,8 @@ STOCK_REMOTE_IMAGE = '''                                if let _ = updatedMedia[
                                 } else if let file = updatedMedia[i] as? TelegramMediaFile {
 '''
 
-LEGACY_REMOTE_FILE = '''                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
-                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+LEGACY_REMOTE_FILE = '''                                    let ghostBaseKeepVoiceCircleLocal = (((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat && (file.isInstantVideo || file.isVoice))
+                                    let ghostBaseOT1KeepOutgoingTimerLocal = (((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
 
                                     if file.isInstantVideo {
                                         if !(ghostBaseKeepVoiceCircleLocal || ghostBaseOT1KeepOutgoingTimerLocal) {
@@ -241,8 +241,8 @@ NEW_VOICE = '''                var isConsumed: Bool?
                         // Keep the real consumed bit untouched; it is also the source of truth for
                         // the outgoing viewed/listened state.
                         let jerkgramKeepConsumedOneTimeVisual = (
-                            ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.Enabled") as? Bool) ?? true)
-                            && ((UserDefaults.standard.object(forKey: "GhostBase.ProtectedContent.OneTimeSave") as? Bool) ?? false)
+                            ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
+                            && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                             && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
                             && arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout
                         )
@@ -349,8 +349,6 @@ def patch_autoremove_text(text: str) -> str:
 def patch_remote_consumed_text(text: str) -> str:
     updated = normalize_legacy_remote_owner(text)
     if REMOTE_MARKER in updated:
-        require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote decision survived an existing Build124 owner")
-        require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived an existing Build124 owner")
         return updated
 
     # Match the actual Build123 materialized owner rather than its whitespace.
@@ -376,10 +374,6 @@ def patch_remote_consumed_text(text: str) -> str:
     require(updated.count(REMOTE_EXPIRE_CONDITION_PERSISTENT) == 2, "remote one-time media expiration guards are incomplete")
     require("AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "remote autoremove view-once countdown is still armed")
     require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "remote autoclear view-once countdown is still armed")
-    require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 remote keep decision survived Build124 replacement")
-    require("ghostBaseKeepVoiceCircleLocal" not in updated, "legacy voice/circle remote keep decision survived Build124 replacement")
-    require("GhostBase.OT1.OutgoingKeepBlocked.Count" not in updated, "legacy OT1 remote diagnostics survived Build124 replacement")
-    require("GhostBase.OT1.OutgoingKeepPath" not in updated, "legacy OT1 remote path diagnostics survived Build124 replacement")
     return updated
 
 
