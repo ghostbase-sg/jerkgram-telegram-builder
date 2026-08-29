@@ -7,6 +7,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_onetime_viewed1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_onetime_viewed1.py"
 
 MEDIA_FIXTURE = '''            if let remainingTime {
                 if remainingTime == viewOnceTimeout {
@@ -69,6 +70,12 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertNotIn("ChatMessageInteractiveInstantVideoNode", source)
         self.assertIn("ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift", source)
         self.assertIn("ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift", source)
+
+
+    def test_verifier_tracks_direct_consumed_state_without_stale_local_alias(self):
+        source = VERIFY.read_text(encoding="utf-8")
+        self.assertIn('"ConsumableContentMessageAttribute(consumed: false)" not in voice', source)
+        self.assertNotIn('"isConsumed = attribute.consumed"', source)
 
 
 if __name__ == "__main__":
