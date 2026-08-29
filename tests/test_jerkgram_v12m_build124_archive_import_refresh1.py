@@ -60,7 +60,7 @@ class Build124ArchiveImportRefreshTests(unittest.TestCase):
         self.assertIn("ActionDisposable", updated)
         self.assertIn("rawAccountPeerId.int64Value == accountPeerId", updated)
         self.assertIn("GhostBaseSettingsState.load(accountPeerId: accountPeerId, mirrorLegacy: true)", updated)
-        self.assertIn("stateValue.modify", updated)
+        self.assertIn("_ = stateValue.modify { _ in refreshed }", updated)
         self.assertIn("statePromise.set(refreshed)", updated)
         self.assertIn("let jerkgramImportRefreshStateSignal = combineLatest(", updated)
         self.assertIn("statePromise.get(),\n        jerkgramImportRefreshSignal", updated)
