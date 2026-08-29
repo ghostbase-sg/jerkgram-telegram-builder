@@ -19,6 +19,25 @@ def require(value: bool, message: str) -> None:
         raise RuntimeError("[Build124 edit history] " + message)
 
 
+OLD_STATE_DATE_OWNER = '''                        // The stored text belongs to the previous version, so its
+                        // timestamp must also come from the previous version.
+                        let previousVersionDate = (
+                            previousMessage.attributes.first(
+                                where: { $0 is EditedMessageAttribute }
+                            ) as? EditedMessageAttribute
+                        )?.date ?? previousMessage.timestamp'''
+
+NEW_STATE_DATE_OWNER = '''                        // MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1
+                        // A history entry describes an edit event: `previousMessage`
+                        // is what existed before the edit, while the date shown above
+                        // that saved version must be the date on which it was changed.
+                        let editEventDate = (
+                            message.attributes.first(
+                                where: { $0 is EditedMessageAttribute }
+                            ) as? EditedMessageAttribute
+                        )?.date ?? message.timestamp'''
+
+
 OLD_STATE = '''                        // The stored text belongs to the previous version, so its
                         // timestamp must also come from the previous version.
                         let previousVersionDate = (
@@ -109,8 +128,14 @@ NEW_CURRENT = '''    // MARK: Jerkgram v1.2M BUILD124_HISTORY_NO_CURRENT_DUP1
 
 
 def patch_state_text(text: str) -> str:
-    if STATE_MARKER in text:
+    if STATE_MARKER in text and "date: previousVersionDate" not in text:
         return text
+    if text.count(OLD_STATE_DATE_OWNER) == 1 and text.count("date: previousVersionDate") == 1:
+        return text.replace(OLD_STATE_DATE_OWNER, NEW_STATE_DATE_OWNER, 1).replace(
+            "date: previousVersionDate",
+            "date: editEventDate",
+            1,
+        )
     if text.count(OLD_STATE) == 1:
         return text.replace(OLD_STATE, NEW_STATE, 1)
     if text.count(OLD_STATE_COMPACT) == 1:
