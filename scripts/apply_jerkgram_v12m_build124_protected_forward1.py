@@ -336,7 +336,9 @@ def patch_portable_branch(text: str) -> str:
 
 
 def patch_commit_resolution(text: str) -> str:
-    token = "switch mode {"
+    # balanced_region searches for the opening brace after the token. Keep the
+    # brace out of the token so it owns the switch, not the nested schedule closure.
+    token = "switch mode"
     require(text.count(token) == 1, f"forward mode switch count is {text.count(token)}")
     switch_start, switch_end = balanced_region(text, token)
     line_start = text.rfind("\n", 0, switch_start) + 1
