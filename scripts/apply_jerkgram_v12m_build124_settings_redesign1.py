@@ -344,7 +344,10 @@ def patch_time_machine_text(text: str) -> str:
         text = text[:filter_start] + filter_block + text[filter_slice_end:]
 
     require("Queue.concurrentDefaultQueue().async" in text, "Time Machine off-main loading disappeared")
-    require("eventPage(limit: 250)" in text, "Time Machine bounded paging disappeared")
+    require(
+        re.search(r"eventPage\s*\([^)]*\blimit\s*:\s*250\b", text, re.DOTALL) is not None,
+        "Time Machine bounded paging disappeared",
+    )
     return text
 
 
