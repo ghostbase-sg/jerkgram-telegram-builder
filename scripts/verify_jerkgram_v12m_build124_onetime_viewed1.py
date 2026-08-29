@@ -44,7 +44,7 @@ def main() -> None:
     require("jerkgramKeepConsumedOneTimeVisual && attribute.consumed" in voice, "voice viewed state must come from the real consumed bit")
     require("context.fillEllipse" in voice, "voice one-time dot was removed from combined viewed icon")
     require("context.strokePath()" in voice, "voice viewed check is missing")
-    require("isConsumed = attribute.consumed" in voice, "voice consumed state was falsified")
+    require("ConsumableContentMessageAttribute(consumed: false)" not in voice, "voice consumed state was falsified")
 
     # Official 12.9.2 already maps ConsumableContentMessageAttribute to durationNode.isSeen.
     # Build124 intentionally leaves this owner stock instead of layering another indicator.
