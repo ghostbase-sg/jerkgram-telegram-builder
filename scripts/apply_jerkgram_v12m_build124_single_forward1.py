@@ -68,7 +68,9 @@ def patch_menu_text(text: str) -> str:
 def main() -> None:
     settings = SETTINGS.read_text(encoding="utf-8")
     menu = MENU.read_text(encoding="utf-8")
-    # Build123 has no forwardWithoutAuthor state field; this is read from UserDefaults.\n    menu = patch_menu_text(menu)\n    MENU.write_text(menu, encoding="utf-8")
+    # Build123 has no forwardWithoutAuthor state field; this is read from UserDefaults.
+    menu = patch_menu_text(menu)
+    MENU.write_text(menu, encoding="utf-8")
     print("[Build124 single forward] GREEN")
     print("[Build124 single forward] single long-press uses the current account setting and remains independent of Telegram forward permission")
 
