@@ -213,9 +213,7 @@ STOCK_REMOTE_FILE = '''                                    if file.isInstantVide
                                     }
 '''
 
-OLD_VOICE = '''                var isConsumed: Bool?
-                
-                var consumableContentIcon: UIImage?
+OLD_VOICE = '''                var consumableContentIcon: UIImage?
                 for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
                         if !attribute.consumed {
@@ -225,21 +223,16 @@ OLD_VOICE = '''                var isConsumed: Bool?
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
-                        isConsumed = attribute.consumed
                         break
                     }
                 }
 '''
 
-NEW_VOICE = '''                var isConsumed: Bool?
-                
-                var consumableContentIcon: UIImage?
+NEW_VOICE = '''                var consumableContentIcon: UIImage?
                 for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
                         // MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1
-                        // A retained one-time voice must stay visibly one-time after playback.
-                        // Keep the real consumed bit untouched; it is also the source of truth for
-                        // the outgoing viewed/listened state.
+                        // Preserve Telegram's consumed=true state, while retaining its one-time icon.
                         let jerkgramKeepConsumedOneTimeVisual = (
                             ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
                             && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
@@ -253,7 +246,6 @@ NEW_VOICE = '''                var isConsumed: Bool?
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
-                        isConsumed = attribute.consumed
                         break
                     }
                 }
@@ -384,7 +376,7 @@ def patch_voice_file_text(text: str) -> str:
     require(text.count(OLD_VOICE) == 1, f"expected one consumable voice icon owner, found {text.count(OLD_VOICE)}")
     updated = text.replace(OLD_VOICE, NEW_VOICE, 1)
     require(VOICE_MARKER in updated, "persistent one-time voice visual marker missing after patch")
-    require("isConsumed = attribute.consumed" in updated, "real consumed state was lost")
+    require("attribute.consumed" in updated, "real consumed state owner was lost")
     return updated
 
 
