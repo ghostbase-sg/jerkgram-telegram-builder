@@ -61,7 +61,7 @@ def main() -> None:
     require("rawAccountPeerId.int64Value == accountPeerId" in settings_text, "settings refresh is not filtered to the current account")
     require("ActionDisposable" in settings_text, "settings import observer is not tied to signal lifetime")
     require("GhostBaseSettingsState.load(accountPeerId: accountPeerId)" in settings_text, "settings refresh does not reload persisted account state")
-    require("stateValue.modify { _ in refreshed }" in settings_text, "settings Atomic state is not refreshed after import")
+    require("_ = stateValue.modify { _ in refreshed }" in settings_text, "settings Atomic refresh result is not explicitly discarded")
     require("statePromise.set(refreshed)" in settings_text, "settings UI promise is not refreshed after import")
     require("combineLatest(" in settings_text and "jerkgramImportRefreshSignal" in settings_text, "settings refresh signal is not retained by controller state pipeline")
 
