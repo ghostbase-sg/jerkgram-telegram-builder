@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "exclude": [
+    {"kind": "segment", "value": ".git", "reason": "VCS metadata"},
+    {"kind": "root-prefix", "value": "bazel-", "reason": "Generated Bazel output"},
+    {"kind": "root-path", "value": "ghostbase-final", "reason": "Generated package staging"},
+    {"kind": "prefix", "value": "build-input/configuration-repository", "reason": "Generated local build configuration"}
+  ]
+}
