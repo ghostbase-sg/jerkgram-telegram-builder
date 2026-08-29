@@ -38,43 +38,48 @@ OLD = '''        // MARK: Jerkgram v1.2D BUILD115_LINKS_READABILITY_OWNER1
 
 NEW = '''        // MARK: Jerkgram v1.2D BUILD115_LINKS_READABILITY_OWNER1
         // MARK: Jerkgram v1.2M BUILD124_LINKS_INTRINSIC_MATERIAL1
-        // Links must keep the Build123 intrinsic geometry fix: never restore
-        // the viewport-height rounded glass plate. Instead the actual list
-        // owner receives a bounded, theme-aware translucent material. The
-        // alpha has a non-zero floor so dark profile sources do not collapse
-        // to a visually opaque/absent material state.
+        // The Links pane itself must remain transparent. A pane-sized color
+        // layer darkens the whole profile; the material belongs only behind
+        // the loaded Links list, exactly like Groups in Common.
         if self.jerkgramLinksReadabilityEnabled {
+            self.backgroundColor = .clear
+            self.listNode.backgroundColor = .clear
             if self.ghostBaseGlassEnabled {
-                let luminance = (
-                    UserDefaults.standard.object(
-                        forKey: "Jerkgram.ProfileBackdrop.SourceLuminance"
-                    ) as? NSNumber
-                )?.doubleValue ?? 0.0
+                let effectView: UIVisualEffectView
+                if let current = self.glassBackgroundView.subviews.first as? UIVisualEffectView {
+                    effectView = current
+                } else {
+                    let created = UIVisualEffectView()
+                    created.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                    self.glassBackgroundView.addSubview(created)
+                    effectView = created
+                }
+                effectView.effect = UIBlurEffect(style: presentationData.theme.overallDarkAppearance ? .systemMaterialDark : .systemMaterialLight)
+                effectView.frame = self.glassBackgroundView.bounds
 
-                let lightness = max(
-                    0.0,
-                    min(
-                        1.0,
-                        (CGFloat(luminance) - 0.55) / 0.45
-                    )
+                var distanceToTop: CGFloat = -100.0
+                var distanceToBottom: CGFloat = -100.0
+                if case let .known(topOffset) = self.listNode.visibleContentOffset() {
+                    distanceToTop = -topOffset + self.listNode.insets.top
+                }
+                if case let .known(bottomOffset) = self.listNode.visibleBottomContentOffset() {
+                    distanceToBottom = -bottomOffset + self.listNode.insets.bottom
+                }
+                distanceToTop = max(-100.0, distanceToTop)
+                distanceToBottom = max(-100.0, distanceToBottom)
+                let linksFrame = CGRect(
+                    x: sideInset + 16.0,
+                    y: distanceToTop,
+                    width: max(1.0, self.listNode.visibleSize.width - (sideInset + 16.0) * 2.0),
+                    height: max(1.0, self.listNode.visibleSize.height - distanceToTop - distanceToBottom)
                 )
-
-                let materialAlpha: CGFloat = presentationData.theme.overallDarkAppearance
-                    ? 0.20 + 0.06 * lightness
-                    : 0.14 + 0.04 * lightness
-                let readabilityColor = UIColor(
-                    white: presentationData.theme.overallDarkAppearance ? 0.0 : 1.0,
-                    alpha: materialAlpha
-                )
-
-                self.backgroundColor = readabilityColor
-                self.listNode.backgroundColor = readabilityColor
+                transition.updateFrame(view: self.glassBackgroundView, frame: linksFrame)
+                self.glassBackgroundView.layer.cornerRadius = 16.0
+                self.glassBackgroundView.layer.borderWidth = 0.5
+                self.glassBackgroundView.layer.borderColor = presentationData.theme.list.itemPlainSeparatorColor.withAlphaComponent(presentationData.theme.overallDarkAppearance ? 0.30 : 0.20).cgColor
+                self.glassBackgroundView.isHidden = false
             } else {
-                // GBGlass off returns this pane to the normal Telegram-owned
-                // transparent surface; the parent profile background remains
-                // the only owner, exactly like the other list panes.
-                self.backgroundColor = .clear
-                self.listNode.backgroundColor = .clear
+                self.glassBackgroundView.isHidden = true
             }
         }
 '''
@@ -90,7 +95,23 @@ def patch_text(text: str) -> str:
         return text
     require(text.count(OLD) == 1, f"expected one Build115 Links owner, found {text.count(OLD)}")
     require("BUILD123_LINKS_INTRINSIC_GLASS1" in text, "Build123 intrinsic Links geometry owner missing")
-    return text.replace(OLD, NEW, 1)
+    updated = text.replace(OLD, NEW, 1)
+    # The Build123 geometry branch used to hide every Links card after the
+    # owner above laid it out. Preserve that policy for non-Links panes only.
+    geometry_marker = "BUILD123_LINKS_INTRINSIC_GLASS1"
+    owner_marker = "BUILD115_LINKS_READABILITY_OWNER1"
+    geometry_start = updated.index(geometry_marker)
+    geometry_end = updated.find(owner_marker, geometry_start)
+    if geometry_end < 0:
+        geometry_end = len(updated)
+    geometry = updated[geometry_start:geometry_end]
+    require(geometry.count("        } else {") == 1, "Build123 Links hide branch missing")
+    geometry = geometry.replace(
+        "        } else {",
+        "        } else if !self.jerkgramLinksReadabilityEnabled {",
+        1,
+    )
+    return updated[:geometry_start] + geometry + updated[geometry_end:]
 
 
 def main() -> None:

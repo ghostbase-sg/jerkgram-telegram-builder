@@ -35,7 +35,24 @@ class Build124ProfileMoreTests(unittest.TestCase):
             self.expandBackgroundNode.isHidden = true
             self.expandNode.isHidden = true
             self.expandButonNode.isHidden = true
-        }'''
+        }
+
+        var expandBackgroundFrame = expandFrame
+        expandBackgroundFrame.origin.x -= 50.0
+        expandBackgroundFrame.size.width += 50.0
+        self.expandBackgroundNode.frame = expandBackgroundFrame
+        // MARK: Jerkgram v1.2L BUILD123_DESCRIPTION_EXPAND_GLASS1
+        let expandSurfaceColor: UIColor
+        if GhostBaseGlassStyle.isEnabled {
+            expandSurfaceColor = UIColor(
+                white: presentationData.theme.overallDarkAppearance ? 0.0 : 1.0,
+                alpha: presentationData.theme.overallDarkAppearance ? 0.26 : 0.18
+            )
+        } else {
+            expandSurfaceColor = presentationData.theme.list.itemBlocksBackgroundColor
+        }
+        self.expandBackgroundNode.image = generateExpandBackground(size: expandBackgroundFrame.size, color: expandSurfaceColor)
+'''
 
     def test_more_reserves_text_layout_space_instead_of_covering_glyphs(self):
         module = self.load_patch()
@@ -45,6 +62,9 @@ class Build124ProfileMoreTests(unittest.TestCase):
         self.assertIn("expandSize.width", result)
         self.assertIn("self.textNode.cutout = nil", result)
         self.assertIn("textLayout = self.textNode.updateLayoutInfo", result)
+        self.assertIn("BUILD124_PROFILE_MORE_NO_OVERLAY1", result)
+        self.assertIn("self.expandBackgroundNode.image = nil", result)
+        self.assertNotIn("expandBackgroundFrame.origin.x -= 50.0", result)
 
     def test_cutout_only_applies_to_collapsed_multiline_with_more(self):
         module = self.load_patch()

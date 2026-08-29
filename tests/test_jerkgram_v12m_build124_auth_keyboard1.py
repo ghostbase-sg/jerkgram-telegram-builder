@@ -62,6 +62,7 @@ class Build124AuthKeyboardTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_phone_layout(self.fixture())
         self.assertIn("BUILD124_AUTH_KEYBOARD1", result)
+        self.assertIn("BUILD124_AUTH_RUNTIME_LAYOUT1", result)
         self.assertIn("let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0", result)
         self.assertIn("if !jerkgramKeyboardVisible {", result)
         self.assertIn("self.animationNode.isHidden = true", result)

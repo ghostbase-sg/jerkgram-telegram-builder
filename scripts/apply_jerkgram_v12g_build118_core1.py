@@ -21,15 +21,49 @@ def require(value, message):
         raise RuntimeError("[Build118 core] " + message)
 
 
+def payload_files():
+    return {
+        Path("BUILD"): PAYLOAD / "BUILD",
+        **{
+            Path("Sources") / source.name: source
+            for source in sorted(PAYLOAD.glob("*.swift"))
+        },
+    }
+
+
+def destination_is_recognized_core() -> bool:
+    expected = payload_files()
+    if not DESTINATION.is_dir():
+        return False
+    # Later Build119+ overlays extend JerkgramStore.swift. The immutable BUILD,
+    # model and index owners still identify the Build118 foundation, while the
+    # Store declaration proves it is the same core rather than an arbitrary
+    # pre-existing directory.
+    for relative in (Path("BUILD"), Path("Sources/JerkgramModels.swift"), Path("Sources/JerkgramIndex.swift")):
+        target = DESTINATION / relative
+        source = expected[relative]
+        if not target.is_file() or target.read_bytes() != source.read_bytes():
+            return False
+    store = DESTINATION / "Sources/JerkgramStore.swift"
+    if not store.is_file():
+        return False
+    return "public enum JerkgramCaptureRecorder" in store.read_text(encoding="utf-8")
+
+
 def main():
     require(PAYLOAD.is_dir(), "payload missing")
-    require(not DESTINATION.exists(), "foundation owner already exists: submodules/JerkgramCore")
+    if DESTINATION.exists():
+        require(
+            destination_is_recognized_core(),
+            "foundation owner exists with different content: submodules/JerkgramCore",
+        )
+        print("[Build118 core] account-scoped canonical store and reference index already materialized")
+        return
     DESTINATION.mkdir(parents=True)
-    shutil.copy2(PAYLOAD / "BUILD", DESTINATION / "BUILD")
-    sources = DESTINATION / "Sources"
-    sources.mkdir()
-    for source in sorted(PAYLOAD.glob("*.swift")):
-        shutil.copy2(source, sources / source.name)
+    for relative, source in payload_files().items():
+        target = DESTINATION / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
     print("[Build118 core] account-scoped canonical store and reference index materialized")
 
 

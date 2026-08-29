@@ -8,10 +8,30 @@ import re
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 STATE = ROOT / "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
 MENU = ROOT / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift"
+CHAT_LIST = ROOT / "submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
 
 STATE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_EDIT_EVENT_DATE1"
 NO_DUP_MARKER = "// MARK: Jerkgram v1.2M BUILD124_HISTORY_NO_CURRENT_DUP1"
 DATE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_HISTORY_NATIVE_DATE1"
+DATE_HEADERS_MARKER = "// MARK: Jerkgram v1.2M BUILD124_HISTORY_DATE_HEADERS1"
+
+
+OLD_DATE_HEADER_OWNER = '''    var disableFloatingDateHeaders = false
+    if case .customChatContents = chatLocation {
+        disableFloatingDateHeaders = true
+    }'''
+
+
+NEW_DATE_HEADER_OWNER = '''    // MARK: Jerkgram v1.2M BUILD124_HISTORY_DATE_HEADERS1
+    // Custom chats normally suppress floating dates. Edit history is the one
+    // exception: it supplies real edit-event timestamps and explicitly opts
+    // out of hashtag-search navigation, so it should use Telegram's native
+    // date separators without changing any other custom-chat screen.
+    var disableFloatingDateHeaders = false
+    if case let .customChatContents(contents) = associatedData.subject,
+       !contents.ghostBaseSuppressSearchJump {
+        disableFloatingDateHeaders = true
+    }'''
 
 
 def require(value: bool, message: str) -> None:
@@ -172,15 +192,28 @@ def patch_menu_text(text: str) -> str:
     return updated
 
 
+def patch_chat_list_text(text: str) -> str:
+    if DATE_HEADERS_MARKER in text:
+        return text
+    require(
+        text.count(OLD_DATE_HEADER_OWNER) == 2,
+        f"custom-chat date-header owner count is {text.count(OLD_DATE_HEADER_OWNER)}",
+    )
+    return text.replace(OLD_DATE_HEADER_OWNER, NEW_DATE_HEADER_OWNER)
+
+
 def main() -> None:
     state = STATE.read_text(encoding="utf-8")
     menu = MENU.read_text(encoding="utf-8")
+    chat_list = CHAT_LIST.read_text(encoding="utf-8")
     state = patch_state_text(state)
     menu = patch_menu_text(menu)
+    chat_list = patch_chat_list_text(chat_list)
     STATE.write_text(state, encoding="utf-8")
     MENU.write_text(menu, encoding="utf-8")
+    CHAT_LIST.write_text(chat_list, encoding="utf-8")
     print("[Build124 edit history] GREEN")
-    print("[Build124 edit history] one stored snapshot per edit; edit-event timestamps feed native Telegram date headers")
+    print("[Build124 edit history] one stored snapshot per edit; edit history alone uses native Telegram date headers")
 
 
 if __name__ == "__main__":

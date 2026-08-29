@@ -23,6 +23,9 @@ def main() -> None:
     require("var textLayout = self.textNode.updateLayoutInfo" in text, "mutable initial text layout missing")
     require("textLayout = self.textNode.updateLayoutInfo" in text, "post-cutout relayout missing")
     require("var textSize = textLayout.size" in text and "textSize = textLayout.size" in text, "post-cutout text size refresh missing")
+    require("BUILD124_PROFILE_MORE_NO_OVERLAY1" in text, "more overlay removal missing")
+    require("self.expandBackgroundNode.image = nil" in text, "more overlay image is still active")
+    require("expandBackgroundFrame.origin.x -= 50.0" not in text, "historical 50 pt text-cover survived")
     print("[Build124 profile more verify] GREEN")
     print("[Build124 profile more verify] more control no longer relies on opaque overlap masking")
 

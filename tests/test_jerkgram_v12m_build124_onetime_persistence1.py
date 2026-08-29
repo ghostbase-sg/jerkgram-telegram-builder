@@ -61,8 +61,8 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         module = self.load_patch()
         updated = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
         self.assertIn("BUILD124_PERSISTENT_ONETIME_MARKER1", updated)
-        self.assertIn("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
-        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)", updated)
+        self.assertIn("currentMessage.minAutoremoveOrClearTimeout != nil", updated)
+        self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", updated)
         self.assertIn("updatedAttributes.remove(at: i)", updated)
         self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)
 
@@ -79,18 +79,18 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         self.assertLess(updated.index("let jerkgramKeepOneTimeIdentity"), updated.index("var updatedMedia = currentMessage.media"))
         self.assertLess(updated.index("var updatedMedia = currentMessage.media"), updated.index("var updatedAttributes = currentMessage.attributes"))
 
-    def test_persistence_guard_remains_non_secret_and_view_once_only(self):
+    def test_persistence_guard_remains_non_secret_and_covers_timed_media(self):
         module = self.load_patch()
         updated = module.patch_autoremove_text(AUTOREMOVE_FIXTURE)
         self.assertIn("currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat", updated)
-        self.assertIn("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
+        self.assertIn("currentMessage.minAutoremoveOrClearTimeout != nil", updated)
         self.assertIn('jerkgram.ProtectedContent.OneTimeSave', updated)
 
     def test_voice_keeps_one_time_visual_after_consumption_but_preserves_consumed_state(self):
         module = self.load_patch()
         updated = module.patch_voice_file_text(VOICE_FIXTURE)
         self.assertIn("BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1", updated)
-        self.assertIn("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
+        self.assertIn("arguments.message.minAutoremoveOrClearTimeout != nil", updated)
         self.assertIn("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual", updated)
         self.assertIn("attribute.consumed", updated)
         self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)

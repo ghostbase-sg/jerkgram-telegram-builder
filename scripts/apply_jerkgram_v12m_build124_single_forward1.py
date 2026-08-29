@@ -9,6 +9,7 @@ SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsCont
 MENU = ROOT / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift"
 STATE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_FORWARD_SETTING_OWNER1"
 MENU_MARKER = "// MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_ACCOUNT_SCOPE1"
+TARGET_MARKER = "// MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_TARGET_SCOPE1"
 BUILD123_MENU_MARKER = "BUILD123_PORTABLE_MENU_RESTRICTIONS1"
 
 
@@ -48,6 +49,33 @@ NEW_MENU = '''        // MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_ACCOUNT_SC
 '''
 
 
+OLD_TARGET_GATE = '''        if ghostBaseForwardWithoutAuthor,
+           messages.allSatisfy({ message in
+               message.id.peerId.namespace != Namespaces.Peer.SecretChat
+               && !message.media.contains(where: {
+                   $0 is TelegramMediaPaidContent
+                   || $0 is TelegramMediaAction
+                   || $0 is TelegramMediaExpiredContent
+               })
+           }) {'''
+
+
+NEW_TARGET_GATE = '''        // MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_TARGET_SCOPE1
+        // Long-pressing one album item must validate that one item. Validating
+        // the whole visual message group hid this action when an unrelated
+        // neighbour was expired or unsupported.
+        let jerkgramForwardWithoutAuthorTargets = selectAll ? messages : [message]
+        if ghostBaseForwardWithoutAuthor,
+           jerkgramForwardWithoutAuthorTargets.allSatisfy({ message in
+               message.id.peerId.namespace != Namespaces.Peer.SecretChat
+               && !message.media.contains(where: {
+                   $0 is TelegramMediaPaidContent
+                   || $0 is TelegramMediaAction
+                   || $0 is TelegramMediaExpiredContent
+               })
+           }) {'''
+
+
 def patch_state_text(text: str) -> str:
     if STATE_MARKER in text:
         return text
@@ -56,11 +84,14 @@ def patch_state_text(text: str) -> str:
 
 
 def patch_menu_text(text: str) -> str:
-    if MENU_MARKER in text:
-        return text
-    require(text.count(BUILD123_MENU_MARKER) == 1 or "data.messageActions.options.contains(.forward) survived portable gate" in text, "Build123 portable single-message gate missing")
-    require(text.count(OLD_MENU) == 1, f"canonical Build123 single context setting owner count is {text.count(OLD_MENU)}")
-    updated = text.replace(OLD_MENU, NEW_MENU, 1)
+    updated = text
+    require(updated.count(BUILD123_MENU_MARKER) == 1 or "data.messageActions.options.contains(.forward) survived portable gate" in updated, "Build123 portable single-message gate missing")
+    if MENU_MARKER not in updated:
+        require(updated.count(OLD_MENU) == 1, f"canonical Build123 single context setting owner count is {updated.count(OLD_MENU)}")
+        updated = updated.replace(OLD_MENU, NEW_MENU, 1)
+    if TARGET_MARKER not in updated:
+        require(updated.count(OLD_TARGET_GATE) == 1, f"single-forward target gate count is {updated.count(OLD_TARGET_GATE)}")
+        updated = updated.replace(OLD_TARGET_GATE, NEW_TARGET_GATE, 1)
     require(BUILD123_MENU_MARKER in updated or "data.messageActions.options.contains(.forward) survived portable gate" in updated, "Build123 portable restrictions were lost")
     return updated
 
@@ -72,7 +103,7 @@ def main() -> None:
     menu = patch_menu_text(menu)
     MENU.write_text(menu, encoding="utf-8")
     print("[Build124 single forward] GREEN")
-    print("[Build124 single forward] single long-press uses the current account setting and remains independent of Telegram forward permission")
+    print("[Build124 single forward] single long-press validates its actual target and remains independent of Telegram forward permission")
 
 
 if __name__ == "__main__":

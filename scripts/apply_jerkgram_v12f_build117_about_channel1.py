@@ -30,6 +30,15 @@ def replace_once(text, old, new, label):
 
 
 def patch_strings(text):
+    if (
+        "case communityLoading" in text
+        and "case communityUnavailable" in text
+        and "case communityNoPosts" in text
+        and "self.text(.communityLoading)" in text
+        and '.communityLoading: "Loading channel…"' in text
+        and '.communityLoading: "Загрузка канала…"' in text
+    ):
+        return text
     text = replace_once(
         text,
         "    case copyExtensionDiagnostics\n}",
@@ -427,6 +436,13 @@ def patch_controller(text):
 
 
 def patch_settings(text):
+    if (
+        "JerkgramAboutChannelState" in text
+        and "BUILD117_ABOUT_CHANNEL_CARD1" in text
+        and "aboutChannelState: aboutChannelState" in text
+        and "openAboutChannel: (EnginePeer) -> Void" in text
+    ):
+        return text
     if "import Postbox\n" not in text:
         text = replace_once(text, "import TelegramCore\n", "import TelegramCore\nimport Postbox\n", "Postbox import")
     if "import ItemListPeerItem\n" not in text:

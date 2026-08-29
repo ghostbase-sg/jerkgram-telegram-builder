@@ -82,6 +82,8 @@ def numeric_peer_id(value):
 
 
 def patch_profile_ui(text):
+    if "BUILD116_PROFILE_SCOPE1" in text:
+        return text
     old = '''// MARK: GhostBase v1.1G NATIVEPANES1
 // MARK: Jerkgram v1.2D BUILD115_HIDE_RESEARCH_PANES1
 private func ghostBaseAppendingProfilePanes(
@@ -127,6 +129,8 @@ private func ghostBaseAppendingProfilePanes(
 
 
 def patch_chat_mentions(text):
+    if "BUILD116_CHAT_NUMERIC_MENTION1" in text:
+        return text
     anchor = '''    func openPeerMention(_ name: String, navigation: ChatControllerInteractionNavigateToPeer = .default, sourceMessageId: MessageId? = nil, progress: Promise<Bool>? = nil) {
         let _ = self.presentVoiceMessageDiscardAlert(action: {
 '''
@@ -164,6 +168,8 @@ def patch_chat_mentions(text):
 
 
 def patch_settings_runtime(text):
+    if "BUILD116_SETTINGS_RUNTIME_CLEANUP1" in text:
+        return text
     start, end = block_bounds(
         text,
         "// MARK: GhostBase v1.1G BOUNDEDDEBUG1",
@@ -178,6 +184,16 @@ def patch_settings_runtime(text):
 
 
 def patch_strings(text):
+    # Build116 writes the other source owners before this one. A failed retry
+    # must therefore safely resume when strings were already added by a later
+    # overlay or a previous partial materialization.
+    if (
+        "case copyExtensionDiagnostics" in text
+        and "self.text(.copyExtensionDiagnostics)" in text
+        and ".copyExtensionDiagnostics: \"Copy Extension Diagnostics\"" in text
+        and ".copyExtensionDiagnostics: \"Копировать диагностику расширений\"" in text
+    ):
+        return text
     key_anchor = "    case exportArchive\n}"
     key_replacement = '''    case exportArchive
 
@@ -284,6 +300,8 @@ def _replace_about_block(text):
 
 
 def patch_settings_localization_about(text):
+    if "BUILD116_STYLE_LOCALIZATION1" in text and "BUILD116_ABOUT_COMMUNITY1" in text:
+        return text
     title_old = '''private func ghostBaseSendTextStyleTitle(
     _ value: String
 ) -> String {

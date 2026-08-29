@@ -25,9 +25,12 @@ def main() -> None:
     require("Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1" in text, "keyboard marker missing")
 
     require(
-        text.count("Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1") == 1,
-        "keyboard marker duplicated",
+        text.count("Jerkgram v1.2M BUILD124_AUTH_RUNTIME_LAYOUT1") == 1,
+        "final keyboard layout owner missing or duplicated",
     )
+    require("self.ghostBaseBotLoginNode.isHidden = jerkgramKeyboardVisible" in text, "bot-login action still overlaps keyboard layout")
+    require("self.ghostBaseSafeLoginNode.isHidden = jerkgramKeyboardVisible" in text, "Safe Login stack still overlaps keyboard layout")
+    require("Режим призрака: ВКЛ" in text and "Включите до входа" in text, "Ghost-login localisation missing")
 
     # Regression gate: the phone input remains an input-height-aware Telegram
     # layout. This fix must not disable keyboard inset handling itself.

@@ -38,7 +38,7 @@ def main() -> None:
     require(remote.count(REMOTE_MARKER) == 1, "remote one-time persistence marker must exist exactly once")
     require(voice.count(VOICE_MARKER) == 1, "persistent one-time voice marker must exist exactly once")
 
-    require("currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout" in autoremove, "managed autoremove is not restricted to genuine view-once messages")
+    require("currentMessage.minAutoremoveOrClearTimeout != nil" in autoremove, "managed autoremove does not cover timed media")
     require("currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat" in autoremove, "secret chats must stay on Telegram stock semantics")
     require("if !jerkgramKeepOneTimeIdentity {" in autoremove, "retained one-time media is still replaced by ExpiredContent")
     require(autoremove.count("let jerkgramKeepOneTimeIdentity = (") == 1, "one-time persistence decision must have exactly one owner")
@@ -56,12 +56,12 @@ def main() -> None:
     require("TelegramMediaExpiredContent(data: .videoMessage)" in autoremove, "stock instant-video expiration fallback was lost")
     require("TelegramMediaExpiredContent(data: .voiceMessage)" in autoremove, "stock voice expiration fallback was lost")
     require("TelegramMediaExpiredContent(data: .file)" in autoremove, "stock file expiration fallback was lost")
-    require("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)" in autoremove, "persistent one-time identity is not disarmed")
+    require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in autoremove, "persistent timed identity is not disarmed")
     require("updatedAttributes.remove(at: i)" in autoremove, "stock autoclear removal fallback was lost")
     require("ghostBaseOT1KeepOutgoingTimerLocal" not in autoremove, "legacy OT1 managed-autoremove owner survived Build124")
     require("GhostBase.OT1.AutoremoveKeepBlocked.Count" not in autoremove, "legacy OT1 managed-autoremove diagnostics survived Build124")
 
-    require("message.minAutoremoveOrClearTimeout == viewOnceTimeout" in remote, "remote persistence is not restricted to genuine view-once messages")
+    require("message.minAutoremoveOrClearTimeout != nil" in remote, "remote persistence does not cover timed media")
     require("message.id.peerId.namespace != Namespaces.Peer.SecretChat" in remote, "remote persistence must not affect Secret Chats")
     require(remote.count("let jerkgramKeepOneTimeRemoteMedia = (") == 1, "remote one-time persistence decision must have exactly one owner")
     require(remote.count("if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout") == 2, "both remote media-expiration owners must be guarded")
@@ -73,7 +73,7 @@ def main() -> None:
     require("UserDefaults.standard.object(forKey: \"jerkgram.ProtectedContent.Enabled\")" in remote, "remote decision is not bound to the active protected-content setting")
     require("UserDefaults.standard.object(forKey: \"jerkgram.ProtectedContent.OneTimeSave\")" in remote, "remote decision is not bound to the active one-time persistence setting")
 
-    require("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout" in voice, "voice visual is not restricted to genuine view-once messages")
+    require("arguments.message.minAutoremoveOrClearTimeout != nil" in voice, "voice visual does not cover timed media")
     require("UserDefaults.standard.object(forKey: \"jerkgram.ProtectedContent.Enabled\")" in voice, "voice visual is not bound to the active protected-content setting")
     require("arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat" in voice, "voice override must not affect secret chats")
     require("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual" in voice, "consumed one-time voice visual is not retained")
@@ -83,7 +83,7 @@ def main() -> None:
     require("ConsumableContentMessageAttribute(consumed: false)" not in combined, "consumed/read state must never be falsified")
 
     print("[verify Build124 one-time persistence] SOURCE VERIFIED")
-    print("[verify Build124 one-time persistence] real view-once media persists across remote consumption and managed autoremove; countdown stays disarmed; legacy OT1 owners are absent; consumed state remains real")
+    print("[verify Build124 one-time persistence] real view-once and timed media persist across remote consumption and managed autoremove; countdown stays disarmed; legacy OT1 owners are absent; consumed state remains real")
 
 
 if __name__ == "__main__":

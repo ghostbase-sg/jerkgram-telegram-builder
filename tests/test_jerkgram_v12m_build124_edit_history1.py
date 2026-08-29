@@ -139,6 +139,26 @@ class Build124EditHistoryTests(unittest.TestCase):
         self.assertIn("timestamp: originalFallbackDate", result)
         self.assertNotIn("timestamp: 0.0, entities: attribute.originalEntities", result)
 
+    def test_only_edit_history_reenables_native_date_headers(self):
+        module = self.load_patch()
+        owner = '''    var disableFloatingDateHeaders = false
+    if case .customChatContents = chatLocation {
+        disableFloatingDateHeaders = true
+    }
+
+    return entries.map { entry in
+    }
+
+    var disableFloatingDateHeaders = false
+    if case .customChatContents = chatLocation {
+        disableFloatingDateHeaders = true
+    }'''
+        result = module.patch_chat_list_text(owner)
+        self.assertEqual(result.count("BUILD124_HISTORY_DATE_HEADERS1"), 2)
+        self.assertIn("associatedData.subject", result)
+        self.assertIn("!contents.ghostBaseSuppressSearchJump", result)
+        self.assertNotIn("if case .customChatContents = chatLocation", result)
+
     def test_patch_is_idempotent(self):
         module = self.load_patch()
         state_once = module.patch_state_text(self.state_fixture())

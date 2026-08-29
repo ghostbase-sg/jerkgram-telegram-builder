@@ -7,6 +7,7 @@ import os
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 TARGET = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenLabeledValueItem.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_PROFILE_MORE_CUTOUT1"
+RUNTIME_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PROFILE_MORE_NO_OVERLAY1"
 
 OLD = '''        let textLayout = self.textNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0 - additionalSideInset, height: .greatestFiniteMagnitude))
         let textSize = textLayout.size
@@ -63,6 +64,30 @@ NEW = '''        // MARK: Jerkgram v1.2M BUILD124_PROFILE_MORE_CUTOUT1
             self.expandButonNode.isHidden = true
         }'''
 
+OLD_OVERLAY = '''        var expandBackgroundFrame = expandFrame
+        expandBackgroundFrame.origin.x -= 50.0
+        expandBackgroundFrame.size.width += 50.0
+        self.expandBackgroundNode.frame = expandBackgroundFrame
+        // MARK: Jerkgram v1.2L BUILD123_DESCRIPTION_EXPAND_GLASS1
+        let expandSurfaceColor: UIColor
+        if GhostBaseGlassStyle.isEnabled {
+            expandSurfaceColor = UIColor(
+                white: presentationData.theme.overallDarkAppearance ? 0.0 : 1.0,
+                alpha: presentationData.theme.overallDarkAppearance ? 0.26 : 0.18
+            )
+        } else {
+            expandSurfaceColor = presentationData.theme.list.itemBlocksBackgroundColor
+        }
+        self.expandBackgroundNode.image = generateExpandBackground(size: expandBackgroundFrame.size, color: expandSurfaceColor)
+'''
+
+NEW_OVERLAY = '''        // MARK: Jerkgram v1.2M BUILD124_PROFILE_MORE_NO_OVERLAY1
+        // The text cutout above reserves the exact "more" footprint. Do not
+        // paint Telegram's historical 50 pt cover over adjacent glyphs.
+        self.expandBackgroundNode.isHidden = true
+        self.expandBackgroundNode.image = nil
+'''
+
 
 def require(value: bool, message: str) -> None:
     if not value:
@@ -70,10 +95,14 @@ def require(value: bool, message: str) -> None:
 
 
 def patch_text(text: str) -> str:
-    if MARKER in text:
-        return text
-    require(text.count(OLD) == 1, f"layout owner count is {text.count(OLD)}")
-    return text.replace(OLD, NEW, 1)
+    updated = text
+    if MARKER not in updated:
+        require(updated.count(OLD) == 1, f"layout owner count is {updated.count(OLD)}")
+        updated = updated.replace(OLD, NEW, 1)
+    if RUNTIME_MARKER not in updated:
+        require(updated.count(OLD_OVERLAY) == 1, f"expand overlay owner count is {updated.count(OLD_OVERLAY)}")
+        updated = updated.replace(OLD_OVERLAY, NEW_OVERLAY, 1)
+    return updated
 
 
 def main() -> None:

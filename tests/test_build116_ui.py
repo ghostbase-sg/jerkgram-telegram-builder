@@ -265,6 +265,21 @@ public struct JerkgramStrings {
 
         self.verifier.verify(profile, chat, settings, strings)
 
+    def test_partial_materialization_retry_is_idempotent(self):
+        profile = "// MARK: Jerkgram v1.2E BUILD116_PROFILE_SCOPE1\n"
+        chat = "// MARK: Jerkgram v1.2E BUILD116_CHAT_NUMERIC_MENTION1\n"
+        settings_runtime = "// MARK: Jerkgram v1.2E BUILD116_SETTINGS_RUNTIME_CLEANUP1\n"
+        strings = '''case copyExtensionDiagnostics
+self.text(.copyExtensionDiagnostics)
+.copyExtensionDiagnostics: "Copy Extension Diagnostics"
+.copyExtensionDiagnostics: "Копировать диагностику расширений"
+'''
+
+        self.assertEqual(profile, self.overlay.patch_profile_ui(profile))
+        self.assertEqual(chat, self.overlay.patch_chat_mentions(chat))
+        self.assertEqual(settings_runtime, self.overlay.patch_settings_runtime(settings_runtime))
+        self.assertEqual(strings, self.overlay.patch_strings(strings))
+
 
 if __name__ == "__main__":
     unittest.main()

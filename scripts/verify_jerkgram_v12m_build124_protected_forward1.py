@@ -19,6 +19,7 @@ def main() -> None:
     text = TARGET.read_text(encoding="utf-8")
 
     require(text.count(MARKER) == 1, "Build124 protected-forward owner missing or duplicated")
+    require(text.count("BUILD124_PROTECTED_FORWARD_SOURCE_CHANNEL1") == 1, "source-channel protection owner missing or duplicated")
     require("import Postbox" in text, "Postbox import required for MediaResourceData")
 
     # Protected media must stop carrying the original protected cloud resource.
@@ -43,6 +44,9 @@ def main() -> None:
     )
     require('type: .TextUrl(url: "https://t.me/\\(username)")' in text, "public-channel attribution link missing")
     require("if !hideAuthor, let author =" in text, "hide-author contract missing")
+    require("private func jerkgramRequiresPortableForward" in text, "private source-channel protection resolver missing")
+    require("sourcePeer.isCopyProtectionEnabled" in text, "source-channel copy-protection flag is ignored")
+    require("messages.contains(where: { jerkgramRequiresPortableForward($0) })" in text, "portable path does not include source-channel protection")
 
     # Do not enqueue until the local file/photo is actually available.
     require("var jerkgramPortableMessagesSignal: Signal<[EnqueueMessage], NoError>?" in text, "async portable signal missing")

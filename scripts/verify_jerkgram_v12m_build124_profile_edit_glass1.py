@@ -20,8 +20,9 @@ def main() -> None:
     for path in FILES:
         text = path.read_text(encoding="utf-8")
         require("BUILD124_PROFILE_EDIT_SURFACE1" in text, f"{path.name}: translucent edit surface missing")
+        require("BUILD124_PROFILE_EDIT_RUNTIME_SURFACE1" in text, f"{path.name}: final edit field visual owner was not updated")
         require("GhostBaseGlassStyle.isEnabled" in text, f"{path.name}: Glass owner missing")
-        require("overallDarkAppearance ? 0.26 : 0.18" in text, f"{path.name}: readability alpha missing")
+        require("? 0.12" in text and ": 0.10" in text, f"{path.name}: final translucency alpha missing")
         require(": presentationData.theme.list.itemBlocksBackgroundColor" in text, f"{path.name}: stock Telegram fallback missing")
         require("self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor" not in text, f"{path.name}: opaque direct owner survived")
 

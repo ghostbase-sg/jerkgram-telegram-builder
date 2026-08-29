@@ -24,18 +24,19 @@ def main() -> None:
     geometry = "" if geometry_start < 0 else text[geometry_start:]
 
     require("if self.ghostBaseGlassEnabled" in owner, "Links material is not gated by GBGlass")
-    require("0.20 + 0.06 * lightness" in owner, "dark material alpha floor missing")
-    require("0.14 + 0.04 * lightness" in owner, "light material alpha floor missing")
-    require("presentationData.theme.overallDarkAppearance ? 0.0 : 1.0" in owner, "theme-aware neutral material missing")
-    require("0.26 * lightness" not in owner, "old zero-alpha Links formula survived")
-    require("self.backgroundColor = .clear" in owner and "self.listNode.backgroundColor = .clear" in owner, "GBGlass-off Telegram fallback missing")
+    require("UIVisualEffectView" in owner, "Links-local material view missing")
+    require(".systemMaterialDark" in owner and ".systemMaterialLight" in owner, "theme-aware Links material missing")
+    require("let linksFrame = CGRect" in owner, "bounded Links-card frame missing")
+    require("visibleContentOffset" in owner and "visibleBottomContentOffset" in owner, "Links-card frame is not tied to list content")
+    require("0.26 * lightness" not in owner, "old whole-pane dimming formula survived")
+    require("self.backgroundColor = .clear" in owner and "self.listNode.backgroundColor = .clear" in owner, "whole-pane fallback is not transparent")
 
     if geometry:
         require("self.ghostBaseGlassEnabled && !self.jerkgramLinksReadabilityEnabled" in geometry, "Build123 non-Links plate policy changed")
-        require("self.jerkgramLinksReadabilityEnabled ? .zero" in geometry, "Links viewport plate was restored")
+        require("else if !self.jerkgramLinksReadabilityEnabled" in geometry, "Links card is hidden by the old viewport branch")
 
     print("[Build124 Links glass verify] GREEN")
-    print("[Build124 Links glass verify] Links has intrinsic non-zero material; viewport plate remains disabled")
+    print("[Build124 Links glass verify] Links material is bounded to the loaded list; pane surface remains transparent")
 
 
 if __name__ == "__main__":

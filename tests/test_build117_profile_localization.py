@@ -78,6 +78,25 @@ public struct JerkgramStrings {
         for literal in ("История", "Присутствие", "Подарки · история", "Канал"):
             self.assertNotIn('text: "' + literal + '"', patched_tabs)
 
+    def test_partial_materialization_retry_is_idempotent(self):
+        strings = '''
+// MARK: Jerkgram v1.2F BUILD117_PROFILE_REPORT_LOCALIZATION1
+case profileHistoryTab
+case profileReportLoading
+.profileHistoryTab: "History"
+.profileHistoryTab: "История"
+'''
+        report = "strings.localizedProfileReport(rawText)\n"
+        tabs = '''
+presentationData.strings.jerkgram.profileHistoryTab
+presentationData.strings.jerkgram.presenceHistoryTab
+presentationData.strings.jerkgram.giftHistoryTab
+presentationData.strings.jerkgram.personalChannelTab
+'''
+        self.assertEqual(strings, self.overlay.patch_strings(strings))
+        self.assertEqual(report, self.overlay.patch_report(report))
+        self.assertEqual(tabs, self.overlay.patch_tabs(tabs))
+
 
 if __name__ == "__main__":
     unittest.main()

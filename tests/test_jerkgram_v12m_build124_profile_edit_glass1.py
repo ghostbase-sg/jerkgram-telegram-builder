@@ -21,7 +21,21 @@ class Build124ProfileEditGlassTests(unittest.TestCase):
             
             self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
             
-            let textColor = presentationData.theme.list.itemPrimaryTextColor'''
+            let textColor = presentationData.theme.list.itemPrimaryTextColor
+
+        // MARK: GhostBase v1.1P HEADER_FIELD_GLASS_OWNER1
+        let isDark = presentationData.theme.overallDarkAppearance
+            self.backgroundNode.backgroundColor =
+                UIColor(
+                    white:
+                        isDark
+                        ? 0.0
+                        : 1.0,
+                    alpha:
+                        isDark
+                        ? 0.26
+                        : 0.18
+                )'''
 
     def test_glass_enabled_uses_translucent_profile_surface(self):
         module = self.load_patch()
@@ -30,6 +44,8 @@ class Build124ProfileEditGlassTests(unittest.TestCase):
         self.assertIn("GhostBaseGlassStyle.isEnabled", result)
         self.assertIn("withAlphaComponent", result)
         self.assertIn("overallDarkAppearance", result)
+        self.assertIn("BUILD124_PROFILE_EDIT_RUNTIME_SURFACE1", result)
+        self.assertIn("? 0.12", result)
 
     def test_glass_off_keeps_stock_telegram_background(self):
         module = self.load_patch()

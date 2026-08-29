@@ -133,6 +133,12 @@ telegram_use_xcode_managed_codesigning = False
 sg_config = "{}"
 EOF
 
+
+echo
+echo "== Jerkgram private Telegram API credentials =="
+python3 ../../scripts/apply_jerkgram_build124_telegram_api_credentials1.py --variables build-input/configuration-repository/variables.bzl
+python3 ../../scripts/verify_jerkgram_build124_telegram_api_credentials1.py --variables build-input/configuration-repository/variables.bzl
+
 echo
 echo "== Build113 unsigned ESign-ready signing setup =="
 echo "Skip provisioning-profile decode, P12 import and temporary keychain"
@@ -586,6 +592,42 @@ python3 ../../scripts/apply_jerkgram_v12l_build123_message_fidelity1.py
 python3 ../../scripts/apply_jerkgram_v12l_build123_profile_ui1.py
 python3 ../../scripts/apply_jerkgram_v12l_build123_settings_ui1.py
 python3 ../../scripts/verify_jerkgram_v12l_build123_release_recovery1.py
+
+# JERKGRAM_V12M_BUILD124_SOURCE_HOOK
+echo
+echo "== Jerkgram v1.2M Build124 runtime fixes =="
+python3 ../../scripts/apply_jerkgram_v12m_build124_profile_edit_glass1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_profile_more1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_links_glass1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_single_forward1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_sensitive_settings1.py
+python3 ../../scripts/debug_jerkgram_v12m_build124_settings_signal_shape1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_archive_import_runtime1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_archive_export_runtime1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_protected_forward1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_deleted_entities1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_edit_history1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_auth_keyboard1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_lifecycle_freeze1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_onetime_persistence1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_onetime_viewed1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_settings_redesign1.py
+
+python3 ../../scripts/verify_jerkgram_v12m_build124_profile_edit_glass1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_profile_more1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_links_glass1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_single_forward1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_sensitive_settings1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_archive_import_runtime1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_archive_export_runtime1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_protected_forward1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_deleted_entities1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_edit_history1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_auth_keyboard1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_lifecycle_freeze1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_persistence1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_settings_redesign1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -703,3 +745,9 @@ echo
 echo "== Jerkgram v1.2L Build123 final identity =="
 python3 ../../scripts/jerkgram_finalize_build123_identity.py ghostbase-final/GhostBase.ipa
 python3 ../../scripts/verify_jerkgram_v12l_build123_final_ipa.py ghostbase-final/GhostBase.ipa
+
+# JERKGRAM_V12M_BUILD124_FINAL_IDENTITY_HOOK
+echo
+echo "== Jerkgram v1.2M Build124 final identity =="
+python3 ../../scripts/jerkgram_finalize_build124_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12m_build124_final_ipa.py ghostbase-final/GhostBase.ipa

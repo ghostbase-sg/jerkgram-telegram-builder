@@ -62,10 +62,17 @@ class Build124SingleForwardTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_menu_text(self.menu_fixture())
         self.assertNotIn("data.messageActions.options.contains(.forward)", result.replace("// data.messageActions.options.contains(.forward) survived portable gate", ""))
-        self.assertIn("messages.allSatisfy", result)
+        self.assertIn("jerkgramForwardWithoutAuthorTargets.allSatisfy", result)
+        self.assertIn("let jerkgramForwardWithoutAuthorTargets = selectAll ? messages : [message]", result)
         self.assertIn("Namespaces.Peer.SecretChat", result)
         self.assertIn("TelegramMediaPaidContent", result)
         self.assertIn("BUILD123_PORTABLE_MENU_RESTRICTIONS1", result)
+
+    def test_single_message_does_not_inherit_an_unsupported_album_neighbour(self):
+        module = self.load_patch()
+        result = module.patch_menu_text(self.menu_fixture())
+        self.assertIn("BUILD124_SINGLE_FORWARD_TARGET_SCOPE1", result)
+        self.assertNotIn("if ghostBaseForwardWithoutAuthor,\n           messages.allSatisfy", result)
 
     def test_pre_build108_legacy_owner_is_rejected(self):
         module = self.load_patch()

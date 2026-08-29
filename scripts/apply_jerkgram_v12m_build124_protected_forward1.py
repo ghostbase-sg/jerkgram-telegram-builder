@@ -7,6 +7,7 @@ import os
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 FORWARD = ROOT / "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_PROTECTED_FORWARD_LOCAL_COPY1"
+SOURCE_PROTECTION_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PROTECTED_FORWARD_SOURCE_CHANNEL1"
 OLD_MARKER = "// MARK: Jerkgram v1.2L BUILD123_PORTABLE_FORWARD1"
 
 
@@ -48,6 +49,20 @@ def balanced_region(text: str, token: str) -> tuple[int, int]:
 
 
 HELPER = r'''// MARK: Jerkgram v1.2M BUILD124_PROTECTED_FORWARD_LOCAL_COPY1
+// MARK: Jerkgram v1.2M BUILD124_PROTECTED_FORWARD_SOURCE_CHANNEL1
+private func jerkgramRequiresPortableForward(_ message: Message) -> Bool {
+    if message.isCopyProtected() {
+        return true
+    }
+    // A channel can send into a discussion/group as its author. In that form
+    // Message.isCopyProtected() sees the destination peer, while the actual
+    // copy restriction belongs to the channel author/source.
+    if let sourcePeer = message.forwardInfo?.author ?? message.effectiveAuthor {
+        return sourcePeer.isCopyProtectionEnabled
+    }
+    return false
+}
+
 private func jerkgramPortableForwardBaseMessage(
     _ message: Message,
     hideAuthor: Bool,
@@ -149,7 +164,7 @@ private func jerkgramPortableForwardMessage(
     threadId: Int64?,
     context: AccountContext
 ) -> Signal<EnqueueMessage, NoError> {
-    guard message.isCopyProtected(), let media = message.media.first else {
+    guard jerkgramRequiresPortableForward(message), let media = message.media.first else {
         let reference = message.media.first.map { AnyMediaReference.standalone(media: $0) }
         return .single(jerkgramPortableForwardBaseMessage(
             message,
@@ -269,9 +284,11 @@ def replace_helper(text: str) -> str:
     token = "private func jerkgramPortableForwardMessage("
     require(text.count(token) == 1, f"portable helper owner count is {text.count(token)}")
     start, end = balanced_region(text, token)
-    marker_start = text.rfind(OLD_MARKER, 0, start)
-    if marker_start >= 0 and text[marker_start:start].strip() == OLD_MARKER:
-        start = marker_start
+    for marker in (MARKER, OLD_MARKER):
+        marker_start = text.rfind(marker, 0, start)
+        if marker_start >= 0:
+            start = marker_start
+            break
     return text[:start] + HELPER + text[end:]
 
 
@@ -368,13 +385,24 @@ def patch_commit_resolution(text: str) -> str:
 
 
 def patch_text(text: str) -> str:
-    if MARKER in text:
+    if SOURCE_PROTECTION_MARKER in text:
         return text
-    require("BUILD123_PORTABLE_FORWARD1" in text, "Build123 portable forward prerequisite missing")
+    upgrading_existing_build124_owner = MARKER in text
+    require(
+        "BUILD123_PORTABLE_FORWARD1" in text or MARKER in text,
+        "Build123/Build124 portable forward prerequisite missing",
+    )
     text = replace_helper(text)
-    text = patch_portable_secret_chat_guard(text)
-    text = patch_portable_branch(text)
-    text = patch_commit_resolution(text)
+    if not upgrading_existing_build124_owner:
+        text = patch_portable_secret_chat_guard(text)
+        text = patch_portable_branch(text)
+        text = patch_commit_resolution(text)
+    require(text.count("messages.contains(where: { $0.isCopyProtected() })") == 1, "portable trigger owner missing")
+    text = text.replace(
+        "messages.contains(where: { $0.isCopyProtected() })",
+        "messages.contains(where: { jerkgramRequiresPortableForward($0) })",
+        1,
+    )
     for proof in (
         MARKER,
         "LocalFileReferenceMediaResource",
@@ -383,6 +411,8 @@ def patch_text(text: str) -> str:
         "context.engine.resources.fetch",
         "waitUntilFetchStatus: true",
         "message.forwardInfo?.author ?? message.effectiveAuthor",
+        "jerkgramRequiresPortableForward",
+        "sourcePeer.isCopyProtectionEnabled",
         "message.id.peerId.namespace != Namespaces.Peer.SecretChat",
         "var jerkgramPortableMessagesSignal: Signal<[EnqueueMessage], NoError>?",
         "let commitResolved",

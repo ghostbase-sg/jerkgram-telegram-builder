@@ -11,6 +11,7 @@ INSTANT_VIDEO_TARGET = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessage
 
 MEDIA_MARKER = "// MARK: Jerkgram v1.2M BUILD124_OUTGOING_ONETIME_VIEWED_MEDIA1"
 VOICE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_OUTGOING_ONETIME_VIEWED_VOICE1"
+CIRCLE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_OUTGOING_ONETIME_VIEWED_CIRCLE1"
 
 
 def fail(message: str) -> None:
@@ -38,7 +39,8 @@ def main() -> None:
     require("return attribute.consumed" in media, "photo/video viewed state is not tied to consumed=true")
     require("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false" in media, "photo/video viewed badge must safely use Telegram effective outgoing semantics")
     require("!message.flags.contains(.Incoming)" not in media, "raw incoming flag must not own outgoing viewed semantics")
-    require('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"' in media, "photo/video viewed badge state missing")
+    require('jerkgramOneTimeBadgeText = jerkgramOutgoingTimedMediaViewed ? "1 ✓" : "1"' in media, "photo/video viewed badge state missing")
+    require('jerkgramTimedBadgeText = strings.MessageTimer_ShortSeconds(Int32(remainingTime)) + (jerkgramOutgoingTimedMediaViewed ? " ✓" : "")' in media, "timed media viewed badge state missing")
     require('iconName: "Chat/Message/SecretMediaOnce"' in media, "photo/video one-time effect icon was removed")
 
     require("jerkgramKeepConsumedOneTimeVisual && attribute.consumed" in voice, "voice viewed state must come from the real consumed bit")
@@ -46,15 +48,16 @@ def main() -> None:
     require("context.strokePath()" in voice, "voice viewed check is missing")
     require("ConsumableContentMessageAttribute(consumed: false)" not in voice, "voice consumed state was falsified")
 
-    # Official 12.9.2 already maps ConsumableContentMessageAttribute to durationNode.isSeen.
-    # Build124 intentionally leaves this owner stock instead of layering another indicator.
-    require("durationNode.isSeen = !notConsumed" in instant_video, "native circle viewed/seen owner missing")
-    require(MEDIA_MARKER not in instant_video and VOICE_MARKER not in instant_video, "Build124 viewed overlay must not patch the native circle seen owner")
+    require(instant_video.count(CIRCLE_MARKER) == 1, "outgoing circle viewed marker must exist exactly once")
+    require("!item.message.effectivelyIncoming(item.context.account.peerId)" in instant_video, "circle viewed state must be outgoing-only")
+    require("attribute.consumed" in instant_video, "circle viewed state must come from Telegram's consumed bit")
+    require("jerkgramOutgoingOneTimeCircleViewed = true" in instant_video, "circle does not retain the one-time visual after a real view")
+    require("durationNode.isSeen = !notConsumed || jerkgramOutgoingOneTimeCircleViewed" in instant_video, "circle does not expose the viewed state through the native seen affordance")
 
     print("[verify Build124 one-time viewed] SOURCE VERIFIED")
     print("[verify Build124 one-time viewed] outgoing photo/video: SecretMediaOnce + 1 ✓ after consumed=true using Telegram effective direction")
     print("[verify Build124 one-time viewed] outgoing voice: one-time dot + viewed check after consumed=true")
-    print("[verify Build124 one-time viewed] circle: Telegram native isSeen state preserved")
+    print("[verify Build124 one-time viewed] outgoing circle: one-time effect retained + native seen affordance after consumed=true")
 
 
 if __name__ == "__main__":

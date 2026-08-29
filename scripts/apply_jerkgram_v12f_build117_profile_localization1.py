@@ -22,6 +22,14 @@ def replace_once(text, old, new, label):
 
 
 def patch_strings(text):
+    if (
+        "BUILD117_PROFILE_REPORT_LOCALIZATION1" in text
+        and "case profileHistoryTab" in text
+        and "case profileReportLoading" in text
+        and '.profileHistoryTab: "History"' in text
+        and '.profileHistoryTab: "История"' in text
+    ):
+        return text
     text = replace_once(
         text,
         "    case communityNoPosts\n}",
@@ -145,6 +153,8 @@ def patch_strings(text):
 
 
 def patch_report(text):
+    if "strings.localizedProfileReport(rawText)" in text:
+        return text
     return replace_once(
         text,
         '''        let text = self.reportText ?? "Загрузка…"
@@ -158,6 +168,16 @@ def patch_report(text):
 
 
 def patch_tabs(text):
+    if all(
+        token in text
+        for token in (
+            "presentationData.strings.jerkgram.profileHistoryTab",
+            "presentationData.strings.jerkgram.presenceHistoryTab",
+            "presentationData.strings.jerkgram.giftHistoryTab",
+            "presentationData.strings.jerkgram.personalChannelTab",
+        )
+    ):
+        return text
     replacements = (
         ('text: "История"', "text: presentationData.strings.jerkgram.profileHistoryTab"),
         ('text: "Присутствие"', "text: presentationData.strings.jerkgram.presenceHistoryTab"),

@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -76,6 +77,21 @@ class Build116FoundationTests(unittest.TestCase):
                 "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchive.swift",
             },
         )
+
+    def test_materializer_retries_only_when_existing_foundation_is_exact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            previous_root = self.overlay.ROOT
+            self.overlay.ROOT = root
+            try:
+                self.overlay.main()
+                self.overlay.main()
+                archive = root / "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchive.swift"
+                archive.write_text("different", encoding="utf-8")
+                with self.assertRaises(RuntimeError):
+                    self.overlay.main()
+            finally:
+                self.overlay.ROOT = previous_root
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ ROOT = Path(
 
 PHONE = ROOT / "submodules/AuthorizationUI/Sources/AuthorizationSequencePhoneEntryControllerNode.swift"
 MARKER = "// MARK: Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1"
+RUNTIME_MARKER = "// MARK: Jerkgram v1.2M BUILD124_AUTH_RUNTIME_LAYOUT1"
 
 
 def require(condition: bool, message: str) -> None:
@@ -27,7 +28,7 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def patch_phone_layout(text: str) -> str:
-    if MARKER in text:
+    if RUNTIME_MARKER in text:
         return text
 
     # This is intentionally a late overlay. The keyboard bug only exists after
@@ -43,6 +44,9 @@ def patch_phone_layout(text: str) -> str:
     )
 
     keyboard_anchor = "        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0\n"
+    safe_login_keyboard_anchor = "        let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset\n"
+    if safe_login_keyboard_anchor in text:
+        keyboard_anchor = safe_login_keyboard_anchor
     if keyboard_anchor not in text:
         return text + "\n// MARK: Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1\n// Existing materialized authorization layout retained.\n"
 
@@ -50,6 +54,7 @@ def patch_phone_layout(text: str) -> str:
         text,
         keyboard_anchor,
         """        // MARK: Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1
+        // MARK: Jerkgram v1.2M BUILD124_AUTH_RUNTIME_LAYOUT1
         let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0
         let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
 """,
@@ -148,6 +153,37 @@ def patch_phone_layout(text: str) -> str:
 """
     text = replace_once(text, old_layout, new_layout, "authorization content bound")
 
+    # The auxiliary actions are outside Telegram's layout item array. Hide the
+    # entire custom stack while typing instead of letting it collide with the
+    # country/phone fields above the keyboard.
+    bot_owner = """        self.ghostBaseBotLoginNode.isHidden = false
+        transition.updateFrame(
+"""
+    if bot_owner in text:
+        text = replace_once(
+            text,
+            bot_owner,
+            """        self.ghostBaseBotLoginNode.isHidden = jerkgramKeyboardVisible
+        transition.updateFrame(
+""",
+            "bot login compact mode",
+        )
+    safe_owner = """        self.ghostBaseSafeLoginNode.isHidden = false
+        self.ghostBaseSafeLoginInfoNode.isHidden = false
+"""
+    if safe_owner in text:
+        text = replace_once(
+            text,
+            safe_owner,
+            """        self.ghostBaseSafeLoginNode.isHidden = jerkgramKeyboardVisible
+        self.ghostBaseSafeLoginInfoNode.isHidden = jerkgramKeyboardVisible
+""",
+            "safe login compact mode",
+        )
+
+    text = text.replace('return enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF"', 'return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"')
+    text = text.replace('string: "Enable before login to stay invisible from the first session."', 'string: "Включите до входа, чтобы оставаться невидимым с первой сессии."')
+
     for proof in (
         MARKER,
         "let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0",
@@ -155,6 +191,7 @@ def patch_phone_layout(text: str) -> str:
         "self.hasOtherAccounts && !jerkgramKeyboardVisible",
         "ghostBaseSafeLoginInfoFrame.minY - 10.0",
         "max(0.0, jerkgramAuthorizationBottomY - insets.top)",
+        RUNTIME_MARKER,
     ):
         require(proof in text, f"proof missing: {proof}")
 

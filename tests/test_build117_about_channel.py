@@ -242,6 +242,24 @@ self.text(.communityNoPosts)
         )
         self.assertNotIn("|> ignoreValues", source)
 
+    def test_partial_materialization_retry_is_idempotent(self):
+        settings = '''
+private enum JerkgramAboutChannelState {}
+// MARK: Jerkgram v1.2F BUILD117_ABOUT_CHANNEL_CARD1
+aboutChannelState: aboutChannelState
+let openAboutChannel: (EnginePeer) -> Void
+'''
+        strings = '''
+case communityLoading
+case communityUnavailable
+case communityNoPosts
+self.text(.communityLoading)
+.communityLoading: "Loading channel…"
+.communityLoading: "Загрузка канала…"
+'''
+        self.assertEqual(settings, self.overlay.patch_settings(settings))
+        self.assertEqual(strings, self.overlay.patch_strings(strings))
+
 
 if __name__ == "__main__":
     unittest.main()

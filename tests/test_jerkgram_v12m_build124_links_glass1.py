@@ -54,20 +54,24 @@ class Build124LinksGlassTests(unittest.TestCase):
         }
 '''
 
-    def test_links_material_has_nonzero_alpha_floor(self):
+    def test_links_material_uses_a_bounded_links_card_not_the_pane_background(self):
         module = self.load_patch()
         result = module.patch_text(self.build123_owner())
         self.assertIn("BUILD124_LINKS_INTRINSIC_MATERIAL1", result)
-        self.assertIn("let materialAlpha", result)
-        self.assertIn("0.20 + 0.06 * lightness", result)
-        self.assertIn("0.14 + 0.04 * lightness", result)
+        self.assertIn("let linksFrame = CGRect", result)
+        self.assertIn("UIVisualEffectView", result)
+        self.assertIn("visibleContentOffset", result)
+        self.assertIn("visibleBottomContentOffset", result)
         self.assertNotIn("0.26 * lightness", result)
+        self.assertNotIn("self.backgroundColor = readabilityColor", result)
+        self.assertNotIn("self.listNode.backgroundColor = readabilityColor", result)
 
     def test_links_material_is_theme_aware_and_glass_gated(self):
         module = self.load_patch()
         result = module.patch_text(self.build123_owner())
         self.assertIn("if self.ghostBaseGlassEnabled", result)
-        self.assertIn("presentationData.theme.overallDarkAppearance ? 0.0 : 1.0", result)
+        self.assertIn(".systemMaterialDark", result)
+        self.assertIn(".systemMaterialLight", result)
         self.assertIn("self.backgroundColor = .clear", result)
         self.assertIn("self.listNode.backgroundColor = .clear", result)
 
@@ -75,7 +79,7 @@ class Build124LinksGlassTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_text(self.build123_owner())
         build123 = result[result.index("BUILD123_LINKS_INTRINSIC_GLASS1"):]
-        self.assertIn("self.jerkgramLinksReadabilityEnabled ? .zero", build123)
+        self.assertIn("else if !self.jerkgramLinksReadabilityEnabled", build123)
         self.assertNotIn("&& self.jerkgramLinksReadabilityEnabled", build123)
 
     def test_patch_is_idempotent(self):

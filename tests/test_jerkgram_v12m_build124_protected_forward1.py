@@ -107,6 +107,14 @@ extension ChatControllerImpl {
         self.assertNotIn("message.peers[message.id.peerId].map(EnginePeer.init)", result)
         self.assertIn('https://t.me/\\(username)', result)
 
+    def test_source_channel_copy_protection_uses_portable_path(self):
+        module = self.load_patch()
+        result = module.patch_text(self.fixture())
+        self.assertIn("BUILD124_PROTECTED_FORWARD_SOURCE_CHANNEL1", result)
+        self.assertIn("sourcePeer.isCopyProtectionEnabled", result)
+        self.assertIn("messages.contains(where: { jerkgramRequiresPortableForward($0) })", result)
+        self.assertNotIn("messages.contains(where: { $0.isCopyProtected() })", result)
+
     def test_hide_author_path_still_omits_attribution(self):
         module = self.load_patch()
         result = module.patch_text(self.fixture())

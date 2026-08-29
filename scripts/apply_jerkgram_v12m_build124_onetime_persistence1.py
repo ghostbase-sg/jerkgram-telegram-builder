@@ -44,7 +44,7 @@ NEW_MEDIA = '''                                // MARK: Jerkgram v1.2M BUILD124_
                                     ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
                                     && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                                     && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
-                                    && currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout
+                                    && currentMessage.minAutoremoveOrClearTimeout != nil
                                 )
                                 var updatedMedia = currentMessage.media
                                 if !jerkgramKeepOneTimeIdentity {
@@ -85,12 +85,12 @@ OLD_BUILD124_AUTOCLEAR = '''                                var updatedAttribute
                                     ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
                                     && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                                     && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
-                                    && currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout
+                                    && currentMessage.minAutoremoveOrClearTimeout != nil
                                 )
                                 for i in 0 ..< updatedAttributes.count {
                                     if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
-                                        if jerkgramKeepOneTimeIdentity && attribute.timeout == viewOnceTimeout {
-                                            updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)
+                                        if jerkgramKeepOneTimeIdentity {
+                                            updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)
                                         } else {
                                             updatedAttributes.remove(at: i)
                                         }
@@ -105,8 +105,8 @@ NEW_AUTOCLEAR = '''                                var updatedAttributes = curre
                                 // timestamp operation. countdownBeginTime == nil does not schedule another pass.
                                 for i in 0 ..< updatedAttributes.count {
                                     if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
-                                        if jerkgramKeepOneTimeIdentity && attribute.timeout == viewOnceTimeout {
-                                            updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)
+                                        if jerkgramKeepOneTimeIdentity {
+                                            updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)
                                         } else {
                                             updatedAttributes.remove(at: i)
                                         }
@@ -132,7 +132,7 @@ REMOTE_DECISION = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + 
             ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
             && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
             && message.id.peerId.namespace != Namespaces.Peer.SecretChat
-            && message.minAutoremoveOrClearTimeout == viewOnceTimeout
+            && message.minAutoremoveOrClearTimeout != nil
         )
         
         for i in 0 ..< updatedAttributes.count {
@@ -141,7 +141,7 @@ REMOTE_DECISION = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + 
 REMOTE_AUTOREMOVE_ASSIGNMENT = '''                    updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
 '''
 
-REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeepOneTimeRemoteMedia && attribute.timeout == viewOnceTimeout {
+REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeepOneTimeRemoteMedia {
                         updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)
                     } else {
                         updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
@@ -151,7 +151,7 @@ REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeep
 REMOTE_AUTOCLEAR_ASSIGNMENT = '''                    updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
 '''
 
-REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeepOneTimeRemoteMedia && attribute.timeout == viewOnceTimeout {
+REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT = '''                    if jerkgramKeepOneTimeRemoteMedia {
                         updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)
                     } else {
                         updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
@@ -237,7 +237,7 @@ NEW_VOICE = '''                var consumableContentIcon: UIImage?
                             ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
                             && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                             && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
-                            && arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout
+                            && arguments.message.minAutoremoveOrClearTimeout != nil
                         )
                         if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual {
                             if arguments.incoming {
@@ -330,7 +330,7 @@ def patch_autoremove_text(text: str) -> str:
     require(MEDIA_MARKER in updated, "persistent one-time media marker missing after patch")
     require(AUTOREMOVE_MARKER in updated, "persistent one-time marker missing after patch")
     require("if !jerkgramKeepOneTimeIdentity {" in updated, "one-time media expiration guard missing")
-    require("AutoclearTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil)" in updated, "disarmed persistent one-time attribute missing")
+    require("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)" in updated, "disarmed persistent timed attribute missing")
     require(updated.count("let jerkgramKeepOneTimeIdentity = (") == 1, "one-time persistence decision must have one owner")
     require(updated.index("let jerkgramKeepOneTimeIdentity = (") < updated.index("var updatedMedia = currentMessage.media"), "one-time persistence decision runs after media expiration")
     require("ghostBaseOT1KeepOutgoingTimerLocal" not in updated, "legacy OT1 managed-autoremove decision survived Build124 replacement")

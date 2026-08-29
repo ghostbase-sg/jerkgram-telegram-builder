@@ -251,7 +251,12 @@ def materialized_files():
 def main():
     for relative, contents in materialized_files().items():
         path = ROOT / relative
-        require(not path.exists(), "foundation owner already exists: " + relative)
+        if path.exists():
+            require(
+                path.read_text(encoding="utf-8") == contents,
+                "foundation owner exists with different content: " + relative,
+            )
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(contents, encoding="utf-8")
     print("[Build116 foundation] typed SettingsV1 and ArchiveV1 materialized")

@@ -30,6 +30,22 @@ VOICE_FIXTURE = '''                        // MARK: Jerkgram v1.2M BUILD124_PERS
                         break
 '''
 
+CIRCLE_FIXTURE = '''            var notConsumed = false
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? ConsumableContentMessageAttribute {
+                    if !attribute.consumed {
+                        notConsumed = true
+                    }
+                    break
+                }
+            }
+            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal || item.message.id.namespace == Namespaces.Message.QuickReplyLocal {
+                notConsumed = true
+            }
+
+                        durationNode.isSeen = !notConsumed || item.presentationData.isPreview
+'''
+
 
 class Build124OneTimeViewedTests(unittest.TestCase):
     def load_patch(self):
@@ -46,7 +62,8 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertIn("attribute.consumed", updated)
         self.assertIn("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false", updated)
         self.assertNotIn("!message.flags.contains(.Incoming)", updated)
-        self.assertIn('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"', updated)
+        self.assertIn('jerkgramOneTimeBadgeText = jerkgramOutgoingTimedMediaViewed ? "1 ✓" : "1"', updated)
+        self.assertIn('jerkgramTimedBadgeText = strings.MessageTimer_ShortSeconds(Int32(remainingTime)) + (jerkgramOutgoingTimedMediaViewed ? " ✓" : "")', updated)
         self.assertIn('iconName: "Chat/Message/SecretMediaOnce"', updated)
 
     def test_outgoing_voice_indicator_keeps_one_time_dot_and_adds_viewed_check(self):
@@ -65,11 +82,15 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         once_voice = module.patch_voice_text(VOICE_FIXTURE)
         self.assertEqual(once_voice, module.patch_voice_text(once_voice))
 
-    def test_circle_keeps_telegram_native_seen_state_owner(self):
-        source = PATCH.read_text(encoding="utf-8")
-        self.assertNotIn("ChatMessageInteractiveInstantVideoNode", source)
-        self.assertIn("ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift", source)
-        self.assertIn("ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift", source)
+    def test_outgoing_circle_keeps_one_time_effect_and_marks_actual_view(self):
+        module = self.load_patch()
+        updated = module.patch_circle_text(CIRCLE_FIXTURE)
+        self.assertIn("BUILD124_OUTGOING_ONETIME_VIEWED_CIRCLE1", updated)
+        self.assertIn("!item.message.effectivelyIncoming(item.context.account.peerId)", updated)
+        self.assertIn("jerkgramOutgoingOneTimeCircleViewed = true", updated)
+        self.assertIn("notConsumed = true", updated)
+        self.assertIn("durationNode.isSeen = !notConsumed || jerkgramOutgoingOneTimeCircleViewed", updated)
+        self.assertEqual(updated, module.patch_circle_text(updated))
 
 
     def test_verifier_tracks_direct_consumed_state_without_stale_local_alias(self):
@@ -78,6 +99,8 @@ class Build124OneTimeViewedTests(unittest.TestCase):
         self.assertNotIn("!message.effectivelyIncoming(context.account.peerId)", source)
         self.assertIn('"ConsumableContentMessageAttribute(consumed: false)" not in voice', source)
         self.assertNotIn('"isConsumed = attribute.consumed"', source)
+        self.assertIn("CIRCLE_MARKER", source)
+        self.assertIn("!item.message.effectivelyIncoming(item.context.account.peerId)", source)
 
 
 if __name__ == "__main__":
