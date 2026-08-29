@@ -364,8 +364,8 @@ def patch_remote_consumed_text(text: str) -> str:
     require(updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT) == 1, f"expected one remote autoclear assignment, found {updated.count(REMOTE_AUTOCLEAR_ASSIGNMENT)}")
     require(updated.count(REMOTE_EXPIRE_CONDITION) == 2, f"expected two remote media-expiration owners, found {updated.count(REMOTE_EXPIRE_CONDITION)}")
 
-    loop_start = decision.end() - len("for i in 0 ..< updatedAttributes.count {")
-    updated = updated[:decision.start()] + REMOTE_DECISION + updated[loop_start:]
+    # REMOTE_DECISION includes the loop opener, so discard the matched source opener too.
+    updated = updated[:decision.start()] + REMOTE_DECISION + updated[decision.end():]
     updated = updated.replace(REMOTE_AUTOREMOVE_ASSIGNMENT, REMOTE_AUTOREMOVE_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_AUTOCLEAR_ASSIGNMENT, REMOTE_AUTOCLEAR_ASSIGNMENT_PERSISTENT, 1)
     updated = updated.replace(REMOTE_EXPIRE_CONDITION, REMOTE_EXPIRE_CONDITION_PERSISTENT, 2)
