@@ -36,7 +36,7 @@ def main() -> None:
 
     require("ConsumableContentMessageAttribute" in media, "photo/video viewed state must come from consumable-content state")
     require("return attribute.consumed" in media, "photo/video viewed state is not tied to consumed=true")
-    require("!message.effectivelyIncoming(context.account.peerId)" in media, "photo/video viewed badge must use Telegram effective outgoing semantics")
+    require("context.map { !message.effectivelyIncoming($0.account.peerId) } ?? false" in media, "photo/video viewed badge must safely use Telegram effective outgoing semantics")
     require("!message.flags.contains(.Incoming)" not in media, "raw incoming flag must not own outgoing viewed semantics")
     require('jerkgramOneTimeBadgeText = jerkgramOutgoingOneTimeViewed ? "1 ✓" : "1"' in media, "photo/video viewed badge state missing")
     require('iconName: "Chat/Message/SecretMediaOnce"' in media, "photo/video one-time effect icon was removed")
