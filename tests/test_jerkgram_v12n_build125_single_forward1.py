@@ -5,11 +5,18 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12n_build125_single_forward1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_v12n_build125_single_forward1.py"
 
 
 class Build125SingleForwardTests(unittest.TestCase):
     def load_patch(self):
         spec = importlib.util.spec_from_file_location("build125_single_forward", PATCH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def load_verifier(self):
+        spec = importlib.util.spec_from_file_location("build125_single_forward_verify", VERIFY)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
@@ -65,6 +72,17 @@ class Build125SingleForwardTests(unittest.TestCase):
         result = module.patch_text(direct_owner)
         self.assertIn("BUILD125_SINGLE_FORWARD_DIRECT_ACTION1", result)
         self.assertEqual(result.count("let jerkgramForwardWithoutAuthorTargets"), 1)
+
+    def test_verifier_ignores_native_forward_text_inside_comment(self):
+        module = self.load_patch()
+        verifier = self.load_verifier()
+        result = module.patch_text(self.build124_owner())
+        result = result.replace(
+            "if ghostBaseForwardWithoutAuthor,",
+            "// data.messageActions.options.contains(.forward) survived portable gate\n        if ghostBaseForwardWithoutAuthor,",
+            1,
+        )
+        verifier.validate(result)
 
 
 if __name__ == "__main__":
