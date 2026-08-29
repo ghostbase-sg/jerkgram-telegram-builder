@@ -355,7 +355,7 @@ def patch_remote_consumed_text(text: str) -> str:
     decision = re.search(
         r"(?m)^(?P<indent>[ \\t]*)let timestamp = Int32\\(CFAbsoluteTimeGetCurrent\\(\\) \\+ NSTimeIntervalSince1970\\)\\n"
         r"(?P=indent)let countdownBeginTime = consumeDate \\?\\? timestamp\\n"
-        r"(?P<gap>\\n)(?P=indent)for i in 0 \\.\\.\\< updatedAttributes.count \\{",
+        r"(?P<gap>[ \\t]*\\n)(?P=indent)for i in 0 \\.\\.\\< updatedAttributes.count \\{",
         updated,
     )
     require(decision is not None, "remote-consume countdown owner missing")
