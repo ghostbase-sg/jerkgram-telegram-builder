@@ -19,6 +19,15 @@ def patch_text(text: str) -> str:
     if MARKER in text:
         return text
 
+    direct_owner = "let jerkgramForwardWithoutAuthorTargets = selectAll ? messages : [message]"
+    direct_gate = "if ghostBaseForwardWithoutAuthor,\n           jerkgramForwardWithoutAuthorTargets.allSatisfy({ message in"
+    if direct_owner in text and direct_gate in text:
+        # Build124 may already have materialized the direct action. Its
+        # explanatory comment deliberately mentions the former native gate;
+        # do not let that comment be mistaken for executable code and rewrite
+        # the action a second time.
+        return text.replace(direct_owner, MARKER + "\n        " + direct_owner, 1)
+
     # Build124 has two materialized owners in the wild: the early direct
     # `data.messageActions` gate and the later portable-target gate. Both must
     # become one explicit action contract. The action is still restricted to

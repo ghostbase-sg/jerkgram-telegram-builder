@@ -49,6 +49,23 @@ class Build125SingleForwardTests(unittest.TestCase):
         once = module.patch_text(self.build124_owner())
         self.assertEqual(once, module.patch_text(once))
 
+    def test_accepts_direct_owner_when_legacy_gate_is_only_a_comment(self):
+        module = self.load_patch()
+        direct_owner = '''        let jerkgramForwardWithoutAuthorTargets = selectAll ? messages : [message]
+        if ghostBaseForwardWithoutAuthor,
+           jerkgramForwardWithoutAuthorTargets.allSatisfy({ message in
+               message.id.peerId.namespace != Namespaces.Peer.SecretChat
+           }) {
+            // data.messageActions.options.contains(.forward) survived portable gate
+            actions.append(.action(ContextMenuActionItem(text: "Переслать без автора", action: { _, f in
+                f(.dismissWithoutContent)
+            })))
+        }
+'''
+        result = module.patch_text(direct_owner)
+        self.assertIn("BUILD125_SINGLE_FORWARD_DIRECT_ACTION1", result)
+        self.assertEqual(result.count("let jerkgramForwardWithoutAuthorTargets"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
