@@ -141,7 +141,11 @@ case let .filter(_, _, title, value, kind):
     )
 strings.build119TimeMachineSummary(results.count, state.kinds.count, state.senderPeerId != nil)
 Queue.concurrentDefaultQueue().async {
-    let page = try eventStore.eventPage(limit: 250)
+    let page = try eventStore.eventPage(
+        accountPeerId: accountPeerId,
+        chatPeerId: chatPeerId,
+        limit: 250
+    )
 }
 '''
 
@@ -218,7 +222,8 @@ class Build124SettingsRedesignTests(unittest.TestCase):
         self.assertNotIn("build119TimeMachineSummary", updated)
         self.assertIn("systemStyle: .glass", updated)
         self.assertIn("Queue.concurrentDefaultQueue().async", updated)
-        self.assertIn("eventPage(limit: 250)", updated)
+        self.assertIn("eventPage(", updated)
+        self.assertIn("limit: 250", updated)
 
     def test_strings_cover_every_internal_surface_in_ru_and_en(self):
         module = self.load_patch()
