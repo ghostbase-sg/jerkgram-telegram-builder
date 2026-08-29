@@ -34,9 +34,7 @@ AUTOREMOVE_FIXTURE = '''                                var updatedMedia = curre
                                 }
 '''
 
-VOICE_FIXTURE = '''                var isConsumed: Bool?
-                
-                var consumableContentIcon: UIImage?
+VOICE_FIXTURE = '''                var consumableContentIcon: UIImage?
                 for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
                         if !attribute.consumed {
@@ -46,7 +44,6 @@ VOICE_FIXTURE = '''                var isConsumed: Bool?
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
-                        isConsumed = attribute.consumed
                         break
                     }
                 }
@@ -95,7 +92,7 @@ class Build124OneTimePersistenceTests(unittest.TestCase):
         self.assertIn("BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1", updated)
         self.assertIn("arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout", updated)
         self.assertIn("if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual", updated)
-        self.assertIn("isConsumed = attribute.consumed", updated)
+        self.assertIn("attribute.consumed", updated)
         self.assertNotIn("ConsumableContentMessageAttribute(consumed: false)", updated)
 
     def test_build124_onetime_patch_is_idempotent(self):
