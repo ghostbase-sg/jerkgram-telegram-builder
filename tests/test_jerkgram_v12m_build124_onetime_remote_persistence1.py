@@ -215,8 +215,8 @@ class Build124OneTimeRemotePersistenceTests(unittest.TestCase):
         self.assertIn("remote.count(REMOTE_MARKER) == 1", source)
         self.assertIn('remote.count("if !jerkgramKeepOneTimeRemoteMedia && (attribute.timeout == viewOnceTimeout") == 2', source)
         self.assertIn("AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil)", source)
-        self.assertIn('"ghostBaseOT1KeepOutgoingTimerLocal" not in remote', source)
-        self.assertIn('"jerkgram.OT1.OutgoingKeepBlocked.Count" not in remote', source)
+        self.assertIn('UserDefaults.standard.object(forKey: \\"jerkgram.ProtectedContent.Enabled\\")', source)
+        self.assertIn('UserDefaults.standard.object(forKey: \\"jerkgram.ProtectedContent.OneTimeSave\\")', source)
 
 
 if __name__ == "__main__":
