@@ -56,7 +56,7 @@ def patch_phone_layout(text: str) -> str:
         """        // MARK: Jerkgram v1.2M BUILD124_AUTH_KEYBOARD1
         // MARK: Jerkgram v1.2M BUILD124_AUTH_RUNTIME_LAYOUT1
         let jerkgramKeyboardVisible = (layout.inputHeight ?? 0.0) > 0.0
-        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
+        let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset
 """,
         "keyboard state",
     )

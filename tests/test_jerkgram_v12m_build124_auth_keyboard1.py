@@ -80,6 +80,18 @@ class Build124AuthKeyboardTests(unittest.TestCase):
         result = module.patch_phone_layout(self.fixture())
         self.assertIn("layout.size.height - insets.bottom - additionalBottomInset", result)
 
+    def test_safe_login_inset_remains_part_of_compact_layout(self):
+        module = self.load_patch()
+        source = self.fixture().replace(
+            "let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0",
+            "let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset",
+        )
+        result = module.patch_phone_layout(source)
+        self.assertIn(
+            "let additionalBottomInset: CGFloat = (layout.size.width > 320.0 ? 80.0 : 10.0) + ghostBaseSafeLoginExtraBottomInset",
+            result,
+        )
+
     def test_prepatched_materialized_auth_owner_is_left_intact(self):
         module = self.load_patch()
         source = "// MARK: GhostBase v0.8H Safe Login layout\nlet ghostBaseSafeLoginInfoFrame = CGRect.zero\n"
