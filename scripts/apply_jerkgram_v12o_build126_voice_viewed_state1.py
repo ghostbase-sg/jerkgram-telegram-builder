@@ -8,6 +8,7 @@ ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOU
 TARGET = ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift"
 MARKER = "// MARK: Jerkgram v1.2O BUILD126_OUTGOING_ONETIME_VIEWED_VOICE1"
 OLD_MARKER = "// MARK: Jerkgram v1.2M BUILD124_OUTGOING_ONETIME_VIEWED_VOICE1"
+PERSISTENT_MARKER = "// MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1"
 
 
 def require(value: bool, message: str) -> None:
@@ -17,11 +18,17 @@ def require(value: bool, message: str) -> None:
 
 def patch_text(text: str) -> str:
     if MARKER in text:
+        # Repair materialized owners produced by the first Build126 attempt:
+        # it installed the new marker but left Build124's now-unused prefix.
+        marker_index = text.find(MARKER)
+        persistent_index = text.rfind(PERSISTENT_MARKER, 0, marker_index)
+        if persistent_index >= 0:
+            return text[:persistent_index] + text[marker_index:]
         return text
 
     marker_index = text.find(OLD_MARKER)
     require(marker_index >= 0, "Build124 voice viewed owner missing")
-    start = text.rfind("                        if !attribute.consumed", 0, marker_index)
+    start = text.rfind("                        " + PERSISTENT_MARKER, 0, marker_index)
     # Build124's persistent owner is followed directly by `break` in the
     # current materialized source; older revisions also assigned isConsumed
     # before that same boundary.

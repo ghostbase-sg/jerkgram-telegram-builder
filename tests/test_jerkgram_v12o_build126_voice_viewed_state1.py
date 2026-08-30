@@ -49,11 +49,24 @@ class Build126VoiceViewedStateTests(unittest.TestCase):
         self.assertIn("} else if attribute.consumed {", result)
         self.assertIn("BUILD126_OUTGOING_ONETIME_VIEWED_VOICE1", result)
         self.assertNotIn("jerkgramOutgoingOneTimeViewed", result)
+        self.assertNotIn("jerkgramKeepConsumedOneTimeVisual", result)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()
         once = module.patch_text(self.owner_fixture())
         self.assertEqual(once, module.patch_text(once))
+
+    def test_repaired_marker_also_removes_legacy_unused_state(self):
+        module = self.load_patch()
+        partially_patched = f'''                        // MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1
+                        let jerkgramKeepConsumedOneTimeVisual = true
+                        {module.MARKER}
+                        if arguments.incoming {{
+                            consumableContentIcon = incomingIcon
+                        }}
+'''
+        result = module.patch_text(partially_patched)
+        self.assertNotIn("jerkgramKeepConsumedOneTimeVisual", result)
 
 
 if __name__ == "__main__":
