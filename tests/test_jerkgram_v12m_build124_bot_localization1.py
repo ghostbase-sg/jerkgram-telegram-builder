@@ -62,7 +62,13 @@ class Build124BotLocalizationTests(unittest.TestCase):
 
     def test_missing_legacy_diagnostics_do_not_block_token_localization(self):
         module = self.load_patch()
-        source = "// Build124 settings redesign removed the legacy bot diagnostic cards.\n"
+        source = '''private func ghostBaseBotCapabilityReport(strings: PresentationStrings) -> String {
+    return strings.researchBotCapability
+}
+private func ghostBaseBotDifferenceReport(strings: PresentationStrings) -> String {
+    return strings.researchBotDifference
+}
+'''
         self.assertEqual(module.patch_settings(source), source)
         self.assertFalse(module.has_legacy_bot_diagnostics(source))
 

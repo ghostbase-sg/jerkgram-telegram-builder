@@ -120,6 +120,8 @@ def patch_auth_sources(files: dict[str, str]) -> dict[str, str]:
 
 
 def patch_settings(text: str) -> str:
+    if not has_legacy_bot_diagnostics(text):
+        return text
     text = text.replace("private func ghostBaseBotCapabilityReport() -> String {", "private func ghostBaseBotCapabilityReport(strings: PresentationStrings) -> String {")
     text = text.replace("private func ghostBaseBotDifferenceReport() -> String {", "private func ghostBaseBotDifferenceReport(strings: PresentationStrings) -> String {")
     text = text.replace('?? "Результатов пока нет."', '?? strings.jerkgram.botNoResults')
@@ -141,8 +143,10 @@ def patch_settings(text: str) -> str:
 
 def has_legacy_bot_diagnostics(text: str) -> bool:
     return (
-        "ghostBaseBotCapabilityReport" in text
-        or "ghostBaseBotDifferenceReport" in text
+        '"Bot Account Capability Probe"' in text
+        or '"Проверить RPC bot-аккаунта"' in text
+        or '"Проверить RPC бот-аккаунта"' in text
+        or '"Проверить updates.getDifference"' in text
     )
 
 
@@ -163,7 +167,9 @@ def main() -> None:
     PHONE_NODE.write_text(auth["phoneNode"], encoding="utf-8")
     PHONE_CONTROLLER.write_text(auth["controller"], encoding="utf-8")
     ACTIONS.write_text(auth["actions"], encoding="utf-8")
-    SETTINGS.write_text(patch_settings(SETTINGS.read_text(encoding="utf-8")), encoding="utf-8")
+    settings = SETTINGS.read_text(encoding="utf-8")
+    had_legacy_bot_diagnostics = has_legacy_bot_diagnostics(settings)
+    SETTINGS.write_text(patch_settings(settings), encoding="utf-8")
 
     combined = "\n".join(path.read_text(encoding="utf-8") for path in (PASSWORD_NODE, PHONE_NODE, PHONE_CONTROLLER, ACTIONS, SETTINGS))
     require("strings.jerkgram.botLoginButton" in combined, "localized bot login button missing")
@@ -171,7 +177,7 @@ def main() -> None:
     require("botLogoutTitle" in combined, "localized bot logout missing")
     # The Build124 settings redesign can remove the legacy diagnostics cards.
     # Their absence must not block the separate bot-token authorization UI.
-    if has_legacy_bot_diagnostics(SETTINGS.read_text(encoding="utf-8")):
+    if had_legacy_bot_diagnostics:
         require("botCapabilityTitle" in combined and "botDifferenceAction" in combined, "localized bot diagnostics missing")
 
     print("[Build124 bot localization] GREEN")

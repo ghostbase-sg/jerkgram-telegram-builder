@@ -50,8 +50,8 @@ def main() -> None:
 
     require("botLogoutTitle" in actions and "botLogoutText" in actions and "botLogoutAction" in actions, "bot logout UI is not localized")
     has_legacy_bot_diagnostics = (
-        "ghostBaseBotCapabilityReport" in settings
-        or "ghostBaseBotDifferenceReport" in settings
+        "strings.jerkgram.botCapabilityTitle" in settings
+        or "strings.jerkgram.botDifferenceAction" in settings
     )
     if has_legacy_bot_diagnostics:
         require("ghostBaseBotCapabilityReport(strings: PresentationStrings)" in settings, "capability report lacks selected-language owner")
