@@ -9,6 +9,7 @@ PHONE = ROOT / "submodules/AuthorizationUI/Sources/AuthorizationSequencePhoneEnt
 STRINGS = ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
 MARKER = "// MARK: Jerkgram v1.2N BUILD125_AUTH_GHOST_LOCALIZATION1"
 BOT_MARKER = "// MARK: Jerkgram v1.2N BUILD125_AUTH_BOT_LOGIN_LOCALIZATION2"
+BOT_STRINGS_MARKER = "// MARK: Jerkgram v1.2N BUILD125_AUTH_BOT_LOGIN_STRINGS2"
 
 
 def require(value: bool, message: str) -> None:
@@ -42,6 +43,25 @@ public extension JerkgramStrings {
 '''
 
 
+BOT_EXTENSION = r'''
+
+// MARK: Jerkgram v1.2N BUILD125_AUTH_BOT_LOGIN_STRINGS2
+// This probe does not materialize the older Build124 bot-localization overlay,
+// so the visible phone-entry control owns its small selected-language contract.
+public extension JerkgramStrings {
+    private var authBotIsRussian: Bool { self.languageCode == "ru" }
+
+    var botLoginButton: String {
+        return self.authBotIsRussian ? "Войти как бот" : "Log in as Bot"
+    }
+
+    var botLoginAccessibility: String {
+        return self.authBotIsRussian ? "Войти как бот" : "Log in as Bot"
+    }
+}
+'''
+
+
 def patch_phone(text: str) -> str:
     if MARKER in text:
         return text
@@ -57,6 +77,25 @@ def patch_phone(text: str) -> str:
             text = text.replace(old, new, 1)
             changed += 1
     require(changed == 2, f"expected Ghost Mode title and hint owners, patched {changed}")
+
+    # This helper is file-private, outside the node instance; it has no
+    # implicit `strings`. Pass PresentationStrings through both real call sites.
+    require(text.count('private func ghostBaseSafeLoginButtonTitle(_ enabled: Bool) -> String {') == 1, "Ghost Mode title helper owner missing")
+    require(text.count('ghostBaseSafeLoginButtonTitle(ghostBaseInitialSafeLoginEnabled)') == 1, "Ghost Mode initial title call missing")
+    require(text.count('ghostBaseSafeLoginButtonTitle(strongSelf.ghostBaseSafeLoginEnabled)') == 1, "Ghost Mode toggle title call missing")
+    text = text.replace(
+        'private func ghostBaseSafeLoginButtonTitle(_ enabled: Bool) -> String {',
+        'private func ghostBaseSafeLoginButtonTitle(_ enabled: Bool, strings: PresentationStrings) -> String {',
+        1,
+    ).replace(
+        'ghostBaseSafeLoginButtonTitle(ghostBaseInitialSafeLoginEnabled)',
+        'ghostBaseSafeLoginButtonTitle(ghostBaseInitialSafeLoginEnabled, strings: strings)',
+        1,
+    ).replace(
+        'ghostBaseSafeLoginButtonTitle(strongSelf.ghostBaseSafeLoginEnabled)',
+        'ghostBaseSafeLoginButtonTitle(strongSelf.ghostBaseSafeLoginEnabled, strings: strongSelf.strings)',
+        1,
+    )
     # This is a distinct visible control from Ghost Mode. It stayed Russian in
     # the published IPA because the first localisation pass only covered the
     # Safe Login title and its hint.
@@ -77,10 +116,12 @@ def patch_phone(text: str) -> str:
 
 
 def patch_strings(text: str) -> str:
-    if MARKER in text:
-        return text
     require("public struct JerkgramStrings" in text, "JerkgramStrings owner missing")
-    return text.rstrip() + EXTENSION + "\n"
+    if MARKER not in text:
+        text = text.rstrip() + EXTENSION + "\n"
+    if BOT_STRINGS_MARKER not in text and "var botLoginButton: String" not in text:
+        text = text.rstrip() + BOT_EXTENSION + "\n"
+    return text
 
 
 def main() -> None:
