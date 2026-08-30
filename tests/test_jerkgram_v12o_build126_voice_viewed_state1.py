@@ -20,7 +20,9 @@ class Build126VoiceViewedStateTests(unittest.TestCase):
         return '''                var consumableContentIcon: UIImage?
                 for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
-                        if !attribute.consumed {
+                        // MARK: Jerkgram v1.2M BUILD124_PERSISTENT_ONETIME_VOICE_VISUAL1
+                        let jerkgramKeepConsumedOneTimeVisual = true
+                        if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual {
                             if arguments.incoming {
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentIncomingIcon(arguments.presentationData.theme.theme)
                             } else {
@@ -33,7 +35,6 @@ class Build126VoiceViewedStateTests(unittest.TestCase):
                                 }
                             }
                         }
-                        isConsumed = attribute.consumed
                         break
                     }
                 }
@@ -47,7 +48,7 @@ class Build126VoiceViewedStateTests(unittest.TestCase):
         self.assertIn("if !attribute.consumed {", result)
         self.assertIn("} else if attribute.consumed {", result)
         self.assertIn("BUILD126_OUTGOING_ONETIME_VIEWED_VOICE1", result)
-        self.assertNotIn("jerkgramKeepConsumedOneTimeVisual", result)
+        self.assertNotIn("jerkgramOutgoingOneTimeViewed", result)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()

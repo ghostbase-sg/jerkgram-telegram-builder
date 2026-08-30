@@ -21,8 +21,11 @@ def patch_text(text: str) -> str:
 
     marker_index = text.find(OLD_MARKER)
     require(marker_index >= 0, "Build124 voice viewed owner missing")
-    start = text.rfind("                        if !attribute.consumed {", 0, marker_index)
-    end = text.find("\n                        isConsumed = attribute.consumed", marker_index)
+    start = text.rfind("                        if !attribute.consumed", 0, marker_index)
+    # Build124's persistent owner is followed directly by `break` in the
+    # current materialized source; older revisions also assigned isConsumed
+    # before that same boundary.
+    end = text.find("\n                        break", marker_index)
     require(start >= 0 and end >= 0, "Build124 voice consumed branch bounds missing")
 
     replacement = '''                        // MARK: Jerkgram v1.2O BUILD126_OUTGOING_ONETIME_VIEWED_VOICE1
