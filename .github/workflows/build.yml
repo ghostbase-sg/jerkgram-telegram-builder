@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build125 Canary
+name: Jerkgram 12.9.2 Build126 Canary
 
 on:
   workflow_dispatch:
@@ -116,7 +116,15 @@ jobs:
             scripts/verify_jerkgram_v12m_build124_wiring1.py \
             scripts/jerkgram_finalize_build125_identity.py \
             scripts/verify_jerkgram_v12n_build125_final_ipa.py \
-            scripts/jerkgram_publish_build125_artifact.py
+            scripts/jerkgram_publish_build125_artifact.py \
+            scripts/apply_jerkgram_v12o_build126_bio_corner_mask1.py \
+            scripts/apply_jerkgram_v12o_build126_voice_viewed_state1.py \
+            scripts/apply_jerkgram_v12o_build126_circle_viewed_state1.py \
+            scripts/apply_jerkgram_v12o_build126_forward_menu_owner1.py \
+            scripts/jerkgram_finalize_build126_keychain_package1.py \
+            scripts/jerkgram_finalize_build126_identity.py \
+            scripts/verify_jerkgram_v12o_build126_final_ipa.py \
+            scripts/jerkgram_publish_build126_artifact.py
 
           # Preserve the established late-release regression gates.
           python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
@@ -160,6 +168,13 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12n_build125_protected_cache1
           python3 -m unittest tests.test_jerkgram_v12n_build125_auth_ghost_localization1
           python3 -m unittest tests.test_jerkgram_v12n_build125_wiring1
+          python3 -m unittest tests.test_jerkgram_v12o_build126_bot_token_wiring1
+          python3 -m unittest tests.test_jerkgram_v12o_build126_bio_corner_mask1
+          python3 -m unittest tests.test_jerkgram_v12o_build126_voice_viewed_state1
+          python3 -m unittest tests.test_jerkgram_v12o_build126_circle_viewed_state1
+          python3 -m unittest tests.test_jerkgram_v12o_build126_forward_menu_owner1
+          python3 -m unittest tests.test_jerkgram_v12o_build126_keychain_packaging1
+          python3 -m unittest tests.test_jerkgram_v12o_build126_release_contract1
 
           # Canonical materialization chain. Build125 root installer invokes the
           # Build124/Build123 chain itself, then appends every Build125 overlay
@@ -179,11 +194,11 @@ jobs:
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
-      - name: Upload materialized Build125 diagnostic owners
+      - name: Upload materialized Build126 diagnostic owners
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Build125-materialized-owner-diagnostics
+          name: Build126-materialized-owner-diagnostics
           path: |
             work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift
             work/swiftgram-src/submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift
@@ -199,18 +214,18 @@ jobs:
             work/swiftgram-src/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
           if-no-files-found: warn
 
-      - name: Publish Jerkgram Build125 canary artifact
+      - name: Publish Jerkgram Build126 canary artifact
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build125_artifact.py
+          python3 scripts/jerkgram_publish_build126_artifact.py
 
-      - name: Upload Jerkgram Build125 canary
+      - name: Upload Jerkgram Build126 canary
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Build125-canary
+          name: Jerkgram-Build126-canary
           path: |
-            artifacts/Jerkgram-Build125-canary.ipa
-            artifacts/Jerkgram-Build125-canary-info.txt
+            artifacts/Jerkgram-Build126-canary.ipa
+            artifacts/Jerkgram-Build126-canary-info.txt
           if-no-files-found: error

@@ -608,6 +608,7 @@ python3 ../../scripts/apply_jerkgram_v12m_build124_protected_forward1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_deleted_entities1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_edit_history1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_auth_keyboard1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_bot_localization1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_lifecycle_freeze1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_onetime_persistence1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_onetime_viewed1.py
@@ -624,6 +625,7 @@ python3 ../../scripts/verify_jerkgram_v12m_build124_protected_forward1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_deleted_entities1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_edit_history1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_auth_keyboard1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_bot_localization1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_lifecycle_freeze1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_persistence1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py
@@ -643,6 +645,13 @@ python3 ../../scripts/verify_jerkgram_v12n_build125_circle_viewed1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_links_bounds1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_protected_cache1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_auth_ghost_localization1.py
+
+echo
+echo "== Jerkgram v1.2O Build126 owner corrections =="
+python3 ../../scripts/apply_jerkgram_v12o_build126_bio_corner_mask1.py
+python3 ../../scripts/apply_jerkgram_v12o_build126_voice_viewed_state1.py
+python3 ../../scripts/apply_jerkgram_v12o_build126_circle_viewed_state1.py
+python3 ../../scripts/apply_jerkgram_v12o_build126_forward_menu_owner1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -766,3 +775,8 @@ echo
 echo "== Jerkgram v1.2N Build125 final identity =="
 python3 ../../scripts/jerkgram_finalize_build125_identity.py ghostbase-final/GhostBase.ipa
 python3 ../../scripts/verify_jerkgram_v12n_build125_final_ipa.py ghostbase-final/GhostBase.ipa
+
+echo
+echo "== Jerkgram v1.2O Build126 final identity and keychain package =="
+python3 ../../scripts/jerkgram_finalize_build126_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12o_build126_final_ipa.py ghostbase-final/GhostBase.ipa
