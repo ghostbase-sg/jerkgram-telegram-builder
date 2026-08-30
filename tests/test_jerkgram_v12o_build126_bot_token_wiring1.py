@@ -7,7 +7,7 @@ PROBE = REPO / "scripts" / "bazel_build_probe_official.sh"
 
 
 class Build126BotTokenWiringTests(unittest.TestCase):
-    def test_selected_language_overlay_runs_before_build125_auth_overlay(self):
+    def test_selected_language_overlay_runs_after_build125_creates_bot_login_owner(self):
         text = PROBE.read_text(encoding="utf-8")
 
         bot_apply = "apply_jerkgram_v12m_build124_bot_localization1.py"
@@ -16,8 +16,8 @@ class Build126BotTokenWiringTests(unittest.TestCase):
 
         self.assertIn(bot_apply, text)
         self.assertIn(bot_verify, text)
-        self.assertLess(text.index(bot_apply), text.index(build125_apply))
-        self.assertLess(text.index(bot_verify), text.index(build125_apply))
+        self.assertLess(text.index(build125_apply), text.index(bot_apply))
+        self.assertLess(text.index(build125_apply), text.index(bot_verify))
 
     def test_build126_owner_overlays_run_after_build125_and_before_bazel(self):
         text = PROBE.read_text(encoding="utf-8")

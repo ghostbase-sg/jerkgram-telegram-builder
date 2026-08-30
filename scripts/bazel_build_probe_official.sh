@@ -608,7 +608,6 @@ python3 ../../scripts/apply_jerkgram_v12m_build124_protected_forward1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_deleted_entities1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_edit_history1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_auth_keyboard1.py
-python3 ../../scripts/apply_jerkgram_v12m_build124_bot_localization1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_lifecycle_freeze1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_onetime_persistence1.py
 python3 ../../scripts/apply_jerkgram_v12m_build124_onetime_viewed1.py
@@ -625,7 +624,6 @@ python3 ../../scripts/verify_jerkgram_v12m_build124_protected_forward1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_deleted_entities1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_edit_history1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_auth_keyboard1.py
-python3 ../../scripts/verify_jerkgram_v12m_build124_bot_localization1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_lifecycle_freeze1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_persistence1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py
@@ -639,12 +637,14 @@ python3 ../../scripts/apply_jerkgram_v12n_build125_circle_viewed1.py
 python3 ../../scripts/apply_jerkgram_v12n_build125_links_bounds1.py
 python3 ../../scripts/apply_jerkgram_v12n_build125_protected_cache1.py
 python3 ../../scripts/apply_jerkgram_v12n_build125_auth_ghost_localization1.py
+python3 ../../scripts/apply_jerkgram_v12m_build124_bot_localization1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_profile_edit1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_single_forward1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_circle_viewed1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_links_bounds1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_protected_cache1.py
 python3 ../../scripts/verify_jerkgram_v12n_build125_auth_ghost_localization1.py
+python3 ../../scripts/verify_jerkgram_v12m_build124_bot_localization1.py
 
 echo
 echo "== Jerkgram v1.2O Build126 owner corrections =="
