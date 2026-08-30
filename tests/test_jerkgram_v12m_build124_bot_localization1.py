@@ -1,10 +1,12 @@
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts" / "apply_jerkgram_v12m_build124_bot_localization1.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_v12m_build124_bot_localization1.py"
 
 
 class Build124BotLocalizationTests(unittest.TestCase):
@@ -79,6 +81,35 @@ private func ghostBaseBotDifferenceReport(strings: PresentationStrings) -> Strin
         twice = module.patch_strings(once)
         self.assertEqual(once, twice)
         self.assertEqual(once.count("BUILD124_BOT_LOCALIZATION1"), 1)
+
+    def test_verifier_accepts_current_token_owner_without_retired_rpc_errors(self):
+        spec = importlib.util.spec_from_file_location("build124_bot_localization_verify", VERIFY)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = {
+                "STRINGS": root / "JerkgramStrings.swift",
+                "PASSWORD_NODE": root / "Password.swift",
+                "PHONE_NODE": root / "Phone.swift",
+                "PHONE_CONTROLLER": root / "Controller.swift",
+                "ACTIONS": root / "Actions.swift",
+                "SETTINGS": root / "Settings.swift",
+            }
+            paths["STRINGS"].write_text(module.MARKER + "\n" + " ".join((
+                "botLoginButton", "botLoginTitle", "botTokenNotice", "botInvalidToken",
+                "botAlreadyAdded", "botLogoutTitle", "botCapabilityTitle",
+                "botDifferenceAction", "botDiagnosticReport",
+                "Log in as Bot — Experimental", "Войти как бот — Экспериментально",
+            )))
+            paths["PASSWORD_NODE"].write_text("strings.jerkgram.botLoginTitle strings.jerkgram.botTokenNotice")
+            paths["PHONE_NODE"].write_text("strings.jerkgram.botLoginButton strings.jerkgram.botLoginAccessibility")
+            paths["PHONE_CONTROLLER"].write_text("title: self.presentationData.strings.jerkgram.botLoginTitle")
+            paths["ACTIONS"].write_text("botLogoutTitle botLogoutText botLogoutAction")
+            paths["SETTINGS"].write_text("// Current Settings owner has no legacy bot diagnostic card.\n")
+            for name, path in paths.items():
+                setattr(module, name, path)
+            module.main()
 
 
 if __name__ == "__main__":

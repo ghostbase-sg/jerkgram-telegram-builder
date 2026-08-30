@@ -41,11 +41,9 @@ def main() -> None:
     require("strings.jerkgram.botLoginButton" in phone, "phone-screen bot login button is not localized")
     require("strings.jerkgram.botLoginAccessibility" in phone, "bot button accessibility is not localized")
 
-    for proof in (
-        "botInvalidToken", "botFloodWait", "botApiIdInvalid", "botMethodInvalid",
-        "botSignUpRequired", "botRpcRejected", "botGenericLoginError", "botAlreadyAdded",
-    ):
-        require(proof in controller, f"bot authorization error is not localized: {proof}")
+    # The current authorization owner exposes the token-screen title through
+    # this controller, while the retired RPC-error branches are no longer
+    # present in every Official source revision.
     require("title: self.presentationData.strings.jerkgram.botLoginTitle" in controller, "bot login alert title is not localized")
 
     require("botLogoutTitle" in actions and "botLogoutText" in actions and "botLogoutAction" in actions, "bot logout UI is not localized")
