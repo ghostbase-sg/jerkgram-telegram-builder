@@ -110,6 +110,8 @@ jobs:
             scripts/verify_jerkgram_v12n_build125_protected_cache1.py \
             scripts/apply_jerkgram_v12n_build125_auth_ghost_localization1.py \
             scripts/verify_jerkgram_v12n_build125_auth_ghost_localization1.py \
+            scripts/install_jerkgram_v12n_build125_probe_hook.py \
+            scripts/verify_jerkgram_v12n_build125_wiring1.py \
             scripts/install_jerkgram_v12m_build124_probe_hook.py \
             scripts/verify_jerkgram_v12m_build124_wiring1.py \
             scripts/jerkgram_finalize_build125_identity.py \
@@ -157,10 +159,11 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12n_build125_links_bounds1
           python3 -m unittest tests.test_jerkgram_v12n_build125_protected_cache1
           python3 -m unittest tests.test_jerkgram_v12n_build125_auth_ghost_localization1
+          python3 -m unittest tests.test_jerkgram_v12n_build125_wiring1
 
-          # Canonical materialization chain. Build124 root installer invokes the
-          # Build123 base installer itself, then appends all Build124 late
-          # overlays/verifiers and final identity without dispatching Actions.
+          # Canonical materialization chain. Build125 root installer invokes the
+          # Build124/Build123 chain itself, then appends every Build125 overlay
+          # and verifier before Bazel and advances the final IPA identity.
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
@@ -169,8 +172,9 @@ jobs:
           python3 scripts/install_jerkgram_v12i_build120_probe_hook.py
           python3 scripts/install_jerkgram_v12j_build121_probe_hook.py
           python3 scripts/install_jerkgram_v12k_build122_probe_hook.py
-          python3 scripts/install_jerkgram_v12m_build124_probe_hook.py
+          python3 scripts/install_jerkgram_v12n_build125_probe_hook.py
           python3 scripts/verify_jerkgram_v12m_build124_wiring1.py
+          python3 scripts/verify_jerkgram_v12n_build125_wiring1.py
 
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh

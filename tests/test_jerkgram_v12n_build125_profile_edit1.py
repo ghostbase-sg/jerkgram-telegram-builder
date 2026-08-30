@@ -85,6 +85,28 @@ class Build125ProfileEditTests(unittest.TestCase):
         self.assertIn("BUILD125_PROFILE_EDIT_GLASS_OWNER1", result)
         self.assertEqual(result.count("GhostBaseGlassStyle.isEnabled"), 1)
 
+    def test_bio_edit_gets_its_own_translucent_background_without_changing_all_input_rows(self):
+        module = self.load_patch()
+        bio = '''let inputItem = ItemListMultilineInputItem(presentationData: ItemListPresentationData(presentationData), systemStyle: .glass, text: item.text, placeholder: item.placeholder, maxLength: item.maxLength.flatMap { ItemListMultilineInputItemTextLimit(value: $0, display: true) }, sectionId: 0, style: .blocks, returnKeyType: .done)'''
+        renderer = '''public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
+    let presentationData: ItemListPresentationData
+    let systemStyle: ItemListSystemStyle
+    let text: String
+    public init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle = .legacy, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil, noInsets: Bool = false) {
+        self.systemStyle = systemStyle
+    }
+}
+case .blocks:
+    itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+'''
+        patched_bio = module.patch_bio_input(bio)
+        patched_renderer = module.patch_item_renderer(renderer)
+        self.assertIn("backgroundColor: GhostBaseGlassStyle.isEnabled", patched_bio)
+        self.assertIn("BUILD125_PROFILE_BIO_GLASS_OWNER1", patched_bio)
+        self.assertIn("let backgroundColor: UIColor?", patched_renderer)
+        self.assertIn("backgroundColor: UIColor? = nil", patched_renderer)
+        self.assertIn("item.backgroundColor ?? item.presentationData.theme.list.itemBlocksBackgroundColor", patched_renderer)
+
 
 if __name__ == "__main__":
     unittest.main()

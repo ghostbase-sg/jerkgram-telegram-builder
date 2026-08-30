@@ -15,10 +15,12 @@ class Build125AuthGhostLocalizationTests(unittest.TestCase):
     def test_replaces_both_login_labels_with_string_owner(self):
         owner = '''return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"\nlet info = NSAttributedString(string: "Включите до входа, чтобы оставаться невидимым с первой сессии.")\nlet bot = NSAttributedString(string: "Войти как бот")\nself.ghostBaseBotLoginNode.accessibilityLabel = "Войти как бот"\n'''
         patched = MODULE.patch_phone(owner)
-        self.assertIn('Locale.current.languageCode == "ru"', patched)
-        self.assertIn('"Log in as bot"', patched)
+        self.assertIn('strings.jerkgram.authGhostModeStatus(enabled: enabled)', patched)
+        self.assertIn('strings.jerkgram.authGhostModeHint', patched)
+        self.assertIn('strings.jerkgram.botLoginButton', patched)
+        self.assertIn('strings.jerkgram.botLoginAccessibility', patched)
         self.assertIn(MODULE.BOT_MARKER, patched)
-        self.assertNotIn("strings.jerkgram", patched)
+        self.assertNotIn("Locale.current", patched)
         self.assertIn(MODULE.MARKER, patched)
 
     def test_adds_russian_and_english_string_contract(self):

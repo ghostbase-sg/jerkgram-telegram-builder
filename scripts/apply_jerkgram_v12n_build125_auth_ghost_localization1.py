@@ -19,7 +19,9 @@ def require(value: bool, message: str) -> None:
 EXTENSION = r'''
 
 // MARK: Jerkgram v1.2N BUILD125_AUTH_GHOST_LOCALIZATION1
-// Login controls must follow the app language before an account session exists.
+// Login controls must follow Telegram's selected interface language before an
+// account session exists. `strings` is supplied by the authorization flow and
+// therefore tracks PresentationStrings.baseLanguageCode rather than iOS Locale.
 public extension JerkgramStrings {
     private var authGhostIsRussian: Bool { self.languageCode == "ru" }
 
@@ -44,10 +46,10 @@ def patch_phone(text: str) -> str:
     if MARKER in text:
         return text
     replacements = {
-        'return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"': 'return Locale.current.languageCode == "ru" ? (enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ") : (enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF")',
-        'return enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF"': 'return Locale.current.languageCode == "ru" ? (enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ") : (enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF")',
-        'string: "Включите до входа, чтобы оставаться невидимым с первой сессии."': 'string: (Locale.current.languageCode == "ru" ? "Включите до входа, чтобы оставаться невидимым с первой сессии." : "Enable before login to stay invisible from the first session.")',
-        'string: "Enable before login to stay invisible from the first session."': 'string: (Locale.current.languageCode == "ru" ? "Включите до входа, чтобы оставаться невидимым с первой сессии." : "Enable before login to stay invisible from the first session.")',
+        'return enabled ? "👻 Режим призрака: ВКЛ" : "👻 Режим призрака: ВЫКЛ"': 'return strings.jerkgram.authGhostModeStatus(enabled: enabled)',
+        'return enabled ? "👻 Ghost Mode: ON" : "👻 Ghost Mode: OFF"': 'return strings.jerkgram.authGhostModeStatus(enabled: enabled)',
+        'string: "Включите до входа, чтобы оставаться невидимым с первой сессии."': 'string: strings.jerkgram.authGhostModeHint',
+        'string: "Enable before login to stay invisible from the first session."': 'string: strings.jerkgram.authGhostModeHint',
     }
     changed = 0
     for old, new in replacements.items():
@@ -63,11 +65,11 @@ def patch_phone(text: str) -> str:
         require(text.count('self.ghostBaseBotLoginNode.accessibilityLabel = "Войти как бот"') == 1, "bot-login accessibility owner missing")
         text = text.replace(
             'string: "Войти как бот"',
-            'string: (Locale.current.languageCode == "ru" ? "Войти как бот" : "Log in as bot")',
+            'string: strings.jerkgram.botLoginButton',
             1,
         ).replace(
             'self.ghostBaseBotLoginNode.accessibilityLabel = "Войти как бот"',
-            'self.ghostBaseBotLoginNode.accessibilityLabel = Locale.current.languageCode == "ru" ? "Войти как бот" : "Log in as bot"',
+            'self.ghostBaseBotLoginNode.accessibilityLabel = strings.jerkgram.botLoginAccessibility',
             1,
         )
         text += "\n" + BOT_MARKER + "\n"

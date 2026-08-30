@@ -9,6 +9,8 @@ FILES = (
     ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift",
     ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift",
 )
+BIO = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift"
+ITEM_RENDERER = ROOT / "submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift"
 
 
 def require(value: bool, message: str) -> None:
@@ -28,6 +30,13 @@ def main() -> None:
         require("UIColor.black.withAlphaComponent(0.045)" in owner, f"{path.name}: light translucent tint missing")
         require("itemBlocksBackgroundColor.withAlphaComponent" not in owner, f"{path.name}: opaque list card survived")
         require("self.backgroundNode.isOpaque = false" in owner, f"{path.name}: field remains opaque")
+    bio = BIO.read_text(encoding="utf-8")
+    renderer = ITEM_RENDERER.read_text(encoding="utf-8")
+    require("BUILD125_PROFILE_BIO_GLASS_OWNER1" in bio, "bio_edit background owner missing")
+    require("backgroundColor: GhostBaseGlassStyle.isEnabled" in bio, "bio_edit does not follow profile Glass switch")
+    require("BUILD125_PROFILE_BIO_BACKGROUND_API1" in renderer, "per-item multiline background API missing")
+    require("let backgroundColor: UIColor?" in renderer, "per-item multiline background field missing")
+    require("item.backgroundColor ?? item.presentationData.theme.list.itemBlocksBackgroundColor" in renderer, "bio override does not bypass opaque blocks card")
     print("[Build125 profile edit verify] GREEN")
 
 

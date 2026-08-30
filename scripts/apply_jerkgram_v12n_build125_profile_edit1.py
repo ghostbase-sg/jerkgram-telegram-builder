@@ -10,7 +10,11 @@ FILES = (
     ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift",
     ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift",
 )
+BIO = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift"
+ITEM_RENDERER = ROOT / "submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift"
 MARKER = "// MARK: Jerkgram v1.2N BUILD125_PROFILE_EDIT_GLASS_OWNER1"
+BIO_MARKER = "// MARK: Jerkgram v1.2N BUILD125_PROFILE_BIO_GLASS_OWNER1"
+ITEM_MARKER = "// MARK: Jerkgram v1.2N BUILD125_PROFILE_BIO_BACKGROUND_API1"
 
 
 def require(value: bool, message: str) -> None:
@@ -84,11 +88,68 @@ def patch_text(text: str, label: str) -> str:
     return text[:start] + tail
 
 
+def patch_bio_input(text: str) -> str:
+    if BIO_MARKER in text:
+        return text
+    owner = "systemStyle: .glass, text: item.text"
+    require(text.count(owner) == 1, f"bio input owner count is {text.count(owner)}")
+    replacement = '''systemStyle: .glass,
+            // MARK: Jerkgram v1.2N BUILD125_PROFILE_BIO_GLASS_OWNER1
+            // `systemStyle` only controls corners/insets. Supply an explicit
+            // tint for this one profile-bio field so the generic `.blocks`
+            // renderer cannot replace it with Telegram's opaque list card.
+            backgroundColor: GhostBaseGlassStyle.isEnabled
+                ? (presentationData.theme.overallDarkAppearance
+                    ? UIColor.white.withAlphaComponent(0.055)
+                    : UIColor.black.withAlphaComponent(0.045))
+                : nil,
+            text: item.text'''
+    return text.replace(owner, replacement, 1)
+
+
+def patch_bio_source(text: str) -> str:
+    text = patch_bio_input(text)
+    if "import TelegramUIPreferences" not in text:
+        require("import TelegramPresentationData" in text, "bio input preference import anchor missing")
+        text = text.replace("import TelegramPresentationData", "import TelegramPresentationData\nimport TelegramUIPreferences", 1)
+    return text
+
+
+def patch_item_renderer(text: str) -> str:
+    if ITEM_MARKER in text:
+        return text
+    require("let systemStyle: ItemListSystemStyle" in text, "multiline item style field missing")
+    require("let text: String" in text, "multiline item text field missing")
+    require("systemStyle: ItemListSystemStyle = .legacy, text: String" in text, "multiline item initializer owner missing")
+    require("self.systemStyle = systemStyle" in text, "multiline item initializer assignment missing")
+    old_background = "itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor"
+    require(text.count(old_background) == 1, f"multiline blocks background owner count is {text.count(old_background)}")
+    text = text.replace(
+        "let systemStyle: ItemListSystemStyle\n    let text: String",
+        "let systemStyle: ItemListSystemStyle\n    // MARK: Jerkgram v1.2N BUILD125_PROFILE_BIO_BACKGROUND_API1\n    // Optional per-item override. Generic callers retain Telegram's stock cards.\n    let backgroundColor: UIColor?\n    let text: String",
+        1,
+    )
+    text = text.replace(
+        "systemStyle: ItemListSystemStyle = .legacy, text: String",
+        "systemStyle: ItemListSystemStyle = .legacy, backgroundColor: UIColor? = nil, text: String",
+        1,
+    )
+    text = text.replace("self.systemStyle = systemStyle", "self.systemStyle = systemStyle\n        self.backgroundColor = backgroundColor", 1)
+    text = text.replace(
+        old_background,
+        "itemBackgroundColor = item.backgroundColor ?? item.presentationData.theme.list.itemBlocksBackgroundColor",
+        1,
+    )
+    return text
+
+
 def main() -> None:
     for path in FILES:
         path.write_text(patch_text(path.read_text(encoding="utf-8"), path.name), encoding="utf-8")
+    BIO.write_text(patch_bio_source(BIO.read_text(encoding="utf-8")), encoding="utf-8")
+    ITEM_RENDERER.write_text(patch_item_renderer(ITEM_RENDERER.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build125 profile edit] GREEN")
-    print("[Build125 profile edit] bio and name fields use the visible profile Glass switch and translucent theme card surface")
+    print("[Build125 profile edit] header fields and the actual bio_edit renderer use the visible profile Glass switch")
 
 
 if __name__ == "__main__":
