@@ -33,7 +33,8 @@ def balanced_if_end(text: str, if_start: int) -> int:
 
 def remove_old_single_forward_action(text: str) -> str:
     marker_start = text.find(OLD_MARKER)
-    require(marker_start >= 0, "Build125 single-forward owner missing")
+    if marker_start < 0:
+        return text
     action_start = text.find("if ghostBaseForwardWithoutAuthor", marker_start)
     require(action_start >= 0, "Build125 single-forward gate missing")
     action_end = balanced_if_end(text, action_start)

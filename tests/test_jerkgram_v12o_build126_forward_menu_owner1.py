@@ -86,6 +86,14 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
         once = module.patch_text(self.owner_fixture())
         self.assertEqual(once, module.patch_text(once))
 
+    def test_legacy_owner_is_optional_after_its_broken_predecessor_is_removed(self):
+        module = self.load_patch()
+        source = self.owner_fixture().replace(module.OLD_MARKER + "\n", "")
+        source = source.replace("        let jerkgramForwardWithoutAuthorTargets = selectAll ? messages : [message]\n", "")
+        source = source.replace("        if ghostBaseForwardWithoutAuthor,\n", "        if true,\n", 1)
+        result = module.patch_text(source)
+        self.assertIn(module.MARKER, result)
+
 
 if __name__ == "__main__":
     unittest.main()
