@@ -63,7 +63,9 @@ def patch_probe(text: str) -> str:
     require(BUILD124_SOURCE_ANCHOR in text, "Build124 source verifier anchor missing")
     require(BUILD124_FINAL_ANCHOR in text, "Build124 final verifier anchor missing")
 
-    if SOURCE_MARKER not in text:
+    hook_names = APPLY_ORDERED + VERIFY_ORDERED
+    hook_counts = [text.count(name) for name in hook_names]
+    if SOURCE_MARKER not in text and all(count == 0 for count in hook_counts):
         source_block = (
             BUILD124_SOURCE_ANCHOR
             + "\n"
@@ -75,11 +77,31 @@ def patch_probe(text: str) -> str:
             + "\n"
         )
         text = text.replace(BUILD124_SOURCE_ANCHOR, source_block, 1)
+    elif SOURCE_MARKER not in text and all(count == 1 for count in hook_counts):
+        # The historical Build125 release block already lives in the probe on
+        # this branch. It was unmarked, so a second installer used to append a
+        # duplicate block and then abort on its own strict count gate. Adopt
+        # the existing ordered block instead of materializing it a second time.
+        require(
+            text.index(BUILD124_SOURCE_ANCHOR.strip()) < min(text.index(name) for name in APPLY_ORDERED),
+            "preexisting Build125 block must follow Build124 source verification",
+        )
+        require(
+            max(text.index(name) for name in VERIFY_ORDERED) < text.index(BAZEL_ANCHOR),
+            "preexisting Build125 block must finish before Bazel",
+        )
+        text = text.replace(
+            BUILD124_SOURCE_ANCHOR,
+            BUILD124_SOURCE_ANCHOR + "\n" + SOURCE_MARKER + "\n",
+            1,
+        )
+    elif SOURCE_MARKER not in text:
+        require(False, "incomplete preexisting Build125 source block")
 
     require(text.count(SOURCE_MARKER) == 1, "Build125 source marker count")
     apply_positions = [text.index(name) for name in APPLY_ORDERED]
     verify_positions = [text.index(name) for name in VERIFY_ORDERED]
-    for name in APPLY_ORDERED + VERIFY_ORDERED:
+    for name in hook_names:
         require(text.count(name) == 1, f"Build125 hook count for {name}")
     require(apply_positions == sorted(apply_positions), "Build125 apply order")
     require(verify_positions == sorted(verify_positions), "Build125 verifier order")

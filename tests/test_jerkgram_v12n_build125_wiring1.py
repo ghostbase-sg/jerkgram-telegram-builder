@@ -56,6 +56,22 @@ python3 ../../scripts/verify_jerkgram_v12m_build124_final_ipa.py ghostbase-final
         once = module.patch_probe(self.fixture())
         self.assertEqual(once, module.patch_probe(once))
 
+    def test_adopts_the_preexisting_unmarked_build125_block_without_duplication(self):
+        module = self.load_installer()
+        anchor = "python3 ../../scripts/verify_jerkgram_v12m_build124_settings_redesign1.py\n"
+        existing = (
+            anchor
+            + '\necho\necho "== Jerkgram v1.2N Build125 release owners =="\n'
+            + "\n".join("python3 ../../scripts/" + name for name in module.APPLY_ORDERED)
+            + "\n"
+            + "\n".join("python3 ../../scripts/" + name for name in module.VERIFY_ORDERED)
+            + "\n"
+        )
+        updated = module.patch_probe(self.fixture().replace(anchor, existing, 1))
+        self.assertEqual(updated.count(module.SOURCE_MARKER), 1)
+        for name in module.APPLY_ORDERED + module.VERIFY_ORDERED:
+            self.assertEqual(updated.count(name), 1, name)
+
     def test_workflow_uses_build125_installer_and_materialized_wiring_gate(self):
         workflow = (REPO / ".github/workflows/build.yml").read_text(encoding="utf-8")
         self.assertIn("install_jerkgram_v12n_build125_probe_hook.py", workflow)
