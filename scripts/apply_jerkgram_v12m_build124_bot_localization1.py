@@ -139,6 +139,13 @@ def patch_settings(text: str) -> str:
     return text
 
 
+def has_legacy_bot_diagnostics(text: str) -> bool:
+    return (
+        "ghostBaseBotCapabilityReport" in text
+        or "ghostBaseBotDifferenceReport" in text
+    )
+
+
 def main() -> None:
     paths = [STRINGS, PASSWORD_NODE, PHONE_NODE, PHONE_CONTROLLER, ACTIONS, SETTINGS]
     for path in paths:
@@ -162,7 +169,10 @@ def main() -> None:
     require("strings.jerkgram.botLoginButton" in combined, "localized bot login button missing")
     require("botAlreadyAdded" in combined, "localized duplicate bot message missing")
     require("botLogoutTitle" in combined, "localized bot logout missing")
-    require("botCapabilityTitle" in combined and "botDifferenceAction" in combined, "localized bot diagnostics missing")
+    # The Build124 settings redesign can remove the legacy diagnostics cards.
+    # Their absence must not block the separate bot-token authorization UI.
+    if has_legacy_bot_diagnostics(SETTINGS.read_text(encoding="utf-8")):
+        require("botCapabilityTitle" in combined and "botDifferenceAction" in combined, "localized bot diagnostics missing")
 
     print("[Build124 bot localization] GREEN")
     print("[Build124 bot localization] bot login/logout/diagnostics follow PresentationStrings.baseLanguageCode")

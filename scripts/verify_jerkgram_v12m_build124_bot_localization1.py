@@ -49,10 +49,15 @@ def main() -> None:
     require("title: self.presentationData.strings.jerkgram.botLoginTitle" in controller, "bot login alert title is not localized")
 
     require("botLogoutTitle" in actions and "botLogoutText" in actions and "botLogoutAction" in actions, "bot logout UI is not localized")
-    require("ghostBaseBotCapabilityReport(strings: PresentationStrings)" in settings, "capability report lacks selected-language owner")
-    require("ghostBaseBotDifferenceReport(strings: PresentationStrings)" in settings, "difference report lacks selected-language owner")
-    require("strings.jerkgram.botCapabilityTitle" in settings, "bot capability title is not localized")
-    require("strings.jerkgram.botDifferenceAction" in settings, "bot difference action is not localized")
+    has_legacy_bot_diagnostics = (
+        "ghostBaseBotCapabilityReport" in settings
+        or "ghostBaseBotDifferenceReport" in settings
+    )
+    if has_legacy_bot_diagnostics:
+        require("ghostBaseBotCapabilityReport(strings: PresentationStrings)" in settings, "capability report lacks selected-language owner")
+        require("ghostBaseBotDifferenceReport(strings: PresentationStrings)" in settings, "difference report lacks selected-language owner")
+        require("strings.jerkgram.botCapabilityTitle" in settings, "bot capability title is not localized")
+        require("strings.jerkgram.botDifferenceAction" in settings, "bot difference action is not localized")
 
     forbidden = (
         'text = "Этот бот уже добавлен в GhostBase."',

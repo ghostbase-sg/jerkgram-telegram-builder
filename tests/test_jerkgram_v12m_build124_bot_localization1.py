@@ -60,6 +60,12 @@ class Build124BotLocalizationTests(unittest.TestCase):
         self.assertIn("ghostBaseBotCapabilityReport(strings: strings)", result)
         self.assertIn("ghostBaseBotDifferenceReport(strings: strings)", result)
 
+    def test_missing_legacy_diagnostics_do_not_block_token_localization(self):
+        module = self.load_patch()
+        source = "// Build124 settings redesign removed the legacy bot diagnostic cards.\n"
+        self.assertEqual(module.patch_settings(source), source)
+        self.assertFalse(module.has_legacy_bot_diagnostics(source))
+
     def test_patch_is_idempotent(self):
         module = self.load_patch()
         source = "public struct JerkgramStrings { public let languageCode: String }\n"
