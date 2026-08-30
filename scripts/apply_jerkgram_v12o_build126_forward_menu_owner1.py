@@ -16,17 +16,38 @@ def require(value: bool, message: str) -> None:
         raise RuntimeError("[Build126 forward menu] " + message)
 
 
+def balanced_if_end(text: str, if_start: int) -> int:
+    brace_start = text.find("{", if_start)
+    require(brace_start >= 0, "Build125 action opening brace missing")
+    depth = 0
+    for index in range(brace_start, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    raise RuntimeError("[Build126 forward menu] Build125 action is unbalanced")
+
+
+def remove_old_single_forward_action(text: str) -> str:
+    marker_start = text.find(OLD_MARKER)
+    require(marker_start >= 0, "Build125 single-forward owner missing")
+    action_start = text.find("if ghostBaseForwardWithoutAuthor", marker_start)
+    require(action_start >= 0, "Build125 single-forward gate missing")
+    action_end = balanced_if_end(text, action_start)
+    while action_end < len(text) and text[action_end] in " \\t\\r\\n":
+        action_end += 1
+    return text[:marker_start] + text[action_end:]
+
+
 def patch_text(text: str) -> str:
     if MARKER in text:
         return text
 
-    old_start = text.find(OLD_MARKER)
-    native_start = text.find(NATIVE_FORWARD, old_start)
-    require(old_start >= 0, "Build125 single-forward owner missing")
-    require(native_start >= 0, "native forward owner missing after Build125 action")
-
-    action_start = text.rfind("        ", 0, old_start)
-    require(action_start >= 0, "Build125 action indentation missing")
+    text = remove_old_single_forward_action(text)
+    native_start = text.find(NATIVE_FORWARD)
+    require(native_start >= 0, "native forward owner missing")
 
     replacement = '''        // MARK: Jerkgram v1.2O BUILD126_FORWARD_MENU_OWNER1
         // The sender below knows how to recreate protected media locally. Its
@@ -88,7 +109,7 @@ def patch_text(text: str) -> str:
         }
 
 '''
-    return text[:action_start] + replacement + text[native_start:]
+    return text[:native_start] + replacement + text[native_start:]
 
 
 def main() -> None:

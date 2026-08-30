@@ -29,6 +29,13 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
             })))
         }
 
+        var messageText: String = ""
+        var isImage = true
+        let isCopyProtected = false
+        let isMigrated = false
+        let isUnremovableAction = false
+        let resourceAvailable = true
+
         if data.messageActions.options.contains(.forward) {
             if !isCopyProtected {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, action: { _, f in
@@ -55,6 +62,14 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
         self.assertIn("forceHideNames: true", result)
         self.assertIn("messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map", result)
         self.assertNotIn("BUILD125_SINGLE_FORWARD_DIRECT_ACTION1", result)
+
+    def test_preserves_the_declarations_between_the_old_action_and_native_gate(self):
+        module = self.load_patch()
+        result = module.patch_text(self.owner_fixture())
+        self.assertIn('var messageText: String = ""', result)
+        self.assertIn("var isImage = true", result)
+        self.assertIn("let isCopyProtected = false", result)
+        self.assertLess(result.index(module.MARKER), result.index(module.NATIVE_FORWARD))
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()
