@@ -8,6 +8,7 @@ ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOU
 TARGET = ROOT / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift"
 MARKER = "// MARK: Jerkgram v1.2O BUILD126_FORWARD_MENU_OWNER1"
 OLD_MARKER = "// MARK: Jerkgram v1.2N BUILD125_SINGLE_FORWARD_DIRECT_ACTION1"
+BROKEN_LEGACY_MARKER = "// MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_TARGET_SCOPE1"
 NATIVE_FORWARD = "        if data.messageActions.options.contains(.forward) {"
 
 
@@ -41,10 +42,20 @@ def remove_old_single_forward_action(text: str) -> str:
     return text[:marker_start] + text[action_end:]
 
 
+def remove_broken_legacy_single_forward_action(text: str) -> str:
+    marker_start = text.find(BROKEN_LEGACY_MARKER)
+    if marker_start < 0:
+        return text
+    next_owner = text.find("        if data.messageActions.options.contains(.sendScheduledNow) {", marker_start)
+    require(next_owner >= 0, "broken Build124 single-forward action end missing")
+    return text[:marker_start] + text[next_owner:]
+
+
 def patch_text(text: str) -> str:
     if MARKER in text:
         return text
 
+    text = remove_broken_legacy_single_forward_action(text)
     text = remove_old_single_forward_action(text)
     native_start = text.find(NATIVE_FORWARD)
     require(native_start >= 0, "native forward owner missing")
@@ -98,7 +109,6 @@ def patch_text(text: str) -> str:
             }, action: { _, f in
                 if let chatController = interfaceInteraction.chatController() as? ChatControllerImpl {
                     chatController.forwardMessages(
-                        forceHideNames: true,
                         messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map { $0.id },
                         options: ChatInterfaceForwardOptionsState(hideNames: true, hideCaptions: false, unhideNamesOnCaptionChange: false),
                         resetCurrent: true

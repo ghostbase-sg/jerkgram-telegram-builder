@@ -18,6 +18,15 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
 
     def owner_fixture(self):
         return '''        let ghostBaseForwardWithoutAuthor = true
+        // MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_TARGET_SCOPE1
+        ) {
+            actions.append(.action(ContextMenuActionItem(text: "Переслать без автора", action: { _, f in
+                f(.dismissWithoutContent)
+            })))
+        }
+        if data.messageActions.options.contains(.sendScheduledNow) {
+        }
+
         // MARK: Jerkgram v1.2N BUILD125_SINGLE_FORWARD_DIRECT_ACTION1
         let jerkgramForwardWithoutAuthorTargets = selectAll ? messages : [message]
         if ghostBaseForwardWithoutAuthor,
@@ -59,9 +68,10 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_text(self.owner_fixture())
         self.assertIn("jerkgramBuild126ForwardWithoutAuthorTargets = selectAll ? messages : [message]", result)
-        self.assertIn("forceHideNames: true", result)
+        self.assertNotIn("forceHideNames: true", result)
         self.assertIn("messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map", result)
         self.assertNotIn("BUILD125_SINGLE_FORWARD_DIRECT_ACTION1", result)
+        self.assertNotIn("BUILD124_SINGLE_FORWARD_TARGET_SCOPE1", result)
 
     def test_preserves_the_declarations_between_the_old_action_and_native_gate(self):
         module = self.load_patch()
