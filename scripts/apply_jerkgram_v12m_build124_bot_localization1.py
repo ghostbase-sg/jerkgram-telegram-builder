@@ -72,7 +72,20 @@ def patch_strings(text: str) -> str:
     if MARKER in text:
         return text
     require("public struct JerkgramStrings" in text, "JerkgramStrings owner missing")
-    return text.rstrip() + STRINGS_EXTENSION + "\n"
+    extension = STRINGS_EXTENSION
+    # Build125 owns the visible phone-entry button. Keep its declaration and
+    # only add the token-screen strings from this older localization overlay.
+    if "var botLoginButton: String" in text:
+        extension = extension.replace(
+            '    var botLoginButton: String { self.botIsRussian ? "Войти как бот — Экспериментально" : "Log in as Bot — Experimental" }\n',
+            '',
+        )
+    if "var botLoginAccessibility: String" in text:
+        extension = extension.replace(
+            '    var botLoginAccessibility: String { self.botIsRussian ? "Войти как бот" : "Log in as Bot" }\n',
+            '',
+        )
+    return text.rstrip() + extension + "\n"
 
 
 def patch_auth_sources(files: dict[str, str]) -> dict[str, str]:

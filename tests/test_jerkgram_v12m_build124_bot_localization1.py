@@ -29,6 +29,20 @@ class Build124BotLocalizationTests(unittest.TestCase):
         self.assertIn("already added to Jerkgram", result)
         self.assertNotIn("added to GhostBase", result)
 
+    def test_keeps_build125_bot_button_properties_single_declared(self):
+        module = self.load_patch()
+        source = '''public struct JerkgramStrings { public let languageCode: String }
+public extension JerkgramStrings {
+    var botLoginButton: String { "Log in as Bot" }
+    var botLoginAccessibility: String { "Log in as Bot" }
+}
+'''
+        result = module.patch_strings(source)
+        self.assertEqual(result.count("var botLoginButton: String"), 1)
+        self.assertEqual(result.count("var botLoginAccessibility: String"), 1)
+        self.assertIn("var botLoginTitle: String", result)
+        self.assertIn("var botTokenNotice: String", result)
+
     def test_auth_ui_uses_selected_presentation_language(self):
         module = self.load_patch()
         files = {
