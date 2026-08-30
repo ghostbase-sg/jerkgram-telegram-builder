@@ -34,7 +34,7 @@ def main() -> None:
         "botDifferenceAction", "botDiagnosticReport",
     ):
         require(proof in strings, f"string owner missing: {proof}")
-    require("Log in as Bot — Experimental" in strings and "Войти как бот — Экспериментально" in strings, "English/Russian bot button translations missing")
+    require("Log in as Bot" in strings and "Войти как бот" in strings, "English/Russian bot button translations missing")
 
     require("strings.jerkgram.botLoginTitle" in password, "bot token screen title is not localized")
     require("strings.jerkgram.botTokenNotice" in password, "bot token notice is not localized")

@@ -114,7 +114,7 @@ private func ghostBaseBotDifferenceReport(strings: PresentationStrings) -> Strin
                 "botLoginButton", "botLoginTitle", "botTokenNotice", "botInvalidToken",
                 "botAlreadyAdded", "botLogoutTitle", "botCapabilityTitle",
                 "botDifferenceAction", "botDiagnosticReport",
-                "Log in as Bot — Experimental", "Войти как бот — Экспериментально",
+                "Log in as Bot", "Войти как бот",
             )))
             paths["PASSWORD_NODE"].write_text("strings.jerkgram.botLoginTitle strings.jerkgram.botTokenNotice")
             paths["PHONE_NODE"].write_text("strings.jerkgram.botLoginButton strings.jerkgram.botLoginAccessibility")
