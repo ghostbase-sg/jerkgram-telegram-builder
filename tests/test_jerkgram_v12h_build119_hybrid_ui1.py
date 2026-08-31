@@ -99,6 +99,7 @@ class Build119HybridUIContractTests(unittest.TestCase):
     def test_build117_release_gate_accepts_truthful_successor_artifact(self) -> None:
         source = BUILD117_RELEASE.read_text(encoding="utf-8")
         self.assertIn('re.findall(r"Jerkgram-build(\\d+)"', source)
+        self.assertIn('re.findall(r"Jerkgram-Build(\\d+)\\.ipa"', source)
         self.assertIn("max(artifact_builds) >= 118", source)
         self.assertIn("Build118-or-newer Jerkgram artifact missing", source)
         self.assertNotIn('require("Jerkgram-build118" in workflow', source)

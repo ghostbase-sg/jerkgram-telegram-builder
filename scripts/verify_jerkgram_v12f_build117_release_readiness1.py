@@ -35,11 +35,13 @@ def main():
         workflow = path.read_text(encoding="utf-8")
         # Build117 predates the canary naming convention. Successor workflows
         # may publish either a normal release-line artifact (Jerkgram-buildN)
-        # or an explicitly non-public canary (Jerkgram-BuildN-canary). Both
+        # an explicitly non-public canary (Jerkgram-BuildN-canary), or the
+        # current release packaging name (Jerkgram-BuildN.ipa). All forms
         # still have to represent Build118 or newer; this gate never accepts a
         # generic/unversioned artifact name.
         artifact_builds = [int(value) for value in re.findall(r"Jerkgram-build(\d+)", workflow)]
         artifact_builds += [int(value) for value in re.findall(r"Jerkgram-Build(\d+)-canary", workflow)]
+        artifact_builds += [int(value) for value in re.findall(r"Jerkgram-Build(\d+)\.ipa", workflow)]
         require(
             artifact_builds and max(artifact_builds) >= 118,
             f"{path.name}: Build118-or-newer Jerkgram artifact missing",
