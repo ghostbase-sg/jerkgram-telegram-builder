@@ -9,8 +9,8 @@ ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOU
 FORWARD = ROOT / "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift"
 MARKER = "// MARK: Jerkgram v1.2R BUILD129_PROTECTED_CHAT_FORWARD1"
 SCRIPT_DIR = Path(__file__).resolve().parent
-BUILD130_APPLY = SCRIPT_DIR / "apply_jerkgram_v12t_build130_release_ui_telemetry1.py"
-BUILD130_VERIFY = SCRIPT_DIR / "verify_jerkgram_v12t_build130_release_ui_telemetry1.py"
+BUILD130_APPLY = SCRIPT_DIR / "apply_jerkgram_v12t_build130_release_ui_telemetry_final.py"
+BUILD130_VERIFY = SCRIPT_DIR / "verify_jerkgram_v12t_build130_release_ui_telemetry_final.py"
 
 
 def require(value: bool, message: str) -> None:
@@ -25,42 +25,31 @@ def balanced_region(text: str, token: str) -> tuple[int, int]:
     require(brace >= 0, f"missing opening brace: {token}")
     depth = 0
     for index in range(brace, len(text)):
-        if text[index] == "{":
-            depth += 1
+        if text[index] == "{": depth += 1
         elif text[index] == "}":
             depth -= 1
-            if depth == 0:
-                return start, index + 1
+            if depth == 0: return start, index + 1
     raise RuntimeError("[Build129 protected chat forward] unbalanced owner")
 
 
 def patch_text(text: str) -> str:
-    if MARKER in text:
-        return text
+    if MARKER in text: return text
     token = "private func jerkgramRequiresPortableForward(_ message: Message) -> Bool"
     start, end = balanced_region(text, token)
     replacement = '''// MARK: Jerkgram v1.2R BUILD129_PROTECTED_CHAT_FORWARD1
 private func jerkgramRequiresPortableForward(_ message: Message) -> Bool {
-    if message.isCopyProtected() {
-        return true
-    }
-    // Chat-level protection is not represented by `isCopyProtected()` for
-    // every channel post. Detect it in the sender owner without mutating the
-    // context menu: the native Forward row and Jerkgram Forward without author
-    // action keep their existing independent owners.
-    if let chatPeer = message.peers[message.id.peerId], chatPeer.isCopyProtectionEnabled {
-        return true
-    }
-    if let sourcePeer = message.forwardInfo?.author ?? message.effectiveAuthor {
-        return sourcePeer.isCopyProtectionEnabled
-    }
+    if message.isCopyProtected() { return true }
+    if let chatPeer = message.peers[message.id.peerId], chatPeer.isCopyProtectionEnabled { return true }
+    if let sourcePeer = message.forwardInfo?.author ?? message.effectiveAuthor { return sourcePeer.isCopyProtectionEnabled }
     return false
 }'''
     return text[:start] + replacement + text[end:]
 
 
 def run_build130_pre_bazel_gate() -> None:
-    for path in (BUILD130_APPLY, BUILD130_VERIFY):
+    base_apply = SCRIPT_DIR / "apply_jerkgram_v12t_build130_release_ui_telemetry1.py"
+    base_verify = SCRIPT_DIR / "verify_jerkgram_v12t_build130_release_ui_telemetry1.py"
+    for path in (base_apply, base_verify, BUILD130_APPLY, BUILD130_VERIFY):
         require(path.is_file(), f"Build130 gate missing: {path.name}")
         subprocess.check_call([sys.executable, "-m", "py_compile", str(path)])
     subprocess.check_call([sys.executable, str(BUILD130_APPLY)])
@@ -69,12 +58,10 @@ def run_build130_pre_bazel_gate() -> None:
 
 def main() -> None:
     require(FORWARD.is_file(), f"missing forward owner: {FORWARD}")
-    forward = patch_text(FORWARD.read_text(encoding="utf-8"))
-    FORWARD.write_text(forward, encoding="utf-8")
+    FORWARD.write_text(patch_text(FORWARD.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build129 protected chat forward] GREEN")
     print("== Build130 fail-fast gate (must pass before Bazel) ==")
     run_build130_pre_bazel_gate()
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
