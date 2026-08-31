@@ -139,7 +139,10 @@ case let .filter(_, _, title, value, kind):
         disclosureStyle: .none,
         action: { if let kind { arguments.toggleKind(kind) } else { arguments.selectSender() } }
     )
-strings.build119TimeMachineSummary(results.count, state.kinds.count, state.senderPeerId != nil)
+var entries: [JerkgramTimeMachineUIEntry] = [
+    .summary(0, 1, strings.timeMachine, strings.build119TimeMachineSummary(results.count, state.kinds.count, state.senderPeerId != nil)),
+    .header(1, strings.timeMachineFilters)
+]
 Queue.concurrentDefaultQueue().async {
     let page = try eventStore.eventPage(
         accountPeerId: accountPeerId,
@@ -156,6 +159,28 @@ class Build124SettingsRedesignTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
+
+    def test_removes_only_script_added_toggle_icons(self):
+        module = self.load_patch()
+        injected = '''
+// MARK: Jerkgram v1.2L BUILD123_SETTINGS_TOGGLE_ICONS1
+private func jerkgramSettingsToggleIcon(_ key: String) -> UIImage? { nil }
+private enum GhostBaseSettingsEntry: ItemListNodeEntry {
+    case let .toggle(_, _, key, title, value):
+        return ItemListSwitchItem(
+            presentationData: presentationData,
+            systemStyle: .glass,
+            icon: jerkgramSettingsToggleIcon(key),
+            title: title,
+            value: value
+        )
+}
+'''
+        updated = module.patch_settings_text(SETTINGS_FIXTURE + injected)
+        self.assertNotIn("BUILD123_SETTINGS_TOGGLE_ICONS1", updated)
+        self.assertNotIn("jerkgramSettingsToggleIcon", updated)
+        self.assertNotIn("icon: jerkgramSettingsToggleIcon(key)", updated)
+        self.assertIn('"Jerkgram/Settings/Airplane", .home', updated)
 
     def test_root_stays_telegram_native_and_internal_pages_get_summaries(self):
         module = self.load_patch()
@@ -218,9 +243,13 @@ class Build124SettingsRedesignTests(unittest.TestCase):
     def test_time_machine_preserves_bounded_off_main_loading(self):
         module = self.load_patch()
         updated = module.patch_time_machine_text(TIME_MACHINE_FIXTURE)
-        self.assertIn("build124TimeMachineSummary", updated)
         self.assertNotIn("build119TimeMachineSummary", updated)
-        self.assertIn("systemStyle: .glass", updated)
+        self.assertNotIn("build124TimeMachineSummary", updated)
+        self.assertNotIn(".summary(0, 1,", updated)
+        self.assertIn("ItemListSwitchItem(", updated)
+        self.assertIn('value: value == "✓"', updated)
+        self.assertIn("arguments.toggleKind(kind)", updated)
+        self.assertIn("arguments.selectSender()", updated)
         self.assertIn("Queue.concurrentDefaultQueue().async", updated)
         self.assertIn("eventPage(", updated)
         self.assertIn("limit: 250", updated)

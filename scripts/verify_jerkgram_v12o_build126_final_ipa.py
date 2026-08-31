@@ -11,7 +11,7 @@ import verify_jerkgram_v12k_build122_final_ipa as base
 from jerkgram_finalize_build126_keychain_package1 import EXPECTED_SHA256, INSTALL_NAME, loaded_dylib_paths, require
 
 
-base.EXPECTED_BUILD = "126"
+base.EXPECTED_BUILD = "128"
 DYLIB_NAME = "sideloadKeychainFix.dylib"
 
 
@@ -34,8 +34,8 @@ def main() -> None:
         require(loaded_dylib_paths((app / executable_name).read_bytes()).count(INSTALL_NAME) == 1, "main executable must load the approved dylib exactly once")
         extension_copies = list((app / "PlugIns").rglob(DYLIB_NAME)) if (app / "PlugIns").is_dir() else []
         require(not extension_copies, "approved dylib must not be embedded in extensions")
-    print("[Build126 final IPA verify] GREEN")
-    print("[Build126 final IPA verify] Build=126, exact main-app-only sideload keychain library")
+    print("[Build128 final IPA verify] GREEN")
+    print("[Build128 final IPA verify] Build=128, exact main-app-only sideload keychain library")
 
 
 if __name__ == "__main__":

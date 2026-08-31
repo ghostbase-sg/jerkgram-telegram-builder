@@ -39,6 +39,7 @@ class Build119HybridUIContractTests(unittest.TestCase):
         artifact_paths = (
             f"artifacts/Jerkgram-build{current_build}.ipa",
             f"artifacts/Jerkgram-Build{current_build}-canary.ipa",
+            f"artifacts/Jerkgram-Build{current_build}.ipa",
         )
         self.assertTrue(
             any(path in source for path in artifact_paths),

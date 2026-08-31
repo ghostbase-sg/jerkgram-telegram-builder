@@ -58,12 +58,16 @@ class Build127OneTimeNativeStatusTests(unittest.TestCase):
                 }
             }
             var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
+                        durationNode.isSeen = !notConsumed || jerkgramOutgoingOneTimeCircleViewed || item.presentationData.isPreview
+                        durationNode.showsViewedCheck = jerkgramOutgoingOneTimeCircleViewed
 '''
         result = module.patch_circle_text(source)
         self.assertIn(module.CIRCLE_MARKER, result)
         self.assertIn("if !attribute.consumed {", result)
         self.assertNotIn("jerkgramOutgoingOneTimeCircleViewed", result)
         self.assertNotIn("effectivelyIncoming", result)
+        self.assertIn("durationNode.isSeen = !notConsumed || item.presentationData.isPreview", result)
+        self.assertIn("durationNode.showsViewedCheck = false", result)
 
     def test_patch_is_idempotent(self):
         module = self.load_patch()

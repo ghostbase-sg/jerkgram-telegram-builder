@@ -96,7 +96,9 @@ def patch_text(text: str) -> str:
         // This does not depend on the native forward capability and passes the
         // exact pressed message to the existing force-hide sender.
         let jerkgramBuild126ForwardWithoutAuthorTargets = selectAll ? messages : [message]
+        let jerkgramBuild126ChatController = interfaceInteraction.chatController() as? ChatControllerImpl
         if ghostBaseForwardWithoutAuthor,
+           let jerkgramBuild126ChatController,
            jerkgramBuild126ForwardWithoutAuthorTargets.allSatisfy({ message in
                message.id.peerId.namespace != Namespaces.Peer.SecretChat
                && !message.media.contains(where: {
@@ -108,13 +110,11 @@ def patch_text(text: str) -> str:
             actions.append(.action(ContextMenuActionItem(text: "Переслать без автора", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
-                if let chatController = interfaceInteraction.chatController() as? ChatControllerImpl {
-                    chatController.forwardMessages(
-                        messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map { $0.id },
-                        options: ChatInterfaceForwardOptionsState(hideNames: true, hideCaptions: false, unhideNamesOnCaptionChange: false),
-                        resetCurrent: true
-                    )
-                }
+                jerkgramBuild126ChatController.forwardMessages(
+                    messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map { $0.id },
+                    options: ChatInterfaceForwardOptionsState(hideNames: true, hideCaptions: false, unhideNamesOnCaptionChange: false),
+                    resetCurrent: true
+                )
                 f(.dismissWithoutContent)
             })))
         }

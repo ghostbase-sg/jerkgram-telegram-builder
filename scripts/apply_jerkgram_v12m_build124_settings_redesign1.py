@@ -17,6 +17,7 @@ PAGE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_SETTINGS_PAGE_SUMMARY1"
 STARS_MARKER = "// MARK: Jerkgram v1.2M BUILD124_STARS_REDESIGN1"
 DATA_MARKER = "// MARK: Jerkgram v1.2M BUILD124_DATA_REDESIGN1"
 TIME_MACHINE_MARKER = "// MARK: Jerkgram v1.2M BUILD124_TIME_MACHINE_REDESIGN1"
+TIME_MACHINE_FINAL_MARKER = "// MARK: Jerkgram v1.2M BUILD124_TIME_MACHINE_FINAL_UI1"
 STRINGS_MARKER = "// MARK: Jerkgram v1.2M BUILD124_SETTINGS_REDESIGN_STRINGS1"
 
 
@@ -204,9 +205,29 @@ def add_page_summary(block: str, expression: str) -> str:
     return block[:append_match.start()] + insertion + block[append_match.start():]
 
 
+def remove_script_added_toggle_icons(text: str) -> str:
+    marker = "// MARK: Jerkgram v1.2L BUILD123_SETTINGS_TOGGLE_ICONS1"
+    if marker not in text:
+        return text
+    helper_start = text.index(marker)
+    signature = "private func jerkgramSettingsToggleIcon(_ key: String) -> UIImage?"
+    _, helper_end = block_bounds(text, signature)
+    text = text[:helper_start] + text[helper_end:]
+    text, count = re.subn(
+        r"(?m)^([ \t]*)icon: jerkgramSettingsToggleIcon\(key\),\n",
+        "",
+        text,
+    )
+    require(count == 1, "script-added Settings toggle icon call missing")
+    require("jerkgramSettingsToggleIcon" not in text, "script-added Settings toggle icon survived")
+    return text
+
+
 def patch_settings_text(text: str) -> str:
     if MARKER in text:
         return text
+
+    text = remove_script_added_toggle_icons(text)
 
     root = block_text(text, "if page == .root {")
     require(root.count(".disclosure(") == 9, "root must keep exactly nine Telegram-native destinations")
@@ -318,31 +339,80 @@ def patch_data_text(text: str) -> str:
     return text
 
 
-def patch_time_machine_text(text: str) -> str:
-    if TIME_MACHINE_MARKER in text:
-        return text
-    require("BUILD119_TIME_MACHINE_SUMMARY1" in text, "Build119 Time Machine summary prerequisite missing")
-    text = text.replace(
-        "// MARK: Jerkgram v1.2H BUILD119_TIME_MACHINE_SUMMARY1",
-        "// MARK: Jerkgram v1.2H BUILD119_TIME_MACHINE_SUMMARY1\n" + TIME_MACHINE_MARKER,
-        1,
-    )
-    require("build119TimeMachineSummary" in text, "Build119 Time Machine summary call missing")
-    text = text.replace("build119TimeMachineSummary", "build124TimeMachineSummary")
+def matching_call_end(text: str, start: int) -> int:
+    opening = text.find("(", start)
+    require(opening >= 0, "Time Machine call opening parenthesis missing")
+    depth = 0
+    for index in range(opening, len(text)):
+        if text[index] == "(":
+            depth += 1
+        elif text[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    raise RuntimeError("[Build124 settings redesign] unbalanced Time Machine call")
 
+
+def remove_time_machine_summary_entry(text: str) -> str:
+    entries_start = text.find("var entries: [JerkgramTimeMachineUIEntry] = [")
+    require(entries_start >= 0, "Time Machine entries owner missing")
+    summary_start = text.find(".summary(", entries_start)
+    require(summary_start >= 0, "Time Machine technical summary entry missing")
+    summary_end = matching_call_end(text, summary_start)
+    while summary_end < len(text) and text[summary_end] in " \t\n":
+        summary_end += 1
+    if summary_end < len(text) and text[summary_end] == ",":
+        summary_end += 1
+    return text[:summary_start] + text[summary_end:]
+
+
+def patch_time_machine_final_ui(text: str) -> str:
+    if TIME_MACHINE_FINAL_MARKER in text:
+        return text
+    text = remove_time_machine_summary_entry(text)
     filter_start = text.find("case let .filter(_, _, title, value, kind):")
     require(filter_start >= 0, "Time Machine filter renderer missing")
-    filter_slice_end = min(len(text), filter_start + 1400)
-    filter_block = text[filter_start:filter_slice_end]
-    if "presentationData: presentationData, systemStyle: .glass," not in filter_block:
-        require("presentationData: presentationData," in filter_block, "Time Machine filter presentation anchor missing")
-        filter_block = filter_block.replace(
-            "presentationData: presentationData,",
-            "presentationData: presentationData, systemStyle: .glass,",
+    filter_end = text.find("\n        case ", filter_start + 1)
+    if filter_end < 0:
+        filter_end = text.find("\nvar entries:", filter_start)
+    require(filter_end >= 0, "Time Machine filter renderer boundary missing")
+    prefix = text[filter_start:filter_end]
+    indent_match = re.match(r"(?m)^(\s*)case let", prefix)
+    require(indent_match is not None, "Time Machine filter indentation missing")
+    indent = indent_match.group(1)
+    replacement = f'''{indent}{TIME_MACHINE_FINAL_MARKER}
+{indent}case let .filter(_, _, title, value, kind):
+{indent}    if let kind {{
+{indent}        return ItemListSwitchItem(
+{indent}            presentationData: presentationData, systemStyle: .glass,
+{indent}            title: title, value: value == "✓",
+{indent}            sectionId: self.section, style: .blocks,
+{indent}            updated: {{ _ in arguments.toggleKind(kind) }}
+{indent}        )
+{indent}    }} else {{
+{indent}        return ItemListDisclosureItem(
+{indent}            presentationData: presentationData, systemStyle: .glass,
+{indent}            title: title, label: value, labelStyle: .text,
+{indent}            sectionId: self.section, style: .blocks,
+{indent}            disclosureStyle: .none,
+{indent}            action: {{ arguments.selectSender() }}
+{indent}        )
+{indent}    }}'''
+    return text[:filter_start] + replacement + text[filter_end:]
+
+
+def patch_time_machine_text(text: str) -> str:
+    if TIME_MACHINE_MARKER not in text:
+        require("BUILD119_TIME_MACHINE_SUMMARY1" in text, "Build119 Time Machine summary prerequisite missing")
+        text = text.replace(
+            "// MARK: Jerkgram v1.2H BUILD119_TIME_MACHINE_SUMMARY1",
+            "// MARK: Jerkgram v1.2H BUILD119_TIME_MACHINE_SUMMARY1\n" + TIME_MACHINE_MARKER,
             1,
         )
-        text = text[:filter_start] + filter_block + text[filter_slice_end:]
 
+    require("build119TimeMachineSummary" in text, "Build119 Time Machine summary call missing")
+    text = text.replace("build119TimeMachineSummary", "build124TimeMachineSummary")
+    text = patch_time_machine_final_ui(text)
     require("Queue.concurrentDefaultQueue().async" in text, "Time Machine off-main loading disappeared")
     require(
         re.search(r"eventPage\s*\([^)]*\blimit\s*:\s*250\b", text, re.DOTALL) is not None,

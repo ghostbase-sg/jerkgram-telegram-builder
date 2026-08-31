@@ -656,6 +656,14 @@ python3 ../../scripts/apply_jerkgram_v12o_build126_forward_menu_owner1.py
 echo
 echo "== Jerkgram v1.2P Build127 native one-time statuses =="
 python3 ../../scripts/apply_jerkgram_v12p_build127_onetime_native_status1.py
+
+echo
+echo "== Jerkgram v1.2Q Build128 profile bio corner owner =="
+python3 ../../scripts/apply_jerkgram_v12q_build128_bio_corner_owner1.py
+
+echo
+echo "== Jerkgram v1.2R Build129 protected chat forwarding =="
+python3 ../../scripts/apply_jerkgram_v12r_build129_protected_chat_forward1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -781,6 +789,6 @@ python3 ../../scripts/jerkgram_finalize_build125_identity.py ghostbase-final/Gho
 python3 ../../scripts/verify_jerkgram_v12n_build125_final_ipa.py ghostbase-final/GhostBase.ipa
 
 echo
-echo "== Jerkgram v1.2O Build126 final identity and keychain package =="
-python3 ../../scripts/jerkgram_finalize_build126_identity.py ghostbase-final/GhostBase.ipa
-python3 ../../scripts/verify_jerkgram_v12o_build126_final_ipa.py ghostbase-final/GhostBase.ipa
+echo "== Jerkgram Build128 final identity and audited compatibility packages =="
+python3 ../../scripts/jerkgram_finalize_build128_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12s_build128_final_ipa.py ghostbase-final/GhostBase.ipa

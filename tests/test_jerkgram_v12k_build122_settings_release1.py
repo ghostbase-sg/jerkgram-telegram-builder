@@ -112,8 +112,14 @@ class Build122SettingsReleaseContractTests(unittest.TestCase):
             self.assertIn(f"name: Jerkgram-Build{current_build}-canary", workflow)
             self.assertIn(f"artifacts/Jerkgram-Build{current_build}-canary.ipa", workflow)
         else:
-            self.assertIn(f"name: Jerkgram-build{current_build}", workflow)
-            self.assertIn(f"artifacts/Jerkgram-build{current_build}.ipa", workflow)
+            self.assertTrue(
+                f"name: Jerkgram-build{current_build}" in workflow
+                or f"name: Jerkgram-Build{current_build}" in workflow
+            )
+            self.assertTrue(
+                f"artifacts/Jerkgram-build{current_build}.ipa" in workflow
+                or f"artifacts/Jerkgram-Build{current_build}.ipa" in workflow
+            )
         self.assertNotIn("python3 scripts/jerkgram_publish_build121_artifact.py", workflow)
 
     def test_build122_finalizer_stamps_main_and_all_extensions(self) -> None:

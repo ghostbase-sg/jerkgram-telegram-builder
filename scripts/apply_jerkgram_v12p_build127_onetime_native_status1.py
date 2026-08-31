@@ -65,7 +65,14 @@ def patch_circle_text(text: str) -> str:
             }
 
 '''
-    return text[:start] + replacement + text[end:]
+    updated = text[:start] + replacement + text[end:]
+    stale_seen = "durationNode.isSeen = !notConsumed || jerkgramOutgoingOneTimeCircleViewed || item.presentationData.isPreview"
+    stale_check = "durationNode.showsViewedCheck = jerkgramOutgoingOneTimeCircleViewed"
+    require((stale_seen in updated) == (stale_check in updated), "incomplete legacy circle viewed state")
+    if stale_seen not in updated:
+        return updated
+    updated = updated.replace(stale_seen, "durationNode.isSeen = !notConsumed || item.presentationData.isPreview", 1)
+    return updated.replace(stale_check, "durationNode.showsViewedCheck = false", 1)
 
 
 def main() -> None:

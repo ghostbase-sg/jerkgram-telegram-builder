@@ -44,7 +44,8 @@ NEW_MEDIA = '''                                // MARK: Jerkgram v1.2M BUILD124_
                                     ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
                                     && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                                     && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
-                                    && currentMessage.minAutoremoveOrClearTimeout != nil
+                                    && currentMessage.minAutoremoveOrClearTimeout == viewOnceTimeout
+                                    && currentMessage.attributes.contains(where: { $0 is ConsumableContentMessageAttribute })
                                 )
                                 var updatedMedia = currentMessage.media
                                 if !jerkgramKeepOneTimeIdentity {
@@ -132,7 +133,8 @@ REMOTE_DECISION = '''        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + 
             ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
             && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
             && message.id.peerId.namespace != Namespaces.Peer.SecretChat
-            && message.minAutoremoveOrClearTimeout != nil
+            && message.minAutoremoveOrClearTimeout == viewOnceTimeout
+            && message.attributes.contains(where: { $0 is ConsumableContentMessageAttribute })
         )
         
         for i in 0 ..< updatedAttributes.count {
@@ -237,7 +239,7 @@ NEW_VOICE = '''                var consumableContentIcon: UIImage?
                             ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
                             && ((UserDefaults.standard.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
                             && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
-                            && arguments.message.minAutoremoveOrClearTimeout != nil
+                            && arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout
                         )
                         if !attribute.consumed || jerkgramKeepConsumedOneTimeVisual {
                             if arguments.incoming {

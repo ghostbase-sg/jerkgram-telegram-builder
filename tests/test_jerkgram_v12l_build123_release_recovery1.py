@@ -186,6 +186,7 @@ class Build123ReleaseRecoveryTests(unittest.TestCase):
         artifact_paths = (
             f"Jerkgram-build{current_build}.ipa",
             f"Jerkgram-Build{current_build}-canary.ipa",
+            f"Jerkgram-Build{current_build}.ipa",
         )
         self.assertTrue(any(path in workflow for path in artifact_paths), "current successor artifact path missing")
 

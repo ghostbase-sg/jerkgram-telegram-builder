@@ -68,6 +68,8 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_text(self.owner_fixture())
         self.assertIn("jerkgramBuild126ForwardWithoutAuthorTargets = selectAll ? messages : [message]", result)
+        self.assertIn("let jerkgramBuild126ChatController = interfaceInteraction.chatController() as? ChatControllerImpl", result)
+        self.assertIn("if ghostBaseForwardWithoutAuthor,\n           let jerkgramBuild126ChatController", result)
         self.assertNotIn("forceHideNames: true", result)
         self.assertIn("messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map", result)
         self.assertNotIn("BUILD125_SINGLE_FORWARD_DIRECT_ACTION1", result)
