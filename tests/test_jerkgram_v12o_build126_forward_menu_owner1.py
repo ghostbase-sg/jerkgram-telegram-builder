@@ -68,10 +68,33 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
         module = self.load_patch()
         result = module.patch_text(self.owner_fixture())
         self.assertNotIn("Переслать без автора", result)
+        self.assertNotIn("ghostBaseForwardWithoutAuthor", result)
         self.assertNotIn("jerkgramBuild126ForwardWithoutAuthorTargets", result)
         self.assertNotIn("jerkgramBuild126ChatController", result)
         self.assertNotIn("BUILD125_SINGLE_FORWARD_DIRECT_ACTION1", result)
         self.assertNotIn("BUILD124_SINGLE_FORWARD_TARGET_SCOPE1", result)
+
+    def test_removes_build124_resolver_that_becomes_unused_with_the_action(self):
+        module = self.load_patch()
+        resolver = '''        // MARK: Jerkgram v1.2M BUILD124_SINGLE_FORWARD_ACCOUNT_SCOPE1
+        let legacyForwardWithoutAuthorKey = "jerkgram.Messages.ForwardWithoutAuthor"
+        let scopedForwardWithoutAuthorKey = "jerkgram.account.\\(context.account.peerId.toInt64()).setting.\\(legacyForwardWithoutAuthorKey)"
+        let defaults = UserDefaults.standard
+        let ghostBaseForwardWithoutAuthor = (
+            defaults.object(forKey: scopedForwardWithoutAuthorKey) as? Bool
+        ) ?? (
+            defaults.object(forKey: legacyForwardWithoutAuthorKey) as? Bool
+        ) ?? true
+'''
+        source = self.owner_fixture().replace(
+            "        let ghostBaseForwardWithoutAuthor = true\n",
+            resolver,
+            1,
+        )
+        result = module.patch_text(source)
+        self.assertNotIn("legacyForwardWithoutAuthorKey", result)
+        self.assertNotIn("scopedForwardWithoutAuthorKey", result)
+        self.assertNotIn("ghostBaseForwardWithoutAuthor", result)
 
     def test_preserves_the_declarations_between_the_old_action_and_native_gate(self):
         module = self.load_patch()

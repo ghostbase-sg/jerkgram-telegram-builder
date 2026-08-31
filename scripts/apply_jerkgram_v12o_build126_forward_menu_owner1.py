@@ -44,7 +44,7 @@ def remove_old_single_forward_action(text: str) -> str:
     action_start = text.find("if ghostBaseForwardWithoutAuthor", marker_start)
     require(action_start >= 0, "Build125 single-forward gate missing")
     action_end = balanced_if_end(text, action_start)
-    while action_end < len(text) and text[action_end] in " \\t\\r\\n":
+    while action_end < len(text) and text[action_end] in " \t\r\n":
         action_end += 1
     return text[:marker_start] + text[action_end:]
 
@@ -55,7 +55,20 @@ def remove_broken_legacy_single_forward_action(text: str) -> str:
         return text
     next_owner = text.find("        if data.messageActions.options.contains(.sendScheduledNow) {", marker_start)
     require(next_owner >= 0, "broken Build124 single-forward action end missing")
+    # Build124's account-scoped resolver exists solely for the custom
+    # "without author" action. Build126 removes that action entirely; leaving
+    # the resolver behind turns into a Swift no-usage compile error.
+    resolver_start = text.rfind("        let legacyForwardWithoutAuthorKey =", 0, marker_start)
+    if resolver_start >= 0:
+        return text[:resolver_start] + text[next_owner:]
     return text[:marker_start] + text[next_owner:]
+
+
+def remove_orphan_simple_forward_flag(text: str) -> str:
+    declaration = "        let ghostBaseForwardWithoutAuthor = true\n"
+    if text.count("ghostBaseForwardWithoutAuthor") == 1 and declaration in text:
+        return text.replace(declaration, "", 1)
+    return text
 
 
 def patch_text(text: str) -> str:
@@ -64,6 +77,7 @@ def patch_text(text: str) -> str:
 
     text = remove_broken_legacy_single_forward_action(text)
     text = remove_old_single_forward_action(text)
+    text = remove_orphan_simple_forward_flag(text)
     native_start = text.find(NATIVE_FORWARD)
     require(native_start >= 0, "native forward owner missing")
 
