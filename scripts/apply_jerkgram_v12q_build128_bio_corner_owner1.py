@@ -26,11 +26,15 @@ def patch_text(text: str) -> str:
     require(frame != -1, "mask-frame owner missing after Build126 patch")
 
     replacement = '''// MARK: Jerkgram v1.2Q BUILD128_PROFILE_BIO_CORNER_OWNER1
-        // The section container owns glass clipping and suppresses the corner
-        // filler around its child update. Applying a second radius to this
-        // wrapper desynchronizes it from the multiline renderer and creates
-        // triangular lower corners. Keep Telegram's outer owner intact.
-        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
+        // `cornersImage(..., glass: true)` is an opaque corner raster. Over a
+        // translucent bio editor its filler remains visible as lower-corner
+        // triangles. The section container already owns the rounded clipping,
+        // so glass must not draw a second corner layer here.
+        if GhostBaseGlassStyle.isEnabled {
+            self.maskNode.image = nil
+        } else {
+            self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
+        }
 '''
     return text[:start] + replacement + text[frame:]
 

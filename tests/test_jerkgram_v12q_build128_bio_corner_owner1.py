@@ -32,12 +32,13 @@ class Build128BioCornerOwnerTests(unittest.TestCase):
         transition.updateFrame(node: self.maskNode, frame: CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height)))
 '''
 
-    def test_restores_the_outer_owner_and_leaves_glass_suppression_to_its_container(self):
+    def test_glass_owner_removes_the_triangle_raster_without_adding_a_second_radius(self):
         module = self.load_patch()
         result = module.patch_text(self.build126_fixture())
         self.assertIn(module.MARKER, result)
+        self.assertIn("if GhostBaseGlassStyle.isEnabled", result)
+        self.assertIn("self.maskNode.image = nil", result)
         self.assertIn("PresentationResourcesItemList.cornersImage", result)
-        self.assertNotIn("GhostBaseGlassStyle.isEnabled", result)
         self.assertNotIn("self.cornerRadius", result)
         self.assertNotIn("self.layer.maskedCorners", result)
 
