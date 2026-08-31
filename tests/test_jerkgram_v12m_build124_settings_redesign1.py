@@ -5,6 +5,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCH = REPO / "scripts/apply_jerkgram_v12m_build124_settings_redesign1.py"
+VERIFIER = REPO / "scripts/verify_jerkgram_v12m_build124_settings_redesign1.py"
 
 
 SETTINGS_FIXTURE = '''
@@ -253,6 +254,13 @@ private enum GhostBaseSettingsEntry: ItemListNodeEntry {
         self.assertIn("Queue.concurrentDefaultQueue().async", updated)
         self.assertIn("eventPage(", updated)
         self.assertIn("limit: 250", updated)
+
+    def test_verifier_accepts_summary_free_time_machine_final_ui(self):
+        verifier = VERIFIER.read_text(encoding="utf-8")
+        self.assertIn("BUILD124_TIME_MACHINE_FINAL_UI1", verifier)
+        self.assertNotIn('require("build124TimeMachineSummary" in time_machine', verifier)
+        self.assertIn('"build119TimeMachineSummary" not in time_machine', verifier)
+        self.assertIn('"build124TimeMachineSummary" not in time_machine', verifier)
 
     def test_strings_cover_every_internal_surface_in_ru_and_en(self):
         module = self.load_patch()

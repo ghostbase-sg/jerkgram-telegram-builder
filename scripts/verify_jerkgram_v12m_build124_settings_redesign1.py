@@ -110,9 +110,14 @@ def main() -> None:
     require("ItemListActionItem" in data, "Data export/import/cleanup buttons disappeared")
     require("systemStyle: .glass" in data, "Data summary/disclosure material is not glass")
 
-    require("BUILD124_TIME_MACHINE_REDESIGN1" in time_machine, "Time Machine redesign marker missing")
-    require("build124TimeMachineSummary" in time_machine and "build119TimeMachineSummary" not in time_machine, "Time Machine still uses Build119 summary identity")
-    require("systemStyle: .glass" in time_machine, "Time Machine filters/summary lost glass material")
+    require("BUILD124_TIME_MACHINE_FINAL_UI1" in time_machine, "Time Machine final UI marker missing")
+    require(
+        "build119TimeMachineSummary" not in time_machine and "build124TimeMachineSummary" not in time_machine,
+        "Time Machine technical summary survived",
+    )
+    require(".summary(0, 1," not in time_machine, "Time Machine technical summary entry survived")
+    require("ItemListSwitchItem" in time_machine, "Time Machine filters are not native switches")
+    require("systemStyle: .glass" in time_machine, "Time Machine filters lost glass material")
     require("Queue.concurrentDefaultQueue().async" in time_machine, "Time Machine loading moved off its background queue owner")
     require(
         re.search(r"eventPage\s*\([^)]*\blimit\s*:\s*250\b", time_machine, re.DOTALL) is not None,
