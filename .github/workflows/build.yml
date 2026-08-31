@@ -121,6 +121,7 @@ jobs:
             scripts/apply_jerkgram_v12o_build126_voice_viewed_state1.py \
             scripts/apply_jerkgram_v12o_build126_circle_viewed_state1.py \
             scripts/apply_jerkgram_v12o_build126_forward_menu_owner1.py \
+            scripts/apply_jerkgram_v12p_build127_onetime_native_status1.py \
             scripts/jerkgram_finalize_build126_keychain_package1.py \
             scripts/jerkgram_finalize_build126_identity.py \
             scripts/verify_jerkgram_v12o_build126_final_ipa.py \
@@ -173,6 +174,7 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12o_build126_voice_viewed_state1
           python3 -m unittest tests.test_jerkgram_v12o_build126_circle_viewed_state1
           python3 -m unittest tests.test_jerkgram_v12o_build126_forward_menu_owner1
+          python3 -m unittest tests.test_jerkgram_v12p_build127_onetime_native_status1
           python3 -m unittest tests.test_jerkgram_v12o_build126_keychain_packaging1
           python3 -m unittest tests.test_jerkgram_v12o_build126_release_contract1
 

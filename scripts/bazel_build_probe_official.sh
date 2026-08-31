@@ -652,6 +652,10 @@ python3 ../../scripts/apply_jerkgram_v12o_build126_bio_corner_mask1.py
 python3 ../../scripts/apply_jerkgram_v12o_build126_voice_viewed_state1.py
 python3 ../../scripts/apply_jerkgram_v12o_build126_circle_viewed_state1.py
 python3 ../../scripts/apply_jerkgram_v12o_build126_forward_menu_owner1.py
+
+echo
+echo "== Jerkgram v1.2P Build127 native one-time statuses =="
+python3 ../../scripts/apply_jerkgram_v12p_build127_onetime_native_status1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
