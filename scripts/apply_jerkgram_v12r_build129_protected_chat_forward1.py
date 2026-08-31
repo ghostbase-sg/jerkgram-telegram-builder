@@ -2,11 +2,15 @@
 
 import os
 from pathlib import Path
-
+import subprocess
+import sys
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 FORWARD = ROOT / "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift"
 MARKER = "// MARK: Jerkgram v1.2R BUILD129_PROTECTED_CHAT_FORWARD1"
+SCRIPT_DIR = Path(__file__).resolve().parent
+BUILD130_APPLY = SCRIPT_DIR / "apply_jerkgram_v12t_build130_release_ui_telemetry1.py"
+BUILD130_VERIFY = SCRIPT_DIR / "verify_jerkgram_v12t_build130_release_ui_telemetry1.py"
 
 
 def require(value: bool, message: str) -> None:
@@ -55,11 +59,21 @@ private func jerkgramRequiresPortableForward(_ message: Message) -> Bool {
     return text[:start] + replacement + text[end:]
 
 
+def run_build130_pre_bazel_gate() -> None:
+    for path in (BUILD130_APPLY, BUILD130_VERIFY):
+        require(path.is_file(), f"Build130 gate missing: {path.name}")
+        subprocess.check_call([sys.executable, "-m", "py_compile", str(path)])
+    subprocess.check_call([sys.executable, str(BUILD130_APPLY)])
+    subprocess.check_call([sys.executable, str(BUILD130_VERIFY)])
+
+
 def main() -> None:
     require(FORWARD.is_file(), f"missing forward owner: {FORWARD}")
     forward = patch_text(FORWARD.read_text(encoding="utf-8"))
     FORWARD.write_text(forward, encoding="utf-8")
     print("[Build129 protected chat forward] GREEN")
+    print("== Build130 fail-fast gate (must pass before Bazel) ==")
+    run_build130_pre_bazel_gate()
 
 
 if __name__ == "__main__":
