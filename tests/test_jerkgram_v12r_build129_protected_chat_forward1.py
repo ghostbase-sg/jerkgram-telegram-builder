@@ -29,34 +29,24 @@ private func jerkgramRequiresPortableForward(_ message: Message) -> Bool {
 }
 '''
 
-    def menu_fixture(self):
-        return '''// MARK: Jerkgram v1.2O BUILD126_FORWARD_MENU_OWNER1
-        let jerkgramPortableForwardTargets = selectAll || isImage ? messages : [message]
-        let jerkgramNeedsPortableForward = jerkgramPortableForwardTargets.contains { message in
-            if message.isCopyProtected() {
-                return true
-            }
-            if let sourcePeer = message.forwardInfo?.author ?? message.effectiveAuthor {
-                return sourcePeer.isCopyProtectionEnabled
-            }
-            return false
-        }
-        let jerkgramPortableForwardIsSafe = true
-'''
-
-    def test_carries_chat_level_protection_to_the_sender_and_menu(self):
+    def test_carries_chat_level_protection_in_the_sender_owner(self):
         module = self.load_patch()
-        forward, menu = module.patch_texts(self.forward_fixture(), self.menu_fixture())
+        forward = module.patch_text(self.forward_fixture())
         self.assertIn(module.MARKER, forward)
         self.assertIn("message.peers[message.id.peerId]", forward)
         self.assertIn("chatPeer.isCopyProtectionEnabled", forward)
-        self.assertIn("chatPresentationInterfaceState.copyProtectionEnabled", menu)
-        self.assertIn("message.peers[message.id.peerId]", menu)
+        self.assertIn("message.forwardInfo?.author ?? message.effectiveAuthor", forward)
+
+    def test_does_not_depend_on_or_mutate_the_retired_build126_menu_owner(self):
+        source = PATCH.read_text(encoding="utf-8")
+        self.assertNotIn("ChatInterfaceStateContextMenus.swift", source)
+        self.assertNotIn("BUILD126_FORWARD_MENU_OWNER1", source)
+        self.assertNotIn("patch_menu", source)
 
     def test_is_idempotent(self):
         module = self.load_patch()
-        once = module.patch_texts(self.forward_fixture(), self.menu_fixture())
-        self.assertEqual(once, module.patch_texts(*once))
+        once = module.patch_text(self.forward_fixture())
+        self.assertEqual(once, module.patch_text(once))
 
 
 if __name__ == "__main__":
