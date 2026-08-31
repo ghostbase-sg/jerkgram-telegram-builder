@@ -44,22 +44,37 @@ def main():
     for token in ('BUILD130_RELEASE_STRINGS1','self.languageCode == "ru"','Анонимная аналитика','Anonymous Analytics','Помогайте улучшать Jerkgram','Help improve Jerkgram','Версия Jerkgram','Jerkgram Version'):
         req(token in strings,'localization invariant missing: '+token)
 
-    # Build130 localization hard gate is deliberately scoped to Build130-owned
-    # Settings fragments. This materialized file contains older research/debug
-    # Cyrillic from predecessor owners; those are outside this bounded release
-    # change and must not create a false-positive. New user-facing text belongs
-    # in JerkgramStrings, where RU is expected and verified above.
+    # Build130 localization hard gate: only Build130-owned user-facing Settings
+    # fragments are scanned. Historical enum rows contain unrelated predecessor
+    # RU literals and are intentionally outside this bounded release change.
     bridge_start=settings.find('private let jerkgramTelemetryEnabledKey')
     bridge_end=settings.find('private enum GhostBaseSettingsEntry:',bridge_start)
     req(bridge_start>=0 and bridge_end>bridge_start,'Build130 telemetry preference bridge bounds missing')
     bridge=settings[bridge_start:bridge_end]
-    enum_start=settings.find('private enum GhostBaseSettingsEntry:')
-    enum_end=settings.find('// MARK: Jerkgram v1.2T BUILD130_RELEASE_UI_TELEMETRY1',enum_start)
-    req(enum_start>=0 and enum_end>enum_start,'Build130 Settings enum bounds missing')
-    enum_owner=settings[enum_start:enum_end]
-    build130_settings_fragments=(('telemetry preference bridge',bridge),('new Settings enum/render owners',enum_owner),('About release UI',about))
+
+    renderer_start=settings.find('case let .aboutValue(_, _, title, value):')
+    renderer_end=settings.find('case let .toggle(',renderer_start)
+    req(renderer_start>=0 and renderer_end>renderer_start,'Build130 Settings renderer bounds missing')
+    renderer=settings[renderer_start:renderer_end]
+    req('case let .telemetryToggle(_, _, title, value):' in renderer,'Build130 telemetry renderer missing from bounded fragment')
+
+    declarations='\n'.join((
+        'case aboutValue(Int32, Int32, String, String)',
+        'case telemetryToggle(Int32, Int32, String, Bool)',
+    ))
+    for declaration in declarations.splitlines():
+        req(declaration in settings,'Build130 declaration missing: '+declaration)
+
+    build130_settings_fragments=(
+        ('telemetry preference bridge',bridge),
+        ('new Settings enum declarations',declarations),
+        ('new Settings render owners',renderer),
+        ('About release UI',about),
+    )
     for label,fragment in build130_settings_fragments:
         req(re.search(r'[А-Яа-яЁё]',fragment) is None,'hardcoded Cyrillic leaked into '+label)
+    for token in ('strings.version','strings.privacy','strings.jerkgramVersion','strings.build','strings.telegramBase','strings.anonymousAnalytics','strings.anonymousAnalyticsDescription'):
+        req(token in about,'Build130 localized About token missing: '+token)
 
     telemetry=app[app.find('// MARK: Jerkgram v1.2T BUILD130_TELEMETRY1'):app.find('@objc(AppDelegate) class AppDelegate')]
     req(telemetry,'telemetry owner missing')
@@ -80,7 +95,7 @@ def main():
     print('  PASS triangles final-owner survival')
     print('  PASS exact Appearance release-info removal + unrelated hint survival')
     print('  PASS About native version/privacy rows + exhaustive entry topology')
-    print('  PASS EN/RU Telegram-language strings + no Cyrillic in new Settings owners')
+    print('  PASS EN/RU Telegram-language strings + no Cyrillic in Build130-owned Settings UI')
     print('  PASS telemetry endpoint/schema/HMAC rotation/rate-limit/OFF gate')
     print('  PASS telemetry forbidden-data hard gate')
     print('  PASS async foreground lifecycle wiring')
