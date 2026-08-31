@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import importlib.util
-import re
 
 HERE = Path(__file__).resolve().parent
 BASE = HERE / "apply_jerkgram_v12t_build130_release_ui_telemetry1.py"
@@ -22,10 +21,14 @@ def patch_settings_final(text: str) -> str:
 
     start, end = module.bounds(text, "if page == .appearance {")
     block = text[start:end]
-    infos = list(re.finditer(r"(?m)^\s*\.info\([^\n]+\),?\s*\n?", block))
-    module.req(len(infos) == 2, f"Appearance expected exactly 2 info rows, found {len(infos)}")
-    for match in reversed(infos):
-        block = block[:match.start()] + block[match.end():]
+    target_rows = (
+        "            .info(0, strings.animatedBackgroundHint),\n",
+        "            .info(0, strings.profileEffectDisabledHint),\n",
+    )
+    for row in target_rows:
+        module.req(block.count(row) == 1, f"Appearance target hint missing or ambiguous: {row.strip()}")
+        block = block.replace(row, "", 1)
+    module.req("strings.hidePhoneHint" in block, "Appearance hide-phone hint must survive")
     text = text[:start] + block + text[end:]
 
     bridge = '''private let jerkgramTelemetryEnabledKey = "jerkgram.telemetry.anonymous.enabled"
