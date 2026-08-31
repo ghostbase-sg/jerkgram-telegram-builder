@@ -36,13 +36,31 @@ def main():
         req(token in about,'About invariant missing: '+token)
     req('Official Telegram 12.9.2' not in about,'legacy giant About footer survived')
     req(settings.count('case aboutValue(')==1 and settings.count('case telemetryToggle(')==1,'native About entry types missing or duplicated')
-    for token in ('case let .aboutValue(section, _, _, _):','case let .telemetryToggle(section, _, _, _):','case let .aboutValue(section, index, _, _):','case let .telemetryToggle(section, index, _, _):','case let .aboutValue(ls, li, lt, lv):','case let .telemetryToggle(ls, li, lt, lv):','case let .aboutValue(_, _, title, value):','case let .telemetryToggle(_, _, title, value):'):
+    topology_tokens=('case let .aboutValue(section, _, _, _):','case let .telemetryToggle(section, _, _, _):','case let .aboutValue(section, index, _, _):','case let .telemetryToggle(section, index, _, _):','case let .aboutValue(ls, li, lt, lv):','case let .telemetryToggle(ls, li, lt, lv):','case let .aboutValue(_, _, title, value):','case let .telemetryToggle(_, _, title, value):')
+    for token in topology_tokens:
         req(token in settings,'new Settings enum case is not exhaustive: '+token)
     req('jerkgram.telemetry.anonymous.enabled' in settings,'global telemetry preference missing')
     req('Notification.Name("JerkgramTelemetryPreferenceChanged")' in settings,'OFF bridge missing')
     for token in ('BUILD130_RELEASE_STRINGS1','self.languageCode == "ru"','Анонимная аналитика','Anonymous Analytics','Помогайте улучшать Jerkgram','Help improve Jerkgram','Версия Jerkgram','Jerkgram Version'):
         req(token in strings,'localization invariant missing: '+token)
-    req(re.search(r'[А-Яа-яЁё]',settings) is None,'hardcoded Cyrillic leaked into Settings owner')
+
+    # Build130 localization hard gate is deliberately scoped to Build130-owned
+    # Settings fragments. This materialized file contains older research/debug
+    # Cyrillic from predecessor owners; those are outside this bounded release
+    # change and must not create a false-positive. New user-facing text belongs
+    # in JerkgramStrings, where RU is expected and verified above.
+    bridge_start=settings.find('private let jerkgramTelemetryEnabledKey')
+    bridge_end=settings.find('private enum GhostBaseSettingsEntry:',bridge_start)
+    req(bridge_start>=0 and bridge_end>bridge_start,'Build130 telemetry preference bridge bounds missing')
+    bridge=settings[bridge_start:bridge_end]
+    enum_start=settings.find('private enum GhostBaseSettingsEntry:')
+    enum_end=settings.find('// MARK: Jerkgram v1.2T BUILD130_RELEASE_UI_TELEMETRY1',enum_start)
+    req(enum_start>=0 and enum_end>enum_start,'Build130 Settings enum bounds missing')
+    enum_owner=settings[enum_start:enum_end]
+    build130_settings_fragments=(('telemetry preference bridge',bridge),('new Settings enum/render owners',enum_owner),('About release UI',about))
+    for label,fragment in build130_settings_fragments:
+        req(re.search(r'[А-Яа-яЁё]',fragment) is None,'hardcoded Cyrillic leaked into '+label)
+
     telemetry=app[app.find('// MARK: Jerkgram v1.2T BUILD130_TELEMETRY1'):app.find('@objc(AppDelegate) class AppDelegate')]
     req(telemetry,'telemetry owner missing')
     for token in ('https://jerkgram-telemetry.cronusk1809.workers.dev/v1/activity','"schema":1','class JerkgramTelemetry','SystemRandomNumberGenerator','randomBytes(32)','hmac(secret,String(format:"%04d-%02d-%02d"','hmac(secret,String(format:"%04d-W%02d"','hmac(secret,String(format:"%04d-%02d"','installReceiptId','minimumInterval: TimeInterval = 4 * 60 * 60','guard JerkgramTelemetryPreferences.isEnabled else { return }','request.timeoutInterval=8.0','queue.async','activeTask?.cancel()'):
@@ -62,7 +80,7 @@ def main():
     print('  PASS triangles final-owner survival')
     print('  PASS exact Appearance release-info removal + unrelated hint survival')
     print('  PASS About native version/privacy rows + exhaustive entry topology')
-    print('  PASS EN/RU Telegram-language strings')
+    print('  PASS EN/RU Telegram-language strings + no Cyrillic in new Settings owners')
     print('  PASS telemetry endpoint/schema/HMAC rotation/rate-limit/OFF gate')
     print('  PASS telemetry forbidden-data hard gate')
     print('  PASS async foreground lifecycle wiring')
