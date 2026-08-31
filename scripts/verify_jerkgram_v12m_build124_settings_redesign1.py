@@ -78,8 +78,8 @@ def main() -> None:
 
     for page in PAGES:
         block = block_text(settings, f"if page == .{page} {{")
-        require(block.count(PAGE_MARKER) == 1, f"{page}: exactly one Build124 summary required")
-        require(".info(-1," in block, f"{page}: compact native summary row missing")
+        require(PAGE_MARKER not in block, f"{page}: state-count summary must not be shown")
+        require(".info(-1," not in block, f"{page}: injected state-count row must not be shown")
 
     require("aboutBuild119Summary" not in block_text(settings, "if page == .about {"), "About still reports Build119")
     require("BUILD123_SETTINGS_SYSTEM1" in settings, "Build123 shared Telegram-native visual system disappeared")
@@ -126,7 +126,7 @@ def main() -> None:
     require("loadMore" in time_machine, "Time Machine load-more behavior disappeared")
 
     print("[verify Build124 settings redesign] SOURCE VERIFIED")
-    print("[verify Build124 settings redesign] Telegram-native root preserved; every internal Jerkgram destination has a coherent status surface")
+    print("[verify Build124 settings redesign] Telegram-native root preserved; internal destinations omit injected state-count surfaces")
     print("[verify Build124 settings redesign] Stars/Data/Time Machine functional owners and bounded loading are preserved")
 
 

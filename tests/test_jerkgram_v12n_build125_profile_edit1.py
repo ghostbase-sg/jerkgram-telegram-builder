@@ -46,8 +46,8 @@ class Build125ProfileEditTests(unittest.TestCase):
     def test_uses_translucent_tint_not_the_opaque_list_card(self):
         module = self.load_patch()
         result = module.patch_text(self.owner_fixture(), "bio")
-        self.assertIn("UIColor.white.withAlphaComponent(0.055)", result)
-        self.assertIn("UIColor.black.withAlphaComponent(0.045)", result)
+        self.assertIn("UIColor.white.withAlphaComponent(0.025)", result)
+        self.assertIn("UIColor.black.withAlphaComponent(0.018)", result)
         self.assertNotIn("itemBlocksBackgroundColor.withAlphaComponent", result)
         self.assertNotIn("let isDark =", result)
 
@@ -78,8 +78,8 @@ class Build125ProfileEditTests(unittest.TestCase):
             '''            let isDark = presentationData.theme.overallDarkAppearance
             self.backgroundNode.isOpaque = false
             self.backgroundNode.backgroundColor = isDark
-                ? UIColor.white.withAlphaComponent(0.055)
-                : UIColor.black.withAlphaComponent(0.045)''',
+                ? UIColor.white.withAlphaComponent(0.025)
+                : UIColor.black.withAlphaComponent(0.018)''',
         )
         result = module.patch_text(already_materialized, "bio")
         self.assertIn("BUILD125_PROFILE_EDIT_GLASS_OWNER1", result)

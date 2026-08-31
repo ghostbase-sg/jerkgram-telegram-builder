@@ -107,6 +107,14 @@ extension ChatControllerImpl {
         self.assertNotIn("message.peers[message.id.peerId].map(EnginePeer.init)", result)
         self.assertIn('https://t.me/\\(username)', result)
 
+    def test_channel_post_falls_back_to_its_chat_for_attribution(self):
+        module = self.load_patch()
+        result = module.patch_text(self.fixture())
+        self.assertIn(
+            "message.forwardInfo?.author ?? message.effectiveAuthor ?? message.peers[message.id.peerId]",
+            result,
+        )
+
     def test_source_channel_copy_protection_uses_portable_path(self):
         module = self.load_patch()
         result = module.patch_text(self.fixture())

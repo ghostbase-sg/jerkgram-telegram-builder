@@ -65,16 +65,16 @@ def patch_text(text: str, label: str) -> str:
             // applied, which is why the bio still looked like a solid black card.
             self.backgroundNode.isOpaque = false
             self.backgroundNode.backgroundColor = presentationData.theme.overallDarkAppearance
-                ? UIColor.white.withAlphaComponent(0.055)
-                : UIColor.black.withAlphaComponent(0.045)''',
+                ? UIColor.white.withAlphaComponent(0.025)
+                : UIColor.black.withAlphaComponent(0.018)''',
             tail,
             count=1,
         )
     else:
         require(
             "self.backgroundNode.isOpaque = false" in tail
-            and "UIColor.white.withAlphaComponent(0.055)" in tail
-            and "UIColor.black.withAlphaComponent(0.045)" in tail,
+            and "UIColor.white.withAlphaComponent(0.025)" in tail
+            and "UIColor.black.withAlphaComponent(0.018)" in tail,
             f"{label}: translucent field color owner missing",
         )
     # The Build124 owner declared this solely for its old black/white color
@@ -100,8 +100,8 @@ def patch_bio_input(text: str) -> str:
             // renderer cannot replace it with Telegram's opaque list card.
             backgroundColor: GhostBaseGlassStyle.isEnabled
                 ? (presentationData.theme.overallDarkAppearance
-                    ? UIColor.white.withAlphaComponent(0.055)
-                    : UIColor.black.withAlphaComponent(0.045))
+                    ? UIColor.white.withAlphaComponent(0.025)
+                    : UIColor.black.withAlphaComponent(0.018))
                 : nil,
             text: item.text'''
     return text.replace(owner, replacement, 1)

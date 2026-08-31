@@ -183,7 +183,7 @@ private enum GhostBaseSettingsEntry: ItemListNodeEntry {
         self.assertNotIn("icon: jerkgramSettingsToggleIcon(key)", updated)
         self.assertIn('"Jerkgram/Settings/Airplane", .home', updated)
 
-    def test_root_stays_telegram_native_and_internal_pages_get_summaries(self):
+    def test_root_stays_telegram_native_without_internal_enabled_summaries(self):
         module = self.load_patch()
         updated = module.patch_settings_text(SETTINGS_FIXTURE)
         root = module.block_text(updated, "if page == .root {")
@@ -192,8 +192,8 @@ private enum GhostBaseSettingsEntry: ItemListNodeEntry {
         self.assertNotIn('"Jerkgram",', root)
         for page in module.PAGE_SUMMARIES:
             block = module.block_text(updated, f"if page == .{page} {{")
-            self.assertIn("BUILD124_SETTINGS_PAGE_SUMMARY1", block, page)
-            self.assertIn(".info(-1,", block, page)
+            self.assertNotIn("BUILD124_SETTINGS_PAGE_SUMMARY1", block, page)
+            self.assertNotIn(".info(-1,", block, page)
         self.assertIn('"sendStyle"', updated)
         self.assertIn('"researchHiddenGifts"', updated)
 
@@ -204,7 +204,7 @@ private enum GhostBaseSettingsEntry: ItemListNodeEntry {
         self.assertNotIn("aboutBuild119Summary", about)
         self.assertIn("build124AboutSummary", about)
 
-    def test_debug_research_entries_accumulator_gets_a_summary(self):
+    def test_debug_research_entries_accumulator_does_not_get_a_summary(self):
         module = self.load_patch()
         settings = SETTINGS_FIXTURE.replace(
             '''    if page == .debugResearch {
@@ -220,8 +220,8 @@ private enum GhostBaseSettingsEntry: ItemListNodeEntry {
         )
         updated = module.patch_settings_text(settings)
         debug = module.block_text(updated, "if page == .debugResearch {")
-        self.assertIn("BUILD124_SETTINGS_PAGE_SUMMARY1", debug)
-        self.assertIn("entries.append(.info(-1, strings.build124DiagnosticsSummary))", debug)
+        self.assertNotIn("BUILD124_SETTINGS_PAGE_SUMMARY1", debug)
+        self.assertNotIn("entries.append(.info(-1, strings.build124DiagnosticsSummary))", debug)
 
     def test_stars_keeps_draft_save_cancel_but_uses_glass_surface(self):
         module = self.load_patch()

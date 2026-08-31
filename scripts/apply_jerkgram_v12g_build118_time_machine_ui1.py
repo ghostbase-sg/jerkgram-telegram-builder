@@ -79,7 +79,10 @@ def patch_source(text):
                 self?.interaction.navigateToMessage(messageId, false, false, .generic)
             }
         )
-        self.interaction.presentController(controller, nil)
+        self.interaction.presentController(
+            controller,
+            ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
+        )
     }
 
 '''

@@ -30,6 +30,7 @@ class Build118TimeMachineUITests(unittest.TestCase):
             controller = (node.parent / "JerkgramTimeMachineController.swift").read_text()
             self.assertIn("jerkgramTimeMachineController", rendered)
             self.assertIn("interaction.presentController", rendered)
+            self.assertIn("presentationAnimation: .modalSheet", rendered)
             self.assertLess(
                 rendered.index("self.view.addSubview(self.backgroundContainer)"),
                 rendered.index("self.view.addSubview(self.jerkgramTimeMachineBackground)"),
@@ -40,6 +41,9 @@ class Build118TimeMachineUITests(unittest.TestCase):
             self.assertIn("loadNextPage", controller)
             self.assertIn("timeMachineLoadMore", strings.read_text())
             self.assertIn("event.eventId", controller)
+            self.assertIn('content: .text("‹ " + presentationData.strings.Common_Back)', controller)
+            self.assertIn("action: { controller?.dismiss() }", controller)
+            self.assertNotIn("backNavigationButton: ItemListBackButton", controller)
             self.assertNotIn("deduplicat", controller.lower())
 
 

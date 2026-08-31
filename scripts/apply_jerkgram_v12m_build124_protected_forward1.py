@@ -75,7 +75,7 @@ private func jerkgramPortableForwardBaseMessage(
     // Telegram's own forwarding UI resolves attribution from forwardInfo first
     // and then effectiveAuthor. For channel-authored posts the chat peer itself
     // is not necessarily the author we need to reproduce.
-    if !hideAuthor, let author = message.forwardInfo?.author ?? message.effectiveAuthor {
+    if !hideAuthor, let author = message.forwardInfo?.author ?? message.effectiveAuthor ?? message.peers[message.id.peerId] {
         let sourcePeer = EnginePeer(author)
         let title = sourcePeer.compactDisplayTitle
         if !title.isEmpty {

@@ -233,10 +233,9 @@ def patch_settings_text(text: str) -> str:
     require(root.count(".disclosure(") == 9, "root must keep exactly nine Telegram-native destinations")
     require('"Jerkgram",' not in root, "root hero must not be restored")
 
-    for page, expression in PAGE_SUMMARIES.items():
+    for page in PAGE_SUMMARIES:
         signature = f"if page == .{page} {{"
         block = block_text(text, signature)
-        block = add_page_summary(block, expression)
         if page == "about":
             block = block.replace("strings.aboutBuild119Summary", "strings.build124AboutSummary")
             require("aboutBuild119Summary" not in block, "stale Build119 About identity survived")
@@ -442,7 +441,7 @@ def main() -> None:
     TIME_MACHINE.write_text(time_machine, encoding="utf-8")
 
     print("[Build124 settings redesign] GREEN")
-    print("[Build124 settings redesign] root remains Telegram-native; internal Jerkgram pages share compact glass summaries")
+    print("[Build124 settings redesign] root and internal Jerkgram pages remain Telegram-native without state-count summaries")
     print("[Build124 settings redesign] Stars/Data/Time Machine retain their functional owners and use Build124 Canary identity")
 
 

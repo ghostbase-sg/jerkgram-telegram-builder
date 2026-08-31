@@ -260,9 +260,15 @@ public func jerkgramTimeMachineController(
         return (
             ItemListControllerState(
                 presentationData: ItemListPresentationData(presentationData),
-                title: .text(strings.timeMachine), leftNavigationButton: nil,
+                title: .text(strings.timeMachine),
+                leftNavigationButton: ItemListNavigationButton(
+                    content: .text("‹ " + presentationData.strings.Common_Back),
+                    style: .regular,
+                    enabled: true,
+                    action: { controller?.dismiss() }
+                ),
                 rightNavigationButton: nil,
-                backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back)
+                backNavigationButton: nil
             ),
             (ItemListNodeState(
                 presentationData: ItemListPresentationData(presentationData),

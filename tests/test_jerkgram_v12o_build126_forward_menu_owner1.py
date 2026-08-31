@@ -64,14 +64,12 @@ class Build126ForwardMenuOwnerTests(unittest.TestCase):
         self.assertIn("sourcePeer.isCopyProtectionEnabled", result)
         self.assertIn("interfaceInteraction.forwardMessages(jerkgramPortableForwardTargets)", result)
 
-    def test_single_long_press_action_uses_exact_pressed_target_and_force_hides_author(self):
+    def test_removes_the_extra_forward_without_author_action(self):
         module = self.load_patch()
         result = module.patch_text(self.owner_fixture())
-        self.assertIn("jerkgramBuild126ForwardWithoutAuthorTargets = selectAll ? messages : [message]", result)
-        self.assertIn("let jerkgramBuild126ChatController = interfaceInteraction.chatController() as? ChatControllerImpl", result)
-        self.assertIn("if ghostBaseForwardWithoutAuthor,\n           let jerkgramBuild126ChatController", result)
-        self.assertNotIn("forceHideNames: true", result)
-        self.assertIn("messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map", result)
+        self.assertNotIn("Переслать без автора", result)
+        self.assertNotIn("jerkgramBuild126ForwardWithoutAuthorTargets", result)
+        self.assertNotIn("jerkgramBuild126ChatController", result)
         self.assertNotIn("BUILD125_SINGLE_FORWARD_DIRECT_ACTION1", result)
         self.assertNotIn("BUILD124_SINGLE_FORWARD_TARGET_SCOPE1", result)
 

@@ -26,8 +26,8 @@ def main() -> None:
         owner = owner[:owner.index("        } else {")]
         require("GhostBaseGlassStyle.isEnabled" in owner, f"{path.name}: profile Glass switch not used")
         require("GhostBaseProfileBlurSettings\n                .loadEnabled()" not in owner, f"{path.name}: stale independent toggle survived")
-        require("UIColor.white.withAlphaComponent(0.055)" in owner, f"{path.name}: dark translucent tint missing")
-        require("UIColor.black.withAlphaComponent(0.045)" in owner, f"{path.name}: light translucent tint missing")
+        require("UIColor.white.withAlphaComponent(0.025)" in owner, f"{path.name}: dark translucent tint missing")
+        require("UIColor.black.withAlphaComponent(0.018)" in owner, f"{path.name}: light translucent tint missing")
         require("itemBlocksBackgroundColor.withAlphaComponent" not in owner, f"{path.name}: opaque list card survived")
         require("self.backgroundNode.isOpaque = false" in owner, f"{path.name}: field remains opaque")
     bio = BIO.read_text(encoding="utf-8")

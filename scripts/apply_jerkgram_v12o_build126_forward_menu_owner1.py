@@ -35,6 +35,12 @@ def remove_old_single_forward_action(text: str) -> str:
     marker_start = text.find(OLD_MARKER)
     if marker_start < 0:
         return text
+    # The legacy entry always precedes the regular context-menu declarations.
+    # Remove the complete owner region rather than trying to retain its nested
+    # closure; otherwise a second visual "Forward" entry can survive.
+    next_owner = text.find("        var messageText:", marker_start)
+    if next_owner >= 0:
+        return text[:marker_start] + text[next_owner:]
     action_start = text.find("if ghostBaseForwardWithoutAuthor", marker_start)
     require(action_start >= 0, "Build125 single-forward gate missing")
     action_end = balanced_if_end(text, action_start)
@@ -88,33 +94,6 @@ def patch_text(text: str) -> str:
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 interfaceInteraction.forwardMessages(jerkgramPortableForwardTargets)
-                f(.dismissWithoutContent)
-            })))
-        }
-
-        // Rebuild the custom action from its owning single-message scope.
-        // This does not depend on the native forward capability and passes the
-        // exact pressed message to the existing force-hide sender.
-        let jerkgramBuild126ForwardWithoutAuthorTargets = selectAll ? messages : [message]
-        let jerkgramBuild126ChatController = interfaceInteraction.chatController() as? ChatControllerImpl
-        if ghostBaseForwardWithoutAuthor,
-           let jerkgramBuild126ChatController,
-           jerkgramBuild126ForwardWithoutAuthorTargets.allSatisfy({ message in
-               message.id.peerId.namespace != Namespaces.Peer.SecretChat
-               && !message.media.contains(where: {
-                   $0 is TelegramMediaPaidContent
-                   || $0 is TelegramMediaAction
-                   || $0 is TelegramMediaExpiredContent
-               })
-           }) {
-            actions.append(.action(ContextMenuActionItem(text: "Переслать без автора", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                jerkgramBuild126ChatController.forwardMessages(
-                    messageIds: jerkgramBuild126ForwardWithoutAuthorTargets.map { $0.id },
-                    options: ChatInterfaceForwardOptionsState(hideNames: true, hideCaptions: false, unhideNamesOnCaptionChange: false),
-                    resetCurrent: true
-                )
                 f(.dismissWithoutContent)
             })))
         }
