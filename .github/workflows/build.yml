@@ -1,4 +1,4 @@
-name: Jerkgram 12.9.2 Build128
+name: Jerkgram 12.9.2 Build130
 
 on:
   workflow_dispatch:
@@ -124,11 +124,16 @@ jobs:
             scripts/apply_jerkgram_v12p_build127_onetime_native_status1.py \
             scripts/apply_jerkgram_v12q_build128_bio_corner_owner1.py \
             scripts/apply_jerkgram_v12r_build129_protected_chat_forward1.py \
+            scripts/apply_jerkgram_v12s_build130_siri_failclosed1.py \
+            scripts/verify_jerkgram_v12s_build130_siri_failclosed1.py \
+            scripts/install_jerkgram_v12s_build130_probe_hook.py \
             scripts/jerkgram_finalize_build126_keychain_package1.py \
             scripts/jerkgram_finalize_build128_file_picker_package1.py \
             scripts/jerkgram_finalize_build128_identity.py \
             scripts/verify_jerkgram_v12s_build128_final_ipa.py \
-            scripts/jerkgram_publish_build128_artifact.py
+            scripts/jerkgram_finalize_build130_identity.py \
+            scripts/verify_jerkgram_v12s_build130_final_ipa.py \
+            scripts/jerkgram_publish_build130_artifact.py
 
           # Preserve the established late-release regression gates.
           python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
@@ -180,6 +185,7 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12p_build127_onetime_native_status1
           python3 -m unittest tests.test_jerkgram_v12q_build128_bio_corner_owner1
           python3 -m unittest tests.test_jerkgram_v12r_build129_protected_chat_forward1
+          python3 -m unittest tests.test_jerkgram_v12s_build130_siri_failclosed1
           python3 -m unittest tests.test_jerkgram_v12s_build128_file_picker_package1
           python3 -m unittest tests.test_jerkgram_v12o_build126_keychain_packaging1
           python3 -m unittest tests.test_jerkgram_v12o_build126_release_contract1
@@ -196,22 +202,24 @@ jobs:
           python3 scripts/install_jerkgram_v12j_build121_probe_hook.py
           python3 scripts/install_jerkgram_v12k_build122_probe_hook.py
           python3 scripts/install_jerkgram_v12n_build125_probe_hook.py
+          python3 scripts/install_jerkgram_v12s_build130_probe_hook.py
           python3 scripts/verify_jerkgram_v12m_build124_wiring1.py
           python3 scripts/verify_jerkgram_v12n_build125_wiring1.py
 
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
-      - name: Upload materialized Build128 diagnostic owners
+      - name: Upload materialized Build130 diagnostic owners
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Build128-materialized-owner-diagnostics
+          name: Build130-materialized-owner-diagnostics
           path: |
             work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift
             work/swiftgram-src/submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift
             work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift
             work/swiftgram-src/submodules/JerkgramCore/Sources/JerkgramStore.swift
             work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
             work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift
@@ -222,18 +230,18 @@ jobs:
             work/swiftgram-src/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
           if-no-files-found: warn
 
-      - name: Publish Jerkgram Build128 artifact
+      - name: Publish Jerkgram Build130 artifact
         if: success()
         run: |
           set -e
-          python3 scripts/jerkgram_publish_build128_artifact.py
+          python3 scripts/jerkgram_publish_build130_artifact.py
 
-      - name: Upload Jerkgram Build128
+      - name: Upload Jerkgram Build130
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Build128
+          name: Jerkgram-Build130
           path: |
-            artifacts/Jerkgram-Build128.ipa
-            artifacts/Jerkgram-Build128-info.txt
+            artifacts/Jerkgram-Build130.ipa
+            artifacts/Jerkgram-Build130-info.txt
           if-no-files-found: error
