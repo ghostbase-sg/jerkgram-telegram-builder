@@ -1,0 +1,207 @@
+name: TEMP Build130 clean source snapshot
+
+on:
+  push:
+    branches:
+      - dev/public-source-exporter-v1
+
+permissions:
+  contents: read
+
+jobs:
+  export-clean-source:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      BUILD130_COMMIT: 3cef060015b53f79764ddd812c8fba0663c76fc2
+      UPSTREAM_COMMIT: 6ad963e5b62d354da79040f388ae2b9132fb17b8
+      JERKGRAM_TELEGRAM_API_ID: "22732185"
+      JERKGRAM_TELEGRAM_API_HASH: "11111111111111111111111111111111"
+      BAZEL_BIN: /usr/bin/true
+
+    steps:
+      - name: Checkout exact Build130 state
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BUILD130_COMMIT }}
+          fetch-depth: 1
+
+      - name: Prepare Official Telegram 12.9.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/prepare_source_official.sh
+          scripts/prepare_source_official.sh
+          test "$(git -C work/swiftgram-src rev-parse HEAD)" = "$UPSTREAM_COMMIT"
+
+      - name: Materialize exact Build130 source before Bazel
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GHOSTBASE_BUILDER_ROOT="$GITHUB_WORKSPACE"
+          export GHOSTBASE_OFFICIAL_ROOT="$RUNNER_TEMP/jerkgram-official-reference-fallback"
+
+          python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
+          python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
+          python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
+          python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
+          python3 scripts/install_jerkgram_v12g_build118_probe_hook.py
+          python3 scripts/install_jerkgram_v12h_build119_probe_hook.py
+          python3 scripts/install_jerkgram_v12i_build120_probe_hook.py
+          python3 scripts/install_jerkgram_v12j_build121_probe_hook.py
+          python3 scripts/install_jerkgram_v12k_build122_probe_hook.py
+          python3 scripts/install_jerkgram_v12n_build125_probe_hook.py
+          python3 scripts/install_jerkgram_v12s_build130_probe_hook.py
+          python3 scripts/verify_jerkgram_v12m_build124_wiring1.py
+          python3 scripts/verify_jerkgram_v12n_build125_wiring1.py
+
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path("scripts/bazel_build_probe_official.sh")
+          out = Path("scripts/materialize_build130_source_only_tmp.sh")
+          text = src.read_text(encoding="utf-8")
+          needle = '"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-}'
+          if text.count(needle) != 1:
+              raise SystemExit(f"Bazel boundary count={text.count(needle)}, expected 1")
+          pos = text.index(needle)
+          line_start = text.rfind("\n", 0, pos) + 1
+          tail = text[line_start:]
+          later_mutators = [line for line in tail.splitlines()[1:] if "python3" in line and ("apply_" in line or "install_" in line)]
+          if later_mutators:
+              raise SystemExit("source mutator exists after Bazel boundary:\n" + "\n".join(later_mutators[:20]))
+          out.write_text(text[:line_start] + '\necho "=== MATERIALIZED BUILD130 SOURCE READY; BAZEL NOT RUN ==="\nexit 0\n', encoding="utf-8")
+          out.chmod(0o755)
+          PY
+
+          scripts/materialize_build130_source_only_tmp.sh
+
+      - name: Sanitize final source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
+
+          # Generated/private build configuration is not source.
+          rm -rf "$SRC/build-input/configuration-repository"
+          rm -rf "$SRC/ghostbase-final"
+          find "$SRC" -maxdepth 1 -mindepth 1 -name 'bazel-*' -exec rm -rf {} + 2>/dev/null || true
+
+          # Restore upstream example configuration so signer-specific values are not published.
+          git -C "$SRC" checkout HEAD -- build-system/example-configuration 2>/dev/null || true
+
+          # Remove all repository metadata, including nested submodule .git files/directories.
+          find "$SRC" -name .git -type f -delete
+          find "$SRC" -name .git -type d -prune -exec rm -rf {} +
+
+          unset JERKGRAM_TELEGRAM_API_ID JERKGRAM_TELEGRAM_API_HASH
+
+          # Hard private-infrastructure gate. Legacy runtime identifiers that are part of
+          # the shipped Build130 source are intentionally not rewritten here.
+          python3 - "$SRC" <<'PY'
+          import os, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          forbidden = [
+              b"ghostbase-sg",
+              b"jerkgram-telegram-builder",
+              b"3cef060015b53f79764ddd812c8fba0663c76fc2",
+              b"/root/gb_builder",
+              b"/GHOSTBASE_",
+              b"actions/runs/",
+              b"11111111111111111111111111111111",
+              b"app.pumpkin6584.lion7414",
+              b"5VZ6BJLW8Q",
+              b"github_pat_",
+              b"ghp_",
+              b"cronusk1809@gmail.com",
+              b"-----BEGIN PRIVATE KEY-----",
+              b"-----BEGIN RSA PRIVATE KEY-----",
+              b"-----BEGIN EC PRIVATE KEY-----",
+          ]
+          hits = []
+          for p in root.rglob('*'):
+              if not p.is_file() or p.is_symlink():
+                  continue
+              try:
+                  data = p.read_bytes()
+              except OSError:
+                  continue
+              found = [x.decode('ascii', 'ignore') for x in forbidden if x in data]
+              if found:
+                  hits.append((str(p.relative_to(root)), found))
+                  if len(hits) >= 20:
+                      break
+          if hits:
+              for path, found in hits:
+                  print(f"PRIVATE MARKER: {path}: {found}")
+              raise SystemExit("private infrastructure leaked into clean source")
+          print("PRIVATE INFRASTRUCTURE SCAN: PASS")
+          PY
+
+      - name: Create deterministic source manifest and archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
+          STAGE="$RUNNER_TEMP/Jerkgram-1.0.0-source"
+          ARCHIVE="$RUNNER_TEMP/Jerkgram-1.0.0-source.tar.xz"
+          MANIFEST="$RUNNER_TEMP/public-source-manifest.json"
+
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          rsync -a --delete "$SRC/" "$STAGE/"
+
+          python3 - "$STAGE" "$MANIFEST" <<'PY'
+          import hashlib, json, os, pathlib, stat, sys
+          root = pathlib.Path(sys.argv[1])
+          out = pathlib.Path(sys.argv[2])
+          files = []
+          for p in sorted(root.rglob('*'), key=lambda x: x.as_posix()):
+              rel = p.relative_to(root).as_posix()
+              st = p.lstat()
+              if p.is_symlink():
+                  files.append({"path": rel, "type": "symlink", "target": os.readlink(p), "mode": oct(stat.S_IMODE(st.st_mode))[2:]})
+              elif p.is_file():
+                  h = hashlib.sha256()
+                  with p.open('rb') as f:
+                      for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                          h.update(chunk)
+                  files.append({"path": rel, "type": "file", "size": st.st_size, "sha256": h.hexdigest(), "mode": oct(stat.S_IMODE(st.st_mode))[2:]})
+          manifest = {
+              "schemaVersion": 1,
+              "project": "Jerkgram",
+              "version": "1.0.0",
+              "build": 130,
+              "upstream": {
+                  "repository": "TelegramMessenger/Telegram-iOS",
+                  "tag": "release-12.9.2",
+                  "commit": "6ad963e5b62d354da79040f388ae2b9132fb17b8"
+              },
+              "files": files
+          }
+          out.write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(',', ':')) + '\n', encoding='utf-8')
+          print(f"manifest files: {len(files)}")
+          PY
+
+          cp "$MANIFEST" "$STAGE/public-source-manifest.json"
+
+          # Normalize mtimes for reproducibility, then archive.
+          find "$STAGE" -exec touch -h -t 202607210000.00 {} +
+          cd "$RUNNER_TEMP"
+          /usr/bin/tar --uid 0 --gid 0 --numeric-owner -cJf "$ARCHIVE" Jerkgram-1.0.0-source
+          shasum -a 256 "$ARCHIVE" | tee "$ARCHIVE.sha256"
+          shasum -a 256 "$MANIFEST" | tee "$MANIFEST.sha256"
+          stat -f 'source archive bytes: %z' "$ARCHIVE"
+          echo "Bazel/IPA build: NOT RUN"
+
+      - name: Upload clean source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.0.0-clean-source
+          path: |
+            ${{ runner.temp }}/Jerkgram-1.0.0-source.tar.xz
+            ${{ runner.temp }}/Jerkgram-1.0.0-source.tar.xz.sha256
+            ${{ runner.temp }}/public-source-manifest.json
+            ${{ runner.temp }}/public-source-manifest.json.sha256
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
