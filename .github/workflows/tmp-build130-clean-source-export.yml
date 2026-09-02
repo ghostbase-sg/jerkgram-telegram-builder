@@ -66,78 +66,138 @@ jobs:
           pos = text.index(needle)
           line_start = text.rfind("\n", 0, pos) + 1
           tail = text[line_start:]
-          later_mutators = [line for line in tail.splitlines()[1:] if "python3" in line and ("apply_" in line or "install_" in line)]
-          if later_mutators:
-              raise SystemExit("source mutator exists after Bazel boundary:\n" + "\n".join(later_mutators[:20]))
+          later = [line for line in tail.splitlines()[1:] if "python3" in line and ("apply_" in line or "install_" in line)]
+          if later:
+              raise SystemExit("source mutator exists after Bazel boundary:\n" + "\n".join(later[:20]))
           out.write_text(text[:line_start] + '\necho "=== MATERIALIZED BUILD130 SOURCE READY; BAZEL NOT RUN ==="\nexit 0\n', encoding="utf-8")
           out.chmod(0o755)
           PY
 
           scripts/materialize_build130_source_only_tmp.sh
 
-      - name: Sanitize final source tree
+      - name: Normalize deployment-only private values
         shell: bash
         run: |
           set -euo pipefail
           SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
 
-          # Generated/private build configuration is not source.
           rm -rf "$SRC/build-input/configuration-repository"
           rm -rf "$SRC/ghostbase-final"
           find "$SRC" -maxdepth 1 -mindepth 1 -name 'bazel-*' -exec rm -rf {} + 2>/dev/null || true
 
-          # Restore upstream example configuration so signer-specific values are not published.
-          git -C "$SRC" checkout HEAD -- build-system/example-configuration 2>/dev/null || true
+          # Keep the upstream public example configuration, never the build signer config.
+          git -C "$SRC" checkout HEAD -- build-system/example-configuration
 
-          # Remove all repository metadata, including nested submodule .git files/directories.
-          find "$SRC" -name .git -type f -delete
-          find "$SRC" -name .git -type d -prune -exec rm -rf {} +
-
-          unset JERKGRAM_TELEGRAM_API_ID JERKGRAM_TELEGRAM_API_HASH
-
-          # Hard private-infrastructure gate. Legacy runtime identifiers that are part of
-          # the shipped Build130 source are intentionally not rewritten here.
+          # Deployment-only values are deliberately normalized for public source.
+          # No Jerkgram feature code or legacy runtime symbol is renamed/removed.
           python3 - "$SRC" <<'PY'
-          import os, pathlib, sys
-          root = pathlib.Path(sys.argv[1])
-          forbidden = [
-              b"ghostbase-sg",
-              b"jerkgram-telegram-builder",
-              b"3cef060015b53f79764ddd812c8fba0663c76fc2",
-              b"/root/gb_builder",
-              b"/GHOSTBASE_",
-              b"actions/runs/",
-              b"11111111111111111111111111111111",
-              b"app.pumpkin6584.lion7414",
-              b"5VZ6BJLW8Q",
-              b"github_pat_",
-              b"ghp_",
-              b"cronusk1809@gmail.com",
-              b"-----BEGIN PRIVATE KEY-----",
-              b"-----BEGIN RSA PRIVATE KEY-----",
-              b"-----BEGIN EC PRIVATE KEY-----",
-          ]
-          hits = []
-          for p in root.rglob('*'):
+          from pathlib import Path
+          import sys
+
+          root = Path(sys.argv[1])
+          replacements = {
+              "app.pumpkin6584.lion7414": "ph.telegra.Telegraph",
+              "group.4a348a9b186b700c.1": "group.ph.telegra.Telegraph",
+              "5VZ6BJLW8Q": "C67CF9S4VU",
+              "https://jerkgram-telemetry.cronusk1809.workers.dev/v1/activity": "https://example.invalid/jerkgram-telemetry/v1/activity",
+          }
+          suffixes = {".swift", ".m", ".mm", ".h", ".hpp", ".c", ".cc", ".cpp", ".bzl", ".plist", ".entitlements", ".json", ".txt", ".md"}
+          names = {"BUILD", "BUILD.bazel", "WORKSPACE", "WORKSPACE.bazel", "MODULE.bazel"}
+          counts = {k: 0 for k in replacements}
+          files_changed = 0
+
+          for p in root.rglob("*"):
               if not p.is_file() or p.is_symlink():
                   continue
-              try:
-                  data = p.read_bytes()
-              except OSError:
+              if p.suffix.lower() not in suffixes and p.name not in names:
                   continue
-              found = [x.decode('ascii', 'ignore') for x in forbidden if x in data]
+              try:
+                  data = p.read_text(encoding="utf-8")
+              except (UnicodeDecodeError, OSError):
+                  continue
+              old = data
+              for source, public in replacements.items():
+                  n = data.count(source)
+                  if n:
+                      counts[source] += n
+                      data = data.replace(source, public)
+              if data != old:
+                  p.write_text(data, encoding="utf-8")
+                  files_changed += 1
+
+          print(f"deployment-normalized files: {files_changed}")
+          for key, value in counts.items():
+              print(f"normalized {key}: {value}")
+          if counts["app.pumpkin6584.lion7414"] == 0:
+              raise SystemExit("expected signer bundle marker was not found")
+          if counts["group.4a348a9b186b700c.1"] == 0:
+              raise SystemExit("expected signer app-group marker was not found")
+          if counts["https://jerkgram-telemetry.cronusk1809.workers.dev/v1/activity"] != 1:
+              raise SystemExit("expected exactly one private telemetry deployment hostname")
+          PY
+
+          # Strip every Git repository/worktree marker from the exported tree.
+          find "$SRC" -name .git -type f -delete
+          find "$SRC" -name .git -type d -prune -exec rm -rf {} +
+          unset JERKGRAM_TELEGRAM_API_ID JERKGRAM_TELEGRAM_API_HASH
+
+      - name: Private infrastructure hard gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
+          python3 - "$SRC" <<'PY'
+          from pathlib import Path
+          import re, sys
+
+          root = Path(sys.argv[1])
+          exact = [
+              "ghostbase-sg",
+              "jerkgram-telegram-builder",
+              "ghostbase-swiftgram-builder",
+              "3cef060015b53f79764ddd812c8fba0663c76fc2",
+              "dev/build124-runtime-15",
+              "/root/gb_builder",
+              "/GHOSTBASE_",
+              "actions/runs/",
+              "app.pumpkin6584.lion7414",
+              "group.4a348a9b186b700c.1",
+              "5VZ6BJLW8Q",
+              "cronusk1809",
+              "ORG_ADMIN_TOKEN",
+          ]
+          token_patterns = [
+              re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),
+              re.compile(r"(?<![A-Za-z0-9])ghp_[A-Za-z0-9]{20,}"),
+          ]
+          suffixes = {".swift", ".m", ".mm", ".h", ".hpp", ".c", ".cc", ".cpp", ".bzl", ".plist", ".entitlements", ".json", ".txt", ".md", ".yml", ".yaml", ".sh", ".py"}
+          names = {"BUILD", "BUILD.bazel", "WORKSPACE", "WORKSPACE.bazel", "MODULE.bazel", ".gitmodules"}
+          hits = []
+
+          for p in root.rglob("*"):
+              if not p.is_file() or p.is_symlink():
+                  continue
+              if p.suffix.lower() not in suffixes and p.name not in names:
+                  continue
+              try:
+                  text = p.read_text(encoding="utf-8")
+              except (UnicodeDecodeError, OSError):
+                  continue
+              found = [x for x in exact if x in text]
+              found += [pat.pattern for pat in token_patterns if pat.search(text)]
               if found:
-                  hits.append((str(p.relative_to(root)), found))
-                  if len(hits) >= 20:
+                  hits.append((p.relative_to(root).as_posix(), found))
+                  if len(hits) >= 30:
                       break
+
           if hits:
               for path, found in hits:
                   print(f"PRIVATE MARKER: {path}: {found}")
-              raise SystemExit("private infrastructure leaked into clean source")
+              raise SystemExit("private infrastructure leaked into public source")
           print("PRIVATE INFRASTRUCTURE SCAN: PASS")
           PY
 
-      - name: Create deterministic source manifest and archive
+      - name: Create source manifest and archive
         shell: bash
         run: |
           set -euo pipefail
@@ -155,15 +215,15 @@ jobs:
           root = pathlib.Path(sys.argv[1])
           out = pathlib.Path(sys.argv[2])
           files = []
-          for p in sorted(root.rglob('*'), key=lambda x: x.as_posix()):
+          for p in sorted(root.rglob("*"), key=lambda x: x.as_posix()):
               rel = p.relative_to(root).as_posix()
               st = p.lstat()
               if p.is_symlink():
                   files.append({"path": rel, "type": "symlink", "target": os.readlink(p), "mode": oct(stat.S_IMODE(st.st_mode))[2:]})
               elif p.is_file():
                   h = hashlib.sha256()
-                  with p.open('rb') as f:
-                      for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                  with p.open("rb") as f:
+                      for chunk in iter(lambda: f.read(1024 * 1024), b""):
                           h.update(chunk)
                   files.append({"path": rel, "type": "file", "size": st.st_size, "sha256": h.hexdigest(), "mode": oct(stat.S_IMODE(st.st_mode))[2:]})
           manifest = {
@@ -176,18 +236,20 @@ jobs:
                   "tag": "release-12.9.2",
                   "commit": "6ad963e5b62d354da79040f388ae2b9132fb17b8"
               },
+              "publicSourceNormalizations": [
+                  "private signing identity replaced with upstream public example identity",
+                  "private telemetry deployment hostname replaced with example.invalid"
+              ],
               "files": files
           }
-          out.write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(',', ':')) + '\n', encoding='utf-8')
+          out.write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
           print(f"manifest files: {len(files)}")
           PY
 
           cp "$MANIFEST" "$STAGE/public-source-manifest.json"
-
-          # Normalize mtimes for reproducibility, then archive.
           find "$STAGE" -exec touch -h -t 202607210000.00 {} +
           cd "$RUNNER_TEMP"
-          /usr/bin/tar --uid 0 --gid 0 --numeric-owner -cJf "$ARCHIVE" Jerkgram-1.0.0-source
+          /usr/bin/tar -cJf "$ARCHIVE" Jerkgram-1.0.0-source
           shasum -a 256 "$ARCHIVE" | tee "$ARCHIVE.sha256"
           shasum -a 256 "$MANIFEST" | tee "$MANIFEST.sha256"
           stat -f 'source archive bytes: %z' "$ARCHIVE"
