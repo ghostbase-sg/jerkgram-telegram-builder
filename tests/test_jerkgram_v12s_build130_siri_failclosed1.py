@@ -79,17 +79,12 @@ let bindings = TelegramApplicationBindings(requestSiriAuthorization: { completio
         self.assertNotIn("TeamIdentifier", result)
         self.assertNotIn("application-identifier", result)
 
-    def test_patch_is_idempotent_and_updates_visible_settings_build(self):
+    def test_patch_is_idempotent_and_does_not_own_about_screen(self):
         module = self.load(PATCH, "build130_siri_patch")
         app = module.patch_app_delegate(self.app_delegate_fixture())
         self.assertEqual(app, module.patch_app_delegate(app))
-        strings = 'var build124AboutSummary: String { return "Jerkgram · Official Telegram 12.9.2 · Build 124 Canary" }'
-        updated = module.patch_strings(strings)
-        self.assertIn("build130AboutSummary", updated)
-        self.assertIn("Build 130", updated)
-        self.assertEqual(updated, module.patch_strings(updated))
-        settings = "if page == .about {\n    return strings.build124AboutSummary\n}"
-        self.assertIn("strings.build130AboutSummary", module.patch_settings(settings))
+        self.assertFalse(hasattr(module, "patch_settings"))
+        self.assertFalse(hasattr(module, "patch_strings"))
 
     def test_source_verifier_rejects_missing_runtime_gate(self):
         verifier = self.load(VERIFY, "build130_siri_verify")
