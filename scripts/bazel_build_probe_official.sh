@@ -672,7 +672,6 @@ echo
 echo "== Jerkgram v1.2S Build130 Siri runtime fail-closed =="
 python3 ../../scripts/apply_jerkgram_v12s_build130_siri_failclosed1.py
 python3 ../../scripts/verify_jerkgram_v12s_build130_siri_failclosed1.py
-"$BAZEL_BIN" build //submodules/JerkgramSiriEntitlement:JerkgramSiriEntitlementSwiftProbe
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \

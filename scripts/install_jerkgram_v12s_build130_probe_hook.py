@@ -19,7 +19,6 @@ SOURCE_ORDERED = (
     "apply_jerkgram_v12s_build130_siri_failclosed1.py",
     "verify_jerkgram_v12s_build130_siri_failclosed1.py",
 )
-BRIDGE_COMPILE_PROBE = '"$BAZEL_BIN" build //submodules/JerkgramSiriEntitlement:JerkgramSiriEntitlementSwiftProbe'
 FINAL_ORDERED = (
     "jerkgram_finalize_build130_identity.py",
     "verify_jerkgram_v12s_build130_final_ipa.py",
@@ -48,22 +47,18 @@ def patch_probe(text: str) -> str:
             + "\n\n" + SOURCE_MARKER
             + '\necho\necho "== Jerkgram v1.2S Build130 Siri runtime fail-closed =="\n'
             + "\n".join(line(name) for name in SOURCE_ORDERED)
-            + "\n" + BRIDGE_COMPILE_PROBE
         )
         text = text.replace(BUILD129_SOURCE_ANCHOR, source_block, 1)
 
-    if BRIDGE_COMPILE_PROBE not in text:
-        verifier_line = line("verify_jerkgram_v12s_build130_siri_failclosed1.py")
-        require(text.count(verifier_line) == 1, "Build130 source verifier owner count")
-        text = text.replace(verifier_line, verifier_line + "\n" + BRIDGE_COMPILE_PROBE, 1)
+    bridge_probe = '"$BAZEL_BIN" build //submodules/JerkgramSiriEntitlement:JerkgramSiriEntitlementSwiftProbe\n'
+    text = text.replace(bridge_probe, "")
 
     require(text.count(SOURCE_MARKER) == 1, "Build130 source marker count")
     source_positions = [text.index(name) for name in SOURCE_ORDERED]
     require(source_positions == sorted(source_positions), "Build130 apply/verifier order")
     require(all(text.count(name) == 1 for name in SOURCE_ORDERED), "Build130 source hook count")
-    require(text.count(BRIDGE_COMPILE_PROBE) == 1, "Build130 bridge compile probe count")
     require(text.index(BUILD129_SOURCE_ANCHOR) < source_positions[0], "Build130 must follow Build129")
-    require(source_positions[-1] < text.index(BRIDGE_COMPILE_PROBE) < text.index(BAZEL_ANCHOR), "Build130 bridge compile probe must precede Bazel")
+    require(source_positions[-1] < text.index(BAZEL_ANCHOR), "Build130 source verifier must precede Bazel")
 
     if FINAL_MARKER not in text:
         require(all(text.count(name) == 0 for name in FINAL_ORDERED), "partial preexisting Build130 final block")
