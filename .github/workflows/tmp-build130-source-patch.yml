@@ -18,6 +18,7 @@ jobs:
       JERKGRAM_TELEGRAM_API_ID: "22732185"
       JERKGRAM_TELEGRAM_API_HASH: "11111111111111111111111111111111"
       BAZEL_BIN: /usr/bin/true
+      GHOSTBASE_OFFICIAL_ROOT: ${{ runner.temp }}/jerkgram-official-reference-fallback
 
     steps:
       - name: Checkout exact Build130 builder state
@@ -38,11 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          # Same legacy baseline as the successful Build130 workflow.
           python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
-
-          # Same canonical hook installation sequence as Build130.
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
@@ -58,7 +55,6 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           src = Path("scripts/bazel_build_probe_official.sh")
           out = Path("scripts/materialize_build130_source_only_tmp.sh")
@@ -105,12 +101,10 @@ jobs:
           SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
           OUT="$RUNNER_TEMP/Jerkgram-1.0.0-source.patch"
 
-          # Build-only generated configuration is not corresponding application source.
           rm -rf "$SRC/build-input/configuration-repository"
           rm -rf "$SRC/ghostbase-final"
           find "$SRC" -maxdepth 1 -mindepth 1 -name 'bazel-*' -exec rm -rf {} + 2>/dev/null || true
 
-          # A Build130 source export must not modify Telegram's external git submodules.
           DIRTY_SUBMODULES="$(git -C "$SRC" submodule foreach --quiet --recursive 's=$(git status --porcelain --untracked-files=all 2>/dev/null); if [ -n "$s" ]; then echo "$displaypath"; fi' 2>/dev/null || true)"
           if [ -n "$DIRTY_SUBMODULES" ]; then
             echo "ERROR: nested dependency source changed:"
