@@ -1,4 +1,4 @@
-name: TEMP Build130 source patch export
+name: TEMP Build130 source delta export
 
 on:
   push:
@@ -9,9 +9,9 @@ permissions:
   contents: read
 
 jobs:
-  export-source-patch:
+  export-source-delta:
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       BUILD130_COMMIT: 3cef060015b53f79764ddd812c8fba0663c76fc2
       UPSTREAM_COMMIT: 6ad963e5b62d354da79040f388ae2b9132fb17b8
@@ -34,13 +34,14 @@ jobs:
           scripts/prepare_source_official.sh
           test "$(git -C work/swiftgram-src rev-parse HEAD)" = "$UPSTREAM_COMMIT"
 
-      - name: Reproduce Build130 pre-Bazel source chain
+      - name: Reproduce exact Build130 source up to Bazel
         shell: bash
         run: |
           set -euo pipefail
           export GHOSTBASE_BUILDER_ROOT="$GITHUB_WORKSPACE"
           export GHOSTBASE_OFFICIAL_ROOT="$RUNNER_TEMP/jerkgram-official-reference-fallback"
 
+          # Exact baseline + exact hook wiring used by successful Build130.
           python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
@@ -55,23 +56,15 @@ jobs:
           python3 scripts/verify_jerkgram_v12m_build124_wiring1.py
           python3 scripts/verify_jerkgram_v12n_build125_wiring1.py
 
+          # Preserve the production script verbatim except for cutting it at the
+          # one Bazel invocation. Submodule initialization remains exactly as in
+          # Build130 because Build112 intentionally edits rules_apple source.
           python3 - <<'PY'
           from pathlib import Path
 
           src = Path("scripts/bazel_build_probe_official.sh")
           out = Path("scripts/materialize_build130_source_only_tmp.sh")
           text = src.read_text(encoding="utf-8")
-
-          start_marker = 'echo "== init bazel rule submodules =="'
-          end_marker = 'echo "== create build configuration repo =="'
-          if text.count(start_marker) != 1 or text.count(end_marker) != 1:
-              raise SystemExit("submodule block boundary is not unique")
-          a = text.index(start_marker)
-          b = text.index(end_marker)
-          if b <= a:
-              raise SystemExit("invalid submodule block order")
-          text = text[:a] + 'echo "== source export: nested dependency downloads skipped =="\n\n' + text[b:]
-
           needle = '"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-}'
           if text.count(needle) != 1:
               raise SystemExit(f"Bazel boundary count={text.count(needle)}, expected 1")
@@ -84,7 +77,6 @@ jobs:
           ]
           if later_mutators:
               raise SystemExit("source mutator exists after Bazel boundary:\n" + "\n".join(later_mutators[:20]))
-
           out.write_text(
               text[:line_start]
               + '\necho "=== MATERIALIZED BUILD130 SOURCE READY; BAZEL NOT RUN ==="\n'
@@ -96,84 +88,158 @@ jobs:
 
           scripts/materialize_build130_source_only_tmp.sh
 
-      - name: Create and verify sanitized source patch
+      - name: Build sanitized multi-repo source delta
         shell: bash
         run: |
           set -euo pipefail
           SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
-          OUT="$RUNNER_TEMP/Jerkgram-1.0.0-source.patch"
+          OUT="$RUNNER_TEMP/Jerkgram-1.0.0-source-delta"
+          mkdir -p "$OUT/patches"
 
+          # Build-only generated data is deliberately outside corresponding source.
           rm -rf "$SRC/build-input/configuration-repository"
           rm -rf "$SRC/ghostbase-final"
           find "$SRC" -maxdepth 1 -mindepth 1 -name 'bazel-*' -exec rm -rf {} + 2>/dev/null || true
 
-          DIRTY_SUBMODULES="$(git -C "$SRC" submodule foreach --quiet --recursive 's=$(git status --porcelain --untracked-files=all 2>/dev/null); if [ -n "$s" ]; then echo "$displaypath"; fi' 2>/dev/null || true)"
-          if [ -n "$DIRTY_SUBMODULES" ]; then
-            echo "ERROR: nested dependency source changed:"
-            printf '%s\n' "$DIRTY_SUBMODULES"
-            exit 1
-          fi
+          python3 - "$SRC" "$OUT" <<'PY'
+          from __future__ import annotations
+          import hashlib
+          import json
+          import pathlib
+          import re
+          import subprocess
+          import sys
 
-          python3 - "$SRC" <<'PY'
-          import subprocess, sys
-          root = sys.argv[1]
-          raw = subprocess.check_output(["git", "-C", root, "ls-files", "--others", "--exclude-standard", "-z"])
-          for item in raw.split(b"\0"):
-              if item:
-                  subprocess.run(["git", "-C", root, "add", "-N", "--", item.decode()], check=True)
+          src = pathlib.Path(sys.argv[1]).resolve()
+          out = pathlib.Path(sys.argv[2]).resolve()
+          patches = out / "patches"
+
+          def run(args, cwd=None, check=True, text=False):
+              return subprocess.run(args, cwd=cwd, check=check, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=text)
+
+          def intent_to_add(repo: pathlib.Path) -> None:
+              raw = run(["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=repo).stdout
+              for item in raw.split(b"\0"):
+                  if item:
+                      run(["git", "add", "-N", "--", item.decode("utf-8")], cwd=repo)
+
+          def make_patch(repo: pathlib.Path, dest: pathlib.Path, ignore_submodules: bool=False) -> bool:
+              intent_to_add(repo)
+              cmd = ["git", "diff", "--binary", "--full-index", "--no-ext-diff"]
+              if ignore_submodules:
+                  cmd.append("--ignore-submodules=all")
+              cmd += ["HEAD", "--"]
+              data = run(cmd, cwd=repo).stdout
+              if not data:
+                  return False
+              dest.write_bytes(data)
+              # Whitespace/error gate on the exact diff.
+              check_cmd = ["git", "diff", "--check"]
+              if ignore_submodules:
+                  check_cmd.append("--ignore-submodules=all")
+              check_cmd += ["HEAD", "--"]
+              run(check_cmd, cwd=repo)
+              return True
+
+          manifest = {
+              "schemaVersion": 1,
+              "project": "Jerkgram",
+              "version": "1.0.0",
+              "build": 130,
+              "upstream": {
+                  "repository": "TelegramMessenger/Telegram-iOS",
+                  "tag": "release-12.9.2",
+                  "commit": "6ad963e5b62d354da79040f388ae2b9132fb17b8",
+              },
+              "patches": [],
+          }
+
+          top = patches / "root.patch"
+          if not make_patch(src, top, ignore_submodules=True):
+              raise SystemExit("root source patch is empty")
+          manifest["patches"].append({"repositoryPath": ".", "file": "patches/root.patch"})
+
+          # Enumerate every initialized nested git repository. If Build130 changed
+          # one, preserve its actual file diff as a separate patch rather than
+          # silently losing it behind a gitlink.
+          p = run(
+              ["git", "submodule", "foreach", "--quiet", "--recursive", 'printf "%s\\n" "$displaypath"'],
+              cwd=src,
+              text=True,
+          )
+          subpaths = [line.strip() for line in p.stdout.splitlines() if line.strip()]
+          for rel in subpaths:
+              repo = src / rel
+              status = run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=repo, text=True).stdout
+              if not status.strip():
+                  continue
+              safe = re.sub(r"[^A-Za-z0-9._-]+", "__", rel).strip("_") + ".patch"
+              dest = patches / safe
+              if not make_patch(repo, dest):
+                  raise SystemExit(f"dirty nested repository produced empty patch: {rel}")
+              manifest["patches"].append({"repositoryPath": rel, "file": f"patches/{safe}"})
+
+          # Verify every patch against a pristine checkout of that repository's
+          # own HEAD. This catches malformed or context-dependent patches.
+          for item in manifest["patches"]:
+              rel = item["repositoryPath"]
+              patch = out / item["file"]
+              repo = src if rel == "." else src / rel
+              verify = out.parent / ("verify-" + hashlib.sha256(rel.encode()).hexdigest()[:12])
+              if verify.exists():
+                  subprocess.run(["rm", "-rf", str(verify)], check=True)
+              run(["git", "clone", "--shared", "--no-checkout", str(repo), str(verify)])
+              head = run(["git", "rev-parse", "HEAD"], cwd=repo, text=True).stdout.strip()
+              run(["git", "checkout", "--detach", head], cwd=verify)
+              run(["git", "apply", "--check", str(patch)], cwd=verify)
+              subprocess.run(["rm", "-rf", str(verify)], check=True)
+
+          # Public delta must not identify internal infrastructure or carry a
+          # credential/token-like value. Build markers inside source are allowed;
+          # builder identity is not.
+          forbidden = [
+              b"ghostbase-sg",
+              b"jerkgram-telegram-builder",
+              b"/root/gb_builder",
+              b"/GHOSTBASE_",
+              b"actions/runs/",
+              b"3cef060015b53f79764ddd812c8fba0663c76fc2",
+              b"11111111111111111111111111111111",
+              b"github_pat_",
+              b"ghp_",
+              b"-----BEGIN PRIVATE KEY-----",
+              b"-----BEGIN RSA PRIVATE KEY-----",
+              b"-----BEGIN EC PRIVATE KEY-----",
+          ]
+          for patch in patches.glob("*.patch"):
+              data = patch.read_bytes()
+              hits = [x.decode("ascii", "ignore") for x in forbidden if x in data]
+              if hits:
+                  raise SystemExit(f"private marker in {patch.name}: {hits}")
+
+          (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          changed = []
+          for item in manifest["patches"]:
+              changed.append(f'{item["repositoryPath"]}\t{item["file"]}')
+          (out / "patch-index.txt").write_text("\n".join(changed) + "\n", encoding="utf-8")
+          print(json.dumps(manifest, indent=2, sort_keys=True))
           PY
 
-          git -C "$SRC" diff --binary --full-index --no-ext-diff --ignore-submodules=all HEAD -- > "$OUT"
-          test -s "$OUT"
-          git -C "$SRC" diff --check --ignore-submodules=all HEAD --
+          # Environment values must not be part of the public bundle metadata.
+          unset JERKGRAM_TELEGRAM_API_ID JERKGRAM_TELEGRAM_API_HASH
 
-          LEAKS="$(grep -aEin 'ghostbase-sg|jerkgram-telegram-builder|actions/runs/|3cef060015b53f79764ddd812c8fba0663c76fc2|11111111111111111111111111111111|github_pat_|ghp_|BEGIN [A-Z ]*PRIVATE KEY|/root/gb_builder|/GHOSTBASE_' "$OUT" | head -20 || true)"
-          if [ -n "$LEAKS" ]; then
-            printf '%s\n' "$LEAKS"
-            echo "ERROR: private infrastructure marker leaked into source patch"
-            exit 1
-          fi
+          cd "$RUNNER_TEMP"
+          /usr/bin/tar -czf Jerkgram-1.0.0-source-delta.tar.gz Jerkgram-1.0.0-source-delta
+          shasum -a 256 Jerkgram-1.0.0-source-delta.tar.gz | tee Jerkgram-1.0.0-source-delta.tar.gz.sha256
+          stat -f 'bytes: %z' Jerkgram-1.0.0-source-delta.tar.gz
+          echo "Bazel/IPA build: NOT RUN"
 
-          VERIFY="$RUNNER_TEMP/verify-upstream"
-          git clone --shared --no-checkout "$SRC" "$VERIFY"
-          git -C "$VERIFY" checkout --detach "$UPSTREAM_COMMIT"
-          git -C "$VERIFY" apply --check "$OUT"
-
-          python3 - "$OUT" "$SRC" "$RUNNER_TEMP" <<'PY'
-          import hashlib, pathlib, subprocess, sys
-          out = pathlib.Path(sys.argv[1])
-          src = sys.argv[2]
-          temp = pathlib.Path(sys.argv[3])
-          h = hashlib.sha256(out.read_bytes()).hexdigest()
-          size = out.stat().st_size
-          names = subprocess.check_output([
-              "git", "-C", src, "diff", "--name-only", "--ignore-submodules=all", "HEAD", "--"
-          ], text=True)
-          changed = len([x for x in names.splitlines() if x.strip()])
-          (temp / "Jerkgram-1.0.0-source.patch.sha256").write_text(
-              f"{h}  Jerkgram-1.0.0-source.patch\n", encoding="utf-8"
-          )
-          (temp / "changed-files.txt").write_text(names, encoding="utf-8")
-          info = (
-              "source patch: Jerkgram-1.0.0-source.patch\n"
-              f"bytes: {size}\n"
-              f"sha256: {h}\n"
-              f"changed files: {changed}\n"
-              "upstream: 6ad963e5b62d354da79040f388ae2b9132fb17b8\n"
-              "Bazel/IPA build: NOT RUN\n"
-          )
-          (temp / "source-patch-info.txt").write_text(info, encoding="utf-8")
-          print(info, end="")
-          PY
-
-      - name: Upload temporary source patch artifact
+      - name: Upload sanitized source delta
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.0.0-source-patch
+          name: Jerkgram-1.0.0-source-delta
           path: |
-            ${{ runner.temp }}/Jerkgram-1.0.0-source.patch
-            ${{ runner.temp }}/Jerkgram-1.0.0-source.patch.sha256
-            ${{ runner.temp }}/changed-files.txt
-            ${{ runner.temp }}/source-patch-info.txt
+            ${{ runner.temp }}/Jerkgram-1.0.0-source-delta.tar.gz
+            ${{ runner.temp }}/Jerkgram-1.0.0-source-delta.tar.gz.sha256
           if-no-files-found: error
           retention-days: 1
