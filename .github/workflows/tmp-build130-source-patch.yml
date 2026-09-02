@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   export-source-patch:
-    runs-on: ubuntu-24.04
+    runs-on: macos-26
     timeout-minutes: 20
     env:
       BUILD130_COMMIT: 3cef060015b53f79764ddd812c8fba0663c76fc2
@@ -114,8 +114,14 @@ jobs:
             exit 1
           fi
 
-          git -C "$SRC" ls-files --others --exclude-standard -z > "$RUNNER_TEMP/untracked.z"
-          xargs -0 -r git -C "$SRC" add -N -- < "$RUNNER_TEMP/untracked.z"
+          python3 - "$SRC" <<'PY'
+          import subprocess, sys
+          root = sys.argv[1]
+          raw = subprocess.check_output(["git", "-C", root, "ls-files", "--others", "--exclude-standard", "-z"])
+          for item in raw.split(b"\0"):
+              if item:
+                  subprocess.run(["git", "-C", root, "add", "-N", "--", item.decode()], check=True)
+          PY
 
           git -C "$SRC" diff --binary --full-index --no-ext-diff --ignore-submodules=all HEAD -- > "$OUT"
           test -s "$OUT"
@@ -133,20 +139,32 @@ jobs:
           git -C "$VERIFY" checkout --detach "$UPSTREAM_COMMIT"
           git -C "$VERIFY" apply --check "$OUT"
 
-          SHA="$(sha256sum "$OUT" | awk '{print $1}')"
-          SIZE="$(stat -c '%s' "$OUT")"
-          CHANGED="$(git -C "$SRC" diff --name-only --ignore-submodules=all HEAD -- | wc -l | tr -d ' ')"
-          printf '%s  %s\n' "$SHA" "Jerkgram-1.0.0-source.patch" > "$RUNNER_TEMP/Jerkgram-1.0.0-source.patch.sha256"
-          git -C "$SRC" diff --name-only --ignore-submodules=all HEAD -- > "$RUNNER_TEMP/changed-files.txt"
-
-          {
-            echo "source patch: Jerkgram-1.0.0-source.patch"
-            echo "bytes: $SIZE"
-            echo "sha256: $SHA"
-            echo "changed files: $CHANGED"
-            echo "upstream: $UPSTREAM_COMMIT"
-            echo "Bazel/IPA build: NOT RUN"
-          } | tee "$RUNNER_TEMP/source-patch-info.txt"
+          python3 - "$OUT" "$SRC" "$RUNNER_TEMP" <<'PY'
+          import hashlib, pathlib, subprocess, sys
+          out = pathlib.Path(sys.argv[1])
+          src = sys.argv[2]
+          temp = pathlib.Path(sys.argv[3])
+          h = hashlib.sha256(out.read_bytes()).hexdigest()
+          size = out.stat().st_size
+          names = subprocess.check_output([
+              "git", "-C", src, "diff", "--name-only", "--ignore-submodules=all", "HEAD", "--"
+          ], text=True)
+          changed = len([x for x in names.splitlines() if x.strip()])
+          (temp / "Jerkgram-1.0.0-source.patch.sha256").write_text(
+              f"{h}  Jerkgram-1.0.0-source.patch\n", encoding="utf-8"
+          )
+          (temp / "changed-files.txt").write_text(names, encoding="utf-8")
+          info = (
+              "source patch: Jerkgram-1.0.0-source.patch\n"
+              f"bytes: {size}\n"
+              f"sha256: {h}\n"
+              f"changed files: {changed}\n"
+              "upstream: 6ad963e5b62d354da79040f388ae2b9132fb17b8\n"
+              "Bazel/IPA build: NOT RUN\n"
+          )
+          (temp / "source-patch-info.txt").write_text(info, encoding="utf-8")
+          print(info, end="")
+          PY
 
       - name: Upload temporary source patch artifact
         uses: actions/upload-artifact@v4
