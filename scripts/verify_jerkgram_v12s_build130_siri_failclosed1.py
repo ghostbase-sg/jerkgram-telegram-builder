@@ -7,6 +7,10 @@ from pathlib import Path
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 APP_DELEGATE = ROOT / "submodules/TelegramUI/Sources/AppDelegate.swift"
 TELEGRAM_UI_BUILD = ROOT / "submodules/TelegramUI/BUILD"
+BRIDGE_HEADER = ROOT / "submodules/JerkgramSiriEntitlement/Sources/JerkgramSiriEntitlement.h"
+BRIDGE_IMPLEMENTATION = ROOT / "submodules/JerkgramSiriEntitlement/Sources/JerkgramSiriEntitlement.m"
+BRIDGE_SWIFT_PROBE = ROOT / "submodules/JerkgramSiriEntitlement/Sources/JerkgramSiriEntitlementSwiftProbe.swift"
+BRIDGE_BUILD = ROOT / "submodules/JerkgramSiriEntitlement/BUILD"
 MARKER = "// MARK: Jerkgram v1.2S BUILD130_SIRI_RUNTIME_FAILCLOSED1"
 GATE = "buildConfig.isSiriEnabled && jerkgramHasRuntimeSiriEntitlement()"
 
@@ -34,14 +38,11 @@ def balanced_region(text: str, token: str) -> str:
 
 def verify_app_delegate(text: str) -> None:
     require(text.count(MARKER) == 1, "Build130 helper marker count")
-    require(text.count("import Security") == 1, "Security import count")
+    require(text.count("import JerkgramSiriEntitlement") == 1, "Siri bridge import count")
+    require("import Security" not in text, "Swift Security import must not bypass the bridge")
     helper = balanced_region(text, "private func jerkgramHasRuntimeSiriEntitlement() -> Bool")
     for token in (
-        "SecTaskCreateFromSelf(nil)",
-        'SecTaskCopyValueForEntitlement(task, "com.apple.developer.siri" as CFString, &error)',
-        "CFGetTypeID(value) == CFBooleanGetTypeID()",
-        "CFBooleanGetValue(value as! CFBoolean)",
-        "error?.release()",
+        "return JerkgramHasRuntimeSiriEntitlement()",
     ):
         require(token in helper, "runtime helper invariant missing: " + token)
     for forbidden in ("TeamIdentifier", "team-identifier", "application-identifier", "bundleIdentifier", "signingIdentity"):
@@ -61,15 +62,32 @@ def verify_app_delegate(text: str) -> None:
 
 
 def main() -> None:
-    for path in (APP_DELEGATE, TELEGRAM_UI_BUILD):
+    for path in (APP_DELEGATE, TELEGRAM_UI_BUILD, BRIDGE_HEADER, BRIDGE_IMPLEMENTATION, BRIDGE_SWIFT_PROBE, BRIDGE_BUILD):
         require(path.is_file(), "missing source owner: " + str(path))
     app_delegate = APP_DELEGATE.read_text(encoding="utf-8")
     verify_app_delegate(app_delegate)
-    # Telegram's existing LocalAuth and WebUI Swift targets already import
-    # Security without a manual sdk_frameworks list. TelegramUI follows that
-    # project-owned Swift/Bazel convention; no speculative bridge is added.
+    bridge = BRIDGE_IMPLEMENTATION.read_text(encoding="utf-8")
+    for token in (
+        "#import <Security/SecTask.h>",
+        "SecTaskCreateFromSelf(kCFAllocatorDefault)",
+        'CFSTR("com.apple.developer.siri")',
+        "CFGetTypeID(value) == CFBooleanGetTypeID()",
+        "CFBooleanGetValue((CFBooleanRef)value)",
+        "CFRelease(value)",
+        "CFRelease(error)",
+        "CFRelease(task)",
+    ):
+        require(token in bridge, "bridge runtime entitlement invariant missing: " + token)
+    for forbidden in ("TeamIdentifier", "team-identifier", "application-identifier", "bundleIdentifier", "signingIdentity"):
+        require(forbidden not in bridge, "bridge signer-specific input: " + forbidden)
     build = TELEGRAM_UI_BUILD.read_text(encoding="utf-8")
     require("swift_library(" in build and 'name = "TelegramUI"' in build, "TelegramUI Bazel owner drifted")
+    require(build.count('"//submodules/JerkgramSiriEntitlement:JerkgramSiriEntitlement",') == 1, "TelegramUI bridge dependency missing or ambiguous")
+    bridge_build = BRIDGE_BUILD.read_text(encoding="utf-8")
+    require("objc_library(" in bridge_build and 'module_name = "JerkgramSiriEntitlement"' in bridge_build, "bridge Bazel target drifted")
+    require('"Security"' in bridge_build, "bridge Security framework dependency missing")
+    require('name = "JerkgramSiriEntitlementSwiftProbe"' in bridge_build, "bridge Swift compile probe missing")
+    require("import JerkgramSiriEntitlement" in BRIDGE_SWIFT_PROBE.read_text(encoding="utf-8"), "bridge Swift probe import missing")
     print("[verify Build130 Siri fail-closed] SOURCE VERIFIED")
 
 

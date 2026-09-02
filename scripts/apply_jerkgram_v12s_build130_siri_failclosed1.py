@@ -6,6 +6,12 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 APP_DELEGATE = ROOT / "submodules/TelegramUI/Sources/AppDelegate.swift"
+TELEGRAM_UI_BUILD = ROOT / "submodules/TelegramUI/BUILD"
+BRIDGE_DIR = ROOT / "submodules/JerkgramSiriEntitlement"
+BRIDGE_HEADER = BRIDGE_DIR / "Sources/JerkgramSiriEntitlement.h"
+BRIDGE_IMPLEMENTATION = BRIDGE_DIR / "Sources/JerkgramSiriEntitlement.m"
+BRIDGE_SWIFT_PROBE = BRIDGE_DIR / "Sources/JerkgramSiriEntitlementSwiftProbe.swift"
+BRIDGE_BUILD = BRIDGE_DIR / "BUILD"
 MARKER = "// MARK: Jerkgram v1.2S BUILD130_SIRI_RUNTIME_FAILCLOSED1"
 
 
@@ -35,22 +41,88 @@ def balanced_region(text: str, token: str) -> tuple[int, int]:
 
 HELPER = r'''// MARK: Jerkgram v1.2S BUILD130_SIRI_RUNTIME_FAILCLOSED1
 private func jerkgramHasRuntimeSiriEntitlement() -> Bool {
-    guard let task = SecTaskCreateFromSelf(nil) else {
-        return false
-    }
-    var error: Unmanaged<CFError>?
-    defer {
-        error?.release()
-    }
-    guard let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.siri" as CFString, &error) else {
-        return false
-    }
-    guard CFGetTypeID(value) == CFBooleanGetTypeID() else {
-        return false
-    }
-    return CFBooleanGetValue(value as! CFBoolean)
+    return JerkgramHasRuntimeSiriEntitlement()
 }
 '''
+
+BRIDGE_HEADER_CONTENT = '''#import <Foundation/Foundation.h>
+
+FOUNDATION_EXPORT BOOL JerkgramHasRuntimeSiriEntitlement(void);
+'''
+
+BRIDGE_IMPLEMENTATION_CONTENT = '''#import "JerkgramSiriEntitlement.h"
+#import <Security/SecTask.h>
+
+BOOL JerkgramHasRuntimeSiriEntitlement(void) {
+    SecTaskRef task = SecTaskCreateFromSelf(kCFAllocatorDefault);
+    if (task == NULL) {
+        return NO;
+    }
+
+    CFErrorRef error = NULL;
+    CFTypeRef value = SecTaskCopyValueForEntitlement(task, CFSTR("com.apple.developer.siri"), &error);
+    BOOL allowed = NO;
+    if (value != NULL && CFGetTypeID(value) == CFBooleanGetTypeID()) {
+        allowed = CFBooleanGetValue((CFBooleanRef)value) ? YES : NO;
+    }
+
+    if (value != NULL) {
+        CFRelease(value);
+    }
+    if (error != NULL) {
+        CFRelease(error);
+    }
+    CFRelease(task);
+    return allowed;
+}
+'''
+
+BRIDGE_SWIFT_PROBE_CONTENT = '''import JerkgramSiriEntitlement
+
+let jerkgramSiriEntitlementSwiftProbe: Bool = JerkgramHasRuntimeSiriEntitlement()
+'''
+
+BRIDGE_BUILD_CONTENT = '''load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+objc_library(
+    name = "JerkgramSiriEntitlement",
+    enable_modules = True,
+    module_name = "JerkgramSiriEntitlement",
+    srcs = ["Sources/JerkgramSiriEntitlement.m"],
+    hdrs = ["Sources/JerkgramSiriEntitlement.h"],
+    sdk_frameworks = [
+        "Foundation",
+        "Security",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+swift_library(
+    name = "JerkgramSiriEntitlementSwiftProbe",
+    module_name = "JerkgramSiriEntitlementSwiftProbe",
+    srcs = ["Sources/JerkgramSiriEntitlementSwiftProbe.swift"],
+    deps = [":JerkgramSiriEntitlement"],
+    visibility = ["//visibility:public"],
+)
+'''
+
+
+def write_bridge(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        require(path.read_text(encoding="utf-8") == content, "bridge owner drifted: " + str(path))
+    else:
+        path.write_text(content, encoding="utf-8")
+
+
+def patch_telegram_ui_build(text: str) -> str:
+    dependency = '        "//submodules/JerkgramSiriEntitlement:JerkgramSiriEntitlement",\n'
+    if dependency in text:
+        require(text.count(dependency) == 1, "bridge Bazel dependency is ambiguous")
+        return text
+    anchor = '        "//submodules/BuildConfig:BuildConfig",\n'
+    require(text.count(anchor) == 1, "TelegramUI BuildConfig dependency owner missing or ambiguous")
+    return text.replace(anchor, anchor + dependency, 1)
 
 
 def patch_app_delegate(text: str) -> str:
@@ -59,8 +131,9 @@ def patch_app_delegate(text: str) -> str:
         return text
     require(text.count("import Intents") == 1, "Intents import owner is missing or ambiguous")
     require("import Security" not in text, "unexpected preexisting Security import")
-    text = text.replace("import Intents", "import Intents\nimport Security", 1)
-    insertion = text.index("\n", text.index("import Security")) + 1
+    require("import JerkgramSiriEntitlement" not in text, "unexpected preexisting bridge import")
+    text = text.replace("import Intents", "import Intents\nimport JerkgramSiriEntitlement", 1)
+    insertion = text.index("\n", text.index("import JerkgramSiriEntitlement")) + 1
     text = text[:insertion] + "\n" + HELPER + text[insertion:]
 
     request_start, request_end = balanced_region(text, "requestSiriAuthorization: { completion in")
@@ -109,9 +182,14 @@ def patch_app_delegate(text: str) -> str:
 
 
 def main() -> None:
-    for path in (APP_DELEGATE,):
+    for path in (APP_DELEGATE, TELEGRAM_UI_BUILD):
         require(path.is_file(), "missing source owner: " + str(path))
+    write_bridge(BRIDGE_HEADER, BRIDGE_HEADER_CONTENT)
+    write_bridge(BRIDGE_IMPLEMENTATION, BRIDGE_IMPLEMENTATION_CONTENT)
+    write_bridge(BRIDGE_SWIFT_PROBE, BRIDGE_SWIFT_PROBE_CONTENT)
+    write_bridge(BRIDGE_BUILD, BRIDGE_BUILD_CONTENT)
     APP_DELEGATE.write_text(patch_app_delegate(APP_DELEGATE.read_text(encoding="utf-8")), encoding="utf-8")
+    TELEGRAM_UI_BUILD.write_text(patch_telegram_ui_build(TELEGRAM_UI_BUILD.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build130 Siri fail-closed] GREEN")
 
 

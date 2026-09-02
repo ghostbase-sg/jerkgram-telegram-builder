@@ -60,11 +60,9 @@ let bindings = TelegramApplicationBindings(requestSiriAuthorization: { completio
     def test_patch_adds_boolean_entitlement_gate_before_both_siri_apis(self):
         module = self.load(PATCH, "build130_siri_patch")
         result = module.patch_app_delegate(self.app_delegate_fixture())
-        self.assertIn("import Security", result)
+        self.assertIn("import JerkgramSiriEntitlement", result)
         self.assertEqual(result.count(module.MARKER), 1)
-        self.assertIn('SecTaskCopyValueForEntitlement(task, "com.apple.developer.siri" as CFString, &error)', result)
-        self.assertIn("CFGetTypeID(value) == CFBooleanGetTypeID()", result)
-        self.assertIn("CFBooleanGetValue(value as! CFBoolean)", result)
+        self.assertIn("return JerkgramHasRuntimeSiriEntitlement()", result)
         self.assertIn("buildConfig.isSiriEnabled && jerkgramHasRuntimeSiriEntitlement()", result)
         self.assertLess(
             result.index("buildConfig.isSiriEnabled && jerkgramHasRuntimeSiriEntitlement()"),
@@ -81,6 +79,20 @@ let bindings = TelegramApplicationBindings(requestSiriAuthorization: { completio
         self.assertNotIn("TeamIdentifier", result)
         self.assertNotIn("application-identifier", result)
 
+    def test_bridge_is_security_owned_by_objc_target_and_telegram_ui_dep(self):
+        module = self.load(PATCH, "build130_siri_patch")
+        self.assertIn("#import <Security/SecTask.h>", module.BRIDGE_IMPLEMENTATION_CONTENT)
+        self.assertIn('CFSTR("com.apple.developer.siri")', module.BRIDGE_IMPLEMENTATION_CONTENT)
+        self.assertIn("CFGetTypeID(value) == CFBooleanGetTypeID()", module.BRIDGE_IMPLEMENTATION_CONTENT)
+        self.assertIn("CFRelease(task)", module.BRIDGE_IMPLEMENTATION_CONTENT)
+        self.assertIn('"Security"', module.BRIDGE_BUILD_CONTENT)
+        self.assertIn("JerkgramSiriEntitlementSwiftProbe", module.BRIDGE_BUILD_CONTENT)
+        self.assertIn("import JerkgramSiriEntitlement", module.BRIDGE_SWIFT_PROBE_CONTENT)
+        build = 'swift_library(\n    deps = [\n        "//submodules/BuildConfig:BuildConfig",\n    ],\n)\n'
+        patched = module.patch_telegram_ui_build(build)
+        self.assertIn('"//submodules/JerkgramSiriEntitlement:JerkgramSiriEntitlement",', patched)
+        self.assertEqual(patched, module.patch_telegram_ui_build(patched))
+
     def test_patch_is_idempotent_and_updates_visible_settings_build(self):
         module = self.load(PATCH, "build130_siri_patch")
         app = module.patch_app_delegate(self.app_delegate_fixture())
@@ -96,7 +108,7 @@ let bindings = TelegramApplicationBindings(requestSiriAuthorization: { completio
     def test_probe_installer_follows_build129_and_runs_before_bazel(self):
         installer = self.load(INSTALLER, "build130_siri_installer")
         probe = '''python3 ../../scripts/apply_jerkgram_v12r_build129_protected_chat_forward1.py
-"$BAZEL_BIN" build //Telegram:Telegram
+"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} //Telegram:Telegram
 python3 ../../scripts/verify_jerkgram_v12s_build128_final_ipa.py ghostbase-final/GhostBase.ipa
 '''
         patched = installer.patch_probe(probe)
@@ -105,6 +117,7 @@ python3 ../../scripts/verify_jerkgram_v12s_build128_final_ipa.py ghostbase-final
         self.assertEqual(patched.count(installer.FINAL_MARKER), 1)
         self.assertLess(patched.index("build129_protected_chat_forward1.py"), patched.index("build130_siri_failclosed1.py"))
         self.assertLess(patched.index("verify_jerkgram_v12s_build130_siri_failclosed1.py"), patched.index('"$BAZEL_BIN" build'))
+        self.assertLess(patched.index("JerkgramSiriEntitlementSwiftProbe"), patched.index(installer.BAZEL_ANCHOR))
         self.assertLess(patched.index("verify_jerkgram_v12s_build128_final_ipa.py"), patched.index("jerkgram_finalize_build130_identity.py"))
 
 
