@@ -629,6 +629,8 @@ python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_persistence1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py
 python3 ../../scripts/verify_jerkgram_v12m_build124_settings_redesign1.py
 
+# JERKGRAM_V12N_BUILD125_SOURCE_HOOK
+
 echo
 echo "== Jerkgram v1.2N Build125 release owners =="
 python3 ../../scripts/apply_jerkgram_v12n_build125_profile_edit1.py
@@ -664,6 +666,12 @@ python3 ../../scripts/apply_jerkgram_v12q_build128_bio_corner_owner1.py
 echo
 echo "== Jerkgram v1.2R Build129 protected chat forwarding =="
 python3 ../../scripts/apply_jerkgram_v12r_build129_protected_chat_forward1.py
+
+# JERKGRAM_V12S_BUILD130_SIRI_FAILCLOSED_HOOK
+echo
+echo "== Jerkgram v1.2S Build130 Siri runtime fail-closed =="
+python3 ../../scripts/apply_jerkgram_v12s_build130_siri_failclosed1.py
+python3 ../../scripts/verify_jerkgram_v12s_build130_siri_failclosed1.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
@@ -782,6 +790,12 @@ echo "== Jerkgram v1.2L Build123 final identity =="
 python3 ../../scripts/jerkgram_finalize_build123_identity.py ghostbase-final/GhostBase.ipa
 python3 ../../scripts/verify_jerkgram_v12l_build123_final_ipa.py ghostbase-final/GhostBase.ipa
 
+# JERKGRAM_V12M_BUILD124_FINAL_IDENTITY_HOOK
+echo
+echo "== Jerkgram v1.2M Build124 final identity =="
+python3 ../../scripts/jerkgram_finalize_build124_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12m_build124_final_ipa.py ghostbase-final/GhostBase.ipa
+
 # JERKGRAM_V12N_BUILD125_FINAL_IDENTITY_HOOK
 echo
 echo "== Jerkgram v1.2N Build125 final identity =="
@@ -792,3 +806,9 @@ echo
 echo "== Jerkgram Build128 final identity and audited compatibility packages =="
 python3 ../../scripts/jerkgram_finalize_build128_identity.py ghostbase-final/GhostBase.ipa
 python3 ../../scripts/verify_jerkgram_v12s_build128_final_ipa.py ghostbase-final/GhostBase.ipa
+
+# JERKGRAM_V12S_BUILD130_FINAL_IDENTITY_HOOK
+echo
+echo "== Jerkgram Build130 final identity =="
+python3 ../../scripts/jerkgram_finalize_build130_identity.py ghostbase-final/GhostBase.ipa
+python3 ../../scripts/verify_jerkgram_v12s_build130_final_ipa.py ghostbase-final/GhostBase.ipa
