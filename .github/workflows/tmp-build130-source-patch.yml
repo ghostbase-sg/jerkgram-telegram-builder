@@ -38,6 +38,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export GHOSTBASE_BUILDER_ROOT="$GITHUB_WORKSPACE"
           export GHOSTBASE_OFFICIAL_ROOT="$RUNNER_TEMP/jerkgram-official-reference-fallback"
 
           python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
