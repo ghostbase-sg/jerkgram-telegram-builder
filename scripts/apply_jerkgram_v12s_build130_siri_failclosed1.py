@@ -17,7 +17,10 @@ def require(value: bool, message: str) -> None:
 def balanced_region(text: str, token: str) -> tuple[int, int]:
     start = text.find(token)
     require(start >= 0, "missing owner: " + token)
-    brace = text.find("{", start + len(token))
+    # Both Siri binding tokens include their closure's opening brace. Starting
+    # after the token would instead capture the nested `if #available` body.
+    token_brace = token.rfind("{")
+    brace = start + token_brace if token_brace >= 0 else text.find("{", start + len(token))
     require(brace >= 0, "missing opening brace: " + token)
     depth = 0
     for index in range(brace, len(text)):
@@ -101,7 +104,8 @@ def patch_app_delegate(text: str) -> str:
                 return .denied
             }
         }'''
-    return text[:siri_start] + siri + text[siri_end:]
+    text = text[:siri_start] + siri + text[siri_end:]
+    return text
 
 
 def main() -> None:

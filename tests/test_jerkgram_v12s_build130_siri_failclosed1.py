@@ -76,10 +76,12 @@ let bindings = TelegramApplicationBindings(requestSiriAuthorization: { completio
         )
         self.assertIn("completion(false)", result)
         self.assertIn("return .denied", result)
+        self.assertIn("            }\n        }, siriAuthorization:", result)
+        self.assertTrue(result.rstrip().endswith("            }\n        })"))
         self.assertNotIn("TeamIdentifier", result)
         self.assertNotIn("application-identifier", result)
 
-    def test_patch_is_idempotent_and_does_not_own_about_screen(self):
+    def test_patch_is_idempotent_and_updates_visible_settings_build(self):
         module = self.load(PATCH, "build130_siri_patch")
         app = module.patch_app_delegate(self.app_delegate_fixture())
         self.assertEqual(app, module.patch_app_delegate(app))
