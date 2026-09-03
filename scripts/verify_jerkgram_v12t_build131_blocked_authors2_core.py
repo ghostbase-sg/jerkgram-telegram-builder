@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 
 
-ROOT = Path(os.environ.get("JERKGRAM_SRC", "/root/gb_builder/work/swiftgram-src"))
+ROOT = Path(os.environ.get("GHOSTBASE_SOURCE_ROOT", os.environ.get("JERKGRAM_SRC", "/root/gb_builder/work/swiftgram-src")))
 BLOCKED = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeers.swift"
 STATE = ROOT / "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
 

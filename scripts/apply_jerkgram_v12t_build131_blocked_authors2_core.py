@@ -8,7 +8,7 @@ from pathlib import Path
 import os
 
 
-ROOT = Path(os.environ.get("JERKGRAM_SRC", "/root/gb_builder/work/swiftgram-src"))
+ROOT = Path(os.environ.get("GHOSTBASE_SOURCE_ROOT", os.environ.get("JERKGRAM_SRC", "/root/gb_builder/work/swiftgram-src")))
 BLOCKED = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeers.swift"
 STATE = ROOT / "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
 
@@ -65,7 +65,9 @@ private func jerkgramBuild131PurgeBlockedAuthorFromGroupHistories(transaction: T
 }
 
 '''
-    blocked = helper + blocked
+    import_anchor = "import MtProtoKit\n\n"
+    require(import_anchor in blocked, "BlockedPeers import section")
+    blocked = blocked.replace(import_anchor, import_anchor + helper, 1)
 
     anchor = '''                        if result != nil {
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
