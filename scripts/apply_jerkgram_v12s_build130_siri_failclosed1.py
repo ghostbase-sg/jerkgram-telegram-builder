@@ -17,7 +17,7 @@ def require(value: bool, message: str) -> None:
 def balanced_region(text: str, token: str) -> tuple[int, int]:
     start = text.find(token)
     require(start >= 0, "missing owner: " + token)
-    brace = text.find("{", start + len(token))
+    brace = text.find("{", start)
     require(brace >= 0, "missing opening brace: " + token)
     depth = 0
     for index in range(brace, len(text)):

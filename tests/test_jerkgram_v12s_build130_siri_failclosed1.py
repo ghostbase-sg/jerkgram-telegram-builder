@@ -79,6 +79,21 @@ let bindings = TelegramApplicationBindings(requestSiriAuthorization: { completio
         self.assertNotIn("TeamIdentifier", result)
         self.assertNotIn("application-identifier", result)
 
+        request_start = result.index("requestSiriAuthorization: { completion in")
+        request_brace = result.index("{", request_start)
+        depth = 0
+        request_end = None
+        for index in range(request_brace, len(result)):
+            if result[index] == "{":
+                depth += 1
+            elif result[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    request_end = index
+                    break
+        self.assertIsNotNone(request_end)
+        self.assertEqual(result[request_end + 1:result.index("siriAuthorization:", request_end)].strip(), ",")
+
     def test_patch_is_idempotent_and_leaves_final_about_owner_untouched(self):
         module = self.load(PATCH, "build130_siri_patch")
         app = module.patch_app_delegate(self.app_delegate_fixture())
