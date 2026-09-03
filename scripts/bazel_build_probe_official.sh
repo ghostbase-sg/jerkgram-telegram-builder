@@ -672,6 +672,12 @@ echo
 echo "== Jerkgram v1.2S Build130 Siri runtime fail-closed =="
 python3 ../../scripts/apply_jerkgram_v12s_build130_siri_failclosed1.py
 python3 ../../scripts/verify_jerkgram_v12s_build130_siri_failclosed1.py
+
+# JERKGRAM_BUILD131_BLOCKED_AUTHORS2_CORE_HOOK
+echo
+echo "== Jerkgram Build131 blocked group authors: core preflight =="
+python3 ../../scripts/apply_jerkgram_v12t_build131_blocked_authors2_core.py
+python3 ../../scripts/verify_jerkgram_v12t_build131_blocked_authors2_core.py
 # END MARK: GhostBase v1.1G unified recovery
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
