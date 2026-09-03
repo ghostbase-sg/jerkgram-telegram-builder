@@ -6,6 +6,7 @@ on:
     branches:
       - Jerkgram-12.9.2
       - dev/build124-runtime-15
+      - dev/build124-runtime-15-siri-build130
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
