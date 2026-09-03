@@ -679,6 +679,13 @@ echo "== Jerkgram Build131 blocked group authors: core preflight =="
 python3 ../../scripts/apply_jerkgram_v12t_build131_blocked_authors2_core.py
 python3 ../../scripts/verify_jerkgram_v12t_build131_blocked_authors2_core.py
 # END MARK: GhostBase v1.1G unified recovery
+
+# JERKGRAM_PROFILE_RENDERER_AUDIT1
+# Diagnostics only: this must never turn a successful materialization into a
+# late Bazel failure. Runtime changes remain blocked until this reports ready.
+echo "== Jerkgram profile renderer audit (non-blocking) =="
+python3 "$GHOSTBASE_BUILDER_ROOT/scripts/audit_jerkgram_profile_renderer_runtime1.py" || true
+
 "$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-} \
   --enable_workspace \
   -c opt \
