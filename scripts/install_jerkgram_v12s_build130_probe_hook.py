@@ -50,6 +50,11 @@ def patch_probe(text: str) -> str:
             + "\n".join(line(name) for name in SOURCE_ORDERED)
         )
         text = text.replace(BUILD129_SOURCE_ANCHOR, source_block, 1)
+    elif "verify_jerkgram_v12s_build130_app_delegate_parse1.py" not in text:
+        # Upgrade the block created by the previous Build130 installer.
+        anchor = line("verify_jerkgram_v12s_build130_siri_failclosed1.py")
+        require(text.count(anchor) == 1, "legacy Build130 verifier anchor count")
+        text = text.replace(anchor, anchor + "\n" + line("verify_jerkgram_v12s_build130_app_delegate_parse1.py"), 1)
 
     require(text.count(SOURCE_MARKER) == 1, "Build130 source marker count")
     source_positions = [text.index(name) for name in SOURCE_ORDERED]

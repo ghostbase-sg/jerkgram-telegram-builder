@@ -100,8 +100,14 @@ python3 ../../scripts/verify_jerkgram_v12s_build128_final_ipa.py ghostbase-final
         self.assertEqual(patched.count(installer.SOURCE_MARKER), 1)
         self.assertEqual(patched.count(installer.FINAL_MARKER), 1)
         self.assertLess(patched.index("build129_protected_chat_forward1.py"), patched.index("build130_siri_failclosed1.py"))
-        self.assertLess(patched.index("verify_jerkgram_v12s_build130_siri_failclosed1.py"), patched.index('"$BAZEL_BIN" build'))
+        self.assertLess(patched.index("verify_jerkgram_v12s_build130_siri_failclosed1.py"), patched.index("verify_jerkgram_v12s_build130_app_delegate_parse1.py"))
+        self.assertLess(patched.index("verify_jerkgram_v12s_build130_app_delegate_parse1.py"), patched.index('"$BAZEL_BIN" build'))
         self.assertLess(patched.index("verify_jerkgram_v12s_build128_final_ipa.py"), patched.index("jerkgram_finalize_build130_identity.py"))
+
+        legacy = patched.replace("\n" + installer.line("verify_jerkgram_v12s_build130_app_delegate_parse1.py"), "", 1)
+        upgraded = installer.patch_probe(legacy)
+        self.assertEqual(upgraded.count("verify_jerkgram_v12s_build130_app_delegate_parse1.py"), 1)
+        self.assertEqual(upgraded, installer.patch_probe(upgraded))
 
 
 if __name__ == "__main__":
