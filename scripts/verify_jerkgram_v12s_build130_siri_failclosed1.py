@@ -6,8 +6,6 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 APP_DELEGATE = ROOT / "submodules/TelegramUI/Sources/AppDelegate.swift"
-SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
-STRINGS = ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
 TELEGRAM_UI_BUILD = ROOT / "submodules/TelegramUI/BUILD"
 MARKER = "// MARK: Jerkgram v1.2S BUILD130_SIRI_RUNTIME_FAILCLOSED1"
 GATE = "buildConfig.isSiriEnabled && jerkgramHasRuntimeSiriEntitlement()"
@@ -63,13 +61,9 @@ def verify_app_delegate(text: str) -> None:
 
 
 def main() -> None:
-    for path in (APP_DELEGATE, SETTINGS, STRINGS, TELEGRAM_UI_BUILD):
+    for path in (APP_DELEGATE, TELEGRAM_UI_BUILD):
         require(path.is_file(), "missing source owner: " + str(path))
-    app_delegate = APP_DELEGATE.read_text(encoding="utf-8")
-    verify_app_delegate(app_delegate)
-    require("strings.build130AboutSummary" in SETTINGS.read_text(encoding="utf-8"), "Build130 About settings owner missing")
-    strings = STRINGS.read_text(encoding="utf-8")
-    require(strings.count("build130AboutSummary") == 1 and "Build 130" in strings, "visible Build130 settings label missing")
+    verify_app_delegate(APP_DELEGATE.read_text(encoding="utf-8"))
     # Telegram's existing LocalAuth and WebUI Swift targets already import
     # Security without a manual sdk_frameworks list. TelegramUI follows that
     # project-owned Swift/Bazel convention; no speculative bridge is added.

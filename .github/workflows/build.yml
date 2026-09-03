@@ -187,6 +187,7 @@ jobs:
           python3 -m unittest tests.test_jerkgram_v12q_build128_bio_corner_owner1
           python3 -m unittest tests.test_jerkgram_v12r_build129_protected_chat_forward1
           python3 -m unittest tests.test_jerkgram_v12s_build130_siri_failclosed1
+          python3 -m unittest tests.test_jerkgram_v12s_build130_identity1
           python3 -m unittest tests.test_jerkgram_v12s_build128_file_picker_package1
           python3 -m unittest tests.test_jerkgram_v12o_build126_keychain_packaging1
           python3 -m unittest tests.test_jerkgram_v12o_build126_release_contract1

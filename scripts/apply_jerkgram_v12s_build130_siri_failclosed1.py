@@ -6,8 +6,6 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 APP_DELEGATE = ROOT / "submodules/TelegramUI/Sources/AppDelegate.swift"
-SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
-STRINGS = ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
 MARKER = "// MARK: Jerkgram v1.2S BUILD130_SIRI_RUNTIME_FAILCLOSED1"
 
 
@@ -106,33 +104,19 @@ def patch_app_delegate(text: str) -> str:
     return text[:siri_start] + siri + text[siri_end:]
 
 
+# Siri must not own public Settings/About rendering. Those views display the
+# packaged app version directly; changing their source here made this security
+# patch depend on stale UI anchors.
 def patch_settings(text: str) -> str:
-    if "strings.build130AboutSummary" in text:
-        return text
-    start, end = balanced_region(text, "if page == .about")
-    block = text[start:end]
-    require(block.count("strings.build124AboutSummary") == 1, "Build124 About summary owner missing or ambiguous")
-    block = block.replace("strings.build124AboutSummary", "strings.build130AboutSummary", 1)
-    return text[:start] + block + text[end:]
+    return text
 
 
 def patch_strings(text: str) -> str:
-    if "build130AboutSummary" in text:
-        return text
-    token = "var build124AboutSummary: String"
-    start, end = balanced_region(text, token)
-    replacement = '''var build130AboutSummary: String {
-        return "Jerkgram · Official Telegram 12.9.2 · Build 130"
-    }'''
-    return text[:start] + replacement + text[end:]
-
+    return text
 
 def main() -> None:
-    for path in (APP_DELEGATE, SETTINGS, STRINGS):
-        require(path.is_file(), "missing source owner: " + str(path))
+    require(APP_DELEGATE.is_file(), "missing source owner: " + str(APP_DELEGATE))
     APP_DELEGATE.write_text(patch_app_delegate(APP_DELEGATE.read_text(encoding="utf-8")), encoding="utf-8")
-    SETTINGS.write_text(patch_settings(SETTINGS.read_text(encoding="utf-8")), encoding="utf-8")
-    STRINGS.write_text(patch_strings(STRINGS.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build130 Siri fail-closed] GREEN")
 
 
