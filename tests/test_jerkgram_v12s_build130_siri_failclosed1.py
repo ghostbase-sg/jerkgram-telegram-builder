@@ -57,42 +57,23 @@ let bindings = TelegramApplicationBindings(requestSiriAuthorization: { completio
 })
 '''
 
-    def test_patch_adds_boolean_entitlement_gate_before_both_siri_apis(self):
+    def test_patch_disables_both_siri_bindings_without_private_security_apis(self):
         module = self.load(PATCH, "build130_siri_patch")
         result = module.patch_app_delegate(self.app_delegate_fixture())
-        self.assertIn("import Security", result)
         self.assertEqual(result.count(module.MARKER), 1)
-        self.assertIn('SecTaskCopyValueForEntitlement(task, "com.apple.developer.siri" as CFString, &error)', result)
-        self.assertIn("CFGetTypeID(value) == CFBooleanGetTypeID()", result)
-        self.assertIn("CFBooleanGetValue(value as! CFBoolean)", result)
-        self.assertIn("buildConfig.isSiriEnabled && jerkgramHasRuntimeSiriEntitlement()", result)
-        self.assertLess(
-            result.index("buildConfig.isSiriEnabled && jerkgramHasRuntimeSiriEntitlement()"),
-            result.index("INPreferences.requestSiriAuthorization"),
-        )
-        self.assertLess(
-            result.rindex("buildConfig.isSiriEnabled && jerkgramHasRuntimeSiriEntitlement()"),
-            result.index("INPreferences.siriAuthorizationStatus()"),
-        )
-        self.assertIn("completion(false)", result)
-        self.assertIn("return .denied", result)
-        self.assertNotIn("TeamIdentifier", result)
-        self.assertNotIn("application-identifier", result)
+        self.assertNotIn("import Security", result)
+        self.assertNotIn("SecTaskCreateFromSelf", result)
+        self.assertNotIn("SecTaskCopyValueForEntitlement", result)
+        self.assertNotIn("INPreferences.requestSiriAuthorization", result)
+        self.assertNotIn("INPreferences.siriAuthorizationStatus", result)
 
         request_start = result.index("requestSiriAuthorization: { completion in")
-        request_brace = result.index("{", request_start)
-        depth = 0
-        request_end = None
-        for index in range(request_brace, len(result)):
-            if result[index] == "{":
-                depth += 1
-            elif result[index] == "}":
-                depth -= 1
-                if depth == 0:
-                    request_end = index
-                    break
-        self.assertIsNotNone(request_end)
-        self.assertEqual(result[request_end + 1:result.index("siriAuthorization:", request_end)].strip(), ",")
+        siri_start = result.index("siriAuthorization: {")
+        request = result[request_start:siri_start]
+        self.assertIn("completion(false)", request)
+        self.assertTrue(request.rstrip().endswith("},"))
+        status = result[siri_start:result.index("})", siri_start)]
+        self.assertIn("return .denied", status)
 
     def test_patch_is_idempotent_and_leaves_final_about_owner_untouched(self):
         module = self.load(PATCH, "build130_siri_patch")

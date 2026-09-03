@@ -18,6 +18,7 @@ BAZEL_ANCHOR = '"$BAZEL_BIN" build'
 SOURCE_ORDERED = (
     "apply_jerkgram_v12s_build130_siri_failclosed1.py",
     "verify_jerkgram_v12s_build130_siri_failclosed1.py",
+    "verify_jerkgram_v12s_build130_app_delegate_parse1.py",
 )
 FINAL_ORDERED = (
     "jerkgram_finalize_build130_identity.py",
