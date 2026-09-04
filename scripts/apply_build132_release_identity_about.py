@@ -10,7 +10,12 @@ TECHNICAL_VERSION = "1.0.2-beta.1"
 BUILD_NUMBER = "132"
 TELEGRAM_BASE = "12.9.2"
 
-IDENTITY_BLOCK = f'''enum JerkgramReleaseIdentity {{
+ABOUT_OWNER = Path("submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift")
+IDENTITY_OWNER = Path("submodules/SettingsUI/Sources/GhostBase/JerkgramReleaseIdentity.swift")
+IDENTITY_MARKER = "// BUILD132_RELEASE_IDENTITY1"
+
+IDENTITY_SOURCE = f'''{IDENTITY_MARKER}
+enum JerkgramReleaseIdentity {{
     static let version = "{TECHNICAL_VERSION}"
     static let displayVersion = "{DISPLAY_VERSION}"
     static let build = "{BUILD_NUMBER}"
@@ -24,133 +29,122 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def find_about_owner(root: Path) -> Path:
-    matches: list[Path] = []
-    for path in root.rglob("*.swift"):
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        if "Jerkgram Version" in text and ("Telegram Base" in text or "Telegram Version" in text):
-            matches.append(path)
-
-    if len(matches) != 1:
-        rendered = ", ".join(str(path.relative_to(root)) for path in matches[:8]) or "none"
-        fail(f"expected exactly one About owner, found {len(matches)}: {rendered}")
-    return matches[0]
+def require_owner(root: Path, relative_path: Path, label: str) -> Path:
+    path = root / relative_path
+    if not path.is_file():
+        fail(f"{label} not found at expected path: {relative_path}")
+    return path
 
 
-def ensure_identity(text: str) -> tuple[str, bool]:
-    if "enum JerkgramReleaseIdentity" in text:
-        changed = False
-        values = {
-            "version": TECHNICAL_VERSION,
-            "displayVersion": DISPLAY_VERSION,
-            "build": BUILD_NUMBER,
-            "telegramBase": TELEGRAM_BASE,
-        }
-        for name, value in values.items():
-            pattern = re.compile(rf'(static\s+let\s+{re.escape(name)}\s*=\s*)"[^"]*"')
-            text, count = pattern.subn(rf'\1"{value}"', text, count=1)
-            if count != 1:
-                fail(f"existing JerkgramReleaseIdentity is missing static let {name}")
-            changed = True
-        return text, changed
+def write_identity(root: Path) -> tuple[Path, bool]:
+    path = root / IDENTITY_OWNER
+    if path.exists():
+        current = path.read_text(encoding="utf-8")
+        if IDENTITY_MARKER not in current:
+            fail(f"refusing to overwrite non-Build132 identity owner: {IDENTITY_OWNER}")
+        if current == IDENTITY_SOURCE:
+            return path, False
+    else:
+        if not path.parent.is_dir():
+            fail(f"identity parent directory not found: {IDENTITY_OWNER.parent}")
 
-    declaration = re.search(r"(?m)^(?:public\s+|internal\s+|private\s+|fileprivate\s+)?(?:final\s+)?(?:class|struct|enum)\s+", text)
-    if declaration is None:
-        fail("could not find a Swift declaration anchor for JerkgramReleaseIdentity")
-
-    insertion = IDENTITY_BLOCK + "\n"
-    return text[: declaration.start()] + insertion + text[declaration.start() :], True
+    path.write_text(IDENTITY_SOURCE, encoding="utf-8")
+    return path, True
 
 
 def about_region(text: str) -> tuple[int, int]:
-    start = text.find("Jerkgram Version")
-    if start < 0:
-        fail("About owner has no Jerkgram Version label")
+    jerkgram_label = '"Jerkgram Version"'
+    count = text.count(jerkgram_label)
+    if count != 1:
+        fail(f"expected exactly one Jerkgram Version label, found {count}")
 
-    end_candidates = [
-        pos for pos in (
-            text.find("Telegram Base", start),
-            text.find("Telegram Version", start),
-        ) if pos >= 0
+    start = text.find(jerkgram_label)
+    base_positions = [
+        pos
+        for token in ('"Telegram Base"', '"Telegram Version"')
+        for pos in [text.find(token, start)]
+        if pos >= 0
     ]
-    if not end_candidates:
-        fail("About owner has no Telegram Base/Telegram Version label")
+    if len(base_positions) != 1:
+        fail(f"expected exactly one Telegram Base/Telegram Version label after Jerkgram Version, found {len(base_positions)}")
 
-    # Keep replacements tightly around the About rows rather than touching the file globally.
     region_start = max(0, start - 600)
-    region_end = min(len(text), min(end_candidates) + 1400)
+    region_end = min(len(text), base_positions[0] + 1400)
     return region_start, region_end
 
 
-def replace_row_value(region: str, label: str, replacement: str) -> tuple[str, bool]:
-    label_match = re.search(rf'"{re.escape(label)}"', region)
-    if label_match is None:
-        return region, False
+VALUE_PATTERN = re.compile(
+    r'(?m)(\b(?:label|value|rightLabel)\s*:\s*)'
+    r'(?P<expr>JerkgramReleaseIdentity\.[A-Za-z_][A-Za-z0-9_]*|"[^"\n]*"|[A-Za-z_][A-Za-z0-9_\.]*)'
+)
 
-    # Telegram Settings rows normally expose the right-hand text as label:/value:.
-    # Restrict the search to this row-sized window so we never rewrite another setting.
+
+def replace_row_value(region: str, label: str, replacement: str) -> str:
+    token = f'"{label}"'
+    if region.count(token) != 1:
+        fail(f"expected exactly one About row label {label!r} in bounded region, found {region.count(token)}")
+
+    label_match = re.search(re.escape(token), region)
+    assert label_match is not None
     window_start = label_match.end()
     window_end = min(len(region), window_start + 900)
     window = region[window_start:window_end]
-    value_match = re.search(
-        r'(?m)(\b(?:label|value|rightLabel)\s*:\s*)(?:"[^"]*"|[^,\n\)]+)',
-        window,
-    )
-    if value_match is None:
-        fail(f"could not find value field for About row {label!r}")
 
-    absolute_start = window_start + value_match.start()
-    absolute_end = window_start + value_match.end()
-    replacement_expr = value_match.group(1) + replacement
-    return region[:absolute_start] + replacement_expr + region[absolute_end:], True
+    value_matches = list(VALUE_PATTERN.finditer(window))
+    if not value_matches:
+        fail(f"could not find a simple value field for About row {label!r}")
+
+    match = value_matches[0]
+    absolute_start = window_start + match.start("expr")
+    absolute_end = window_start + match.end("expr")
+    return region[:absolute_start] + replacement + region[absolute_end:]
 
 
-def patch_about(text: str) -> tuple[str, bool]:
+def extract_row_value(region: str, label: str) -> str:
+    token = f'"{label}"'
+    label_match = re.search(re.escape(token), region)
+    if label_match is None:
+        fail(f"missing About row {label!r} after patch")
+
+    window = region[label_match.end() : min(len(region), label_match.end() + 900)]
+    match = VALUE_PATTERN.search(window)
+    if match is None:
+        fail(f"missing value field for About row {label!r} after patch")
+    return match.group("expr")
+
+
+def patch_about(text: str) -> str:
     start, end = about_region(text)
     region = text[start:end]
 
-    changed = False
-    for labels, replacement in (
-        (("Jerkgram Version",), "JerkgramReleaseIdentity.displayVersion"),
-        (("Build",), "JerkgramReleaseIdentity.build"),
-        (("Telegram Base", "Telegram Version"), "JerkgramReleaseIdentity.telegramBase"),
-    ):
-        replaced = False
-        for label in labels:
-            if f'"{label}"' not in region:
-                continue
-            region, did_replace = replace_row_value(region, label, replacement)
-            replaced = replaced or did_replace
-            if did_replace:
-                break
-        if not replaced:
-            fail(f"could not patch About row: {' / '.join(labels)}")
-        changed = True
+    base_count = region.count('"Telegram Base"')
+    legacy_count = region.count('"Telegram Version"')
+    if base_count == 0 and legacy_count == 1:
+        region = region.replace('"Telegram Version"', '"Telegram Base"', 1)
+    elif not (base_count == 1 and legacy_count == 0):
+        fail(
+            "bounded About region must contain exactly one Telegram Base label "
+            "or exactly one legacy Telegram Version label"
+        )
 
-    return text[:start] + region + text[end:], changed
+    region = replace_row_value(region, "Jerkgram Version", "JerkgramReleaseIdentity.displayVersion")
+    region = replace_row_value(region, "Build", "JerkgramReleaseIdentity.build")
+    region = replace_row_value(region, "Telegram Base", "JerkgramReleaseIdentity.telegramBase")
 
+    expected = {
+        "Jerkgram Version": "JerkgramReleaseIdentity.displayVersion",
+        "Build": "JerkgramReleaseIdentity.build",
+        "Telegram Base": "JerkgramReleaseIdentity.telegramBase",
+    }
+    for label, expression in expected.items():
+        actual = extract_row_value(region, label)
+        if actual != expression:
+            fail(f"{label} uses {actual!r}, expected {expression!r}")
 
-def verify_result(text: str) -> None:
-    required = (
-        f'static let version = "{TECHNICAL_VERSION}"',
-        f'static let displayVersion = "{DISPLAY_VERSION}"',
-        f'static let build = "{BUILD_NUMBER}"',
-        f'static let telegramBase = "{TELEGRAM_BASE}"',
-        "JerkgramReleaseIdentity.displayVersion",
-        "JerkgramReleaseIdentity.build",
-        "JerkgramReleaseIdentity.telegramBase",
-    )
-    for token in required:
-        if token not in text:
-            fail(f"post-patch verification missing {token!r}")
+    if "1.0.0" in region:
+        fail("stale 1.0.0 remains in Jerkgram-visible About region")
 
-    start, end = about_region(text)
-    about = text[start:end]
-    if "1.0.0" in about:
-        fail("stale 1.0.0 remains in About region")
+    return text[:start] + region + text[end:]
 
 
 def main() -> None:
@@ -161,19 +155,22 @@ def main() -> None:
     if not root.is_dir():
         fail(f"not a directory: {root}")
 
-    owner = find_about_owner(root)
-    original = owner.read_text(encoding="utf-8")
+    about_path = require_owner(root, ABOUT_OWNER, "About owner")
+    original_about = about_path.read_text(encoding="utf-8")
+    patched_about = patch_about(original_about)
 
-    patched, _ = ensure_identity(original)
-    patched, _ = patch_about(patched)
-    verify_result(patched)
+    identity_path, identity_changed = write_identity(root)
+    about_changed = patched_about != original_about
+    if about_changed:
+        about_path.write_text(patched_about, encoding="utf-8")
 
-    if patched == original:
-        print(f"[build132-release-identity] already applied: {owner.relative_to(root)}")
-        return
+    if not identity_changed and not about_changed:
+        print("[build132-release-identity] already applied")
+    else:
+        print("[build132-release-identity] patched")
 
-    owner.write_text(patched, encoding="utf-8")
-    print(f"[build132-release-identity] patched: {owner.relative_to(root)}")
+    print(f"  identity:         {identity_path.relative_to(root)}")
+    print(f"  about:            {about_path.relative_to(root)}")
     print(f"  Jerkgram Version: {DISPLAY_VERSION}")
     print(f"  Build:            {BUILD_NUMBER}")
     print(f"  Telegram Base:    {TELEGRAM_BASE}")
