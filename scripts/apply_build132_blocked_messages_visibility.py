@@ -327,7 +327,7 @@ private func jerkgramBuild132MarkIncomingBlockedGroupMessage(transaction: Transa
 
     return StoreMessage(
         id: message.id,
-        customStableId: message.customStableId,
+        customStableId: nil,
         globallyUniqueId: message.globallyUniqueId,
         groupingKey: message.groupingKey,
         threadId: message.threadId,
