@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fast structural verifier for Build131 plus the Build132 release-identity pre-Bazel gate."""
+"""Fast structural verifier for Build131 plus Build132 pre-Bazel gates."""
 from pathlib import Path
 import os
 import subprocess
@@ -12,10 +12,29 @@ STATE = ROOT / "submodules/TelegramCore/Sources/State/AccountStateManagementUtil
 SCRIPTS = Path(__file__).resolve().parent
 BUILD132_APPLY = SCRIPTS / "apply_build132_release_identity_about.py"
 BUILD132_VERIFY = SCRIPTS / "verify_build132_release_identity_about.py"
+BUILD132_TELEMETRY_APPLY = SCRIPTS / "apply_build132_telemetry_v2.py"
+BUILD132_TELEMETRY_VERIFY = SCRIPTS / "verify_build132_telemetry_v2.py"
 
 
 def fail(message):
     raise SystemExit(f"[Build131 verify] FAIL: {message}")
+
+
+def run_gate(script):
+    if not script.is_file():
+        fail(f"Build132 gate script missing: {script}")
+    result = subprocess.run(
+        [sys.executable, str(script), str(ROOT)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.stdout:
+        print(result.stdout, end="")
+    if result.returncode != 0:
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
+        fail(f"Build132 gate failed in {script.name} with exit {result.returncode}")
 
 
 for path in (BLOCKED, STATE):
@@ -60,19 +79,10 @@ print("[Build131 verify] PASS: indexed purge + pre-insert ingress gate")
 
 # JERKGRAM_BUILD132_RELEASE_IDENTITY_PREBAZEL_HOOK
 for script in (BUILD132_APPLY, BUILD132_VERIFY):
-    if not script.is_file():
-        fail(f"Build132 gate script missing: {script}")
-    result = subprocess.run(
-        [sys.executable, str(script), str(ROOT)],
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if result.stdout:
-        print(result.stdout, end="")
-    if result.returncode != 0:
-        if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)
-        fail(f"Build132 gate failed in {script.name} with exit {result.returncode}")
-
+    run_gate(script)
 print("[Build132 pre-Bazel] PASS: release identity + About verifier")
+
+# JERKGRAM_BUILD132_TELEMETRY_V2_PREBAZEL_HOOK
+for script in (BUILD132_TELEMETRY_APPLY, BUILD132_TELEMETRY_VERIFY):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: telemetry v2 + privacy verifier")
