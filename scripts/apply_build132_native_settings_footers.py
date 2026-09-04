@@ -21,7 +21,7 @@ def require_target_info(source: str, page: str) -> None:
     if not positions:
         fail(f"missing settings page token: {token}")
 
-    # The page enum token can also occur in navigation wiring.  Require at
+    # The page enum token can also occur in navigation wiring. Require at
     # least one bounded occurrence whose local page-entry region contains the
     # semantic .info footer entry used by this controller.
     for pos in positions:
@@ -46,18 +46,25 @@ def canonicalize_info_renderer(source: str) -> tuple[str, bool]:
     body_start = match.start()
     search_from = match.end()
 
-    # Bound replacement to this switch case only.  Stop at the next sibling
-    # case or at the switch-closing brace; never rewrite the surrounding enum.
+    # Bound replacement to this switch case only. Prefer the next sibling
+    # case. If .info is the last case, stop at the first closing brace whose
+    # indentation is not deeper than the case itself. This avoids consuming
+    # nested constructor/closure braces while accepting normal Swift layout.
     sibling_case = re.compile(
         rf"(?m)^{re.escape(indent)}case\s+"
     ).search(source, search_from)
-    closing_brace = re.compile(
-        rf"(?m)^{re.escape(indent)}\}}[ \t]*$"
-    ).search(source, search_from)
 
-    candidates = [
-        m.start() for m in (sibling_case, closing_brace) if m is not None
-    ]
+    closing_brace = None
+    for candidate in re.finditer(r"(?m)^(?P<close>[ \t]*)\}[ \t]*$", source[search_from:]):
+        if len(candidate.group("close")) <= len(indent):
+            closing_brace = search_from + candidate.start()
+            break
+
+    candidates = []
+    if sibling_case is not None:
+        candidates.append(sibling_case.start())
+    if closing_brace is not None:
+        candidates.append(closing_brace)
     if not candidates:
         fail("could not bound .info renderer case")
     body_end = min(candidates)
