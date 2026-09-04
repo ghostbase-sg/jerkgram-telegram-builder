@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Fast structural verifier for the Build131 core policy."""
+"""Fast structural verifier for Build131 plus the Build132 release-identity pre-Bazel gate."""
 from pathlib import Path
 import os
+import subprocess
+import sys
 
 
 ROOT = Path(os.environ.get("GHOSTBASE_SOURCE_ROOT", os.environ.get("JERKGRAM_SRC", "/root/gb_builder/work/swiftgram-src")))
 BLOCKED = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeers.swift"
 STATE = ROOT / "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
+SCRIPTS = Path(__file__).resolve().parent
+BUILD132_APPLY = SCRIPTS / "apply_build132_release_identity_about.py"
+BUILD132_VERIFY = SCRIPTS / "verify_build132_release_identity_about.py"
 
 
 def fail(message):
@@ -52,3 +57,22 @@ if "ChatHistoryEntriesForView" in blocked or "ChatListNodeEntries" in state:
     fail("policy must not install a UI scroll/list filter")
 
 print("[Build131 verify] PASS: indexed purge + pre-insert ingress gate")
+
+# JERKGRAM_BUILD132_RELEASE_IDENTITY_PREBAZEL_HOOK
+for script in (BUILD132_APPLY, BUILD132_VERIFY):
+    if not script.is_file():
+        fail(f"Build132 gate script missing: {script}")
+    result = subprocess.run(
+        [sys.executable, str(script), str(ROOT)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.stdout:
+        print(result.stdout, end="")
+    if result.returncode != 0:
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
+        fail(f"Build132 gate failed in {script.name} with exit {result.returncode}")
+
+print("[Build132 pre-Bazel] PASS: release identity + About verifier")
