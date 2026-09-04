@@ -88,8 +88,12 @@ def main() -> None:
 
     # Block and unblock both mutate the reversible attribute. These
     # transaction.updateMessage calls invalidate MessageHistoryView immediately.
+    # Scope remains group/supergroup only, matching the prior Build131 feature.
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_MESSAGE_INVALIDATION",
+        "jerkgramBuild132IsGroupOrSupergroup(",
+        "peer is TelegramGroup",
+        "case .group = channel.info",
         "jerkgramBuild132UpdateBlockedAuthorVisibility(",
         "transaction.jerkgramMessageIdsWithAuthor(",
         "transaction.updateMessage(messageId, update:",
@@ -102,11 +106,15 @@ def main() -> None:
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_MESSAGE_INGRESS_ANNOTATION",
         "jerkgramBuild132MarkIncomingBlockedGroupMessage",
+        "jerkgramBuild132IsGroupOrSupergroup(chatPeer)",
         "messages = messages.map { message in",
+        "customStableId: nil",
         "isBlockedHidden: true",
     ):
         if token not in state:
             fail(f"incoming reversible annotation missing: {token}")
+    if "message.customStableId" in state:
+        fail("ingress annotation must not depend on StoreMessage.customStableId accessor")
 
     # UI suppression is cheap and reversible: only annotated messages are
     # skipped, and only while the independent setting is enabled.
@@ -138,7 +146,7 @@ def main() -> None:
         if "JERKGRAM_BUILD132_BLOCKED_REACTION" in text:
             fail(f"reaction filtering leaked into STEP4 {label}")
 
-    print("[Build132 blocked messages verify] PASS: reversible storage + author index + toggle + block/unblock invalidation + history filter")
+    print("[Build132 blocked messages verify] PASS: reversible storage + author index + group-only toggle + block/unblock invalidation + history filter")
 
 
 if __name__ == "__main__":
