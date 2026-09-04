@@ -14,6 +14,8 @@ BUILD132_APPLY = SCRIPTS / "apply_build132_release_identity_about.py"
 BUILD132_VERIFY = SCRIPTS / "verify_build132_release_identity_about.py"
 BUILD132_TELEMETRY_APPLY = SCRIPTS / "apply_build132_telemetry_v2.py"
 BUILD132_TELEMETRY_VERIFY = SCRIPTS / "verify_build132_telemetry_v2.py"
+BUILD132_FOOTERS_APPLY = SCRIPTS / "apply_build132_native_settings_footers.py"
+BUILD132_FOOTERS_VERIFY = SCRIPTS / "verify_build132_native_settings_footers.py"
 
 
 def fail(message):
@@ -86,3 +88,8 @@ print("[Build132 pre-Bazel] PASS: release identity + About verifier")
 for script in (BUILD132_TELEMETRY_APPLY, BUILD132_TELEMETRY_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: telemetry v2 + privacy verifier")
+
+# JERKGRAM_BUILD132_NATIVE_SETTINGS_FOOTERS_PREBAZEL_HOOK
+for script in (BUILD132_FOOTERS_APPLY, BUILD132_FOOTERS_VERIFY):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: native About/Appearance/Messages footers")
