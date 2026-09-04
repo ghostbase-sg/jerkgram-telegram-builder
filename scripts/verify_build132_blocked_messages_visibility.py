@@ -9,6 +9,7 @@ ATTRIBUTE = Path("submodules/TelegramCore/Sources/SyncCore/GhostBaseMessageAttri
 BLOCKED = Path("submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeers.swift")
 STATE = Path("submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift")
 HISTORY = Path("submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift")
+POSTBOX = Path("submodules/Postbox/Sources/Postbox.swift")
 PATCHER = Path("scripts/apply_build132_blocked_messages_visibility.py")
 
 
@@ -33,6 +34,7 @@ def main() -> None:
     blocked = read(root, BLOCKED)
     state = read(root, STATE)
     history = read(root, HISTORY)
+    postbox = read(root, POSTBOX)
     patcher = read(root, PATCHER)
 
     # STEP4 must retire the irreversible Build131 policy.
@@ -55,27 +57,42 @@ def main() -> None:
         "var hideBlockedMessages: Bool",
         "GhostBaseKey.hideBlockedMessages",
         '"Скрывать сообщения заблокированных"',
+        "state.hideBlockedMessages",
     ):
         if token not in settings:
             fail(f"Messages toggle/state missing: {token}")
 
-    # Reversible local message state. Messages stay in Postbox and can be shown
-    # again after unblock; no destructive deletion or ingress drop is allowed.
+    # Reversible local message state. The existing GhostBase attribute is
+    # backwards-compatible because missing `ibh` decodes as false.
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_HIDDEN_ATTRIBUTE",
         "isBlockedHidden: Bool",
-        'decodeBoolForKey("ibh", orElse: false)',
-        'encodeBool(self.isBlockedHidden, forKey: "ibh")',
+        'decodeInt32ForKey("ibh", orElse: 0) != 0',
+        'encodeInt32(self.isBlockedHidden ? 1 : 0, forKey: "ibh")',
         "withUpdatedBlockedHidden(isBlockedHidden:",
+        "isBlockedHidden: self.isBlockedHidden",
     ):
         if token not in attribute:
             fail(f"reversible blocked-hidden attribute missing: {token}")
 
-    # Block and unblock must both update stored messages so Postbox history
-    # views are invalidated immediately instead of depending on app restart.
+    # We reuse Postbox's existing author index, exposed through one bounded
+    # Transaction bridge. No chat-history scan is introduced.
+    for token in (
+        "JERKGRAM_BUILD132_MESSAGE_IDS_WITH_AUTHOR",
+        "public func jerkgramMessageIdsWithAuthor(",
+        "messageHistoryTable.allIndicesWithAuthor(",
+        ").map(\\.id)",
+    ):
+        if token not in postbox:
+            fail(f"Postbox author-index bridge missing: {token}")
+
+    # Block and unblock both mutate the reversible attribute. These
+    # transaction.updateMessage calls invalidate MessageHistoryView immediately.
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_MESSAGE_INVALIDATION",
         "jerkgramBuild132UpdateBlockedAuthorVisibility(",
+        "transaction.jerkgramMessageIdsWithAuthor(",
+        "transaction.updateMessage(messageId, update:",
         "hidden: isBlocked",
     ):
         if token not in blocked:
@@ -85,6 +102,8 @@ def main() -> None:
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_MESSAGE_INGRESS_ANNOTATION",
         "jerkgramBuild132MarkIncomingBlockedGroupMessage",
+        "messages = messages.map { message in",
+        "isBlockedHidden: true",
     ):
         if token not in state:
             fail(f"incoming reversible annotation missing: {token}")
@@ -100,19 +119,26 @@ def main() -> None:
         if token not in history:
             fail(f"history visibility filter missing: {token}")
 
-    # Scope guard: STEP4 patcher is bounded to the five exact owners above.
-    for rel in (SETTINGS, ATTRIBUTE, BLOCKED, STATE, HISTORY):
+    # Scope guard: exact six owners, no source-tree discovery.
+    for rel in (SETTINGS, ATTRIBUTE, BLOCKED, STATE, HISTORY, POSTBOX):
         if str(rel) not in patcher:
             fail(f"patcher not bound to exact owner: {rel}")
     if "rglob(" in patcher or ".glob(" in patcher or "os.walk(" in patcher:
         fail("broad source discovery is forbidden")
 
     # STEP5 belongs to the next task.
-    for text, label in ((settings, "settings"), (attribute, "attribute"), (blocked, "blocked"), (state, "state"), (history, "history")):
+    for text, label in (
+        (settings, "settings"),
+        (attribute, "attribute"),
+        (blocked, "blocked"),
+        (state, "state"),
+        (history, "history"),
+        (postbox, "postbox"),
+    ):
         if "JERKGRAM_BUILD132_BLOCKED_REACTION" in text:
             fail(f"reaction filtering leaked into STEP4 {label}")
 
-    print("[Build132 blocked messages verify] PASS: reversible storage + toggle + block/unblock invalidation + history filter")
+    print("[Build132 blocked messages verify] PASS: reversible storage + author index + toggle + block/unblock invalidation + history filter")
 
 
 if __name__ == "__main__":
