@@ -121,10 +121,11 @@ def prepare_identity(root: Path, app: str, settings: str) -> tuple[str, str, Pat
     return ensure_import(app, "TelegramCore"), ensure_import(settings, "TelegramCore"), local, shared
 
 
-def extract_toggle_key(block: str, settings: str) -> str:
+def extract_toggle_key(app: str, settings: str) -> str:
     candidates: list[str] = []
-    for source in (block, settings):
+    for source in (app, settings):
         for pattern in (
+            r'(?:static|private)\s+let\s+(?:enabledKey|jerkgramTelemetryEnabledKey)\s*=\s*"([^"]+)"',
             r'bool\s*\(\s*forKey:\s*"([^"]*(?:analytic|telemetr)[^"]*)"\s*\)',
             r'object\s*\(\s*forKey:\s*"([^"]*(?:analytic|telemetr)[^"]*)"\s*\)',
             r'set\s*\([^,\n]+,\s*forKey:\s*"([^"]*(?:analytic|telemetr)[^"]*)"\s*\)',
@@ -254,7 +255,7 @@ def main() -> None:
 
     if APP_MARKER not in app:
         start, end = locate_telemetry(app)
-        key = extract_toggle_key(app[start:end], settings)
+        key = extract_toggle_key(app, settings)
         app = app[:start] + canonical_telemetry(key) + app[end:]
         app = remove_duplicate_launch(app)
 
