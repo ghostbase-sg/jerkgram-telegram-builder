@@ -10,7 +10,9 @@ BLOCKED = Path("submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPe
 STATE = Path("submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift")
 HISTORY = Path("submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift")
 POSTBOX = Path("submodules/Postbox/Sources/Postbox.swift")
-PATCHER = Path("scripts/apply_build132_blocked_messages_visibility.py")
+SCRIPT_DIR = Path(__file__).resolve().parent
+PATCHER = SCRIPT_DIR / "apply_build132_blocked_messages_visibility.py"
+PATCHER_BASE = SCRIPT_DIR / "apply_build132_blocked_messages_visibility_base.py"
 
 
 def fail(message: str) -> None:
@@ -21,6 +23,12 @@ def read(root: Path, rel: Path) -> str:
     path = root / rel
     if not path.is_file():
         fail(f"missing exact owner: {rel}")
+    return path.read_text(encoding="utf-8")
+
+
+def read_builder(path: Path) -> str:
+    if not path.is_file():
+        fail(f"missing builder verifier dependency: {path.name}")
     return path.read_text(encoding="utf-8")
 
 
@@ -35,7 +43,7 @@ def main() -> None:
     state = read(root, STATE)
     history = read(root, HISTORY)
     postbox = read(root, POSTBOX)
-    patcher = read(root, PATCHER)
+    patcher = read_builder(PATCHER) + "\n" + read_builder(PATCHER_BASE)
 
     # STEP4 must retire the irreversible Build131 policy.
     destructive = (
@@ -53,7 +61,7 @@ def main() -> None:
     # Separate user-facing toggle in Messages settings.
     for token in (
         "JERKGRAM_BUILD132_HIDE_BLOCKED_MESSAGES_SETTING",
-        'static let hideBlockedMessages = "GhostBase.Messages.HideBlockedMessages"',
+        'static let hideBlockedMessages = "jerkgram.Messages.HideBlockedMessages"',
         "var hideBlockedMessages: Bool",
         "GhostBaseKey.hideBlockedMessages",
         '"Скрывать сообщения заблокированных"',
@@ -120,14 +128,15 @@ def main() -> None:
     # skipped, and only while the independent setting is enabled.
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_MESSAGE_HISTORY_FILTER",
-        'UserDefaults.standard.bool(forKey: "GhostBase.Messages.HideBlockedMessages")',
+        'UserDefaults.standard.bool(forKey: "jerkgram.Messages.HideBlockedMessages")',
         "isBlockedHidden",
         "continue loop",
     ):
         if token not in history:
             fail(f"history visibility filter missing: {token}")
 
-    # Scope guard: exact six owners, no source-tree discovery.
+    # Scope guard: exact six owners, no source-tree discovery. The current
+    # STEP4 entrypoint is a bounded adapter over the retained base patcher.
     for rel in (SETTINGS, ATTRIBUTE, BLOCKED, STATE, HISTORY, POSTBOX):
         if str(rel) not in patcher:
             fail(f"patcher not bound to exact owner: {rel}")
