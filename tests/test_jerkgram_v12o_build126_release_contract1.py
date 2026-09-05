@@ -12,9 +12,24 @@ class Build126ReleaseContractTests(unittest.TestCase):
         publisher = REPO / "scripts" / "jerkgram_publish_build128_artifact.py"
         for path in (finalizer, verifier, publisher):
             self.assertTrue(path.is_file(), f"missing Build126 release owner: {path.name}")
-        self.assertIn('base.base.BUILD = "130"', (REPO / "scripts" / "jerkgram_finalize_build130_identity.py").read_text(encoding="utf-8"))
+
+        build130_finalizer = (REPO / "scripts" / "jerkgram_finalize_build130_identity.py").read_text(encoding="utf-8")
+        self.assertIn('base.base.BUILD = "130"', build130_finalizer)
+        self.assertIn("import jerkgram_finalize_build132_esign_ready as build132", build130_finalizer)
+        self.assertIn("build132.main()", build130_finalizer)
+
+        build132_finalizer = (REPO / "scripts" / "jerkgram_finalize_build132_esign_ready.py").read_text(encoding="utf-8")
+        self.assertIn('PROD_BASE = "com.jerkgram.ios"', build132_finalizer)
+        self.assertIn('BUILD = "132"', build132_finalizer)
+        self.assertIn('TELEGRAM_BASE_VERSION = "12.9.2"', build132_finalizer)
+
+        build130_verifier = (REPO / "scripts" / "verify_jerkgram_v12s_build130_final_ipa.py").read_text(encoding="utf-8")
+        self.assertIn('EXPECTED_BUILD = "132"', build130_verifier)
+        self.assertIn('EXPECTED_DISPLAY_VERSION = "12.9.2"', build130_verifier)
+        self.assertIn("base.base.EXPECTED_BUILD = EXPECTED_BUILD", build130_verifier)
+        self.assertIn("base.base.EXPECTED_BUNDLE = bundle_base", build130_verifier)
+
         verifier_text = verifier.read_text(encoding="utf-8")
-        self.assertIn('base.base.EXPECTED_BUILD = "130"', (REPO / "scripts" / "verify_jerkgram_v12s_build130_final_ipa.py").read_text(encoding="utf-8"))
         self.assertIn("sideloadKeychainFix.dylib", verifier_text)
         self.assertIn("file_picker.FILE_PICKER_NAME", verifier_text)
         publisher_text = publisher.read_text(encoding="utf-8")
