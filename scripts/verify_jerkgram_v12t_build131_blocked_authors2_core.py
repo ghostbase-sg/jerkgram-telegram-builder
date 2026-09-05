@@ -22,6 +22,8 @@ BUILD132_BLOCKED_REACTIONS_APPLY = SCRIPTS / "apply_build132_blocked_reactions_v
 BUILD132_BLOCKED_REACTIONS_RICH_APPLY = SCRIPTS / "apply_build132_blocked_reactions_rich_data.py"
 BUILD132_BLOCKED_REACTION_LIST_APPLY = SCRIPTS / "apply_build132_blocked_reaction_list_filter.py"
 BUILD132_BLOCKED_REACTIONS_VERIFY = SCRIPTS / "verify_build132_blocked_reactions_visibility.py"
+BUILD132_SETTINGS_AVATAR_PERF_APPLY = SCRIPTS / "apply_build132_settings_avatar_video_perf.py"
+BUILD132_SETTINGS_AVATAR_PERF_VERIFY = SCRIPTS / "verify_build132_settings_avatar_video_perf.py"
 
 
 def fail(message):
@@ -131,3 +133,8 @@ for script in (
 ):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: blocked reaction visibility + both toggles default OFF")
+
+# JERKGRAM_BUILD132_SETTINGS_AVATAR_VIDEO_PERF_PREBAZEL_HOOK
+for script in (BUILD132_SETTINGS_AVATAR_PERF_APPLY, BUILD132_SETTINGS_AVATAR_PERF_VERIFY):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: Settings animated-avatar collapse keeps video content attached")
