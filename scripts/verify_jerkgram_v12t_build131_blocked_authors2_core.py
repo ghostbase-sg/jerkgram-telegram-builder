@@ -53,6 +53,24 @@ def run_gate(script):
         fail(f"Build132 gate failed in {script.name} with exit {result.returncode}")
 
 
+def verify_python_syntax(*scripts):
+    for script in scripts:
+        if not script.is_file():
+            fail(f"Build132 syntax-gate script missing: {script}")
+    result = subprocess.run(
+        [sys.executable, "-m", "py_compile", *[str(script) for script in scripts]],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        if result.stdout:
+            print(result.stdout, end="")
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
+        fail("Build132 telemetry Python syntax gate failed")
+
+
 for path in (BLOCKED, STATE):
     if not path.is_file():
         fail(f"missing {path}")
@@ -110,6 +128,9 @@ else:
 
     print("[Build131 verify] PASS: indexed purge + pre-insert ingress gate")
 
+verify_python_syntax(BUILD132_TELEMETRY_APPLY, BUILD132_TELEMETRY_VERIFY)
+print("[Build132 pre-Bazel] PASS: telemetry patcher/verifier Python syntax")
+
 # STEP1: release identity + About
 for script in (BUILD132_APPLY, BUILD132_VERIFY):
     run_gate(script)
@@ -119,6 +140,24 @@ print("[Build132 pre-Bazel] PASS: release identity + About verifier")
 for script in (BUILD132_TELEMETRY_APPLY, BUILD132_TELEMETRY_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: telemetry + privacy verifier")
+
+telemetry_owners = (
+    ROOT / "submodules/TelegramUI/Sources/AppDelegate.swift",
+    ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+    ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift",
+    ROOT / "submodules/TelegramCore/Sources/JerkgramReleaseIdentity.swift",
+)
+for path in telemetry_owners:
+    if not path.is_file():
+        fail(f"telemetry idempotence owner missing: {path}")
+before_second_apply = {path: path.read_bytes() for path in telemetry_owners}
+run_gate(BUILD132_TELEMETRY_APPLY)
+after_second_apply = {path: path.read_bytes() for path in telemetry_owners}
+if before_second_apply != after_second_apply:
+    changed = [str(path.relative_to(ROOT)) for path in telemetry_owners if before_second_apply[path] != after_second_apply[path]]
+    fail(f"telemetry second apply is not byte-identical: {changed}")
+run_gate(BUILD132_TELEMETRY_VERIFY)
+print("[Build132 pre-Bazel] PASS: telemetry second apply is byte-identical")
 
 # STEP3: native Settings footers
 for script in (BUILD132_FOOTERS_APPLY, BUILD132_FOOTERS_VERIFY):
