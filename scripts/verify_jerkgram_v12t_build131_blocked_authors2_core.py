@@ -26,6 +26,8 @@ BUILD132_SETTINGS_AVATAR_PERF_APPLY = SCRIPTS / "apply_build132_settings_avatar_
 BUILD132_SETTINGS_AVATAR_PERF_VERIFY = SCRIPTS / "verify_build132_settings_avatar_video_perf.py"
 BUILD132_BUNDLE_IDENTITY_APPLY = SCRIPTS / "apply_build132_bundle_identity.py"
 BUILD132_BUNDLE_IDENTITY_VERIFY = SCRIPTS / "verify_build132_active_bundle_identity.py"
+BUILD132_TELEGRAM_CLIENT_IDENTITY_APPLY = SCRIPTS / "apply_build132_telegram_client_identity.py"
+BUILD132_TELEGRAM_CLIENT_IDENTITY_VERIFY = SCRIPTS / "verify_build132_telegram_client_identity.py"
 
 
 def fail(message):
@@ -142,6 +144,11 @@ for script in (BUILD132_SETTINGS_AVATAR_PERF_APPLY, BUILD132_SETTINGS_AVATAR_PER
 print("[Build132 pre-Bazel] PASS: Settings animated-avatar collapse keeps video content attached")
 
 # JERKGRAM_BUILD132_BUNDLE_IDENTITY_PREBAZEL_HOOK
-for script in (BUILD132_BUNDLE_IDENTITY_APPLY, BUILD132_BUNDLE_IDENTITY_VERIFY):
+for script in (
+    BUILD132_BUNDLE_IDENTITY_APPLY,
+    BUILD132_TELEGRAM_CLIENT_IDENTITY_APPLY,
+    BUILD132_BUNDLE_IDENTITY_VERIFY,
+    BUILD132_TELEGRAM_CLIENT_IDENTITY_VERIFY,
+):
     run_gate(script)
-print("[Build132 pre-Bazel] PASS: final InstalledIdentity prod/test bundle policy")
+print("[Build132 pre-Bazel] PASS: InstalledIdentity prod/test + TelegramClientIdentity compatibility separation")
