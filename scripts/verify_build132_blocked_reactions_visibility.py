@@ -49,17 +49,22 @@ def main() -> None:
     list_patcher = read(root, LIST_PATCHER)
     rich_patcher = read(root, RICH_PATCHER)
 
-    # User requirement: both visibility features are opt-in.
+    # User requirement: both visibility features are opt-in and use the
+    # current account-scoped Jerkgram Messages settings owner.
     for token in (
-        'hideBlockedMessages: ghostBaseBool(GhostBaseKey.hideBlockedMessages, defaultValue: false)',
-        'static let hideBlockedReactions = "GhostBase.Messages.HideBlockedReactions"',
+        'static let hideBlockedMessages = "jerkgram.Messages.HideBlockedMessages"',
+        'hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: false)',
+        'static let hideBlockedReactions = "jerkgram.Messages.HideBlockedReactions"',
         'var hideBlockedReactions: Bool',
-        'hideBlockedReactions: ghostBaseBool(GhostBaseKey.hideBlockedReactions, defaultValue: false)',
+        'hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: false)',
+        'GhostBaseKey.hideBlockedReactions: .bool(state.hideBlockedReactions)',
         '"Скрывать реакции заблокированных"',
         'state.hideBlockedReactions',
     ):
         if token not in settings:
-            fail(f"OFF-by-default settings contract missing: {token}")
+            fail(f"OFF-by-default scoped settings contract missing: {token}")
+    if 'GhostBase.Messages.HideBlockedReactions' in settings:
+        fail("legacy unscoped STEP5 reaction key survived in Settings")
 
     # Registry is local presentation state only. It is updated on successful
     # block/unblock and synchronized from contacts.getBlocked results so peers
@@ -117,7 +122,7 @@ def main() -> None:
         for token in (
             "JERKGRAM_BUILD132_BLOCKED_REACTION_UI_FILTER",
             "jerkgramFilteredReactionsForBlockedPeers(",
-            'UserDefaults.standard.bool(forKey: "GhostBase.Messages.HideBlockedReactions")',
+            'UserDefaults.standard.bool(forKey: "jerkgram.Messages.HideBlockedReactions")',
         ):
             if token not in text:
                 fail(f"{label} reaction filtering missing: {token}")
@@ -139,6 +144,7 @@ def main() -> None:
         "jerkgramBuild132IsGroupOrSupergroup(chatPeer)",
         "JerkgramBlockedPeerRegistry.snapshot()",
         "jerkgramBlockedReactionPeerIds.contains(peer.id)",
+        'forKey: "jerkgram.Messages.HideBlockedReactions"',
     ):
         if token not in reaction_state:
             fail(f"reaction-list filtering missing: {token}")
@@ -154,6 +160,8 @@ def main() -> None:
             fail(f"reaction persistence/mutation forbidden in {label}")
         if "rglob(" in source or ".glob(" in source or "os.walk(" in source:
             fail(f"broad source discovery forbidden in {label}")
+        if 'GhostBase.Messages.HideBlockedReactions' in source:
+            fail(f"legacy reaction settings namespace survived in {label}")
 
     for rel in (SETTINGS, BLOCKED, BLOCKED_CONTEXT, REACTIONS, FOOTER, STICKER, INSTANT_VIDEO, ANIMATED_STICKER):
         if str(rel) not in patcher:
@@ -163,7 +171,7 @@ def main() -> None:
     if str(RICH_DATA) not in rich_patcher:
         fail(f"rich-data patcher not bound to exact owner: {RICH_DATA}")
 
-    print("[Build132 blocked reactions verify] PASS: both toggles OFF + synced registry + reversible group-only reaction buttons/list projection")
+    print("[Build132 blocked reactions verify] PASS: both toggles OFF + scoped Messages owner + synced registry + reversible group-only reaction buttons/list projection")
 
 
 if __name__ == "__main__":
