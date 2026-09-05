@@ -14,9 +14,10 @@ STICKER = Path("submodules/TelegramUI/Components/Chat/ChatMessageStickerItemNode
 INSTANT_VIDEO = Path("submodules/TelegramUI/Components/Chat/ChatMessageInstantVideoItemNode/Sources/ChatMessageInstantVideoItemNode.swift")
 ANIMATED_STICKER = Path("submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode/Sources/ChatMessageAnimatedStickerItemNode.swift")
 RICH_DATA = Path("submodules/TelegramUI/Components/Chat/ChatMessageRichDataBubbleContentNode/Sources/ChatMessageRichDataBubbleContentNode.swift")
-PATCHER = Path("scripts/apply_build132_blocked_reactions_visibility.py")
-LIST_PATCHER = Path("scripts/apply_build132_blocked_reaction_list_filter.py")
-RICH_PATCHER = Path("scripts/apply_build132_blocked_reactions_rich_data.py")
+SCRIPTS = Path(__file__).resolve().parent
+PATCHER = SCRIPTS / "apply_build132_blocked_reactions_visibility.py"
+LIST_PATCHER = SCRIPTS / "apply_build132_blocked_reaction_list_filter.py"
+RICH_PATCHER = SCRIPTS / "apply_build132_blocked_reactions_rich_data.py"
 
 
 def fail(message: str) -> None:
