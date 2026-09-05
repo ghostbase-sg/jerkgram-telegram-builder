@@ -29,11 +29,15 @@ class Build126ReleaseContractTests(unittest.TestCase):
         self.assertIn("base.base.EXPECTED_BUILD = EXPECTED_BUILD", build130_verifier)
         self.assertIn("base.base.EXPECTED_BUNDLE = bundle_base", build130_verifier)
 
+        publisher130_text = (REPO / "scripts" / "jerkgram_publish_build130_artifact.py").read_text(encoding="utf-8")
+        self.assertIn('base.EXPECTED_BUILD = "132"', publisher130_text)
+        self.assertIn('.replace("Build=122", "Build=132")', publisher130_text)
+
         verifier_text = verifier.read_text(encoding="utf-8")
         self.assertIn("sideloadKeychainFix.dylib", verifier_text)
         self.assertIn("file_picker.FILE_PICKER_NAME", verifier_text)
         publisher_text = publisher.read_text(encoding="utf-8")
-        self.assertIn("Jerkgram-Build130.ipa", (REPO / "scripts" / "jerkgram_publish_build130_artifact.py").read_text(encoding="utf-8"))
+        self.assertIn("Jerkgram-Build130.ipa", publisher130_text)
 
     def test_workflow_publishes_only_current_build128_artifact(self):
         workflow = (REPO / ".github/workflows/build.yml").read_text(encoding="utf-8")
