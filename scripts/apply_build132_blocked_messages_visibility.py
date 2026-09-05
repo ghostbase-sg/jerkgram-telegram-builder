@@ -36,23 +36,9 @@ def patch_settings(text: str) -> str:
     )
     text = base.replace_once(
         text,
-        '''            showEditHistory: jerkgramScopedBool(
-                accountPeerId: accountPeerId,
-                key: GhostBaseKey.showEditHistory,
-                defaultValue: true
-            ),
-''',
-        '''            showEditHistory: jerkgramScopedBool(
-                accountPeerId: accountPeerId,
-                key: GhostBaseKey.showEditHistory,
-                defaultValue: true
-            ),
-            hideBlockedMessages: jerkgramScopedBool(
-                accountPeerId: accountPeerId,
-                key: GhostBaseKey.hideBlockedMessages,
-                defaultValue: true
-            ),
-''',
+        "            showEditHistory: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showEditHistory, defaultValue: true),\n",
+        "            showEditHistory: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showEditHistory, defaultValue: true),\n"
+        "            hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: true),\n",
         "settings state load",
     )
     text = base.replace_once(
