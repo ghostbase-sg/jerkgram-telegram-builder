@@ -108,24 +108,44 @@ def main() -> None:
 
     active=method_body(block,'func applicationDidBecomeActive()')
     expected_active=(
-        'guard JerkgramTelemetryPreferences.isEnabled else { return }',
-        'guard !self.hasSeenActive || self.enteredBackground else { return }',
+        'let shouldCountOpen = !self.hasSeenActive || self.enteredBackground',
         'self.hasSeenActive = true','self.enteredBackground = false',
+        'guard JerkgramTelemetryPreferences.isEnabled else { return }',
+        'guard shouldCountOpen else { return }','queue.async',
         'self.incrementOpenCountForCurrentAnalyticsDay()','self.submitIfNeeded()'
     )
     for token in expected_active:
-        if token not in active: fail(f"foreground lifecycle guard missing: {token}")
-    if active.find('guard JerkgramTelemetryPreferences.isEnabled else { return }') > active.find('queue.async'):
-        fail("OFF gate must precede foreground telemetry queue scheduling")
-    if active.find('incrementOpenCountForCurrentAnalyticsDay()') > active.find('submitIfNeeded()'):
-        fail("open counter must update before normal telemetry scheduler")
+        if token not in active: fail(f"foreground lifecycle contract missing: {token}")
+    ordered=(
+        'let shouldCountOpen = !self.hasSeenActive || self.enteredBackground',
+        'self.hasSeenActive = true',
+        'self.enteredBackground = false',
+        'guard JerkgramTelemetryPreferences.isEnabled else { return }',
+        'guard shouldCountOpen else { return }',
+        'queue.async',
+        'self.incrementOpenCountForCurrentAnalyticsDay()',
+        'self.submitIfNeeded()',
+    )
+    positions=[active.find(token) for token in ordered]
+    if any(pos < 0 for pos in positions) or positions != sorted(positions):
+        fail("foreground lifecycle ordering regressed: consume lifecycle state before OFF gate, then schedule analytics")
+    queue_pos=active.find('queue.async')
+    second_gate=active.find('guard JerkgramTelemetryPreferences.isEnabled else { return }',queue_pos)
+    if second_gate < queue_pos:
+        fail("foreground analytics queue must re-check OFF before persisted counter/scheduler")
+    increment_pos=active.find('self.incrementOpenCountForCurrentAnalyticsDay()',queue_pos)
+    if second_gate > increment_pos:
+        fail("persisted open counter can update after Analytics was disabled")
     for token in ('URL(', 'URLRequest(', 'URLSession', 'dataTask('):
         if token in active: fail(f"foreground open creates dedicated network request: {token}")
 
     background=method_body(block,'func applicationDidEnterBackground()')
-    for token in ('guard JerkgramTelemetryPreferences.isEnabled else { return }','self.enteredBackground = true'):
-        if token not in background: fail(f"background lifecycle guard missing: {token}")
-    if 'submitIfNeeded' in background or 'URLSession' in background: fail("background transition must not create telemetry POST")
+    if 'self.enteredBackground = true' not in background:
+        fail("background lifecycle must record a real background transition")
+    if 'JerkgramTelemetryPreferences.isEnabled' in background:
+        fail("background lifecycle bookkeeping must not depend on Analytics toggle")
+    if 'queue.async' in background or 'submitIfNeeded' in background or 'URLSession' in background:
+        fail("background transition must only update ephemeral lifecycle state")
 
     submit=method_body(block,'private func submitIfNeeded()')
     stripped=submit.lstrip()
@@ -165,6 +185,6 @@ def main() -> None:
     for path in (APP_OWNER,SETTINGS_OWNER,STRINGS_OWNER,LOCAL_IDENTITY_OWNER,SHARED_IDENTITY_OWNER):
         if str(path) not in patcher: fail(f"patcher not bound to exact owner: {path}")
 
-    print('[Build132 telemetry verify] PASS: legacy UTC/install contract + Jerkgram 1.0.2 identity + Moscow DAU/open counter + hard OFF + no per-open POST + semantic RU/EN privacy')
+    print('[Build132 telemetry verify] PASS: legacy UTC/install contract + Jerkgram 1.0.2 identity + Moscow DAU/open counter + lifecycle-safe hard OFF + no per-open POST + semantic RU/EN privacy')
 
 if __name__=='__main__': main()
