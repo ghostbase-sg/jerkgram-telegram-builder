@@ -24,6 +24,8 @@ BUILD132_BLOCKED_REACTION_LIST_APPLY = SCRIPTS / "apply_build132_blocked_reactio
 BUILD132_BLOCKED_REACTIONS_VERIFY = SCRIPTS / "verify_build132_blocked_reactions_visibility.py"
 BUILD132_SETTINGS_AVATAR_PERF_APPLY = SCRIPTS / "apply_build132_settings_avatar_video_perf.py"
 BUILD132_SETTINGS_AVATAR_PERF_VERIFY = SCRIPTS / "verify_build132_settings_avatar_video_perf.py"
+BUILD132_BUNDLE_IDENTITY_APPLY = SCRIPTS / "apply_build132_bundle_identity.py"
+BUILD132_BUNDLE_IDENTITY_VERIFY = SCRIPTS / "verify_build132_active_bundle_identity.py"
 
 
 def fail(message):
@@ -138,3 +140,8 @@ print("[Build132 pre-Bazel] PASS: blocked reaction visibility + both toggles def
 for script in (BUILD132_SETTINGS_AVATAR_PERF_APPLY, BUILD132_SETTINGS_AVATAR_PERF_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: Settings animated-avatar collapse keeps video content attached")
+
+# JERKGRAM_BUILD132_BUNDLE_IDENTITY_PREBAZEL_HOOK
+for script in (BUILD132_BUNDLE_IDENTITY_APPLY, BUILD132_BUNDLE_IDENTITY_VERIFY):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: final InstalledIdentity prod/test bundle policy")
