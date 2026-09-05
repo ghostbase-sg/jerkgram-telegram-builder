@@ -18,6 +18,16 @@ BUILD132_FOOTERS_APPLY = SCRIPTS / "apply_build132_native_settings_footers.py"
 BUILD132_FOOTERS_VERIFY = SCRIPTS / "verify_build132_native_settings_footers.py"
 BUILD132_BLOCKED_MESSAGES_APPLY = SCRIPTS / "apply_build132_blocked_messages_visibility.py"
 BUILD132_BLOCKED_MESSAGES_VERIFY = SCRIPTS / "verify_build132_blocked_messages_visibility.py"
+BUILD132_BLOCKED_REACTIONS_APPLY = SCRIPTS / "apply_build132_blocked_reactions_visibility.py"
+BUILD132_BLOCKED_REACTIONS_RICH_APPLY = SCRIPTS / "apply_build132_blocked_reactions_rich_data.py"
+BUILD132_BLOCKED_REACTION_LIST_APPLY = SCRIPTS / "apply_build132_blocked_reaction_list_filter.py"
+BUILD132_BLOCKED_REACTIONS_VERIFY = SCRIPTS / "verify_build132_blocked_reactions_visibility.py"
+BUILD132_SETTINGS_AVATAR_PERF_APPLY = SCRIPTS / "apply_build132_settings_avatar_video_perf.py"
+BUILD132_SETTINGS_AVATAR_PERF_VERIFY = SCRIPTS / "verify_build132_settings_avatar_video_perf.py"
+BUILD132_BUNDLE_IDENTITY_APPLY = SCRIPTS / "apply_build132_bundle_identity.py"
+BUILD132_BUNDLE_IDENTITY_VERIFY = SCRIPTS / "verify_build132_active_bundle_identity.py"
+BUILD132_TELEGRAM_CLIENT_IDENTITY_APPLY = SCRIPTS / "apply_build132_telegram_client_identity.py"
+BUILD132_TELEGRAM_CLIENT_IDENTITY_VERIFY = SCRIPTS / "verify_build132_telegram_client_identity.py"
 
 
 def fail(message):
@@ -98,27 +108,47 @@ else:
 
     print("[Build131 verify] PASS: indexed purge + pre-insert ingress gate")
 
-# Approved Build132 chain only. Later numbered steps remain intentionally
-# unwired until the user explicitly approves each one.
-
-# JERKGRAM_BUILD132_RELEASE_IDENTITY_PREBAZEL_HOOK
+# STEP1: release identity + About
 for script in (BUILD132_APPLY, BUILD132_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: release identity + About verifier")
 
-# JERKGRAM_BUILD132_TELEMETRY_V2_PREBAZEL_HOOK
+# STEP2: telemetry v2/v2.1 + privacy
 for script in (BUILD132_TELEMETRY_APPLY, BUILD132_TELEMETRY_VERIFY):
     run_gate(script)
-print("[Build132 pre-Bazel] PASS: telemetry v2 + privacy verifier")
+print("[Build132 pre-Bazel] PASS: telemetry + privacy verifier")
 
-# JERKGRAM_BUILD132_NATIVE_SETTINGS_FOOTERS_PREBAZEL_HOOK
+# STEP3: native Settings footers
 for script in (BUILD132_FOOTERS_APPLY, BUILD132_FOOTERS_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: native About/Appearance/Messages footers")
 
-# JERKGRAM_BUILD132_BLOCKED_MESSAGES_VISIBILITY_PREBAZEL_HOOK
+# STEP4: reversible blocked-message visibility
 for script in (BUILD132_BLOCKED_MESSAGES_APPLY, BUILD132_BLOCKED_MESSAGES_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: reversible blocked-message visibility + toggle")
 
-print("[Build132 pre-Bazel] STOP: approved chain ends after STEP4; STEP5-STEP7 remain unwired")
+# STEP5: blocked reactions in groups/supergroups
+for script in (
+    BUILD132_BLOCKED_REACTIONS_APPLY,
+    BUILD132_BLOCKED_REACTIONS_RICH_APPLY,
+    BUILD132_BLOCKED_REACTION_LIST_APPLY,
+    BUILD132_BLOCKED_REACTIONS_VERIFY,
+):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: blocked reaction visibility + both toggles default OFF")
+
+# STEP6: Settings animated-avatar performance
+for script in (BUILD132_SETTINGS_AVATAR_PERF_APPLY, BUILD132_SETTINGS_AVATAR_PERF_VERIFY):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: Settings animated-avatar collapse keeps video content attached")
+
+# STEP7: installed Bundle ID + Telegram network compatibility identity
+for script in (
+    BUILD132_BUNDLE_IDENTITY_APPLY,
+    BUILD132_TELEGRAM_CLIENT_IDENTITY_APPLY,
+    BUILD132_BUNDLE_IDENTITY_VERIFY,
+    BUILD132_TELEGRAM_CLIENT_IDENTITY_VERIFY,
+):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: InstalledIdentity prod/test + TelegramClientIdentity compatibility separation")
