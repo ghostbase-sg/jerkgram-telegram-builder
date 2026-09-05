@@ -7,8 +7,10 @@ import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
-APPLY = SCRIPTS / "apply_build132_bundle_identity.py"
-VERIFY = SCRIPTS / "verify_build132_active_bundle_identity.py"
+INSTALLED_APPLY = SCRIPTS / "apply_build132_bundle_identity.py"
+INSTALLED_VERIFY = SCRIPTS / "verify_build132_active_bundle_identity.py"
+CLIENT_APPLY = SCRIPTS / "apply_build132_telegram_client_identity.py"
+CLIENT_VERIFY = SCRIPTS / "verify_build132_telegram_client_identity.py"
 SOURCE_ENV = "GHOSTBASE_SOURCE_ROOT"
 
 
@@ -43,9 +45,12 @@ def run(script: Path, root: Path) -> None:
 
 def main() -> int:
     root = source_root()
-    run(APPLY, root)
-    run(VERIFY, root)
-    print("[Build132 bundle identity gate] PASS: InstalledIdentity policy applied and verified")
+    for script in (INSTALLED_APPLY, CLIENT_APPLY, INSTALLED_VERIFY, CLIENT_VERIFY):
+        run(script, root)
+    print(
+        "[Build132 bundle identity gate] PASS: InstalledIdentity prod/test + "
+        "TelegramClientIdentity compatibility separation"
+    )
     return 0
 
 
