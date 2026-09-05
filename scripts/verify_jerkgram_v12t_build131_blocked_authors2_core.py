@@ -130,34 +130,9 @@ for script in (BUILD132_BLOCKED_MESSAGES_APPLY, BUILD132_BLOCKED_MESSAGES_VERIFY
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: reversible blocked-message visibility + toggle")
 
-# STEP5: blocked reactions in groups/supergroups
-for script in (
-    BUILD132_BLOCKED_REACTIONS_APPLY,
-    BUILD132_BLOCKED_REACTIONS_RICH_APPLY,
-    BUILD132_BLOCKED_REACTION_LIST_APPLY,
-    BUILD132_BLOCKED_REACTIONS_VERIFY,
-):
-    run_gate(script)
-print("[Build132 pre-Bazel] PASS: blocked reaction visibility + both toggles default OFF")
-
-# STEP6: Settings animated-avatar performance
-for script in (BUILD132_SETTINGS_AVATAR_PERF_APPLY, BUILD132_SETTINGS_AVATAR_PERF_VERIFY):
-    run_gate(script)
-print("[Build132 pre-Bazel] PASS: Settings animated-avatar collapse keeps video content attached")
-
-# STEP7: installed Bundle ID + Telegram network compatibility identity
-for script in (
-    BUILD132_BUNDLE_IDENTITY_APPLY,
-    BUILD132_TELEGRAM_CLIENT_IDENTITY_APPLY,
-    BUILD132_BUNDLE_IDENTITY_VERIFY,
-    BUILD132_TELEGRAM_CLIENT_IDENTITY_VERIFY,
-):
-    run_gate(script)
-print("[Build132 pre-Bazel] PASS: InstalledIdentity prod/test + TelegramClientIdentity compatibility separation")
-
 # Release-critical invariant: Telegram signer-visible marketing version must stay
-# at the upstream base version. This gate intentionally runs last so no older
-# patch can leak a Jerkgram product version into CFBundleShortVersionString.
+# at the upstream base version. This is a narrow invariant gate, not STEP5-STEP7.
 for script in (BUILD132_SIGNER_VERSION_APPLY, BUILD132_SIGNER_VERSION_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: signer-visible Telegram version = 12.9.2")
+print("[STEP4] STOP: canonical CI chain intentionally ends after Build132 reversible blocked-message visibility")
