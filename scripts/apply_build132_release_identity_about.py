@@ -23,6 +23,14 @@ enum JerkgramReleaseIdentity {{
 }}
 '''
 
+ROW_SPECS = (
+    (1, "strings.jerkgramVersion", "JerkgramReleaseIdentity.displayVersion"),
+    (2, "strings.build", "JerkgramReleaseIdentity.build"),
+    (3, "strings.telegramBase", "JerkgramReleaseIdentity.telegramBase"),
+)
+ABOUT_START = "if page == .about {"
+ABOUT_END = "if page == .debugResearch {"
+
 
 def fail(message: str) -> None:
     print(f"[build132-release-identity] FAIL: {message}", file=sys.stderr)
@@ -53,93 +61,43 @@ def write_identity(root: Path) -> tuple[Path, bool]:
 
 
 def about_region(text: str) -> tuple[int, int]:
-    jerkgram_label = '"Jerkgram Version"'
-    count = text.count(jerkgram_label)
-    if count != 1:
-        fail(f"expected exactly one Jerkgram Version label, found {count}")
-
-    start = text.find(jerkgram_label)
-    base_positions = [
-        pos
-        for token in ('"Telegram Base"', '"Telegram Version"')
-        for pos in [text.find(token, start)]
-        if pos >= 0
-    ]
-    if len(base_positions) != 1:
-        fail(f"expected exactly one Telegram Base/Telegram Version label after Jerkgram Version, found {len(base_positions)}")
-
-    region_start = max(0, start - 600)
-    region_end = min(len(text), base_positions[0] + 1400)
-    return region_start, region_end
+    if text.count(ABOUT_START) != 1:
+        fail(f"expected exactly one semantic About block, found {text.count(ABOUT_START)}")
+    start = text.index(ABOUT_START)
+    end = text.find(ABOUT_END, start)
+    if end < 0:
+        fail("semantic About block has no bounded Debug/Research successor")
+    if end <= start:
+        fail("invalid semantic About block bounds")
+    return start, end
 
 
-VALUE_PATTERN = re.compile(
-    r'(?m)(\b(?:label|value|rightLabel)\s*:\s*)'
-    r'(?P<expr>JerkgramReleaseIdentity\.[A-Za-z_][A-Za-z0-9_]*|"[^"\n]*"|[A-Za-z_][A-Za-z0-9_\.]*)'
-)
-
-
-def replace_row_value(region: str, label: str, replacement: str) -> str:
-    token = f'"{label}"'
-    if region.count(token) != 1:
-        fail(f"expected exactly one About row label {label!r} in bounded region, found {region.count(token)}")
-
-    label_match = re.search(re.escape(token), region)
-    assert label_match is not None
-    window_start = label_match.end()
-    window_end = min(len(region), window_start + 900)
-    window = region[window_start:window_end]
-
-    value_matches = list(VALUE_PATTERN.finditer(window))
-    if not value_matches:
-        fail(f"could not find a simple value field for About row {label!r}")
-
-    match = value_matches[0]
-    absolute_start = window_start + match.start("expr")
-    absolute_end = window_start + match.end("expr")
-    return region[:absolute_start] + replacement + region[absolute_end:]
-
-
-def extract_row_value(region: str, label: str) -> str:
-    token = f'"{label}"'
-    label_match = re.search(re.escape(token), region)
-    if label_match is None:
-        fail(f"missing About row {label!r} after patch")
-
-    window = region[label_match.end() : min(len(region), label_match.end() + 900)]
-    match = VALUE_PATTERN.search(window)
-    if match is None:
-        fail(f"missing value field for About row {label!r} after patch")
-    return match.group("expr")
+def row_pattern(index: int, title: str) -> re.Pattern[str]:
+    return re.compile(
+        rf'(?m)^(?P<prefix>[ \t]*\.aboutValue\(1,[ \t]*{index},[ \t]*{re.escape(title)},[ \t]*)(?P<value>.+)(?P<suffix>\),[ \t]*)$'
+    )
 
 
 def patch_about(text: str) -> str:
     start, end = about_region(text)
     region = text[start:end]
 
-    base_count = region.count('"Telegram Base"')
-    legacy_count = region.count('"Telegram Version"')
-    if base_count == 0 and legacy_count == 1:
-        region = region.replace('"Telegram Version"', '"Telegram Base"', 1)
-    elif not (base_count == 1 and legacy_count == 0):
-        fail(
-            "bounded About region must contain exactly one Telegram Base label "
-            "or exactly one legacy Telegram Version label"
-        )
+    for index, title, replacement in ROW_SPECS:
+        pattern = row_pattern(index, title)
+        matches = list(pattern.finditer(region))
+        if len(matches) != 1:
+            fail(f"expected exactly one About row {title} at index {index}, found {len(matches)}")
+        match = matches[0]
+        current = match.group("value").strip()
+        if current == replacement:
+            continue
+        new_line = f'{match.group("prefix")}{replacement}{match.group("suffix")}'
+        region = region[:match.start()] + new_line + region[match.end():]
 
-    region = replace_row_value(region, "Jerkgram Version", "JerkgramReleaseIdentity.displayVersion")
-    region = replace_row_value(region, "Build", "JerkgramReleaseIdentity.build")
-    region = replace_row_value(region, "Telegram Base", "JerkgramReleaseIdentity.telegramBase")
-
-    expected = {
-        "Jerkgram Version": "JerkgramReleaseIdentity.displayVersion",
-        "Build": "JerkgramReleaseIdentity.build",
-        "Telegram Base": "JerkgramReleaseIdentity.telegramBase",
-    }
-    for label, expression in expected.items():
-        actual = extract_row_value(region, label)
-        if actual != expression:
-            fail(f"{label} uses {actual!r}, expected {expression!r}")
+    for index, title, expected in ROW_SPECS:
+        matches = list(row_pattern(index, title).finditer(region))
+        if len(matches) != 1 or matches[0].group("value").strip() != expected:
+            fail(f"About row {title} did not converge to {expected}")
 
     if "1.0.0" in region:
         fail("stale 1.0.0 remains in Jerkgram-visible About region")
