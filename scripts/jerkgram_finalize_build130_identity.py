@@ -8,6 +8,7 @@ import tempfile
 import zipfile
 
 import jerkgram_finalize_build128_identity as base
+import jerkgram_finalize_build132_esign_ready as build132
 
 
 base.base.BUILD = "130"
@@ -54,8 +55,9 @@ def main() -> None:
     ipa = Path(sys.argv[1] if len(sys.argv) > 1 else "work/swiftgram-src/ghostbase-final/GhostBase.ipa").resolve()
     base.main()
     stamp_short_version(ipa)
-    print("[Build130 identity] GREEN")
-    print("[Build130 identity] CFBundleShortVersionString=1.0.0; CFBundleVersion=130")
+    print("[Build130 identity] legacy identity stage GREEN")
+    print("[Build130 identity] handing finalized legacy package to Build132 InstalledIdentity finalizer")
+    build132.main()
 
 
 if __name__ == "__main__":
