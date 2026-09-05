@@ -10,7 +10,7 @@ ORIGINAL = "mergedMessageReactions(attributes: item.message.attributes, isTags: 
 WRAPPED = '''jerkgramFilteredReactionsForBlockedPeers(
                         message: item.message,
                         reactions: mergedMessageReactions(attributes: item.message.attributes, isTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId)),
-                        enabled: UserDefaults.standard.bool(forKey: "GhostBase.Messages.HideBlockedReactions")
+                        enabled: UserDefaults.standard.bool(forKey: "jerkgram.Messages.HideBlockedReactions")
                     )'''
 
 
