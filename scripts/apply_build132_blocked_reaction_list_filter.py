@@ -44,7 +44,7 @@ def main() -> None:
             message: message._asMessage(),
             reactions: message._asMessage().reactionsAttribute,
             enabled: UserDefaults.standard.bool(
-                forKey: "GhostBase.Messages.HideBlockedReactions"
+                forKey: "jerkgram.Messages.HideBlockedReactions"
             )
         )
         if let reactionsAttribute = jerkgramReactionsAttribute {
@@ -59,7 +59,7 @@ def main() -> None:
         new = '''                            // MARK: JERKGRAM_BUILD132_BLOCKED_REACTION_LIST_PAGE_FILTER
                             let jerkgramShouldFilterBlockedReactionPeers: Bool
                             if UserDefaults.standard.bool(
-                                forKey: "GhostBase.Messages.HideBlockedReactions"
+                                forKey: "jerkgram.Messages.HideBlockedReactions"
                             ), let chatPeer = transaction.getPeer(message.id.peerId),
                                jerkgramBuild132IsGroupOrSupergroup(chatPeer) {
                                 jerkgramShouldFilterBlockedReactionPeers = true
