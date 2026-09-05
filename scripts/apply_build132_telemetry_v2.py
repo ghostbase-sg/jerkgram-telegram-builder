@@ -156,10 +156,6 @@ def require_legacy_contract(block: str) -> None:
             "refusing to synthesize/replace the legacy telemetry identity contract; "
             f"materialized JerkgramTelemetry is missing {missing}"
         )
-    if "TimeZone.current" in block and any(token in block for token in ("dayId", "weekId", "monthId")):
-        # Legacy period IDs are allowed to keep their old UTC implementation, but v2.1 must not reuse
-        # user-local timezone for the new analytics day.
-        pass
 
 
 def local_secret_shape(block: str) -> str:
@@ -237,16 +233,16 @@ def analytics_helpers(secret_shape: str) -> str:
     }}
 
     static func didEnterBackground() {{
-        guard isEnabled else {{ return }}
         enteredBackground = true
+        guard isEnabled else {{ return }}
         record(event: "app_background")
     }}
 
     static func didBecomeActive() {{
-        guard isEnabled else {{ return }}
         guard !hasSeenActive || enteredBackground else {{ return }}
         hasSeenActive = true
         enteredBackground = false
+        guard isEnabled else {{ return }}
         _ = incrementOpenCountForCurrentAnalyticsDay()
         track(event: "app_active")
     }}
@@ -321,41 +317,56 @@ def patch_telemetry_block(block: str) -> str:
     return block
 
 
+def replace_outside_telemetry(app: str, patterns: tuple[str, ...], replacement: str, label: str) -> str:
+    start, end = locate_telemetry(app)
+    prefix = app[:start]
+    block = app[start:end]
+    suffix = app[end:]
+    if replacement in prefix or replacement in suffix:
+        return app
+
+    count = 0
+    for pattern in patterns:
+        prefix, prefix_count = re.subn(pattern, replacement, prefix, count=1)
+        suffix, suffix_count = re.subn(pattern, replacement, suffix, count=1)
+        count += prefix_count + suffix_count
+    if count != 1:
+        fail(f"expected exactly one existing {label} lifecycle call outside JerkgramTelemetry, replaced {count}")
+    return prefix + block + suffix
+
+
 def patch_lifecycle_calls(app: str) -> str:
-    active_patterns = (
-        r'JerkgramTelemetry\.track\(\s*event:\s*"app_active"\s*\)',
-        r'JerkgramTelemetry\.record\(\s*event:\s*"app_active"\s*\)',
+    app = replace_outside_telemetry(
+        app,
+        (
+            r'JerkgramTelemetry\.track\(\s*event:\s*"app_active"\s*\)',
+            r'JerkgramTelemetry\.record\(\s*event:\s*"app_active"\s*\)',
+        ),
+        "JerkgramTelemetry.didBecomeActive()",
+        "app_active",
     )
-    background_patterns = (
-        r'JerkgramTelemetry\.record\(\s*event:\s*"app_background"\s*\)',
-        r'JerkgramTelemetry\.track\(\s*event:\s*"app_background"\s*\)',
+    app = replace_outside_telemetry(
+        app,
+        (
+            r'JerkgramTelemetry\.record\(\s*event:\s*"app_background"\s*\)',
+            r'JerkgramTelemetry\.track\(\s*event:\s*"app_background"\s*\)',
+        ),
+        "JerkgramTelemetry.didEnterBackground()",
+        "app_background",
     )
 
-    if "JerkgramTelemetry.didBecomeActive()" not in app:
-        replacements = 0
-        for pattern in active_patterns:
-            app, count = re.subn(pattern, "JerkgramTelemetry.didBecomeActive()", app, count=1)
-            replacements += count
-        if replacements != 1:
-            fail(f"expected exactly one existing app_active lifecycle call, replaced {replacements}")
-
-    if "JerkgramTelemetry.didEnterBackground()" not in app:
-        replacements = 0
-        for pattern in background_patterns:
-            app, count = re.subn(pattern, "JerkgramTelemetry.didEnterBackground()", app, count=1)
-            replacements += count
-        if replacements != 1:
-            fail(f"expected exactly one existing app_background lifecycle call, replaced {replacements}")
-
-    # External app_launch bypasses the foreground counter and is therefore removed. The ordinary
-    # rate-limited send is reached from didBecomeActive() -> track().
+    start, end = locate_telemetry(app)
+    prefix = app[:start]
+    block = app[start:end]
+    suffix = app[end:]
     external_launch = re.compile(
         r'(?m)^[ \t]*JerkgramTelemetry\.(?:send|track|record)\(\s*event:\s*"app_launch"[^\n]*\)\s*\n?'
     )
-    app, count = external_launch.subn("", app)
-    if count > 1:
-        fail(f"unexpected external app_launch call count: {count}")
-    return app
+    prefix, prefix_count = external_launch.subn("", prefix)
+    suffix, suffix_count = external_launch.subn("", suffix)
+    if prefix_count + suffix_count > 1:
+        fail(f"unexpected external app_launch call count: {prefix_count + suffix_count}")
+    return prefix + block + suffix
 
 
 def patch_privacy_strings(text: str) -> str:
