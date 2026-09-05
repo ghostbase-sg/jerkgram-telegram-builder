@@ -8,11 +8,13 @@ SETTINGS = Path("submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsContro
 BLOCKED = Path("submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeers.swift")
 BLOCKED_CONTEXT = Path("submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift")
 REACTIONS = Path("submodules/TelegramCore/Sources/ApiUtils/ReactionsMessageAttribute.swift")
+REACTION_STATE = Path("submodules/TelegramCore/Sources/State/MessageReactions.swift")
 FOOTER = Path("submodules/TelegramUI/Components/Chat/ChatMessageReactionsFooterContentNode/Sources/ChatMessageReactionsFooterContentNode.swift")
 STICKER = Path("submodules/TelegramUI/Components/Chat/ChatMessageStickerItemNode/Sources/ChatMessageStickerItemNode.swift")
 INSTANT_VIDEO = Path("submodules/TelegramUI/Components/Chat/ChatMessageInstantVideoItemNode/Sources/ChatMessageInstantVideoItemNode.swift")
 ANIMATED_STICKER = Path("submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode/Sources/ChatMessageAnimatedStickerItemNode.swift")
 PATCHER = Path("scripts/apply_build132_blocked_reactions_visibility.py")
+LIST_PATCHER = Path("scripts/apply_build132_blocked_reaction_list_filter.py")
 
 
 def fail(message: str) -> None:
@@ -35,11 +37,13 @@ def main() -> None:
     blocked = read(root, BLOCKED)
     blocked_context = read(root, BLOCKED_CONTEXT)
     reactions = read(root, REACTIONS)
+    reaction_state = read(root, REACTION_STATE)
     footer = read(root, FOOTER)
     sticker = read(root, STICKER)
     instant_video = read(root, INSTANT_VIDEO)
     animated_sticker = read(root, ANIMATED_STICKER)
     patcher = read(root, PATCHER)
+    list_patcher = read(root, LIST_PATCHER)
 
     # User requirement: both visibility features are opt-in.
     for token in (
@@ -54,8 +58,8 @@ def main() -> None:
             fail(f"OFF-by-default settings contract missing: {token}")
 
     # Registry is local presentation state only. It is updated on successful
-    # block/unblock and also synchronized from contacts.getBlocked results so
-    # users blocked before installing this build are covered.
+    # block/unblock and synchronized from contacts.getBlocked results so peers
+    # blocked before installing this build are covered too.
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_PEER_REGISTRY",
         "JerkgramBlockedPeerRegistry",
@@ -71,28 +75,34 @@ def main() -> None:
         if token not in blocked_context:
             fail(f"blocked-peer registry sync missing: {token}")
 
-    # Filtering is a pure view projection. Source ReactionsMessageAttribute
-    # stays untouched in Postbox, therefore unblock restores the original data.
+    # Main reaction buttons use a pure view projection. Source reaction
+    # attributes stay untouched in Postbox, so unblock restores them naturally.
     for token in (
         "JERKGRAM_BUILD132_BLOCKED_REACTION_FILTER",
         "jerkgramFilteredReactionsForBlockedPeers(",
-        "recentPeers.filter",
-        "topPeers.filter",
-        "MessageReaction(value:",
-        "ReactionsMessageAttribute(",
+        "reactions.recentPeers.filter",
+        "reactions.topPeers.filter",
+        "return MessageReaction(",
+        "return ReactionsMessageAttribute(",
     ):
         if token not in reactions:
             fail(f"reaction projection helper missing: {token}")
+
+    helper_start = reactions.find("JERKGRAM_BUILD132_BLOCKED_REACTION_FILTER")
+    helper_end = reactions.find("public func mergedMessageReactions", helper_start)
+    if helper_start < 0 or helper_end <= helper_start:
+        fail("reaction projection helper bounds malformed")
+    helper_window = reactions[helper_start:helper_end]
     for forbidden in (
         "transaction.updateMessage",
         "withUpdatedBlockedReaction",
-        "removeAll(where:",
+        "UserDefaults.standard.set(",
     ):
-        if forbidden in reactions:
+        if forbidden in helper_window:
             fail(f"reaction source mutation leaked into projection helper: {forbidden}")
 
-    # Every chat rendering path that builds reaction buttons must opt in to the
-    # same helper. The helper itself is responsible for group/supergroup-only.
+    # Every chat rendering path that builds reaction buttons opts into the same
+    # helper. Group/supergroup-only is enforced centrally by the helper.
     for text, label in (
         (footer, "footer"),
         (sticker, "sticker"),
@@ -114,18 +124,35 @@ def main() -> None:
         if token not in reactions:
             fail(f"group/supergroup-only guard missing: {token}")
 
-    # STEP5 is read-only presentation logic; no destructive message/reaction
-    # persistence and no private-chat filtering.
-    if "JERKGRAM_BUILD132_BLOCKED_REACTION_PERSIST" in patcher:
-        fail("reaction persistence/mutation is forbidden")
-    if "rglob(" in patcher or ".glob(" in patcher or "os.walk(" in patcher:
-        fail("broad source discovery is forbidden")
+    # The full reaction peer list has a second projection at its state boundary:
+    # initial recentPeers and every paginated API page are filtered, without
+    # modifying the message's stored ReactionsMessageAttribute.
+    for token in (
+        "JERKGRAM_BUILD132_BLOCKED_REACTION_LIST_INITIAL_FILTER",
+        "jerkgramFilteredReactionsForBlockedPeers(",
+        "JERKGRAM_BUILD132_BLOCKED_REACTION_LIST_PAGE_FILTER",
+        "jerkgramBuild132IsGroupOrSupergroup(chatPeer)",
+        "JerkgramBlockedPeerRegistry.snapshot()",
+        "jerkgramBlockedReactionPeerIds.contains(peer.id)",
+    ):
+        if token not in reaction_state:
+            fail(f"reaction-list filtering missing: {token}")
+
+    # STEP5 is presentation-only. Do not add a persistence layer for filtered
+    # reactions or private-chat special cases.
+    for source, label in ((patcher, "main patcher"), (list_patcher, "list patcher")):
+        if "JERKGRAM_BUILD132_BLOCKED_REACTION_PERSIST" in source:
+            fail(f"reaction persistence/mutation forbidden in {label}")
+        if "rglob(" in source or ".glob(" in source or "os.walk(" in source:
+            fail(f"broad source discovery forbidden in {label}")
 
     for rel in (SETTINGS, BLOCKED, BLOCKED_CONTEXT, REACTIONS, FOOTER, STICKER, INSTANT_VIDEO, ANIMATED_STICKER):
         if str(rel) not in patcher:
-            fail(f"patcher not bound to exact owner: {rel}")
+            fail(f"main patcher not bound to exact owner: {rel}")
+    if str(REACTION_STATE) not in list_patcher:
+        fail(f"list patcher not bound to exact owner: {REACTION_STATE}")
 
-    print("[Build132 blocked reactions verify] PASS: both toggles OFF + synced blocked registry + reversible group-only reaction projection")
+    print("[Build132 blocked reactions verify] PASS: both toggles OFF + synced registry + reversible group-only reaction buttons/list projection")
 
 
 if __name__ == "__main__":
