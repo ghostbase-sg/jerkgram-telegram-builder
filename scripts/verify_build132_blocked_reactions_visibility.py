@@ -13,8 +13,10 @@ FOOTER = Path("submodules/TelegramUI/Components/Chat/ChatMessageReactionsFooterC
 STICKER = Path("submodules/TelegramUI/Components/Chat/ChatMessageStickerItemNode/Sources/ChatMessageStickerItemNode.swift")
 INSTANT_VIDEO = Path("submodules/TelegramUI/Components/Chat/ChatMessageInstantVideoItemNode/Sources/ChatMessageInstantVideoItemNode.swift")
 ANIMATED_STICKER = Path("submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode/Sources/ChatMessageAnimatedStickerItemNode.swift")
+RICH_DATA = Path("submodules/TelegramUI/Components/Chat/ChatMessageRichDataBubbleContentNode/Sources/ChatMessageRichDataBubbleContentNode.swift")
 PATCHER = Path("scripts/apply_build132_blocked_reactions_visibility.py")
 LIST_PATCHER = Path("scripts/apply_build132_blocked_reaction_list_filter.py")
+RICH_PATCHER = Path("scripts/apply_build132_blocked_reactions_rich_data.py")
 
 
 def fail(message: str) -> None:
@@ -42,8 +44,10 @@ def main() -> None:
     sticker = read(root, STICKER)
     instant_video = read(root, INSTANT_VIDEO)
     animated_sticker = read(root, ANIMATED_STICKER)
+    rich_data = read(root, RICH_DATA)
     patcher = read(root, PATCHER)
     list_patcher = read(root, LIST_PATCHER)
+    rich_patcher = read(root, RICH_PATCHER)
 
     # User requirement: both visibility features are opt-in.
     for token in (
@@ -101,13 +105,14 @@ def main() -> None:
         if forbidden in helper_window:
             fail(f"reaction source mutation leaked into projection helper: {forbidden}")
 
-    # Every chat rendering path that builds reaction buttons opts into the same
-    # helper. Group/supergroup-only is enforced centrally by the helper.
+    # Every known 12.9.2 chat renderer that directly builds reaction UI opts
+    # into the same projection helper. Group/supergroup-only is centralized.
     for text, label in (
         (footer, "footer"),
         (sticker, "sticker"),
         (instant_video, "instant video"),
         (animated_sticker, "animated sticker"),
+        (rich_data, "rich data bubble"),
     ):
         for token in (
             "JERKGRAM_BUILD132_BLOCKED_REACTION_UI_FILTER",
@@ -140,7 +145,11 @@ def main() -> None:
 
     # STEP5 is presentation-only. Do not add a persistence layer for filtered
     # reactions or private-chat special cases.
-    for source, label in ((patcher, "main patcher"), (list_patcher, "list patcher")):
+    for source, label in (
+        (patcher, "main patcher"),
+        (list_patcher, "list patcher"),
+        (rich_patcher, "rich-data patcher"),
+    ):
         if "JERKGRAM_BUILD132_BLOCKED_REACTION_PERSIST" in source:
             fail(f"reaction persistence/mutation forbidden in {label}")
         if "rglob(" in source or ".glob(" in source or "os.walk(" in source:
@@ -151,6 +160,8 @@ def main() -> None:
             fail(f"main patcher not bound to exact owner: {rel}")
     if str(REACTION_STATE) not in list_patcher:
         fail(f"list patcher not bound to exact owner: {REACTION_STATE}")
+    if str(RICH_DATA) not in rich_patcher:
+        fail(f"rich-data patcher not bound to exact owner: {RICH_DATA}")
 
     print("[Build132 blocked reactions verify] PASS: both toggles OFF + synced registry + reversible group-only reaction buttons/list projection")
 
