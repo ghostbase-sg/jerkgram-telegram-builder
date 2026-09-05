@@ -99,8 +99,11 @@ def locate_telemetry(text: str) -> tuple[int, int]:
 def ensure_import(text: str, module: str) -> str:
     if re.search(rf"(?m)^import {re.escape(module)}\s*$", text):
         return text
-    anchor = re.search(r"(?m)^import Foundation\s*$", text)
-    if not anchor: fail(f"Foundation import anchor missing while adding {module}")
+    anchor = re.search(r"(?m)^import [A-Za-z_][A-Za-z0-9_.]*\s*$", text)
+    if not anchor:
+        fail(f"top-level Swift import anchor missing while adding {module}")
+    if anchor.start() > 2048:
+        fail(f"first Swift import is outside bounded header while adding {module}")
     return text[:anchor.end()] + f"\nimport {module}" + text[anchor.end():]
 
 
