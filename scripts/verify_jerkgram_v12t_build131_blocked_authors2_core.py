@@ -18,6 +18,10 @@ BUILD132_FOOTERS_APPLY = SCRIPTS / "apply_build132_native_settings_footers.py"
 BUILD132_FOOTERS_VERIFY = SCRIPTS / "verify_build132_native_settings_footers.py"
 BUILD132_BLOCKED_MESSAGES_APPLY = SCRIPTS / "apply_build132_blocked_messages_visibility.py"
 BUILD132_BLOCKED_MESSAGES_VERIFY = SCRIPTS / "verify_build132_blocked_messages_visibility.py"
+BUILD132_BLOCKED_REACTIONS_APPLY = SCRIPTS / "apply_build132_blocked_reactions_visibility.py"
+BUILD132_BLOCKED_REACTIONS_RICH_APPLY = SCRIPTS / "apply_build132_blocked_reactions_rich_data.py"
+BUILD132_BLOCKED_REACTION_LIST_APPLY = SCRIPTS / "apply_build132_blocked_reaction_list_filter.py"
+BUILD132_BLOCKED_REACTIONS_VERIFY = SCRIPTS / "verify_build132_blocked_reactions_visibility.py"
 
 
 def fail(message):
@@ -117,3 +121,13 @@ print("[Build132 pre-Bazel] PASS: native About/Appearance/Messages footers")
 for script in (BUILD132_BLOCKED_MESSAGES_APPLY, BUILD132_BLOCKED_MESSAGES_VERIFY):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: reversible blocked-message visibility + toggle")
+
+# JERKGRAM_BUILD132_BLOCKED_REACTIONS_VISIBILITY_PREBAZEL_HOOK
+for script in (
+    BUILD132_BLOCKED_REACTIONS_APPLY,
+    BUILD132_BLOCKED_REACTIONS_RICH_APPLY,
+    BUILD132_BLOCKED_REACTION_LIST_APPLY,
+    BUILD132_BLOCKED_REACTIONS_VERIFY,
+):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: blocked reaction visibility + both toggles default OFF")
