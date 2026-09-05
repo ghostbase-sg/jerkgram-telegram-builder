@@ -23,7 +23,7 @@ public enum JerkgramReleaseIdentity {{
     public static let build = "132"
     public static let telegramBase = "12.9.2"
 
-    // Telemetry reports the product release, not the beta suffix or Telegram base version.
+    // Telemetry uses the product release without the beta suffix.
     public static var releaseVersion: String {{
         return self.version.split(separator: "-").first.map(String.init) ?? self.version
     }}
@@ -59,10 +59,10 @@ def write_if_changed(path: Path, text: str) -> bool:
     return True
 
 
-def matching_delimiter(text: str, open_index: int, opening: str, closing: str) -> int:
+def matching_brace(text: str, opening: int) -> int:
     depth = 0
-    i = open_index
     state = "code"
+    i = opening
     while i < len(text):
         ch = text[i]
         nxt = text[i + 1] if i + 1 < len(text) else ""
@@ -70,14 +70,12 @@ def matching_delimiter(text: str, open_index: int, opening: str, closing: str) -
             if ch == '"':
                 state = "string"
             elif ch == "/" and nxt == "/":
-                state = "line"
-                i += 1
+                state = "line"; i += 1
             elif ch == "/" and nxt == "*":
-                state = "block"
-                i += 1
-            elif ch == opening:
+                state = "block"; i += 1
+            elif ch == "{":
                 depth += 1
-            elif ch == closing:
+            elif ch == "}":
                 depth -= 1
                 if depth == 0:
                     return i
@@ -87,285 +85,131 @@ def matching_delimiter(text: str, open_index: int, opening: str, closing: str) -
             elif ch == '"':
                 state = "code"
         elif state == "line":
-            if ch == "\n":
-                state = "code"
+            if ch == "\n": state = "code"
         elif state == "block" and ch == "*" and nxt == "/":
-            state = "code"
-            i += 1
+            state = "code"; i += 1
         i += 1
-    fail(f"unterminated Swift delimiter {opening}{closing}")
-
-
-def matching_brace(text: str, open_index: int) -> int:
-    return matching_delimiter(text, open_index, "{", "}")
+    fail("unterminated Swift block")
 
 
 def locate_telemetry(text: str) -> tuple[int, int]:
-    matches = list(re.finditer(
-        r"(?m)^[ \t]*(?:(?:private|fileprivate|internal|public|final)\s+)*(?:final\s+)?(?:class|enum|struct)\s+JerkgramTelemetry\b",
-        text,
-    ))
+    matches = list(re.finditer(r"(?m)^[ \t]*private\s+final\s+class\s+JerkgramTelemetry\s*\{", text))
     if len(matches) != 1:
-        fail(f"expected exactly one JerkgramTelemetry declaration in {APP_OWNER}, found {len(matches)}")
-    match = matches[0]
-    opening = text.find("{", match.end())
-    if opening < 0:
-        fail("JerkgramTelemetry opening brace missing")
-    return match.start(), matching_brace(text, opening) + 1
+        fail(f"expected one legacy JerkgramTelemetry singleton, found {len(matches)}")
+    opening = text.find("{", matches[0].start(), matches[0].end())
+    return matches[0].start(), matching_brace(text, opening) + 1
 
 
 def ensure_import(text: str, module: str) -> str:
     if re.search(rf"(?m)^import {re.escape(module)}\s*$", text):
         return text
-    anchor = re.search(r"(?m)^import [A-Za-z_][A-Za-z0-9_.]*\s*$", text)
-    if not anchor:
-        fail(f"top-level Swift import anchor missing while adding {module}")
-    if anchor.start() > 2048:
-        fail(f"first Swift import is outside bounded header while adding {module}")
-    return text[:anchor.end()] + f"\nimport {module}" + text[anchor.end():]
+    match = re.search(r"(?m)^import [A-Za-z_][A-Za-z0-9_.]*\s*$", text)
+    if not match or match.start() > 2048:
+        fail(f"bounded Swift import anchor missing for {module}")
+    return text[:match.end()] + f"\nimport {module}" + text[match.end():]
 
 
 def prepare_identity(root: Path, app: str, settings: str) -> tuple[str, str, Path, Path]:
     local = root / LOCAL_IDENTITY_OWNER
-    if local.is_file() and IDENTITY_MARKER not in local.read_text(encoding="utf-8"):
-        fail(f"refusing to remove non-Build132 identity owner: {LOCAL_IDENTITY_OWNER}")
-
+    if local.is_file() and IDENTITY_MARKER not in read(local):
+        fail(f"refusing to remove non-Build132 identity: {LOCAL_IDENTITY_OWNER}")
     shared = root / SHARED_IDENTITY_OWNER
     if not shared.parent.is_dir():
         fail(f"shared identity parent missing: {SHARED_IDENTITY_OWNER.parent}")
-    if shared.is_file() and IDENTITY_MARKER not in shared.read_text(encoding="utf-8"):
-        fail(f"refusing to overwrite non-Build132 shared identity: {SHARED_IDENTITY_OWNER}")
-
-    return ensure_import(app, "TelegramCore"), ensure_import(settings, "TelegramCore"), local, shared
+    if shared.is_file() and IDENTITY_MARKER not in read(shared):
+        fail(f"refusing to overwrite non-Build132 identity: {SHARED_IDENTITY_OWNER}")
+    app = ensure_import(ensure_import(app, "TelegramCore"), "Darwin")
+    settings = ensure_import(settings, "TelegramCore")
+    return app, settings, local, shared
 
 
 def require_legacy_contract(block: str) -> None:
     required = (
-        ENDPOINT,
-        "schema",
-        "installReceiptId",
-        "dayId",
-        "weekId",
-        "monthId",
-        "localSecret",
-        "HMAC<SHA256>",
+        f'URL(string: "{ENDPOINT}")!',
+        'static let shared = JerkgramTelemetry()',
+        'private let queue = DispatchQueue(label: "org.jerkgram.telemetry", qos: .utility)',
+        'private let secretKey = "jerkgram.telemetry.secret.v1"',
+        'private let firstDateKey = "jerkgram.telemetry.firstDate.v1"',
+        'private let receiptKey = "jerkgram.telemetry.installReceipt.v1"',
+        'private let installReportedKey = "jerkgram.telemetry.installReported.v1"',
+        'private let lastSuccessKey = "jerkgram.telemetry.lastSuccess.v1"',
+        'private let minimumInterval: TimeInterval = 4 * 60 * 60',
+        'let dayId=hmac(secret,', 'let weekId=hmac(secret,', 'let monthId=hmac(secret,',
+        'payload["installReceiptId"]=receipt',
+        'private func localSecret(defaults:UserDefaults)->[UInt8]',
+        'private func hmac(_ key:[UInt8],_ value:String)->String',
+        'private func sha256(_ input:[UInt8])->[UInt8]',
+        'request.timeoutInterval=8.0',
     )
     missing = [token for token in required if token not in block]
     if missing:
-        fail(
-            "refusing to synthesize/replace the legacy telemetry identity contract; "
-            f"materialized JerkgramTelemetry is missing {missing}"
-        )
+        fail(f"legacy telemetry contract drifted; missing {missing}")
 
 
-def local_secret_shape(block: str) -> str:
-    match = re.search(
-        r"(?m)(?:private\s+)?static\s+func\s+localSecret\s*\([^)]*\)\s*->\s*(Data|SymmetricKey)(\?)?\s*\{",
-        block,
-    )
-    if not match:
-        fail("existing localSecret() must return Data/Data? or SymmetricKey/SymmetricKey? for bounded v2.1 HMAC reuse")
-    return match.group(1) + (match.group(2) or "")
-
-
-def analytics_helpers(secret_shape: str) -> str:
-    if secret_shape == "Data":
-        secret_lines = """        let secret = localSecret()\n        let key = SymmetricKey(data: secret)"""
-    elif secret_shape == "Data?":
-        secret_lines = """        guard let secret = localSecret() else { return nil }\n        let key = SymmetricKey(data: secret)"""
-    elif secret_shape == "SymmetricKey":
-        secret_lines = "        let key = localSecret()"
-    elif secret_shape == "SymmetricKey?":
-        secret_lines = "        guard let key = localSecret() else { return nil }"
-    else:
-        fail(f"unsupported localSecret() shape: {secret_shape}")
-
-    return f'''
-    {ADDENDUM_MARKER}
-    private static let analyticsTimeZone = TimeZone(identifier: "Europe/Moscow")!
-    private static let opensDayKey = "jerkgram.telemetry.opens.day"
-    private static let opensCountKey = "jerkgram.telemetry.opens.count"
-    private static let maximumOpenCount = 100000
-    private static var hasSeenActive = false
-    private static var enteredBackground = false
-
-    private struct AnalyticsDayState {{
-        let day: String
-        let dayId: String
-        let openCountToday: Int
-    }}
-
-    private static func analyticsDayString(for date: Date = Date()) -> String {{
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = analyticsTimeZone
-        let components = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
-    }}
-
-    private static func analyticsDayId(for day: String) -> String? {{
-{secret_lines}
-        let input = Data(("jerkgram-msk-day-v1:" + day).utf8)
-        let digest = HMAC<SHA256>.authenticationCode(for: input, using: key)
-        return digest.map {{ String(format: "%02x", $0) }}.joined()
-    }}
-
-    @discardableResult
-    private static func incrementOpenCountForCurrentAnalyticsDay() -> AnalyticsDayState? {{
-        let defaults = UserDefaults.standard
-        let day = analyticsDayString()
-        let storedDay = defaults.string(forKey: opensDayKey)
-        let oldCount = storedDay == day ? defaults.integer(forKey: opensCountKey) : 0
-        let boundedOldCount = min(max(oldCount, 0), maximumOpenCount)
-        let count = min(maximumOpenCount, boundedOldCount + 1)
-        guard let dayId = analyticsDayId(for: day) else {{ return nil }}
-        defaults.set(day, forKey: opensDayKey)
-        defaults.set(count, forKey: opensCountKey)
-        return AnalyticsDayState(day: day, dayId: dayId, openCountToday: count)
-    }}
-
-    private static func currentAnalyticsDayState() -> AnalyticsDayState? {{
-        let defaults = UserDefaults.standard
-        let day = analyticsDayString()
-        guard defaults.string(forKey: opensDayKey) == day else {{ return nil }}
-        let count = min(max(defaults.integer(forKey: opensCountKey), 1), maximumOpenCount)
-        guard let dayId = analyticsDayId(for: day) else {{ return nil }}
-        return AnalyticsDayState(day: day, dayId: dayId, openCountToday: count)
-    }}
-
-    static func didEnterBackground() {{
-        enteredBackground = true
-        guard isEnabled else {{ return }}
-        record(event: "app_background")
-    }}
-
-    static func didBecomeActive() {{
-        guard !hasSeenActive || enteredBackground else {{ return }}
-        hasSeenActive = true
-        enteredBackground = false
-        guard isEnabled else {{ return }}
-        _ = incrementOpenCountForCurrentAnalyticsDay()
-        track(event: "app_active")
-    }}
-'''
-
-
-def replace_app_version(block: str) -> str:
-    pattern = re.compile(r'(?m)^(?P<indent>[ \t]*)"appVersion"\s*:\s*[^,\n]+,')
-    matches = list(pattern.finditer(block))
-    if len(matches) != 1:
-        fail(f"expected exactly one appVersion payload field, found {len(matches)}")
-    return pattern.sub(
-        lambda m: f'{m.group("indent")}"appVersion": JerkgramReleaseIdentity.releaseVersion,',
-        block,
-        count=1,
-    )
-
-
-def inject_analytics_payload(block: str) -> str:
-    if all(f'payload["{key}"]' in block for key in ("analyticsDay", "analyticsDayId", "openCountToday")):
-        return block
-
-    matches = list(re.finditer(r"\bvar\s+payload\s*:\s*\[String\s*:\s*Any\]\s*=\s*\[", block))
-    if len(matches) != 1:
-        fail(f"expected exactly one mutable telemetry payload dictionary, found {len(matches)}")
-    opening = block.find("[", matches[0].end() - 1)
-    closing = matching_delimiter(block, opening, "[", "]")
-    injection = '''
-        if let analytics = currentAnalyticsDayState() {
-            payload["analyticsDay"] = analytics.day
-            payload["analyticsDayId"] = analytics.dayId
-            payload["openCountToday"] = analytics.openCountToday
-        }
-'''
-    return block[:closing + 1] + injection + block[closing + 1:]
-
-
-def neutralize_startup_open_send(block: str) -> str:
-    match = re.search(r"(?m)^[ \t]*static\s+func\s+start\s*\([^)]*\)\s*\{", block)
-    if not match:
-        fail("JerkgramTelemetry.start() missing")
-    opening = block.find("{", match.start(), match.end())
-    closing = matching_brace(block, opening)
-    method = block[match.start():closing + 1]
-    method = re.sub(
-        r'(?m)^[ \t]*(?:send|track|record)\(\s*event:\s*"app_launch"[^\n]*\)\s*\n?',
-        "",
-        method,
-    )
-    return block[:match.start()] + method + block[closing + 1:]
+def one_replace(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count != 1:
+        fail(f"expected one {label} anchor, found {count}")
+    return text.replace(old, new, 1)
 
 
 def patch_telemetry_block(block: str) -> str:
     if ADDENDUM_MARKER in block:
-        if block.count(ADDENDUM_MARKER) != 1:
-            fail("v2.1 marker duplicated")
+        if block.count(ADDENDUM_MARKER) != 1 or APP_MARKER not in block:
+            fail("partial/duplicated telemetry v2.1 marker")
         return block
 
     require_legacy_contract(block)
-    secret_shape = local_secret_shape(block)
-    block = replace_app_version(block)
-    block = inject_analytics_payload(block)
-    block = neutralize_startup_open_send(block)
 
-    closing = block.rfind("}")
-    if closing < 0:
-        fail("telemetry closing brace missing")
-    helpers = analytics_helpers(secret_shape)
-    block = block[:closing] + helpers + block[closing:]
-    if APP_MARKER not in block:
-        block = APP_MARKER + "\n" + block
+    fields_anchor = '    private let minimumInterval: TimeInterval = 4 * 60 * 60\n'
+    fields = fields_anchor + f'''    {APP_MARKER}\n    {ADDENDUM_MARKER}\n    private let lastAttemptAtKey = "jerkgram.telemetry.lastAttempt.v2"\n    private let analyticsTimeZone = TimeZone(identifier: "Europe/Moscow")!\n    private let opensDayKey = "jerkgram.telemetry.opens.day"\n    private let opensCountKey = "jerkgram.telemetry.opens.count"\n    private let maximumOpenCount = 100000\n    private var hasSeenActive = false\n    private var enteredBackground = false\n'''
+    block = one_replace(block, fields_anchor, fields, "telemetry v2.1 fields")
+
+    old_active = '    func applicationDidBecomeActive() { queue.async { [weak self] in self?.submitIfNeeded() } }\n'
+    new_active = '''    func applicationDidBecomeActive() {\n        guard JerkgramTelemetryPreferences.isEnabled else { return }\n        queue.async { [weak self] in\n            guard let self else { return }\n            guard JerkgramTelemetryPreferences.isEnabled else { return }\n            guard !self.hasSeenActive || self.enteredBackground else { return }\n            self.hasSeenActive = true\n            self.enteredBackground = false\n            self.incrementOpenCountForCurrentAnalyticsDay()\n            self.submitIfNeeded()\n        }\n    }\n    func applicationDidEnterBackground() {\n        guard JerkgramTelemetryPreferences.isEnabled else { return }\n        queue.async { [weak self] in\n            guard let self else { return }\n            guard JerkgramTelemetryPreferences.isEnabled else { return }\n            self.enteredBackground = true\n        }\n    }\n'''
+    block = one_replace(block, old_active, new_active, "legacy foreground scheduler")
+
+    old_interval = '        if let last = defaults.object(forKey: lastSuccessKey) as? Date, now.timeIntervalSince(last) < minimumInterval { return }\n'
+    new_interval = '        if let last = defaults.object(forKey: lastAttemptAtKey) as? Date, now.timeIntervalSince(last) < minimumInterval { return }\n'
+    block = one_replace(block, old_interval, new_interval, "rate-limit timestamp")
+
+    old_version = '        let version=Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? ""\n        let build=Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? ""\n'
+    new_version = '        let version=JerkgramReleaseIdentity.releaseVersion\n        let build=JerkgramReleaseIdentity.build\n'
+    block = one_replace(block, old_version, new_version, "Jerkgram release identity")
+
+    old_payload = '        var payload:[String:Any]=["schema":1,"appVersion":version,"build":build,"iosVersion":os,"iosMajor":major,"deviceRegion":region,"installAgeDays":age,"dayId":dayId,"weekId":weekId,"monthId":monthId]\n'
+    new_payload = '''        let model=hardwareModel()\n        var payload:[String:Any]=["schema":1,"appVersion":version,"build":build,"iosVersion":os,"iosMajor":major,"deviceRegion":region,"deviceModel":model,"installAgeDays":age,"dayId":dayId,"weekId":weekId,"monthId":monthId,"event":"app_active","ts":Int(now.timeIntervalSince1970)]\n        if let analytics=currentAnalyticsDayState(defaults:defaults,secret:secret){\n            payload["analyticsDay"]=analytics.day\n            payload["analyticsDayId"]=analytics.dayId\n            payload["openCountToday"]=analytics.openCountToday\n        }\n'''
+    block = one_replace(block, old_payload, new_payload, "legacy payload")
+
+    task_anchor = '        guard JerkgramTelemetryPreferences.isEnabled else{return}\n        let task=URLSession.shared.dataTask(with:request)'
+    task_replacement = '        guard JerkgramTelemetryPreferences.isEnabled else{return}\n        defaults.set(now,forKey:lastAttemptAtKey)\n        let task=URLSession.shared.dataTask(with:request)'
+    block = one_replace(block, task_anchor, task_replacement, "pre-network OFF gate")
+
+    helper_anchor = '    private func localSecret(defaults:UserDefaults)->[UInt8]'
+    helpers = '''    private struct AnalyticsDayState {\n        let day: String\n        let dayId: String\n        let openCountToday: Int\n    }\n    private func analyticsDayString(for date:Date=Date())->String{\n        var calendar=Calendar(identifier:.gregorian)\n        calendar.timeZone=analyticsTimeZone\n        let components=calendar.dateComponents([.year,.month,.day],from:date)\n        return String(format:"%04d-%02d-%02d",components.year ?? 0,components.month ?? 0,components.day ?? 0)\n    }\n    private func analyticsDayId(for day:String,secret:[UInt8])->String{\n        return hmac(secret,"jerkgram-msk-day-v1:"+day)\n    }\n    private func incrementOpenCountForCurrentAnalyticsDay(){\n        let defaults=UserDefaults.standard\n        let day=analyticsDayString()\n        let storedDay=defaults.string(forKey:opensDayKey)\n        let oldCount=storedDay == day ? defaults.integer(forKey:opensCountKey) : 0\n        let boundedOldCount=min(max(oldCount,0),maximumOpenCount)\n        let count=min(maximumOpenCount,boundedOldCount+1)\n        let secret=localSecret(defaults:defaults)\n        _=analyticsDayId(for:day,secret:secret)\n        defaults.set(day,forKey:opensDayKey)\n        defaults.set(count,forKey:opensCountKey)\n    }\n    private func currentAnalyticsDayState(defaults:UserDefaults,secret:[UInt8])->AnalyticsDayState?{\n        let day=analyticsDayString()\n        guard defaults.string(forKey:opensDayKey) == day else{return nil}\n        let count=min(max(defaults.integer(forKey:opensCountKey),1),maximumOpenCount)\n        return AnalyticsDayState(day:day,dayId:analyticsDayId(for:day,secret:secret),openCountToday:count)\n    }\n    private func hardwareModel()->String{\n        var info=utsname()\n        guard uname(&info) == 0 else{return "unknown"}\n        let capacity=MemoryLayout.size(ofValue:info.machine)\n        return withUnsafePointer(to:&info.machine){ pointer in\n            pointer.withMemoryRebound(to:CChar.self,capacity:capacity){ String(cString:$0) }\n        }\n    }\n'''
+    block = one_replace(block, helper_anchor, helpers + helper_anchor, "legacy secret helper")
     return block
 
 
-def replace_outside_telemetry(app: str, patterns: tuple[str, ...], replacement: str, label: str) -> str:
+def patch_app_lifecycle(app: str) -> str:
     start, end = locate_telemetry(app)
-    prefix = app[:start]
-    block = app[start:end]
-    suffix = app[end:]
-    if replacement in prefix or replacement in suffix:
-        return app
+    prefix, block, suffix = app[:start], app[start:end], app[end:]
+    if 'JerkgramTelemetry.shared.applicationDidBecomeActive()' not in suffix:
+        fail("AppDelegate foreground owner no longer calls telemetry singleton")
+    if suffix.count('JerkgramTelemetry.shared.applicationDidBecomeActive()') != 1:
+        fail("foreground telemetry call duplicated")
 
-    count = 0
-    for pattern in patterns:
-        prefix, prefix_count = re.subn(pattern, replacement, prefix, count=1)
-        suffix, suffix_count = re.subn(pattern, replacement, suffix, count=1)
-        count += prefix_count + suffix_count
-    if count != 1:
-        fail(f"expected exactly one existing {label} lifecycle call outside JerkgramTelemetry, replaced {count}")
-    return prefix + block + suffix
+    background_signature = '    func applicationDidEnterBackground(_ application: UIApplication) {\n'
+    if background_signature not in suffix:
+        fail("AppDelegate background lifecycle owner missing")
+    background_call = '        JerkgramTelemetry.shared.applicationDidEnterBackground()\n'
+    if background_call not in suffix:
+        suffix = suffix.replace(background_signature, background_signature + background_call, 1)
+    elif suffix.count(background_call) != 1:
+        fail("background telemetry call duplicated")
 
-
-def patch_lifecycle_calls(app: str) -> str:
-    app = replace_outside_telemetry(
-        app,
-        (
-            r'JerkgramTelemetry\.track\(\s*event:\s*"app_active"\s*\)',
-            r'JerkgramTelemetry\.record\(\s*event:\s*"app_active"\s*\)',
-        ),
-        "JerkgramTelemetry.didBecomeActive()",
-        "app_active",
-    )
-    app = replace_outside_telemetry(
-        app,
-        (
-            r'JerkgramTelemetry\.record\(\s*event:\s*"app_background"\s*\)',
-            r'JerkgramTelemetry\.track\(\s*event:\s*"app_background"\s*\)',
-        ),
-        "JerkgramTelemetry.didEnterBackground()",
-        "app_background",
-    )
-
-    start, end = locate_telemetry(app)
-    prefix = app[:start]
-    block = app[start:end]
-    suffix = app[end:]
-    external_launch = re.compile(
-        r'(?m)^[ \t]*JerkgramTelemetry\.(?:send|track|record)\(\s*event:\s*"app_launch"[^\n]*\)\s*\n?'
-    )
-    prefix, prefix_count = external_launch.subn("", prefix)
-    suffix, suffix_count = external_launch.subn("", suffix)
-    if prefix_count + suffix_count > 1:
-        fail(f"unexpected external app_launch call count: {prefix_count + suffix_count}")
+    if 'JerkgramTelemetry.didBecomeActive()' in suffix or 'JerkgramTelemetry.didEnterBackground()' in suffix:
+        fail("static telemetry lifecycle API must not coexist with legacy singleton")
     return prefix + block + suffix
 
 
@@ -373,28 +217,23 @@ def patch_privacy_strings(text: str) -> str:
     if text.count(PRIVACY_MARKER) == 1 and EN_PRIVACY in text and RU_PRIVACY in text:
         return text
     if PRIVACY_MARKER in text:
-        fail("privacy marker exists without canonical v2.1 RU/EN text")
-
-    matches = list(re.finditer(
-        r"(?m)^(?P<indent>[ \t]*)var anonymousAnalyticsDescription: String \{",
-        text,
-    ))
+        fail("privacy marker exists without canonical v2.1 text")
+    matches = list(re.finditer(r"(?m)^(?P<indent>[ \t]*)var anonymousAnalyticsDescription: String \{", text))
     if len(matches) != 1:
-        fail(f"expected exactly one semantic anonymousAnalyticsDescription owner, found {len(matches)}")
-
+        fail(f"expected one anonymousAnalyticsDescription owner, found {len(matches)}")
     match = matches[0]
     opening = text.find("{", match.start(), match.end())
     closing = matching_brace(text, opening)
     indent = match.group("indent")
-    body_indent = indent + "    "
+    b = indent + "    "
     canonical = (
         f"{indent}{PRIVACY_MARKER}\n"
         f"{indent}var anonymousAnalyticsDescription: String {{\n"
-        f"{body_indent}if self.languageCode == \"ru\" {{\n"
-        f"{body_indent}    return \"{RU_PRIVACY}\"\n"
-        f"{body_indent}}} else {{\n"
-        f"{body_indent}    return \"{EN_PRIVACY}\"\n"
-        f"{body_indent}}}\n"
+        f"{b}if self.languageCode == \"ru\" {{\n"
+        f"{b}    return \"{RU_PRIVACY}\"\n"
+        f"{b}}} else {{\n"
+        f"{b}    return \"{EN_PRIVACY}\"\n"
+        f"{b}}}\n"
         f"{indent}}}"
     )
     return text[:match.start()] + canonical + text[closing + 1:]
@@ -403,25 +242,21 @@ def patch_privacy_strings(text: str) -> str:
 def main() -> None:
     if len(sys.argv) != 2:
         fail("usage: apply_build132_telemetry_v2.py <materialized-source-root>")
-
     root = Path(sys.argv[1]).resolve()
     app_path = root / APP_OWNER
     settings_path = root / SETTINGS_OWNER
     strings_path = root / STRINGS_OWNER
-
     app = read(app_path)
     settings = read(settings_path)
     strings = read(strings_path)
     app, settings, local_identity, shared_identity = prepare_identity(root, app, settings)
-    app = ensure_import(app, "Darwin")
 
     start, end = locate_telemetry(app)
-    old_block = app[start:end]
-    new_block = patch_telemetry_block(old_block)
+    new_block = patch_telemetry_block(app[start:end])
     app = app[:start] + new_block + app[end:]
-    app = patch_lifecycle_calls(app)
+    app = patch_app_lifecycle(app)
 
-    if ".info(3, strings.anonymousAnalyticsDescription)" not in settings:
+    if '.info(3, strings.anonymousAnalyticsDescription)' not in settings:
         fail("Settings no longer renders semantic anonymousAnalyticsDescription")
     strings = patch_privacy_strings(strings)
 
@@ -431,13 +266,7 @@ def main() -> None:
     changed_strings = write_if_changed(strings_path, strings)
     if local_identity.is_file():
         local_identity.unlink()
-
-    print(
-        f"[Build132 telemetry v2.1] AppDelegate={'updated' if changed_app else 'unchanged'}, "
-        f"Settings={'updated' if changed_settings else 'unchanged'}, "
-        f"Strings={'updated' if changed_strings else 'unchanged'}, "
-        f"shared identity={'updated' if changed_identity else 'unchanged'}"
-    )
+    print(f"[Build132 telemetry v2.1] AppDelegate={'updated' if changed_app else 'unchanged'}, Settings={'updated' if changed_settings else 'unchanged'}, Strings={'updated' if changed_strings else 'unchanged'}, shared identity={'updated' if changed_identity else 'unchanged'}")
 
 
 if __name__ == "__main__":
