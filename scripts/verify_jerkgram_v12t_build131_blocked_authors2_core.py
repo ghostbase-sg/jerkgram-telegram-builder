@@ -28,6 +28,8 @@ BUILD132_BUNDLE_IDENTITY_APPLY = SCRIPTS / "apply_build132_bundle_identity.py"
 BUILD132_BUNDLE_IDENTITY_VERIFY = SCRIPTS / "verify_build132_active_bundle_identity.py"
 BUILD132_TELEGRAM_CLIENT_IDENTITY_APPLY = SCRIPTS / "apply_build132_telegram_client_identity.py"
 BUILD132_TELEGRAM_CLIENT_IDENTITY_VERIFY = SCRIPTS / "verify_build132_telegram_client_identity.py"
+BUILD132_SIGNER_VERSION_APPLY = SCRIPTS / "apply_build132_signer_version.py"
+BUILD132_SIGNER_VERSION_VERIFY = SCRIPTS / "verify_build132_signer_version.py"
 
 
 def fail(message):
@@ -152,3 +154,10 @@ for script in (
 ):
     run_gate(script)
 print("[Build132 pre-Bazel] PASS: InstalledIdentity prod/test + TelegramClientIdentity compatibility separation")
+
+# Release-critical invariant: Telegram signer-visible marketing version must stay
+# at the upstream base version. This gate intentionally runs last so no older
+# patch can leak a Jerkgram product version into CFBundleShortVersionString.
+for script in (BUILD132_SIGNER_VERSION_APPLY, BUILD132_SIGNER_VERSION_VERIFY):
+    run_gate(script)
+print("[Build132 pre-Bazel] PASS: signer-visible Telegram version = 12.9.2")
