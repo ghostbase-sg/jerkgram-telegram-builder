@@ -78,6 +78,102 @@ def patch_settings(text: str) -> str:
     return text
 
 
+def patch_attribute(text: str) -> str:
+    marker = "// MARK: JERKGRAM_BUILD132_BLOCKED_HIDDEN_ATTRIBUTE"
+    if marker in text:
+        return text
+
+    text = base.replace_once(
+        text,
+        "    public let deletedAt: Int32\n",
+        "    public let deletedAt: Int32\n    // MARK: JERKGRAM_BUILD132_BLOCKED_HIDDEN_ATTRIBUTE\n    public let isBlockedHidden: Bool\n",
+        "blocked-hidden property",
+    )
+    text = base.replace_once(
+        text,
+        "        deletedAt: Int32,\n        originalEntities: [MessageTextEntity] = [],\n",
+        "        deletedAt: Int32,\n        isBlockedHidden: Bool = false,\n        originalEntities: [MessageTextEntity] = [],\n",
+        "Build123 blocked-hidden initializer",
+    )
+    text = base.replace_once(
+        text,
+        "        self.deletedAt = deletedAt\n    }\n\n    required public init(decoder: PostboxDecoder) {\n",
+        "        self.deletedAt = deletedAt\n        self.isBlockedHidden = isBlockedHidden\n    }\n\n    required public init(decoder: PostboxDecoder) {\n",
+        "blocked-hidden initializer assignment",
+    )
+    text = base.replace_once(
+        text,
+        '        self.deletedAt = decoder.decodeInt32ForKey("dat", orElse: 0)\n',
+        '        self.deletedAt = decoder.decodeInt32ForKey("dat", orElse: 0)\n        self.isBlockedHidden = decoder.decodeInt32ForKey("ibh", orElse: 0) != 0\n',
+        "blocked-hidden decode",
+    )
+    text = base.replace_once(
+        text,
+        '        encoder.encodeInt32(self.deletedAt, forKey: "dat")\n',
+        '        encoder.encodeInt32(self.deletedAt, forKey: "dat")\n        encoder.encodeInt32(self.isBlockedHidden ? 1 : 0, forKey: "ibh")\n',
+        "blocked-hidden encode",
+    )
+    text = base.replace_once(
+        text,
+        "            deletedAt: self.deletedAt,\n            originalEntities: self.originalEntities.isEmpty ? entities : self.originalEntities,\n",
+        "            deletedAt: self.deletedAt,\n            isBlockedHidden: self.isBlockedHidden,\n            originalEntities: self.originalEntities.isEmpty ? entities : self.originalEntities,\n",
+        "preserve blocked-hidden in edit-history helper",
+    )
+    text = base.replace_once(
+        text,
+        "            deletedAt: deletedAt,\n            originalEntities: self.originalEntities,\n",
+        "            deletedAt: deletedAt,\n            isBlockedHidden: self.isBlockedHidden,\n            originalEntities: self.originalEntities,\n",
+        "preserve blocked-hidden in delete helper",
+    )
+    text = base.replace_once(
+        text,
+        '''    public func withUpdatedDeleted(isDeleted: Bool, deletedAt: Int32) -> GhostBaseMessageAttribute {
+        return GhostBaseMessageAttribute(
+            originalText: self.originalText,
+            editHistoryTexts: self.editHistoryTexts,
+            editHistoryDates: self.editHistoryDates,
+            isDeleted: isDeleted,
+            deletedAt: deletedAt,
+            isBlockedHidden: self.isBlockedHidden,
+            originalEntities: self.originalEntities,
+            editHistoryEntities: self.editHistoryEntities,
+            editHistorySnapshots: self.editHistorySnapshots
+        )
+    }
+''',
+        '''    public func withUpdatedDeleted(isDeleted: Bool, deletedAt: Int32) -> GhostBaseMessageAttribute {
+        return GhostBaseMessageAttribute(
+            originalText: self.originalText,
+            editHistoryTexts: self.editHistoryTexts,
+            editHistoryDates: self.editHistoryDates,
+            isDeleted: isDeleted,
+            deletedAt: deletedAt,
+            isBlockedHidden: self.isBlockedHidden,
+            originalEntities: self.originalEntities,
+            editHistoryEntities: self.editHistoryEntities,
+            editHistorySnapshots: self.editHistorySnapshots
+        )
+    }
+
+    public func withUpdatedBlockedHidden(isBlockedHidden: Bool) -> GhostBaseMessageAttribute {
+        return GhostBaseMessageAttribute(
+            originalText: self.originalText,
+            editHistoryTexts: self.editHistoryTexts,
+            editHistoryDates: self.editHistoryDates,
+            isDeleted: self.isDeleted,
+            deletedAt: self.deletedAt,
+            isBlockedHidden: isBlockedHidden,
+            originalEntities: self.originalEntities,
+            editHistoryEntities: self.editHistoryEntities,
+            editHistorySnapshots: self.editHistorySnapshots
+        )
+    }
+''',
+        "blocked-hidden updater",
+    )
+    return text
+
+
 def patch_history(text: str) -> str:
     text = base_patch_history(text)
     old = '"GhostBase.Messages.HideBlockedMessages"'
@@ -90,6 +186,7 @@ def patch_history(text: str) -> str:
 
 
 base.patch_settings = patch_settings
+base.patch_attribute = patch_attribute
 base.patch_history = patch_history
 
 if __name__ == "__main__":
