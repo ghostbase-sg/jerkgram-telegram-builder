@@ -37,9 +37,10 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def patch_settings(text: str) -> str:
-    # STEP4 correction requested by the user: message hiding must be opt-in.
-    old_default = "            hideBlockedMessages: ghostBaseBool(GhostBaseKey.hideBlockedMessages, defaultValue: true),\n"
-    new_default = "            hideBlockedMessages: ghostBaseBool(GhostBaseKey.hideBlockedMessages, defaultValue: false),\n"
+    # STEP4/STEP5 visibility controls are opt-in and owned by the current
+    # account-scoped Jerkgram Messages settings pipeline.
+    old_default = "            hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: true),\n"
+    new_default = "            hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: false),\n"
     if new_default not in text:
         text = replace_once(text, old_default, new_default, "hide blocked messages default OFF")
 
@@ -49,8 +50,8 @@ def patch_settings(text: str) -> str:
 
     text = replace_once(
         text,
-        '    static let hideBlockedMessages = "GhostBase.Messages.HideBlockedMessages"\n',
-        '    static let hideBlockedMessages = "GhostBase.Messages.HideBlockedMessages"\n\n    // MARK: JERKGRAM_BUILD132_HIDE_BLOCKED_REACTIONS_SETTING\n    static let hideBlockedReactions = "GhostBase.Messages.HideBlockedReactions"\n',
+        '    static let hideBlockedMessages = "jerkgram.Messages.HideBlockedMessages"\n',
+        '    static let hideBlockedMessages = "jerkgram.Messages.HideBlockedMessages"\n\n    // MARK: JERKGRAM_BUILD132_HIDE_BLOCKED_REACTIONS_SETTING\n    static let hideBlockedReactions = "jerkgram.Messages.HideBlockedReactions"\n',
         "reaction setting key",
     )
     text = replace_once(
@@ -61,15 +62,15 @@ def patch_settings(text: str) -> str:
     )
     text = replace_once(
         text,
-        "            hideBlockedMessages: ghostBaseBool(GhostBaseKey.hideBlockedMessages, defaultValue: false),\n",
-        "            hideBlockedMessages: ghostBaseBool(GhostBaseKey.hideBlockedMessages, defaultValue: false),\n            hideBlockedReactions: ghostBaseBool(GhostBaseKey.hideBlockedReactions, defaultValue: false),\n",
+        "            hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: false),\n",
+        "            hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: false),\n            hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: false),\n",
         "reaction state load OFF",
     )
     text = replace_once(
         text,
-        "        UserDefaults.standard.set(self.hideBlockedMessages, forKey: GhostBaseKey.hideBlockedMessages)\n",
-        "        UserDefaults.standard.set(self.hideBlockedMessages, forKey: GhostBaseKey.hideBlockedMessages)\n        UserDefaults.standard.set(self.hideBlockedReactions, forKey: GhostBaseKey.hideBlockedReactions)\n",
-        "reaction state save",
+        "        GhostBaseKey.hideBlockedMessages: .bool(state.hideBlockedMessages),\n",
+        "        GhostBaseKey.hideBlockedMessages: .bool(state.hideBlockedMessages),\n        GhostBaseKey.hideBlockedReactions: .bool(state.hideBlockedReactions),\n",
+        "reaction state values",
     )
 
     message_toggle = '''            .toggle(
@@ -92,12 +93,10 @@ def patch_settings(text: str) -> str:
 
     message_case = '''            case GhostBaseKey.hideBlockedMessages:
                 updated.hideBlockedMessages = value
-                UserDefaults.standard.set(value, forKey: GhostBaseKey.hideBlockedMessages)
 '''
     reaction_case = message_case + '''
             case GhostBaseKey.hideBlockedReactions:
                 updated.hideBlockedReactions = value
-                UserDefaults.standard.set(value, forKey: GhostBaseKey.hideBlockedReactions)
 '''
     text = replace_once(text, message_case, reaction_case, "reaction toggle handler")
     return text
@@ -297,7 +296,7 @@ def patch_reaction_ui(text: str, label: str) -> str:
     wrapped = '''jerkgramFilteredReactionsForBlockedPeers(
                     message: item.message,
                     reactions: mergedMessageReactions(attributes: item.message.attributes, isTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId)),
-                    enabled: UserDefaults.standard.bool(forKey: "GhostBase.Messages.HideBlockedReactions")
+                    enabled: UserDefaults.standard.bool(forKey: "jerkgram.Messages.HideBlockedReactions")
                 )'''
     text = text.replace(original, wrapped)
     return marker + "\n" + text
