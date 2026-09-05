@@ -15,11 +15,13 @@ EXPECTED = {
 ABOUT_OWNER = Path("submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift")
 IDENTITY_OWNER = Path("submodules/SettingsUI/Sources/GhostBase/JerkgramReleaseIdentity.swift")
 IDENTITY_MARKER = "// BUILD132_RELEASE_IDENTITY1"
-
-VALUE_PATTERN = re.compile(
-    r'(?m)(\b(?:label|value|rightLabel)\s*:\s*)'
-    r'(?P<expr>JerkgramReleaseIdentity\.[A-Za-z_][A-Za-z0-9_]*|"[^"\n]*"|[A-Za-z_][A-Za-z0-9_\.]*)'
+ROW_SPECS = (
+    (1, "strings.jerkgramVersion", "JerkgramReleaseIdentity.displayVersion"),
+    (2, "strings.build", "JerkgramReleaseIdentity.build"),
+    (3, "strings.telegramBase", "JerkgramReleaseIdentity.telegramBase"),
 )
+ABOUT_START = "if page == .about {"
+ABOUT_END = "if page == .debugResearch {"
 
 
 def fail(message: str) -> None:
@@ -38,68 +40,52 @@ def require_identity(root: Path) -> Path:
     path, text = require_file(root, IDENTITY_OWNER, "JerkgramReleaseIdentity")
     if text.count("enum JerkgramReleaseIdentity") != 1:
         fail(f"{IDENTITY_OWNER}: expected exactly one JerkgramReleaseIdentity enum")
-    if IDENTITY_MARKER not in text:
-        fail(f"{IDENTITY_OWNER}: missing {IDENTITY_MARKER}")
+    if text.count(IDENTITY_MARKER) != 1:
+        fail(f"{IDENTITY_OWNER}: missing or duplicate {IDENTITY_MARKER}")
 
     for name, value in EXPECTED.items():
         pattern = rf'static\s+let\s+{re.escape(name)}\s*=\s*"{re.escape(value)}"'
         if re.search(pattern, text) is None:
             fail(f"{IDENTITY_OWNER}: missing {name} = {value!r}")
-
     return path
 
 
 def about_region(text: str) -> str:
-    if text.count('"Jerkgram Version"') != 1:
-        fail(f'{ABOUT_OWNER}: expected exactly one "Jerkgram Version" label')
-
-    start = text.find('"Jerkgram Version"')
-    base = text.find('"Telegram Base"', start)
-    if base < 0:
-        fail(f'{ABOUT_OWNER}: missing canonical "Telegram Base" label')
-
-    region_start = max(0, start - 600)
-    region_end = min(len(text), base + 1400)
-    region = text[region_start:region_end]
-
-    if '"Telegram Version"' in region:
-        fail(f'{ABOUT_OWNER}: legacy "Telegram Version" label remains in About')
-    return region
+    if text.count(ABOUT_START) != 1:
+        fail(f"{ABOUT_OWNER}: expected exactly one semantic About block")
+    start = text.index(ABOUT_START)
+    end = text.find(ABOUT_END, start)
+    if end < 0 or end <= start:
+        fail(f"{ABOUT_OWNER}: semantic About block is not bounded by Debug/Research")
+    return text[start:end]
 
 
-def extract_row_value(region: str, label: str) -> str:
-    token = f'"{label}"'
-    if region.count(token) != 1:
-        fail(f"{ABOUT_OWNER}: expected exactly one About row {label!r}, found {region.count(token)}")
-
-    label_match = re.search(re.escape(token), region)
-    assert label_match is not None
-    window = region[label_match.end() : min(len(region), label_match.end() + 900)]
-    match = VALUE_PATTERN.search(window)
-    if match is None:
-        fail(f"{ABOUT_OWNER}: missing simple value field for About row {label!r}")
-    return match.group("expr")
+def row_pattern(index: int, title: str) -> re.Pattern[str]:
+    return re.compile(
+        rf'(?m)^[ \t]*\.aboutValue\(1,[ \t]*{index},[ \t]*{re.escape(title)},[ \t]*(?P<value>.+)\),[ \t]*$'
+    )
 
 
 def require_about_uses_identity(root: Path) -> Path:
     path, text = require_file(root, ABOUT_OWNER, "About owner")
     region = about_region(text)
 
-    expected_rows = {
-        "Jerkgram Version": "JerkgramReleaseIdentity.displayVersion",
-        "Build": "JerkgramReleaseIdentity.build",
-        "Telegram Base": "JerkgramReleaseIdentity.telegramBase",
-    }
-    for label, expected_expression in expected_rows.items():
-        actual = extract_row_value(region, label)
+    for index, title, expected_expression in ROW_SPECS:
+        matches = list(row_pattern(index, title).finditer(region))
+        if len(matches) != 1:
+            fail(f"{ABOUT_OWNER}: expected exactly one About row {title}, found {len(matches)}")
+        actual = matches[0].group("value").strip()
         if actual != expected_expression:
-            fail(f"{ABOUT_OWNER}: {label} uses {actual!r}, expected {expected_expression!r}")
+            fail(f"{ABOUT_OWNER}: {title} uses {actual!r}, expected {expected_expression!r}")
 
     if "1.0.0" in region:
         fail(f"{ABOUT_OWNER}: stale Jerkgram-visible 1.0.0 remains in About")
-    if extract_row_value(region, "Jerkgram Version") == "JerkgramReleaseIdentity.telegramBase":
-        fail(f"{ABOUT_OWNER}: Telegram Base must never be used as Jerkgram Version")
-
+    if region.count("JerkgramReleaseIdentity.displayVersion") != 1:
+        fail(f"{ABOUT_OWNER}: display identity must be used exactly once in About")
+    if region.count("JerkgramReleaseIdentity.build") != 1:
+        fail(f"{ABOUT_OWNER}: build identity must be used exactly once in About")
+    if region.count("JerkgramReleaseIdentity.telegramBase") != 1:
+        fail(f"{ABOUT_OWNER}: Telegram base identity must be used exactly once in About")
     return path
 
 
@@ -109,14 +95,18 @@ def require_bounded_patcher() -> None:
         fail(f"patcher not found next to verifier: {patcher_path.name}")
 
     text = patcher_path.read_text(encoding="utf-8")
-    if "rglob(" in text:
+    if "rglob(" in text or "os.walk(" in text:
         fail("release identity patcher must not recursively scan the Swift source tree")
-    if "CFBundleShortVersionString" in text:
-        fail("release identity patcher must not rewrite Telegram CFBundleShortVersionString")
+    forbidden_info_key = "CFBundle" + "ShortVersionString"
+    if forbidden_info_key in text:
+        fail("release identity patcher must not target Telegram's signing/display version key")
 
     for token in (
         str(ABOUT_OWNER),
         str(IDENTITY_OWNER),
+        "strings.jerkgramVersion",
+        "strings.build",
+        "strings.telegramBase",
         "JerkgramReleaseIdentity.displayVersion",
         "JerkgramReleaseIdentity.build",
         "JerkgramReleaseIdentity.telegramBase",
