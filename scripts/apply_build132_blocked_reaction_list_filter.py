@@ -57,16 +57,17 @@ def main() -> None:
                             for reaction in reactions {
 '''
         new = '''                            // MARK: JERKGRAM_BUILD132_BLOCKED_REACTION_LIST_PAGE_FILTER
-                            let jerkgramBlockedReactionPeerIds: Set<PeerId>
+                            let jerkgramShouldFilterBlockedReactionPeers: Bool
                             if UserDefaults.standard.bool(
                                 forKey: "GhostBase.Messages.HideBlockedReactions"
                             ), let chatPeer = transaction.getPeer(message.id.peerId),
                                jerkgramBuild132IsGroupOrSupergroup(chatPeer) {
-                                jerkgramBlockedReactionPeerIds =
-                                    JerkgramBlockedPeerRegistry.snapshot()
+                                jerkgramShouldFilterBlockedReactionPeers = true
                             } else {
-                                jerkgramBlockedReactionPeerIds = []
+                                jerkgramShouldFilterBlockedReactionPeers = false
                             }
+                            var jerkgramBlockedReactionPeerIds =
+                                JerkgramBlockedPeerRegistry.snapshot()
 
                             var items: [EngineMessageReactionListContext.Item] = []
                             for reaction in reactions {
@@ -78,8 +79,19 @@ def main() -> None:
                                     }
 '''
         new_append = '''                                    if let peer = transaction.getPeer(peer.peerId), let reaction = MessageReaction.Reaction(apiReaction: reaction) {
-                                        if jerkgramBlockedReactionPeerIds.contains(peer.id) {
-                                            continue
+                                        if jerkgramShouldFilterBlockedReactionPeers {
+                                            let cachedBlocked =
+                                                (transaction.getPeerCachedData(peerId: peer.id) as? CachedUserData)?.isBlocked == true
+                                            if cachedBlocked && !jerkgramBlockedReactionPeerIds.contains(peer.id) {
+                                                jerkgramBlockedReactionPeerIds.insert(peer.id)
+                                                JerkgramBlockedPeerRegistry.setBlocked(
+                                                    peerId: peer.id,
+                                                    isBlocked: true
+                                                )
+                                            }
+                                            if jerkgramBlockedReactionPeerIds.contains(peer.id) || cachedBlocked {
+                                                continue
+                                            }
                                         }
                                         items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction, timestamp: date, timestampIsReaction: true))
                                     }
