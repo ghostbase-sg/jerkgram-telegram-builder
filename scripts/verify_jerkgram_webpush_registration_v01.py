@@ -10,6 +10,7 @@ if not TARGET.exists():
     errors.append(f"missing RegisterNotificationToken.swift: {TARGET}")
 else:
     text = TARGET.read_text()
+    result_marker = "public enum JerkgramWebPushRegistrationResult"
     register_marker = "public func _internal_registerJerkgramWebPushToken("
     unregister_marker = "public func _internal_unregisterJerkgramWebPushToken("
 
@@ -21,6 +22,9 @@ else:
         "mappedType = 9",
         "func _internal_unregisterNotificationToken(",
         "func _internal_registerNotificationToken(",
+        result_marker,
+        "case success",
+        "case failure(code: Int32, description: String)",
         register_marker,
         unregister_marker,
         "account: Account",
@@ -34,26 +38,36 @@ else:
         "secret: Buffer(data: Data())",
         "otherUids: []",
         "Api.functions.account.unregisterDevice(tokenType: 10, token: token, otherUids: [])",
+        "Signal<JerkgramWebPushRegistrationResult, NoError>",
+        "error.errorCode",
+        "error.errorDescription",
+        ".failure(code: error.errorCode, description: error.errorDescription)",
     ):
         if required not in text:
             errors.append(f"missing invariant: {required}")
 
+    if text.count(result_marker) != 1:
+        errors.append(f"result enum count={text.count(result_marker)}, expected 1")
     if text.count(register_marker) != 1:
         errors.append(f"register helper count={text.count(register_marker)}, expected 1")
     if text.count(unregister_marker) != 1:
         errors.append(f"unregister helper count={text.count(unregister_marker)}, expected 1")
 
     if register_marker in text:
-        helper = text[text.index(register_marker):]
-        if helper.count("|> map { _ -> Bool in") != 2:
+        helper = text[text.index(result_marker):] if result_marker in text else text[text.index(register_marker):]
+        if helper.count("Signal<JerkgramWebPushRegistrationResult, NoError>") != 2:
+            errors.append("Web Push helpers must return the diagnostic result type exactly twice")
+        if helper.count("return .success") != 2:
             errors.append("Web Push helpers must map exactly two request successes")
-        if helper.count("return true") != 2:
-            errors.append("Web Push helpers must return true exactly twice on success")
-        if helper.count("|> `catch` { _ -> Signal<Bool, NoError> in") != 2:
-            errors.append("Web Push helpers must catch exactly two request failures")
-        if helper.count("return .single(false)") != 2:
-            errors.append("Web Push helpers must return false exactly twice on failure")
+        if helper.count("error.errorCode") != 2:
+            errors.append("Web Push helpers must preserve exactly two RPC error codes")
+        if helper.count("error.errorDescription") != 2:
+            errors.append("Web Push helpers must preserve exactly two RPC error descriptions")
+        if helper.count(".failure(code: error.errorCode, description: error.errorDescription)") != 2:
+            errors.append("Web Push helpers must convert both RPC failures to diagnostic failures")
         for forbidden in (
+            "Signal<Bool, NoError>",
+            "return .single(false)",
             "retryRequest",
             "masterNotificationsKey",
             "hexString(token)",
