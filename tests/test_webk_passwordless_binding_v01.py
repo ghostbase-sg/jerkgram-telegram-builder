@@ -45,8 +45,8 @@ def test_passwordless_patcher_is_standalone_and_idempotent(tmp_path: Path):
     assert "buildJerkgramBindingUrl" in pure
 
     binding = snapshots["binding"]
-    assert "action === 'register'" in binding
-    assert "action === 'unregister'" in binding
+    assert "action !== 'register'" in binding
+    assert "action !== 'unregister'" in binding
     assert "pushManager.subscribe" in binding
     assert "applicationServerKey: App.pushServerKey" in binding
     assert "window.location" not in binding
