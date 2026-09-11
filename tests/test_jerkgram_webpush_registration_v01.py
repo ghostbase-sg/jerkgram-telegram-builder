@@ -1,6 +1,8 @@
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+import unittest
 
 
 STOCK_REGISTER_NOTIFICATION_TOKEN = """import Foundation
@@ -69,6 +71,19 @@ def make_fixture(root: Path) -> Path:
     return target
 
 
+def assert_diagnostic_contract(helper: str) -> None:
+    assert "public enum JerkgramWebPushRegistrationResult" in helper
+    assert "case success" in helper
+    assert "case failure(code: Int32, description: String)" in helper
+    assert helper.count("Signal<JerkgramWebPushRegistrationResult, NoError>") == 2
+    assert helper.count("return .success") == 2
+    assert helper.count("error.errorCode") == 2
+    assert helper.count("error.errorDescription") == 2
+    assert helper.count(".failure(code: error.errorCode, description: error.errorDescription)") == 2
+    assert "Signal<Bool, NoError>" not in helper
+    assert "return .single(false)" not in helper
+
+
 def test_webpush_type10_registration_is_separate_bounded_diagnostic_and_idempotent(tmp_path: Path):
     root = tmp_path / "telegram"
     target = make_fixture(root)
@@ -96,9 +111,6 @@ def test_webpush_type10_registration_is_separate_bounded_diagnostic_and_idempote
     assert patched.count(unregister_signature) == 1
 
     helper = patched[len(original):]
-    assert "public enum JerkgramWebPushRegistrationResult" in helper
-    assert "case success" in helper
-    assert "case failure(code: Int32, description: String)" in helper
     assert "account: Account" in helper
     assert "token: String" in helper
     assert "excludeMutedChats: Bool" in helper
@@ -111,15 +123,8 @@ def test_webpush_type10_registration_is_separate_bounded_diagnostic_and_idempote
     assert "otherUids: []" in helper
     assert "Api.functions.account.unregisterDevice(tokenType: 10, token: token, otherUids: [])" in helper
 
-    # The helper must preserve Telegram's RPC error code + description for the
-    # first real-device integration pass instead of collapsing every failure to Bool(false).
-    assert helper.count("Signal<JerkgramWebPushRegistrationResult, NoError>") == 2
-    assert helper.count("return .success") == 2
-    assert helper.count("error.errorCode") == 2
-    assert helper.count("error.errorDescription") == 2
-    assert helper.count(".failure(code: error.errorCode, description: error.errorDescription)") == 2
-    assert "Signal<Bool, NoError>" not in helper
-    assert "return .single(false)" not in helper
+    # Preserve Telegram's RPC code + description for runtime diagnosis.
+    assert_diagnostic_contract(helper)
     assert "retryRequest" not in helper
     assert "masterNotificationsKey" not in helper
     assert "hexString(token)" not in helper
@@ -144,3 +149,20 @@ def test_webpush_type10_registration_is_separate_bounded_diagnostic_and_idempote
     second = subprocess.run([sys.executable, str(patcher), str(root)], capture_output=True, text=True)
     assert second.returncode == 0, second.stderr + second.stdout
     assert target.read_text() == patched
+
+
+class WebPushRpcDiagnosticsPreflightTest(unittest.TestCase):
+    def test_runtime_helper_preserves_rpc_code_and_description(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "telegram"
+            target = make_fixture(root)
+            original = target.read_text()
+            patcher = Path(__file__).parents[1] / "scripts/apply_jerkgram_webpush_registration_v01.py"
+            result = subprocess.run([sys.executable, str(patcher), str(root)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            helper = target.read_text()[len(original):]
+            assert_diagnostic_contract(helper)
+
+
+if __name__ == "__main__":
+    unittest.main()
