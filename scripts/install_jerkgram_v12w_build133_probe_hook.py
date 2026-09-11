@@ -43,8 +43,10 @@ SOURCE_ORDERED = (
     "verify_jerkgram_v12w_build133_music_overlay1.py",
     "apply_jerkgram_push_click_bridge_v01.py",
     "verify_jerkgram_push_click_bridge_v01.py",
-    "apply_jerkgram_push_pairing_bridge_v01.py",
-    "verify_jerkgram_push_pairing_bridge_v01.py",
+    "apply_jerkgram_webpush_registration_v01.py",
+    "verify_jerkgram_webpush_registration_v01.py",
+    "apply_jerkgram_push_binding_bridge_v01.py",
+    "verify_jerkgram_push_binding_bridge_v01.py",
     "apply_jerkgram_build140_identity.py",
     "verify_jerkgram_build140_identity.py",
     "verify_jerkgram_v12w_build133_runtime_repair1.py",
@@ -72,7 +74,7 @@ def patch_probe(text: str) -> str:
 
     source_payload = (
         SOURCE_MARKER
-        + '\necho\necho "== Jerkgram Build140 runtime + push bridges =="\n'
+        + '\necho\necho "== Jerkgram Build140 runtime + passwordless Web Push =="\n'
         + "\n".join(line(name) for name in SOURCE_ORDERED)
     )
     if SOURCE_MARKER not in text:
@@ -92,6 +94,11 @@ def patch_probe(text: str) -> str:
     require(all(text.count(name) == 1 for name in SOURCE_ORDERED), "Build133 source hook count")
     require(text.index(BUILD130_SOURCE_ANCHOR) < source_positions[0], "Build133 must follow Build130")
     require(source_positions[-1] < text.index(BAZEL_ANCHOR), "Build133 final source verifier must precede Bazel")
+    for legacy in (
+        "apply_jerkgram_push_pairing_bridge_v01.py",
+        "verify_jerkgram_push_pairing_bridge_v01.py",
+    ):
+        require(legacy not in text[text.index(SOURCE_MARKER):text.index(BAZEL_ANCHOR)], "legacy pairing bridge still active: " + legacy)
 
     if FINAL_MARKER not in text:
         require(all(text.count(name) == 0 for name in FINAL_ORDERED), "partial preexisting Build133 final block")
@@ -123,7 +130,7 @@ def main() -> None:
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build140 probe hook] GREEN")
-    print("[Build140 probe hook] existing Build133-139 runtime -> push click/pairing routing -> internal identity 140 -> final source gate -> Bazel -> physical identity 140")
+    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> identity 140 -> source gate -> Bazel -> physical identity 140")
 
 
 if __name__ == "__main__":

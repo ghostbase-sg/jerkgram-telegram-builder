@@ -20,8 +20,12 @@ jobs:
         run: |
           set -e
           python3 -m py_compile \
-            scripts/apply_jerkgram_push_pairing_bridge_v01.py \
-            scripts/verify_jerkgram_push_pairing_bridge_v01.py \
+            scripts/apply_jerkgram_push_click_bridge_v01.py \
+            scripts/verify_jerkgram_push_click_bridge_v01.py \
+            scripts/apply_jerkgram_webpush_registration_v01.py \
+            scripts/verify_jerkgram_webpush_registration_v01.py \
+            scripts/apply_jerkgram_push_binding_bridge_v01.py \
+            scripts/verify_jerkgram_push_binding_bridge_v01.py \
             scripts/apply_jerkgram_build140_identity.py \
             scripts/verify_jerkgram_build140_identity.py \
             scripts/install_jerkgram_v12w_build133_probe_hook.py \
