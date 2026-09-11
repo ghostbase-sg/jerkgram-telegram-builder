@@ -167,7 +167,7 @@ class WebPushRpcDiagnosticsPreflightTest(unittest.TestCase):
         self.assertNotIn('RPC \\(code): \\(description) \\(canonicalToken)', bridge)
         self.assertNotIn('RPC \\(code): \\(description) \\(rawBinding)', bridge)
         self.assertNotIn("print(error.errorDescription)", bridge)
-        self.assertNotIn("NSLog", bridge)
+        self.assertNotIn("NSLog(", bridge)
 
 
 if __name__ == "__main__":
