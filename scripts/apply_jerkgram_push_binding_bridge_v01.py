@@ -187,15 +187,20 @@ helper = r'''    // MARK: Jerkgram Notifications passwordless Web Push binding
                                 token: canonicalToken,
                                 excludeMutedChats: true
                             )
-                            |> deliverOnMainQueue).start(next: { [weak self] success in
+                            |> deliverOnMainQueue).start(next: { [weak self] registrationResult in
                                 guard let self = self else {
                                     return
                                 }
+                                let message: String
+                                switch registrationResult {
+                                case .success:
+                                    message = "Jerkgram Notifications connected."
+                                case let .failure(code, description):
+                                    message = "Could not connect Jerkgram Notifications.\nRPC \(code): \(description)"
+                                }
                                 let result = UIAlertController(
                                     title: "Jerkgram Notifications",
-                                    message: success
-                                        ? "Jerkgram Notifications connected."
-                                        : "Could not connect Jerkgram Notifications. Try again.",
+                                    message: message,
                                     preferredStyle: .alert
                                 )
                                 result.addAction(UIAlertAction(title: "OK", style: .default))
@@ -211,15 +216,20 @@ helper = r'''    // MARK: Jerkgram Notifications passwordless Web Push binding
                                 account: primary.account,
                                 token: canonicalToken
                             )
-                            |> deliverOnMainQueue).start(next: { [weak self] success in
+                            |> deliverOnMainQueue).start(next: { [weak self] registrationResult in
                                 guard let self = self else {
                                     return
                                 }
+                                let message: String
+                                switch registrationResult {
+                                case .success:
+                                    message = "Jerkgram Notifications disconnected."
+                                case let .failure(code, description):
+                                    message = "Could not disconnect Jerkgram Notifications.\nRPC \(code): \(description)"
+                                }
                                 let result = UIAlertController(
                                     title: "Jerkgram Notifications",
-                                    message: success
-                                        ? "Jerkgram Notifications disconnected."
-                                        : "Could not disconnect Jerkgram Notifications. Try again.",
+                                    message: message,
                                     preferredStyle: .alert
                                 )
                                 result.addAction(UIAlertAction(title: "OK", style: .default))
@@ -297,6 +307,8 @@ for invariant in (
     "JSONSerialization.data(withJSONObject: subscriptionObject, options: [.sortedKeys])",
     "_internal_registerJerkgramWebPushToken(",
     "_internal_unregisterJerkgramWebPushToken(",
+    "case let .failure(code, description):",
+    'RPC \\(code): \\(description)',
     "if self.handleJerkgramExternalUrl(url)",
 ):
     if invariant not in text:
@@ -314,6 +326,10 @@ if "self.mainWindow?.viewController?.present(" in helper_scope:
     raise SystemExit("[jerkgram-push-binding] invalid ContainableController alert presentation survived")
 if helper_scope.count("self.window?.rootViewController?.present(") != 4:
     raise SystemExit("[jerkgram-push-binding] expected exactly four UIKit alert presentations")
+if helper_scope.count("case let .failure(code, description):") != 2:
+    raise SystemExit("[jerkgram-push-binding] register/unregister must each surface RPC diagnostics")
+if helper_scope.count("RPC \\(code): \\(description)") != 2:
+    raise SystemExit("[jerkgram-push-binding] RPC diagnostic copy must appear exactly twice")
 for forbidden in (
     "approveAuthTransferToken",
     "auth.acceptLoginToken",
@@ -323,6 +339,9 @@ for forbidden in (
     "print(rawBinding)",
     "print(canonicalToken)",
     "debugPrint",
+    "NSLog",
+    "RPC \\(code): \\(description) \\(canonicalToken)",
+    "RPC \\(code): \\(description) \\(rawBinding)",
 ):
     if forbidden in helper_scope:
         raise SystemExit(f"[jerkgram-push-binding] forbidden legacy/sensitive marker: {forbidden}")
