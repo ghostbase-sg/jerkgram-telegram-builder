@@ -52,6 +52,11 @@ def test_passwordless_patcher_is_standalone_and_idempotent(tmp_path: Path):
     assert "window.location" not in binding
     assert "Notification.requestPermission" not in binding
 
+    qr = snapshots["qr"]
+    assert "import {CardSpec} from '@/pages/authFlow';" in qr
+    assert "type Spec = Extract<CardSpec, {name: 'signQR'}>;" in qr
+    assert "export default function SignQRCard(_props: {spec: Spec})" in qr
+
     second = subprocess.run([sys.executable, str(patcher), str(root)], capture_output=True, text=True)
     assert second.returncode == 0, second.stderr + second.stdout
     for name, path in paths.items():
