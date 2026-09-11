@@ -108,14 +108,11 @@ jobs:
       - name: Apply Jerkgram companion push patch
         run: python webpush-companion/apply_webk_jerkgram_push_v01.py "$GITHUB_WORKSPACE/tweb"
 
-      - name: Apply Jerkgram companion one-tap pairing patch
-        run: python webpush-companion/apply_webk_jerkgram_pairing_v01.py "$GITHUB_WORKSPACE/tweb"
+      - name: Apply passwordless push binding
+        run: python webpush-companion/apply_webk_jerkgram_passwordless_binding_v01.py "$GITHUB_WORKSPACE/tweb"
 
       - name: Apply isolated companion branding
         run: python webpush-companion/apply_webk_jerkgram_branding_v01.py "$GITHUB_WORKSPACE/tweb"
-
-      - name: Apply notification-only companion UI
-        run: python webpush-companion/apply_webk_jerkgram_minimal_ui_v01.py "$GITHUB_WORKSPACE/tweb"
 
       - name: Apply push privacy hardening
         run: python webpush-companion/apply_webk_jerkgram_privacy_v01.py "$GITHUB_WORKSPACE/tweb"
@@ -154,11 +151,46 @@ jobs:
           grep -q '"name": "Jerkgram Notifications"' tweb/dist/site.webmanifest
           grep -q '<title>Jerkgram Notifications</title>' tweb/dist/index.html
           grep -R -q "Connect with Jerkgram" tweb/dist/*.js
-          grep -R -q "jerkgram://push/authorize" tweb/dist/*.js
-          grep -R -q "Connected as" tweb/dist/*.js
+          grep -R -q "jerkgram://push/register" tweb/dist/*.js
+          grep -R -q "jerkgram://push/unregister" tweb/dist/*.js
+          grep -R -q "jerkgram.notifications.installation.v1" tweb/dist/*.js
           grep -R -q "Disconnect" tweb/dist/*.js
-          grep -R -q "Enable Notifications" tweb/dist/*.js
+          grep -R -q "Approve in Jerkgram" tweb/dist/*.js
           grep -R -q "Add Jerkgram Notifications to the Home Screen" tweb/dist/*.js
+
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('tweb/dist')
+          js_files = list(root.glob('*.js'))
+          markers = (
+              'Connect with Jerkgram',
+              'jerkgram.notifications.installation.v1',
+              'jerkgram://push/register',
+              'jerkgram://push/unregister',
+          )
+          active = []
+          for path in js_files:
+              text = path.read_text(errors='ignore')
+              if any(marker in text for marker in markers):
+                  active.append((path, text))
+          if not active:
+              raise SystemExit('passwordless companion setup chunk not found')
+          combined = '\n'.join(text for _, text in active)
+          for required in markers:
+              if required not in combined:
+                  raise SystemExit(f'missing passwordless setup marker: {required}')
+          for forbidden in (
+              'jerkgram://push/authorize',
+              'auth.exportLoginToken',
+              'auth.importLoginToken',
+              'auth.loginTokenSuccess',
+              'SESSION_PASSWORD_NEEDED',
+              'Connected as',
+          ):
+              if forbidden in combined:
+                  raise SystemExit(f'legacy pairing marker escaped into active setup chunks: {forbidden}')
+          PY
 
           test "$(grep -o 'id=\"page-chats\"' tweb/dist/index.html | wc -l)" -eq 1
           test "$(grep -o 'id=\"main-columns\"' tweb/dist/index.html | wc -l)" -eq 1
