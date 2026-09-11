@@ -69,7 +69,7 @@ def make_fixture(root: Path) -> Path:
     return target
 
 
-def test_webpush_type10_registration_is_separate_bounded_and_idempotent(tmp_path: Path):
+def test_webpush_type10_registration_is_separate_bounded_diagnostic_and_idempotent(tmp_path: Path):
     root = tmp_path / "telegram"
     target = make_fixture(root)
     original = target.read_text()
@@ -96,6 +96,9 @@ def test_webpush_type10_registration_is_separate_bounded_and_idempotent(tmp_path
     assert patched.count(unregister_signature) == 1
 
     helper = patched[len(original):]
+    assert "public enum JerkgramWebPushRegistrationResult" in helper
+    assert "case success" in helper
+    assert "case failure(code: Int32, description: String)" in helper
     assert "account: Account" in helper
     assert "token: String" in helper
     assert "excludeMutedChats: Bool" in helper
@@ -108,12 +111,15 @@ def test_webpush_type10_registration_is_separate_bounded_and_idempotent(tmp_path
     assert "otherUids: []" in helper
     assert "Api.functions.account.unregisterDevice(tokenType: 10, token: token, otherUids: [])" in helper
 
-    # Both helpers report the real request outcome instead of retrying forever or
-    # converting a failure into a success state.
-    assert helper.count("|> map { _ -> Bool in") == 2
-    assert helper.count("return true") == 2
-    assert helper.count("|> `catch` { _ -> Signal<Bool, NoError> in") == 2
-    assert helper.count("return .single(false)") == 2
+    # The helper must preserve Telegram's RPC error code + description for the
+    # first real-device integration pass instead of collapsing every failure to Bool(false).
+    assert helper.count("Signal<JerkgramWebPushRegistrationResult, NoError>") == 2
+    assert helper.count("return .success") == 2
+    assert helper.count("error.errorCode") == 2
+    assert helper.count("error.errorDescription") == 2
+    assert helper.count(".failure(code: error.errorCode, description: error.errorDescription)") == 2
+    assert "Signal<Bool, NoError>" not in helper
+    assert "return .single(false)" not in helper
     assert "retryRequest" not in helper
     assert "masterNotificationsKey" not in helper
     assert "hexString(token)" not in helper
