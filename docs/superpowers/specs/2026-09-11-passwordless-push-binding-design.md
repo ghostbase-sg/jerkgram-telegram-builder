@@ -81,7 +81,7 @@ Unregistration:
 
 The payload is base64url without padding. Native consumes malformed Jerkgram-owned push URLs locally and never forwards them to Telegram's generic URL router.
 
-Native validation must enforce bounded total URL/payload sizes, exactly one `binding` query item, schema version 1, valid UUID syntax, HTTPS endpoint, bounded endpoint length, exactly one `p256dh` and `auth` key, URL-safe base64 key syntax/lengths, and `vapid === true`. Unknown fields may be rejected in v1 to keep parsing fail-closed.
+Native validation must enforce bounded total URL/payload sizes, exactly one `binding` query item, schema version 1, valid UUID syntax, HTTPS endpoint, bounded endpoint length, exactly one `p256dh` and `auth` key, URL-safe base64 key syntax/lengths, and `vapid === true`. Unknown JSON fields are rejected in v1 so parsing is fail-closed.
 
 The subscription JSON sent to Telegram is reconstructed from validated fields; native never trusts an opaque pre-serialized Telegram token string supplied by the PWA.
 
@@ -95,11 +95,12 @@ Add a narrow TelegramCore helper adjacent to the stock notification token owner.
 - `appSandbox: false`
 - `secret: empty Buffer/Data`
 - flag bit 0 enabled to preserve the current Web K `no_muted: true` behavior
+- `otherUids: []` for v1, because v1 binds only the current primary account
 - no fabricated APNs token conversion
 
 For v1, registration is performed on the current primary account and uses no durable account-slot number. The native confirmation UI shows that account's username/display name before the network call.
 
-Unregistration uses `account.unregisterDevice(tokenType: 10, token: ..., otherUids: ...)` through the same bounded TelegramCore owner.
+Unregistration uses `account.unregisterDevice(tokenType: 10, token: ..., otherUids: [])` through the same bounded TelegramCore owner.
 
 No Web Push endpoint/key or binding payload is printed, logged, sent to analytics, or persisted in debug output.
 
@@ -132,9 +133,9 @@ Fresh installations never create the legacy Web K Telegram session.
 
 ## Disconnect behavior
 
-Disconnect must stop Telegram delivery without requiring Web K authorization. The PWA obtains its current subscription and sends the `unregister` binding to native Jerkgram. Native performs Telegram type-10 unregistration for the selected account.
+Disconnect must stop Telegram delivery without requiring Web K authorization. The PWA obtains its current subscription and sends the `unregister` binding to native Jerkgram. Native performs Telegram type-10 unregistration for the current primary account.
 
-For v1, the browser PushSubscription may remain locally allocated after server-side unregister so reconnect can reuse it and so a suspended custom-scheme handoff cannot leave us without the token needed for cleanup. Local subscription destruction can be added after a proven acknowledgement mechanism; it is not required for stopping Telegram delivery.
+For v1, the browser PushSubscription remains locally allocated after server-side unregister so reconnect can reuse it and so a suspended custom-scheme handoff cannot leave us without the token needed for cleanup. Local subscription destruction is intentionally deferred until a proven acknowledgement mechanism exists; it is not required for stopping Telegram delivery.
 
 The PWA keeps only a local UI marker that a binding was requested/disconnected. Native success/failure alerts are authoritative in v1; the PWA must not claim Telegram registration success merely because the custom-scheme navigation was attempted.
 
@@ -171,7 +172,7 @@ Test-first coverage must include:
 - no password route required for setup;
 - Home Screen-only permission/subscription behavior;
 - native strict `/register` and `/unregister` parsing;
-- native registration uses token type 10, empty secret and canonical JSON token;
+- native registration uses token type 10, empty secret, `otherUids: []` and canonical JSON token;
 - malformed/duplicate/oversized binding rejection;
 - primary-account confirmation before registration;
 - no sensitive logging/persistence;
