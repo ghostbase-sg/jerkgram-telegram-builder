@@ -58,7 +58,7 @@ assert.equal(
   null
 );
 assert.equal(
-  normalizeJerkgramPushSubscription({...VALID_SUBSCRIPTION, endpoint: 'https:///missing-host'}),
+  normalizeJerkgramPushSubscription({...VALID_SUBSCRIPTION, endpoint: 'https://'}),
   null
 );
 assert.equal(
