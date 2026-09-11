@@ -103,10 +103,13 @@ import Button from '@components/buttonTsx';
 import {isJerkgramStandalone, makeJerkgramBindingUrl} from '@lib/jerkgramCompanionBinding';
 
 import AuthCard from '@/pages/AuthCard';
+import {CardSpec} from '@/pages/authFlow';
 
 if(import.meta.hot) import.meta.hot.accept();
 
-export default function SignQRCard() {
+type Spec = Extract<CardSpec, {name: 'signQR'}>;
+
+export default function SignQRCard(_props: {spec: Spec}) {
   const [busy, setBusy] = createSignal(false);
   const [status, setStatus] = createSignal('Jerkgram must already be installed and logged in.');
 
