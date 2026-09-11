@@ -3,6 +3,10 @@
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 const encoder = new TextEncoder();
+const BINDING_URLS = {
+  register: 'jerkgram://push/register',
+  unregister: 'jerkgram://push/unregister'
+};
 
 function hasExactKeys(value, expected) {
   if(!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -86,14 +90,15 @@ export function encodeJerkgramBinding(envelope) {
 }
 
 export function buildJerkgramBindingUrl(action, installationId, subscription) {
-  if(action !== 'register' && action !== 'unregister') return null;
+  const baseUrl = BINDING_URLS[action];
+  if(!baseUrl) return null;
 
   const envelope = buildJerkgramBindingEnvelope(installationId, subscription);
   if(!envelope) return null;
   const binding = encodeJerkgramBinding(envelope);
   if(!binding) return null;
 
-  const url = `jerkgram://push/${action}?binding=${binding}`;
+  const url = `${baseUrl}?binding=${binding}`;
   if(utf8Length(url) > 8192) return null;
   return url;
 }
