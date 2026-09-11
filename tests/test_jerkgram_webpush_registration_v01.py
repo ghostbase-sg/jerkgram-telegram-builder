@@ -95,8 +95,6 @@ def test_webpush_type10_registration_is_separate_bounded_diagnostic_and_idempote
 
     patched = target.read_text()
 
-    # Stock APNs/VoIP owner is regression-locked: Jerkgram Web Push is a separate
-    # helper and must not masquerade as a new NotificationTokenType case.
     assert "case aps(encrypt: Bool)" in patched
     assert "case voip" in patched
     assert "mappedType = 1" in patched
@@ -123,13 +121,11 @@ def test_webpush_type10_registration_is_separate_bounded_diagnostic_and_idempote
     assert "otherUids: []" in helper
     assert "Api.functions.account.unregisterDevice(tokenType: 10, token: token, otherUids: [])" in helper
 
-    # Preserve Telegram's RPC code + description for runtime diagnosis.
     assert_diagnostic_contract(helper)
     assert "retryRequest" not in helper
     assert "masterNotificationsKey" not in helper
     assert "hexString(token)" not in helper
 
-    # Sensitive Web Push capability material must never be persisted or printed.
     for forbidden in (
         "UserDefaults",
         "print(token)",
@@ -162,6 +158,15 @@ class WebPushRpcDiagnosticsPreflightTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             helper = target.read_text()[len(original):]
             assert_diagnostic_contract(helper)
+
+    def test_binding_alert_surfaces_only_rpc_code_and_description(self):
+        bridge = (Path(__file__).parents[1] / "scripts/apply_jerkgram_push_binding_bridge_v01.py").read_text()
+        self.assertGreaterEqual(bridge.count("case let .failure(code, description):"), 2)
+        self.assertIn('"RPC \\(code): \\(description)"', bridge)
+        self.assertNotIn('RPC \\(code): \\(description) \\(canonicalToken)', bridge)
+        self.assertNotIn('RPC \\(code): \\(description) \\(rawBinding)', bridge)
+        self.assertNotIn("print(error.errorDescription)", bridge)
+        self.assertNotIn("NSLog", bridge)
 
 
 if __name__ == "__main__":
