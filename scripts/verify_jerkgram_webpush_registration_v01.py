@@ -55,8 +55,10 @@ else:
 
     if register_marker in text:
         helper = text[text.index(result_marker):] if result_marker in text else text[text.index(register_marker):]
-        if helper.count("Signal<JerkgramWebPushRegistrationResult, NoError>") != 2:
-            errors.append("Web Push helpers must return the diagnostic result type exactly twice")
+        if helper.count(") -> Signal<JerkgramWebPushRegistrationResult, NoError> {") != 2:
+            errors.append("Web Push helper public signatures must return the diagnostic result type exactly twice")
+        if helper.count("-> Signal<JerkgramWebPushRegistrationResult, NoError> in") != 2:
+            errors.append("Web Push RPC catch closures must preserve the diagnostic result type exactly twice")
         if helper.count("return .success") != 2:
             errors.append("Web Push helpers must map exactly two request successes")
         if helper.count("error.errorCode") != 2:
