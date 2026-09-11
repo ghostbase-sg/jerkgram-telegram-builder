@@ -11,6 +11,7 @@ if not TARGET.exists():
 text = TARGET.read_text()
 REGISTER_MARKER = "public func _internal_registerJerkgramWebPushToken("
 UNREGISTER_MARKER = "public func _internal_unregisterJerkgramWebPushToken("
+RESULT_MARKER = "public enum JerkgramWebPushRegistrationResult"
 
 if (REGISTER_MARKER in text) != (UNREGISTER_MARKER in text):
     raise SystemExit("[jerkgram-webpush-registration] partial Web Push helper patch detected")
@@ -31,6 +32,13 @@ if REGISTER_MARKER not in text:
     helper = r'''
 
 // MARK: Jerkgram Web Push type-10 registration
+// Keep Telegram's RPC code/description for the first real-device integration pass.
+// Capability material (endpoint/keys/token) is never included in this result.
+public enum JerkgramWebPushRegistrationResult {
+    case success
+    case failure(code: Int32, description: String)
+}
+
 // This is deliberately separate from NotificationTokenType. The stock enum owns
 // APNs/VoIP tokens, while this helper receives an already validated canonical Web
 // Push subscription JSON string from the Jerkgram-owned URL bridge.
@@ -38,7 +46,7 @@ public func _internal_registerJerkgramWebPushToken(
     account: Account,
     token: String,
     excludeMutedChats: Bool
-) -> Signal<Bool, NoError> {
+) -> Signal<JerkgramWebPushRegistrationResult, NoError> {
     var flags: Int32 = 0
     if excludeMutedChats {
         flags |= 1 << 0
@@ -52,24 +60,24 @@ public func _internal_registerJerkgramWebPushToken(
         secret: Buffer(data: Data()),
         otherUids: []
     ))
-    |> map { _ -> Bool in
-        return true
+    |> map { _ -> JerkgramWebPushRegistrationResult in
+        return .success
     }
-    |> `catch` { _ -> Signal<Bool, NoError> in
-        return .single(false)
+    |> `catch` { error -> Signal<JerkgramWebPushRegistrationResult, NoError> in
+        return .single(.failure(code: error.errorCode, description: error.errorDescription))
     }
 }
 
 public func _internal_unregisterJerkgramWebPushToken(
     account: Account,
     token: String
-) -> Signal<Bool, NoError> {
+) -> Signal<JerkgramWebPushRegistrationResult, NoError> {
     return account.network.request(Api.functions.account.unregisterDevice(tokenType: 10, token: token, otherUids: []))
-    |> map { _ -> Bool in
-        return true
+    |> map { _ -> JerkgramWebPushRegistrationResult in
+        return .success
     }
-    |> `catch` { _ -> Signal<Bool, NoError> in
-        return .single(false)
+    |> `catch` { error -> Signal<JerkgramWebPushRegistrationResult, NoError> in
+        return .single(.failure(code: error.errorCode, description: error.errorDescription))
     }
 }
 '''
@@ -78,8 +86,15 @@ public func _internal_unregisterJerkgramWebPushToken(
 
 patched = TARGET.read_text()
 for required in (
+    RESULT_MARKER,
+    "case success",
+    "case failure(code: Int32, description: String)",
     REGISTER_MARKER,
     UNREGISTER_MARKER,
+    "Signal<JerkgramWebPushRegistrationResult, NoError>",
+    "error.errorCode",
+    "error.errorDescription",
+    ".failure(code: error.errorCode, description: error.errorDescription)",
     "tokenType: 10",
     "appSandbox: .boolFalse",
     "secret: Buffer(data: Data())",
@@ -89,8 +104,12 @@ for required in (
     if required not in patched:
         raise SystemExit(f"[jerkgram-webpush-registration] invariant missing after patch: {required}")
 
+if patched.count(RESULT_MARKER) != 1:
+    raise SystemExit("[jerkgram-webpush-registration] result enum count is not exactly one")
 if patched.count(REGISTER_MARKER) != 1 or patched.count(UNREGISTER_MARKER) != 1:
     raise SystemExit("[jerkgram-webpush-registration] helper count is not exactly one each")
+if patched.count("error.errorCode") != 2 or patched.count("error.errorDescription") < 2:
+    raise SystemExit("[jerkgram-webpush-registration] RPC diagnostics must be preserved for register and unregister")
 
 if "case .webPush" in patched or "case webPush" in patched:
     raise SystemExit("[jerkgram-webpush-registration] NotificationTokenType must not gain a Web Push case")
