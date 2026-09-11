@@ -63,6 +63,8 @@ else:
         "Jerkgram Notifications disconnected.",
         "Could not connect Jerkgram Notifications. Try again.",
         "Could not disconnect Jerkgram Notifications. Try again.",
+        "case let .failure(code, description):",
+        'RPC \\(code): \\(description)',
         "self.window?.rootViewController?.present(",
     ):
         if required not in text:
@@ -123,6 +125,10 @@ else:
             errors.append("binding helper must present exactly four alerts via rootViewController")
         if "self.mainWindow?.viewController?.present(" in helper:
             errors.append("binding helper still uses ContainableController.present")
+        if helper.count("case let .failure(code, description):") != 2:
+            errors.append("register and unregister must each surface the RPC failure")
+        if helper.count("RPC \\(code): \\(description)") != 2:
+            errors.append("register and unregister must each show only RPC code + description")
 
         for forbidden in (
             "jerkgram://push/authorize",
@@ -136,8 +142,11 @@ else:
             "print(rawBinding)",
             "print(canonicalToken)",
             "debugPrint",
+            "NSLog",
             "user_id",
             "accountId",
+            "RPC \\(code): \\(description) \\(canonicalToken)",
+            "RPC \\(code): \\(description) \\(rawBinding)",
         ):
             if forbidden in helper:
                 errors.append(f"binding helper contains forbidden legacy/sensitive marker: {forbidden}")
