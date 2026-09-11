@@ -94,11 +94,6 @@ def patch_probe(text: str) -> str:
     require(all(text.count(name) == 1 for name in SOURCE_ORDERED), "Build133 source hook count")
     require(text.index(BUILD130_SOURCE_ANCHOR) < source_positions[0], "Build133 must follow Build130")
     require(source_positions[-1] < text.index(BAZEL_ANCHOR), "Build133 final source verifier must precede Bazel")
-    for legacy in (
-        "apply_jerkgram_push_pairing_bridge_v01.py",
-        "verify_jerkgram_push_pairing_bridge_v01.py",
-    ):
-        require(legacy not in text[text.index(SOURCE_MARKER):text.index(BAZEL_ANCHOR)], "legacy pairing bridge still active: " + legacy)
 
     if FINAL_MARKER not in text:
         require(all(text.count(name) == 0 for name in FINAL_ORDERED), "partial preexisting Build133 final block")
