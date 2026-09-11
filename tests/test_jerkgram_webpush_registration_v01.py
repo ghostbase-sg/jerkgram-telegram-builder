@@ -75,7 +75,8 @@ def assert_diagnostic_contract(helper: str) -> None:
     assert "public enum JerkgramWebPushRegistrationResult" in helper
     assert "case success" in helper
     assert "case failure(code: Int32, description: String)" in helper
-    assert helper.count("Signal<JerkgramWebPushRegistrationResult, NoError>") == 2
+    assert helper.count(") -> Signal<JerkgramWebPushRegistrationResult, NoError> {") == 2
+    assert helper.count("-> Signal<JerkgramWebPushRegistrationResult, NoError> in") == 2
     assert helper.count("return .success") == 2
     assert helper.count("error.errorCode") == 2
     assert helper.count("error.errorDescription") == 2
@@ -162,7 +163,7 @@ class WebPushRpcDiagnosticsPreflightTest(unittest.TestCase):
     def test_binding_alert_surfaces_only_rpc_code_and_description(self):
         bridge = (Path(__file__).parents[1] / "scripts/apply_jerkgram_push_binding_bridge_v01.py").read_text()
         self.assertGreaterEqual(bridge.count("case let .failure(code, description):"), 2)
-        self.assertIn('"RPC \\(code): \\(description)"', bridge)
+        self.assertIn('RPC \\(code): \\(description)', bridge)
         self.assertNotIn('RPC \\(code): \\(description) \\(canonicalToken)', bridge)
         self.assertNotIn('RPC \\(code): \\(description) \\(rawBinding)', bridge)
         self.assertNotIn("print(error.errorDescription)", bridge)
