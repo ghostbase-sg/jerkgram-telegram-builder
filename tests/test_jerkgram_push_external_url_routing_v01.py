@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-APPLY = REPO / "scripts" / "apply_jerkgram_push_pairing_bridge_v01.py"
-VERIFY = REPO / "scripts" / "verify_jerkgram_push_pairing_bridge_v01.py"
+APPLY = REPO / "scripts" / "apply_jerkgram_push_binding_bridge_v01.py"
+VERIFY = REPO / "scripts" / "verify_jerkgram_push_binding_bridge_v01.py"
 
 SOURCE_ONLY = """    func application(_ application: UIApplication, open url: URL, sourceApplication: String?) -> Bool {
         self.openUrl(url: url)
@@ -54,6 +54,7 @@ CLICK_HELPER = """    private func handleJerkgramPushUrl(_ url: URL) -> Bool {
 
 """
 
+
 def callback_scope(text: str, signature: str) -> str:
     start = text.index(signature)
     body_start = text.index("{", start)
@@ -67,6 +68,7 @@ def callback_scope(text: str, signature: str) -> str:
                 return text[start:index + 1]
     raise AssertionError(f"unterminated callback: {signature}")
 
+
 class ExternalUrlRoutingTests(unittest.TestCase):
     def materialize(self) -> str:
         with tempfile.TemporaryDirectory() as td:
@@ -75,6 +77,8 @@ class ExternalUrlRoutingTests(unittest.TestCase):
             app.parent.mkdir(parents=True)
             app.write_text(
                 "final class AppDelegate {\n"
+                "    var openUrlInProgress: URL?\n"
+                "    var window: UIWindow?\n"
                 + CLICK_HELPER
                 + SOURCE_ONLY
                 + "\n"
@@ -106,28 +110,38 @@ class ExternalUrlRoutingTests(unittest.TestCase):
         self.assertLess(scope.index("self.handleJerkgramExternalUrl(url)"), scope.index("guard self.openUrlInProgress != url"))
         self.assertLess(scope.index("guard self.openUrlInProgress != url"), scope.index("self.openUrl(url: url)"))
 
-    def test_unified_dispatch_prioritizes_authorize_then_open(self):
+    def test_unified_dispatch_prioritizes_binding_then_existing_open_bridge(self):
         text = self.materialize()
         marker = "private func handleJerkgramExternalUrl(_ url: URL) -> Bool"
         start = text.index(marker)
         end = text.index("\n    func application(", start)
         scope = text[start:end]
-        self.assertLess(scope.index("self.handleJerkgramPushPairingUrl(url)"), scope.index("self.handleJerkgramPushUrl(url)"))
+        self.assertLess(scope.index("self.handleJerkgramPushBindingUrl(url)"), scope.index("self.handleJerkgramPushUrl(url)"))
         self.assertNotIn("self.openUrl(url: url)", scope)
+        self.assertNotIn("handleJerkgramPushPairingUrl", scope)
 
-    def test_invalid_authorize_is_consumed_before_generic_router(self):
+    def test_register_unregister_are_consumed_before_generic_router_even_when_invalid(self):
         text = self.materialize()
-        marker = "private func handleJerkgramPushPairingUrl(_ url: URL) -> Bool"
+        marker = "private func handleJerkgramPushBindingUrl(_ url: URL) -> Bool"
         start = text.index(marker)
         end = text.index("private func handleJerkgramExternalUrl", start)
         scope = text[start:end]
-        route_guard = 'url.path == "/authorize" else'
-        validation_guard = "guard url.absoluteString.utf8.count <= 2048"
+        route_guard = 'url.path == "/register" || url.path == "/unregister" else'
+        validation_guard = "guard url.absoluteString.utf8.count <= 8192"
         self.assertIn(route_guard, scope)
         self.assertIn(validation_guard, scope)
         self.assertLess(scope.index(route_guard), scope.index(validation_guard))
-        post_route = scope[scope.index(validation_guard):]
-        self.assertIn("return true", post_route)
+        self.assertIn("return true", scope[scope.index(validation_guard):])
+
+    def test_alerts_use_uikit_root_controller_not_containable_controller(self):
+        text = self.materialize()
+        marker = "private func handleJerkgramPushBindingUrl(_ url: URL) -> Bool"
+        start = text.index(marker)
+        end = text.index("private func handleJerkgramExternalUrl", start)
+        scope = text[start:end]
+        self.assertIn("self.window?.rootViewController?.present(", scope)
+        self.assertNotIn("self.mainWindow?.viewController?.present(", scope)
+
 
 if __name__ == "__main__":
     unittest.main()

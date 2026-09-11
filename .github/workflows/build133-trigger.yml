@@ -30,6 +30,10 @@ jobs:
             scripts/verify_jerkgram_v12w_build133_final_ipa.py \
             scripts/jerkgram_publish_build138_artifact.py
           python3 -m unittest \
+            tests.test_jerkgram_webpush_registration_v01 \
+            tests.test_jerkgram_push_binding_bridge_v01 \
+            tests.test_jerkgram_push_binding_wiring_v01 \
+            tests.test_jerkgram_push_click_bridge_v01 \
             tests.test_jerkgram_push_external_url_routing_v01 \
             tests.test_jerkgram_build140_identity \
             tests.test_jerkgram_v12x_build133_release_ui1 \
