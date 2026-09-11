@@ -43,8 +43,10 @@ SOURCE_ORDERED = (
     "verify_jerkgram_v12w_build133_music_overlay1.py",
     "apply_jerkgram_push_click_bridge_v01.py",
     "verify_jerkgram_push_click_bridge_v01.py",
-    "apply_jerkgram_push_pairing_bridge_v01.py",
-    "verify_jerkgram_push_pairing_bridge_v01.py",
+    "apply_jerkgram_webpush_registration_v01.py",
+    "verify_jerkgram_webpush_registration_v01.py",
+    "apply_jerkgram_push_binding_bridge_v01.py",
+    "verify_jerkgram_push_binding_bridge_v01.py",
     "verify_jerkgram_v12w_build133_runtime_repair1.py",
 )
 FINAL_ORDERED = (
@@ -122,7 +124,7 @@ def main() -> None:
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build138 probe hook] GREEN")
-    print("[Build138 probe hook] Telemetry 2.1 -> reactions/activity/navigation -> Settings2 -> localization -> visible preview/unread/account runtime -> visible ordering/cache -> performance hardening -> music -> push click/pairing bridges -> final source gate -> Bazel")
+    print("[Build138 probe hook] Telemetry 2.1 -> reactions/activity/navigation -> Settings2 -> localization -> visible preview/unread/account runtime -> visible ordering/cache -> performance hardening -> music -> push click/Web Push registration/passwordless binding bridges -> final source gate -> Bazel")
 
 
 if __name__ == "__main__":
