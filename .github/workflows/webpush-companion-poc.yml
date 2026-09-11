@@ -8,6 +8,7 @@ on:
     paths:
       - "webpush-companion/**"
       - "tests/webpush_handoff_test.mjs"
+      - "tests/webpush_binding_test.mjs"
       - "tests/test_webk_jerkgram_push_patch.py"
       - "tests/test_webk_jerkgram_pairing_v01.py"
       - "tests/test_webk_jerkgram_branding_v01.py"
@@ -57,6 +58,9 @@ jobs:
 
       - name: Test handoff parser
         run: node tests/webpush_handoff_test.mjs
+
+      - name: Test passwordless push binding
+        run: node tests/webpush_binding_test.mjs
 
       - name: Test bounded patchers packaging and release identity
         run: >-
