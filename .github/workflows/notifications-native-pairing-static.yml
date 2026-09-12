@@ -7,13 +7,17 @@ on:
     paths:
       - 'scripts/apply_jerkgram_notifications_session_pairing_v01.py'
       - 'scripts/verify_jerkgram_notifications_session_pairing_v01.py'
+      - 'scripts/install_jerkgram_v12w_build133_probe_hook.py'
       - 'tests/test_jerkgram_notifications_session_pairing_v01.py'
+      - 'tests/test_jerkgram_notifications_session_wiring_v01.py'
       - '.github/workflows/notifications-native-pairing-static.yml'
   pull_request:
     paths:
       - 'scripts/apply_jerkgram_notifications_session_pairing_v01.py'
       - 'scripts/verify_jerkgram_notifications_session_pairing_v01.py'
+      - 'scripts/install_jerkgram_v12w_build133_probe_hook.py'
       - 'tests/test_jerkgram_notifications_session_pairing_v01.py'
+      - 'tests/test_jerkgram_notifications_session_wiring_v01.py'
       - '.github/workflows/notifications-native-pairing-static.yml'
 
 permissions:
@@ -30,5 +34,8 @@ jobs:
           python-version: '3.12'
       - name: Install pytest
         run: python -m pip install pytest
-      - name: Run bounded native pairing patch test
-        run: python -m pytest -q tests/test_jerkgram_notifications_session_pairing_v01.py
+      - name: Run bounded native pairing tests
+        run: >-
+          python -m pytest -q
+          tests/test_jerkgram_notifications_session_pairing_v01.py
+          tests/test_jerkgram_notifications_session_wiring_v01.py
