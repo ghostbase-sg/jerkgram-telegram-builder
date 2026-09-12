@@ -1,0 +1,21 @@
+name: Dispatch Native Push Probe Build
+
+on:
+  push:
+    branches:
+      - dev/native-push-type1-runtime-probe
+    paths:
+      - .github/workflows/native-push-probe-build-dispatch.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch full Jerkgram build on this branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
