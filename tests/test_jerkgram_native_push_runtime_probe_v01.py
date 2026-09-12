@@ -39,14 +39,14 @@ func _internal_registerNotificationToken(account: Account, token: Data, type: No
         var keyData = Data()
 
         switch type {
-        case let .aps(encrypt):
-            mappedType = 1
-            if encrypt {
+            case let .aps(encrypt):
+                mappedType = 1
+                if encrypt {
+                    keyData = masterKey.data
+                }
+            case .voip:
+                mappedType = 9
                 keyData = masterKey.data
-            }
-        case .voip:
-            mappedType = 9
-            keyData = masterKey.data
         }
 
         var flags: Int32 = 0
@@ -125,10 +125,11 @@ SETTINGS_FIXTURE = r'''            switch action {
 
 
 class NativePushRuntimeProbeTests(unittest.TestCase):
-    def test_live_v10e1_shape_is_extended_without_second_interceptor_or_semantic_change(self):
+    def test_official_v10e1_indentation_is_extended_without_second_interceptor_or_semantic_change(self):
         patch = load_module("native_push_apply", APPLY)
 
         self.assertIn('registerDevice" + ghostBaseRegisterDeviceKind + "Request"', REGISTER_FIXTURE)
+        self.assertIn("\n            case let .aps(encrypt):\n", REGISTER_FIXTURE)
         self.assertNotIn("JERKGRAM_NATIVE_PUSH_TYPE1_RUNTIME_PROBE_V01", REGISTER_FIXTURE)
         self.assertNotIn(
             'LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription',
@@ -138,6 +139,7 @@ class NativePushRuntimeProbeTests(unittest.TestCase):
         updated = patch.patch_register_text(REGISTER_FIXTURE)
         for token in (
             patch.SWIFT_MARKER,
+            "jerkgramType1Encrypt = encrypt",
             "LastRegisterDeviceType1Sandbox",
             "LastRegisterDeviceType1Encrypt",
             "LastRegisterDeviceType1SecretLength",

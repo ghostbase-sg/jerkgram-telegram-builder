@@ -8,6 +8,7 @@ section to the existing Copy Extension Diagnostics report.
 """
 
 from pathlib import Path
+import re
 import sys
 
 
@@ -55,17 +56,25 @@ def patch_register_text(text: str) -> str:
         "Type1 encrypt state",
     )
 
-    text = replace_once(
-        text,
-        "        case let .aps(encrypt):\n"
-        "            mappedType = 1\n"
-        "            if encrypt {\n",
-        "        case let .aps(encrypt):\n"
-        "            mappedType = 1\n"
-        "            jerkgramType1Encrypt = encrypt\n"
-        "            if encrypt {\n",
-        "APS encrypt capture",
+    aps_pattern = re.compile(
+        r"(?m)^(?P<indent>[ \t]*)case let \.aps\(encrypt\):\n"
+        r"(?P=indent)    mappedType = 1\n"
+        r"(?P=indent)    if encrypt \{\n"
     )
+    aps_matches = list(aps_pattern.finditer(text))
+    require(
+        len(aps_matches) == 1,
+        f"APS encrypt capture: expected exactly one structural match, found {len(aps_matches)}",
+    )
+    aps_match = aps_matches[0]
+    aps_indent = aps_match.group("indent")
+    aps_replacement = (
+        f"{aps_indent}case let .aps(encrypt):\n"
+        f"{aps_indent}    mappedType = 1\n"
+        f"{aps_indent}    jerkgramType1Encrypt = encrypt\n"
+        f"{aps_indent}    if encrypt {{\n"
+    )
+    text = text[:aps_match.start()] + aps_replacement + text[aps_match.end():]
 
     typed_request = (
         '        GhostBaseV10EPushProbeCore.record("registerDevice" + '
