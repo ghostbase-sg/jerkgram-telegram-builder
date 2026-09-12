@@ -28,10 +28,12 @@ def patch_register(text: str) -> str:
         return text
 
     for required in (
-        "// GHOSTBASE_V10E1_SPLIT_PUSH_TYPE1",
         'ghostBaseRegisterDeviceKind = "Type1"',
         'registerDevice" + ghostBaseRegisterDeviceKind + "Request"',
-        'LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Success"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Invalidated"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Error"',
+        'GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", error.errorDescription)',
         'public func _internal_registerJerkgramWebPushToken(',
         "tokenType: 10",
     ):
@@ -80,14 +82,15 @@ def patch_register(text: str) -> str:
     )
     text = replace_once(text, typed_success, typed_success_replacement, "type1 success result")
 
-    typed_error = '            GhostBaseV10EPushProbeCore.set("LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription)\n'
-    typed_error_replacement = typed_error + (
+    generic_error = '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", error.errorDescription)\n'
+    generic_error_replacement = generic_error + (
         '            if mappedType == 1 {\n'
+        '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Error", error.errorDescription)\n'
         '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1ErrorCode", "\\(error.errorCode)")\n'
         '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Timestamp", "\\(Int(Date().timeIntervalSince1970))")\n'
         '            }\n'
     )
-    text = replace_once(text, typed_error, typed_error_replacement, "type1 rpc code")
+    text = replace_once(text, generic_error, generic_error_replacement, "type1 rpc result")
 
     marker_anchor = '    GhostBaseV10EPushProbeCore.record("registerDeviceEntry")\n'
     text = replace_once(text, marker_anchor, SWIFT_MARKER + "\n" + marker_anchor, "swift marker")

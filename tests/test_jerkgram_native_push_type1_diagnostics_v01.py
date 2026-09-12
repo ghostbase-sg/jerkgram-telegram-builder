@@ -18,7 +18,6 @@ def load_module(name: str, path: Path):
 
 REGISTER_FIXTURE = r'''import Foundation
 
-// GHOSTBASE_V10E1_SPLIT_PUSH_TYPE1
 func _internal_registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Bool, NoError> {
     let ghostBaseRegisterDeviceKind: String
     switch type {
@@ -58,7 +57,6 @@ func _internal_registerNotificationToken(account: Account, token: Data, type: No
         }
         |> `catch` { error -> Signal<Bool, NoError> in
             GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", error.errorDescription)
-            GhostBaseV10EPushProbeCore.set("LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription)
             if error.errorDescription == "TOKEN_WAS_INVALIDATED" {
                 GhostBaseV10EPushProbeCore.record("registerDeviceInvalidated")
                 GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Invalidated")
@@ -100,7 +98,7 @@ BUILD_CONFIG_FIXTURE = r'''@implementation BuildConfig (JerkgramExtensionDiagnos
 
 
 class NativePushType1DiagnosticsTests(unittest.TestCase):
-    def test_register_patch_extends_existing_type1_probe_without_changing_stock_semantics(self):
+    def test_register_patch_extends_live_v10e1_shape_without_changing_stock_semantics(self):
         patch = load_module("native_type1_apply", APPLY)
         actual = patch.patch_register(REGISTER_FIXTURE)
 
@@ -111,10 +109,16 @@ class NativePushType1DiagnosticsTests(unittest.TestCase):
             'LastRegisterDeviceType1SecretLength',
             'LastRegisterDeviceType1OtherUidsCount',
             'LastRegisterDeviceType1ErrorCode',
+            'LastRegisterDeviceType1Error", error.errorDescription',
             'error.errorCode',
         ):
             self.assertIn(token, actual)
 
+        self.assertNotIn("GHOSTBASE_V10E1_SPLIT_PUSH_TYPE1", REGISTER_FIXTURE)
+        self.assertNotIn(
+            'LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription',
+            REGISTER_FIXTURE,
+        )
         self.assertIn('tokenType: 10', actual)
         self.assertIn('public func _internal_registerJerkgramWebPushToken(', actual)
         self.assertIn('return .single(false)', actual)
