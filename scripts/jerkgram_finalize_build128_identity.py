@@ -16,7 +16,7 @@ def main() -> None:
     keychain.package_ipa(ipa)
     file_picker.package_file_picker(ipa)
     print("[Build128 identity] GREEN")
-    print("[Build128 identity] CFBundleVersion=128; audited main-app-only keychain and FilePicker dylibs are present")
+    print("[Build128 identity] CFBundleVersion=128; audited keychain/app-group compatibility is loaded by main + Notification Service; FilePicker remains main-only")
 
 
 if __name__ == "__main__":
