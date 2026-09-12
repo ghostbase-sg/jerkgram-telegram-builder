@@ -1,0 +1,15 @@
+{
+  "name": "Jerkgram Notifications Backend PoC",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "postCreateCommand": "cd notifications-backend && python -m pip install -e '.[test]'",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "Jerkgram Notifications Backend",
+      "onAutoForward": "notify"
+    }
+  },
+  "remoteEnv": {
+    "PYTHONUNBUFFERED": "1"
+  }
+}
