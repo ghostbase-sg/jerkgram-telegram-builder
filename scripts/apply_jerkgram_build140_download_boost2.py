@@ -17,6 +17,10 @@ RAW_PENDING = "maxPendingParts: 6,"
 PATCHED_PENDING = "maxPendingParts: jerkgramDownloadMaxPendingParts(6),"
 EXPECTED_PENDING_OWNERS = 4
 
+SELECTOR_RENDERER = "        case let .selector(_, _, title, value):"
+STYLE_PREVIEW_RENDERER = "        case let .stylePreview(_, _, value):"
+BOOST_RENDERER = "        case let .downloadBoost(_, _, title, value):"
+
 
 def require(value: bool, message: str) -> None:
     if not value:
@@ -75,12 +79,66 @@ def patch_fetch_v2(text: str) -> str:
     return text
 
 
+def patch_download_boost_renderer(text: str) -> str:
+    if BOOST_RENDERER in text:
+        require(text.count(BOOST_RENDERER) == 1, "download boost renderer duplicated")
+        return text
+
+    require(text.count(SELECTOR_RENDERER) == 1, f"selector renderer: expected one owner, found {text.count(SELECTOR_RENDERER)}")
+    selector_start = text.find(SELECTOR_RENDERER)
+    preview_start = text.find("\n" + STYLE_PREVIEW_RENDERER, selector_start)
+    require(preview_start >= 0, "stylePreview boundary missing after selector renderer")
+
+    selector_block = text[selector_start:preview_start]
+    require("arguments.openSendTextStyle()" in selector_block, "selector renderer lost send-style action owner")
+    require("GhostBaseSettingsEntryTag.sendTextStyle" in selector_block, "selector renderer lost send-style tag owner")
+
+    boost_block = '''
+        case let .downloadBoost(_, _, title, value):
+            return ItemListDisclosureItem(
+                presentationData: presentationData,
+                systemStyle: .glass,
+                title: title,
+                label: value,
+                labelStyle: .text,
+                sectionId: self.section,
+                style: .blocks,
+                disclosureStyle: .arrow,
+                action: {
+                    arguments.openDownloadBoost()
+                },
+                tag: GhostBaseSettingsEntryTag.downloadBoost
+            )
+'''
+    result = text[:preview_start] + boost_block + text[preview_start:]
+    require(result.count(BOOST_RENDERER) == 1, "download boost renderer insertion failed")
+    return result
+
+
+def patch_settings_text(text: str) -> str:
+    # Boost1 owns the established settings topology. Intercept only its stale
+    # exact-string renderer replacement and bind that one operation semantically
+    # to the live selector -> stylePreview boundary.
+    original_replace_once = base.replace_once
+
+    def replace_once_with_live_renderer(current: str, old: str, new: str, label: str) -> str:
+        if label == "download boost item renderer":
+            return patch_download_boost_renderer(current)
+        return original_replace_once(current, old, new, label)
+
+    base.replace_once = replace_once_with_live_renderer
+    try:
+        return base.patch_settings_text(text)
+    finally:
+        base.replace_once = original_replace_once
+
+
 def main() -> None:
     for path in (base.FETCH, base.SETTINGS, base.STRINGS):
         require(path.is_file(), "missing source file: " + str(path))
 
     fetch = patch_fetch_v2(base.FETCH.read_text(encoding="utf-8"))
-    settings = base.patch_settings_text(base.SETTINGS.read_text(encoding="utf-8"))
+    settings = patch_settings_text(base.SETTINGS.read_text(encoding="utf-8"))
     strings = base.patch_strings_text(base.STRINGS.read_text(encoding="utf-8"))
 
     base.FETCH.write_text(fetch, encoding="utf-8")
@@ -89,6 +147,7 @@ def main() -> None:
 
     print("[Build140 Download Boost2] SOURCE PATCHED")
     print("[Build140 Download Boost2] FetchV2 four-owner topology: 4 -> 4; CDN chunk size preserved")
+    print("[Build140 Download Boost2] Settings renderer: semantic selector -> stylePreview binding")
 
 
 if __name__ == "__main__":
