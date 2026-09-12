@@ -42,9 +42,17 @@ def main() -> None:
             dylib = app / "Frameworks" / name
             require(dylib.is_file(), name + " missing from main-app Frameworks")
             require(hashlib.sha256(dylib.read_bytes()).hexdigest() == digest, name + " SHA-256 mismatch")
-            require(keychain.loaded_dylib_paths(binary).count(install_name) == 1, name + " must load exactly once")
+            require(keychain.loaded_dylib_paths(binary).count(install_name) == 1, name + " must load exactly once in main app")
             extension_copies = list((app / "PlugIns").rglob(name)) if (app / "PlugIns").is_dir() else []
-            require(not extension_copies, name + " must not be embedded in extensions")
+            require(not extension_copies, name + " must not be redundantly embedded in extensions")
+
+        notification_services = keychain.notification_service_executables(app)
+        require(len(notification_services) == 1, "expected exactly one Notification Service Extension")
+        notification_binary = notification_services[0].read_bytes()
+        require(
+            keychain.loaded_dylib_paths(notification_binary).count(keychain.NSE_INSTALL_NAME) == 1,
+            "Notification Service Extension must load sideloadKeychainFix exactly once from main-app Frameworks",
+        )
     print("[Build128 final IPA verify] GREEN")
 
 
