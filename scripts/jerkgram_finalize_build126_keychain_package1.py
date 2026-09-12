@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Package the audited sideload keychain compatibility library into Build126.
+"""Package the audited sideload compatibility library into Jerkgram.
 
-The app is deliberately left resign-ready: this script changes its main Mach-O
-load commands and therefore does not pretend to produce an Apple signature.
-The final installer (ESign) must sign the app bundle afterwards.
+The app is deliberately left resign-ready: this script changes Mach-O load
+commands and therefore does not pretend to produce an Apple signature. The
+final installer (ESign) must sign the app bundle afterwards.
+
+The same audited dylib is loaded by the main app and by the Notification
+Service Extension. The extension needs the runtime app-group/keychain bridge
+in its own process when an IPA is re-signed with generated entitlements.
 """
 
 import hashlib
@@ -19,6 +23,8 @@ import zipfile
 ASSET = Path(__file__).resolve().parents[1] / "assets" / "sideloadKeychainFix.dylib"
 EXPECTED_SHA256 = "f8d81929c4de5799c9f5cb5b3e7d7410a7374224bef63afe88128f66fc351d79"
 INSTALL_NAME = "@executable_path/Frameworks/sideloadKeychainFix.dylib"
+NSE_INSTALL_NAME = "@executable_path/../../Frameworks/sideloadKeychainFix.dylib"
+NOTIFICATION_SERVICE_EXTENSION_POINT = "com.apple.usernotifications.service"
 LC_LOAD_DYLIB = 0xC
 LC_SEGMENT_64 = 0x19
 LC_SYMTAB = 0x2
@@ -128,7 +134,7 @@ def inject_load_dylib(executable: bytes, install_name: str = INSTALL_NAME) -> by
         commands, commands_end, _ = _thin_load_commands(mutable, start, slice_size)
         command = dylib_command(install_name)
         headerpad_end = _headerpad_limit(mutable, start, slice_size, commands_end, commands)
-        require(commands_end + len(command) <= headerpad_end, "insufficient Mach-O headerpad for Build126 dylib")
+        require(commands_end + len(command) <= headerpad_end, "insufficient Mach-O headerpad for sideload compatibility dylib")
         mutable[commands_end:commands_end + len(command)] = command
         ncmds = struct.unpack_from("<I", mutable, start + 16)[0]
         sizeofcmds = struct.unpack_from("<I", mutable, start + 20)[0]
@@ -142,6 +148,32 @@ def approved_dylib(path: Path) -> bytes:
     data = path.read_bytes()
     require(hashlib.sha256(data).hexdigest() == EXPECTED_SHA256, "approved dylib SHA-256 mismatch")
     return data
+
+
+def notification_service_executables(app: Path) -> list[Path]:
+    result = []
+    plugins = app / "PlugIns"
+    if not plugins.is_dir():
+        return result
+    for extension in sorted(plugins.glob("*.appex")):
+        info_path = extension / "Info.plist"
+        if not info_path.is_file():
+            continue
+        try:
+            info = plistlib.loads(info_path.read_bytes())
+        except Exception:
+            continue
+        extension_info = info.get("NSExtension")
+        if not isinstance(extension_info, dict):
+            continue
+        if extension_info.get("NSExtensionPointIdentifier") != NOTIFICATION_SERVICE_EXTENSION_POINT:
+            continue
+        executable_name = info.get("CFBundleExecutable")
+        require(isinstance(executable_name, str) and executable_name, "notification service executable key missing")
+        executable_path = extension / executable_name
+        require(executable_path.is_file(), "notification service executable missing: " + str(executable_path))
+        result.append(executable_path)
+    return result
 
 
 def package_ipa(ipa: Path, dylib: Path = ASSET) -> None:
@@ -163,19 +195,25 @@ def package_ipa(ipa: Path, dylib: Path = ASSET) -> None:
         frameworks = app / "Frameworks"
         frameworks.mkdir(exist_ok=True)
         embedded = frameworks / "sideloadKeychainFix.dylib"
-        executable_path.write_bytes(inject_load_dylib(executable_path.read_bytes()))
+
+        executable_path.write_bytes(inject_load_dylib(executable_path.read_bytes(), INSTALL_NAME))
+        for notification_executable in notification_service_executables(app):
+            notification_executable.write_bytes(
+                inject_load_dylib(notification_executable.read_bytes(), NSE_INSTALL_NAME)
+            )
         embedded.write_bytes(dylib_data)
+
         fd, temporary_name = tempfile.mkstemp(prefix=ipa.name + ".build126.", suffix=".tmp", dir=str(ipa.parent))
         os.close(fd)
         temporary = Path(temporary_name)
         try:
             with zipfile.ZipFile(temporary, "w") as output:
-                for info in infos:
-                    source = root / info.filename
+                for archive_info in infos:
+                    source = root / archive_info.filename
                     if source.exists():
-                        output.writestr(info, b"" if info.is_dir() else source.read_bytes())
+                        output.writestr(archive_info, b"" if archive_info.is_dir() else source.read_bytes())
                 extra = embedded.relative_to(root).as_posix()
-                if extra not in {info.filename for info in infos}:
+                if extra not in {archive_info.filename for archive_info in infos}:
                     output.writestr(extra, embedded.read_bytes())
             os.replace(temporary, ipa)
         finally:
@@ -187,7 +225,7 @@ def main() -> None:
     ipa = Path(sys.argv[1] if len(sys.argv) > 1 else "work/swiftgram-src/ghostbase-final/GhostBase.ipa").resolve()
     package_ipa(ipa)
     print("[Build126 keychain package] GREEN")
-    print("[Build126 keychain package] main app only; ESign must sign the final IPA")
+    print("[Build126 keychain package] main app + notification service; ESign must sign the final IPA")
 
 
 if __name__ == "__main__":
