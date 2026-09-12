@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import os
+import re
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 FETCH = ROOT / "submodules/TelegramCore/Sources/Network/FetchV2.swift"
@@ -68,10 +69,24 @@ require('networkSettings?.useExperimentalDownload ?? true' in network, "Telegram
 require('ios_killswitch_disable_downloadv2' in network, "Telegram Download V2 server kill-switch missing")
 
 require(settings.count("// MARK: Jerkgram Build140 Download Boost Settings1") == 1, "Settings marker missing or duplicated")
-require(settings.count("// MARK: Jerkgram Build140 Download Boost Menu1") == 1, "Settings menu marker missing or duplicated")
+legacy_menu_marker = "// MARK: Jerkgram Build140 Download Boost Menu1"
+native_page_marker = "// MARK: Jerkgram Build140 Download Boost Native Page1"
+native_opener_marker = "// MARK: Jerkgram Build140 Download Boost Native Page Opener1"
+legacy_menu_count = settings.count(legacy_menu_marker)
+native_page_count = settings.count(native_page_marker)
+require(native_page_count in (0, 1), "native Settings page marker duplicated")
+if native_page_count == 1:
+    require(legacy_menu_count == 0, "legacy Settings menu survived native page")
+    require(settings.count(native_opener_marker) == 1, "native Settings page opener missing or duplicated")
+    require(settings.count("controller?.push(downloadBoostController)") == 1, "native Settings page push missing or duplicated")
+else:
+    require(legacy_menu_count == 1, "Settings menu marker missing or duplicated")
 require(settings.count(KEY) == 1, "Settings global key missing or duplicated")
 require('UserDefaults.standard.string(forKey: jerkgramDownloadBoostKey) ?? "off"' in settings, "global settings read missing")
-require('UserDefaults.standard.set(mode, forKey: jerkgramDownloadBoostKey)' in settings, "global settings write missing")
+global_write_pattern = re.compile(
+    r"UserDefaults\.standard\.set\(\s*mode\s*,\s*forKey:\s*jerkgramDownloadBoostKey\s*\)"
+)
+require(len(global_write_pattern.findall(settings)) == 1, "global settings write missing or duplicated")
 require('case downloadBoost' in settings and '.downloadBoost(' in settings, "Download Boost selector row missing")
 require('downloadBoostRefreshNonce' in settings, "Download Boost list refresh owner missing")
 
