@@ -7,15 +7,19 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "work/swiftgram-src"
 BASE = ROOT / "scripts/apply_ghostbase_v10e_main_push_probe.py"
 
+
 def read(p):
     return Path(p).read_text()
+
 
 def write(p, s):
     Path(p).write_text(s)
 
+
 def ensure(s, needle, label):
     if needle not in s:
         raise SystemExit(f"[v1.0E.1] ERROR: missing {label}: {needle}")
+
 
 def replace_once(s, old, new, label):
     if old in s:
@@ -23,6 +27,7 @@ def replace_once(s, old, new, label):
     if new in s:
         return s
     raise SystemExit(f"[v1.0E.1] ERROR: pattern not found: {label}")
+
 
 print("[v1.0E.1] running base v1.0E patcher...")
 subprocess.check_call([sys.executable, str(BASE)], cwd=str(ROOT))
@@ -66,7 +71,38 @@ if "static func setRegisterDeviceTypeSummary" not in helper:
         }
     }
 
+    private static func incrementDedicated(_ key: String) {
+        let defaults = UserDefaults.standard
+        let fullKey = "GhostBase.V10E.Push." + key
+        defaults.set(defaults.integer(forKey: fullKey) + 1, forKey: fullKey)
+    }
+
+    static func recordType1Request(sandbox: Bool, encrypt: Bool, secretLength: Int, otherUidsCount: Int) {
+        incrementDedicated("Type1RequestCount")
+        set("Type1AppSandbox", sandbox ? "true" : "false")
+        set("Type1Encrypt", encrypt ? "true" : "false")
+        set("Type1SecretLength", "\(secretLength)")
+        set("Type1OtherUidsCount", "\(otherUidsCount)")
+        set("Type1LastErrorCode", "none")
+        set("Type1LastErrorDescription", "none")
+    }
+
+    static func recordType1Success() {
+        incrementDedicated("Type1SuccessCount")
+        set("Type1LastErrorCode", "none")
+        set("Type1LastErrorDescription", "none")
+    }
+
+    static func recordType1Failure(errorCode: Int32, errorDescription: String) {
+        incrementDedicated("Type1FailureCount")
+        set("Type1LastErrorCode", "\(errorCode)")
+        set("Type1LastErrorDescription", errorDescription)
+    }
+
     static func setRegisterDeviceTypeSummary(lastType: Int32, kind: String) {
+        let defaults = UserDefaults.standard
+        let prefix = "GhostBase.V10E.Push."
+
         let t1Entry = count("registerDeviceType1Entry")
         let t1Request = count("registerDeviceType1Request")
         let t1Success = count("registerDeviceType1Success")
@@ -82,7 +118,17 @@ if "static func setRegisterDeviceTypeSummary" not in helper:
         let t1Status = typeStatus(prefix: "registerDeviceType1")
         let t9Status = typeStatus(prefix: "registerDeviceType9")
 
-        let summary = "last=\(lastType)/\(kind); type1=\(t1Status) E/R/S/I/ERR=\(t1Entry)/\(t1Request)/\(t1Success)/\(t1Invalidated)/\(t1Error); type9=\(t9Status) E/R/S/I/ERR=\(t9Entry)/\(t9Request)/\(t9Success)/\(t9Invalidated)/\(t9Error)"
+        let dRequest = defaults.integer(forKey: prefix + "Type1RequestCount")
+        let dSuccess = defaults.integer(forKey: prefix + "Type1SuccessCount")
+        let dFailure = defaults.integer(forKey: prefix + "Type1FailureCount")
+        let dSandbox = defaults.string(forKey: prefix + "Type1AppSandbox") ?? "none"
+        let dEncrypt = defaults.string(forKey: prefix + "Type1Encrypt") ?? "none"
+        let dSecret = defaults.string(forKey: prefix + "Type1SecretLength") ?? "none"
+        let dOther = defaults.string(forKey: prefix + "Type1OtherUidsCount") ?? "none"
+        let dErrorCode = defaults.string(forKey: prefix + "Type1LastErrorCode") ?? "none"
+        let dErrorDescription = defaults.string(forKey: prefix + "Type1LastErrorDescription") ?? "none"
+
+        let summary = "last=\(lastType)/\(kind); type1=\(t1Status) E/R/S/I/ERR=\(t1Entry)/\(t1Request)/\(t1Success)/\(t1Invalidated)/\(t1Error); type9=\(t9Status) E/R/S/I/ERR=\(t9Entry)/\(t9Request)/\(t9Success)/\(t9Invalidated)/\(t9Error); Type1Dedicated R/S/F=\(dRequest)/\(dSuccess)/\(dFailure) sandbox=\(dSandbox) encrypt=\(dEncrypt) secretLen=\(dSecret) otherUids=\(dOther) rpc=\(dErrorCode):\(dErrorDescription)"
         set("LastRegisterDeviceType", summary)
     }
 '''
@@ -97,11 +143,14 @@ if "let ghostBaseRegisterDeviceKind: String" not in reg:
         reg,
         '    GhostBaseV10EPushProbeCore.record("registerDeviceEntry")\n',
         '''    let ghostBaseRegisterDeviceKind: String
+    let ghostBaseRegisterDeviceEncrypt: Bool
     switch type {
-        case .aps:
+        case let .aps(encrypt):
             ghostBaseRegisterDeviceKind = "Type1"
+            ghostBaseRegisterDeviceEncrypt = encrypt
         case .voip:
             ghostBaseRegisterDeviceKind = "Type9"
+            ghostBaseRegisterDeviceEncrypt = false
     }
 
     GhostBaseV10EPushProbeCore.record("registerDeviceEntry")
@@ -127,9 +176,26 @@ if "LastRegisterDeviceTypeRaw" not in reg:
         '        GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType", "\\(mappedType)")\n',
         '''        GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType", "\\(mappedType)")
         GhostBaseV10EPushProbeCore.set("LastRegisterDeviceTypeRaw", "\\(mappedType)")
+''',
+        "raw type"
+    )
+
+if "recordType1Request(" not in reg:
+    reg = replace_once(
+        reg,
+        '        GhostBaseV10EPushProbeCore.set("LastRegisterDeviceSecretLength", "\\(keyData.count)")\n',
+        '''        GhostBaseV10EPushProbeCore.set("LastRegisterDeviceSecretLength", "\\(keyData.count)")
+        if mappedType == 1 {
+            GhostBaseV10EPushProbeCore.recordType1Request(
+                sandbox: sandbox,
+                encrypt: ghostBaseRegisterDeviceEncrypt,
+                secretLength: keyData.count,
+                otherUidsCount: otherAccountUserIds.count
+            )
+        }
         GhostBaseV10EPushProbeCore.setRegisterDeviceTypeSummary(lastType: mappedType, kind: ghostBaseRegisterDeviceKind)
 ''',
-        "type summary"
+        "dedicated Type1 request metadata"
     )
 
 if 'registerDevice" + ghostBaseRegisterDeviceKind + "Success"' not in reg:
@@ -144,6 +210,9 @@ if 'registerDevice" + ghostBaseRegisterDeviceKind + "Success"' not in reg:
             GhostBaseV10EPushProbeCore.record("registerDeviceSuccess")
             GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Success")
             GhostBaseV10EPushProbeCore.set("LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", "none")
+            if mappedType == 1 {
+                GhostBaseV10EPushProbeCore.recordType1Success()
+            }
             GhostBaseV10EPushProbeCore.setRegisterDeviceTypeSummary(lastType: mappedType, kind: ghostBaseRegisterDeviceKind)
             return true
         }
@@ -157,6 +226,9 @@ if 'LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error"' not in reg:
         '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", error.errorDescription)\n',
         '''            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", error.errorDescription)
             GhostBaseV10EPushProbeCore.set("LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription)
+            if mappedType == 1 {
+                GhostBaseV10EPushProbeCore.recordType1Failure(errorCode: error.errorCode, errorDescription: error.errorDescription)
+            }
 ''',
         "typed last error"
     )
@@ -208,12 +280,33 @@ settings = read(settings_p)
 
 ensure(reg, 'ghostBaseRegisterDeviceKind = "Type1"', "Type1 branch")
 ensure(reg, 'ghostBaseRegisterDeviceKind = "Type9"', "Type9 branch")
+ensure(reg, "ghostBaseRegisterDeviceEncrypt = encrypt", "APS encrypt capture")
 ensure(reg, 'registerDevice" + ghostBaseRegisterDeviceKind + "Request"', "typed request")
 ensure(reg, 'registerDevice" + ghostBaseRegisterDeviceKind + "Success"', "typed success")
 ensure(reg, 'registerDevice" + ghostBaseRegisterDeviceKind + "Invalidated"', "typed invalidated")
+ensure(reg, "if mappedType == 1", "Type1 gate")
+ensure(reg, "recordType1Request(", "Type1 request recorder")
+ensure(reg, "recordType1Success()", "Type1 success recorder")
+ensure(reg, "recordType1Failure(errorCode: error.errorCode", "Type1 failure recorder")
+ensure(helper, "Type1RequestCount", "Type1 request counter")
+ensure(helper, "Type1SuccessCount", "Type1 success counter")
+ensure(helper, "Type1FailureCount", "Type1 failure counter")
+ensure(helper, "Type1LastErrorCode", "Type1 error code")
+ensure(helper, "Type1LastErrorDescription", "Type1 error description")
+ensure(helper, "Type1AppSandbox", "Type1 sandbox")
+ensure(helper, "Type1Encrypt", "Type1 encrypt")
+ensure(helper, "Type1SecretLength", "Type1 secret length")
+ensure(helper, "Type1OtherUidsCount", "Type1 other UIDs")
 ensure(helper, "setRegisterDeviceTypeSummary", "summary helper")
 ensure(helper, "type1=", "type1 summary")
 ensure(app, "registered=\\(ghostBaseRuntimeRegistered); bundle=\\(ghostBaseRuntimeBundleId)", "runtime status")
 ensure(settings, "v1.0E.1", "settings version")
 
-print("[v1.0E.1] Split Type + Runtime Push Verdict Probe patch OK")
+for forbidden in ("hexString(token)", "keyData.base64", "masterKey.data"):
+    dedicated_start = helper.find("private static func incrementDedicated")
+    dedicated_end = helper.find("static func setRegisterDeviceTypeSummary")
+    dedicated_block = helper[dedicated_start:dedicated_end]
+    if forbidden in dedicated_block:
+        raise SystemExit(f"[v1.0E.1] ERROR: sensitive data marker in Type1 recorder: {forbidden}")
+
+print("[v1.0E.1] Split Type + dedicated Type1 runtime verdict probe patch OK")
