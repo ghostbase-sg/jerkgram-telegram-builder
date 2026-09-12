@@ -12,20 +12,12 @@ VIDEO_GALLERY = ROOT / "submodules/GalleryUI/Sources/Items/UniversalVideoGallery
 CHAT_MARKER = "// JERKGRAM_NO_ADS_V1_CHAT"
 GALLERY_MARKER = "// JERKGRAM_NO_ADS_V1_GALLERY"
 
-CHAT_OWNER = '''        let adMessagesState: Signal<AdMessagesHistoryContext.State?, NoError>
-        if let adMessagesContext = adMessagesContext {
-            adMessagesState = adMessagesContext.state
-            |> map { state -> AdMessagesHistoryContext.State? in
-                return state
-            }
-        } else {
-            adMessagesState = .single(nil)
-        }
-'''
-
-CHAT_REPLACEMENT = '''        let adMessagesState: Signal<AdMessagesHistoryContext.State?, NoError>
-        // JERKGRAM_NO_ADS_V1_CHAT
-        adMessagesState = .single(nil)
+CHAT_SOURCE_START = "        var adMessages: Signal<(interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?), NoError>\n"
+CHAT_SOURCE_END = "        let clientId = Atomic<Int32>(value: nextClientId)\n"
+CHAT_LIVE_STATE_OWNER = "                    adMessages = adMessagesContext.state\n"
+CHAT_REPLACEMENT = '''        // JERKGRAM_NO_ADS_V1_CHAT
+        let adMessages: Signal<(interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?), NoError> = .single((nil, [], nil, nil))
+        
 '''
 
 GALLERY_START = "        let adContext = context.engine.messages.adMessages(peerId: message.id.peerId, messageId: message.id)\n"
@@ -46,12 +38,24 @@ def require(value: bool, message: str) -> None:
 def patch_chat_history_list(text: str) -> str:
     if CHAT_MARKER in text:
         require(text.count(CHAT_MARKER) == 1, "chat marker is ambiguous")
-        require(CHAT_OWNER not in text, "stock chat ad-state owner survived beside marker")
+        require(CHAT_SOURCE_START not in text, "stock chat ad source survived beside marker")
+        require(CHAT_LIVE_STATE_OWNER not in text, "live sponsored state survived beside marker")
         return text
 
-    require(text.count(CHAT_OWNER) == 1, f"chat ad-state owner: expected 1, found {text.count(CHAT_OWNER)}")
-    text = text.replace(CHAT_OWNER, CHAT_REPLACEMENT, 1)
+    require(text.count(CHAT_SOURCE_START) == 1, f"chat ad source start: expected 1, found {text.count(CHAT_SOURCE_START)}")
+    start = text.index(CHAT_SOURCE_START)
+    end = text.find(CHAT_SOURCE_END, start)
+    require(end >= 0, "chat ad source end not found")
+
+    owner = text[start:end]
+    require("if case .bubbles = mode, let adMessagesContext" in owner, "chat ad source mode gate missing")
+    require("immediateExperimentalUISettings.fakeAds" in owner, "chat fake-ad branch missing")
+    require("adMessages = adMessagesContext.state" in owner, "chat live sponsored-state owner missing")
+    require("adMessages = .single((nil, [], nil, nil))" in owner, "chat stock empty fallback missing")
+
+    text = text[:start] + CHAT_REPLACEMENT + text[end:]
     require(text.count(CHAT_MARKER) == 1, "chat marker count after patch")
+    require(CHAT_LIVE_STATE_OWNER not in text, "live sponsored state survived patch")
     return text
 
 

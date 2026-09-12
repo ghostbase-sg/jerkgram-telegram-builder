@@ -16,12 +16,35 @@ class NoAdsTests(unittest.TestCase):
         cls.patch = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.patch)
 
-    def test_chat_sponsored_state_is_replaced_with_nil_signal(self):
-        source = "before\n" + self.patch.CHAT_OWNER + "after\n"
+    def test_chat_official_1292_sponsored_source_is_replaced_with_empty_signal(self):
+        source = '''before
+        self.adMessagesContext = adMessagesContext
+        var adMessages: Signal<(interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?), NoError>
+        if case .bubbles = mode, let adMessagesContext {
+            let peerId = adMessagesContext.peerId
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                adMessages = .single((nil, [], nil, nil))
+            } else {
+                if context.sharedContext.immediateExperimentalUISettings.fakeAds {
+                    adMessages = .single((10, [], nil, nil))
+                } else {
+                    adMessages = adMessagesContext.state
+                }
+            }
+        } else {
+            adMessages = .single((nil, [], nil, nil))
+        }
+        
+        let clientId = Atomic<Int32>(value: nextClientId)
+        self.beginAdMessageManagement(adMessages: adMessages)
+after
+'''
         actual = self.patch.patch_chat_history_list(source)
         self.assertIn(self.patch.CHAT_MARKER, actual)
-        self.assertIn("adMessagesState = .single(nil)", actual)
+        self.assertIn("= .single((nil, [], nil, nil))", actual)
         self.assertNotIn("adMessagesContext.state", actual)
+        self.assertNotIn("immediateExperimentalUISettings.fakeAds", actual)
+        self.assertIn("self.beginAdMessageManagement(adMessages: adMessages)", actual)
         self.assertEqual(actual, self.patch.patch_chat_history_list(actual))
 
     def test_gallery_ad_subscription_is_removed_and_state_is_cleared(self):

@@ -16,11 +16,13 @@ def require(value: bool, message: str) -> None:
 
 def verify_chat(text: str) -> None:
     require(text.count(patch.CHAT_MARKER) == 1, "chat marker count != 1")
-    require(patch.CHAT_OWNER not in text, "stock chat sponsored-state owner survived")
+    require(patch.CHAT_SOURCE_START not in text, "stock chat sponsored-state source survived")
+    require(patch.CHAT_LIVE_STATE_OWNER not in text, "live chat sponsored-state owner survived")
     marker = text.index(patch.CHAT_MARKER)
-    window = text[max(0, marker - 180):marker + 220]
-    require("adMessagesState = .single(nil)" in window, "chat sponsored-state signal is not nil")
+    window = text[max(0, marker - 120):marker + 360]
+    require("let adMessages: Signal<(interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?), NoError> = .single((nil, [], nil, nil))" in window, "chat sponsored-state signal is not empty")
     require("isPremium" not in window, "chat no-ads patch must not spoof Premium")
+    require("self.beginAdMessageManagement(adMessages: adMessages)" in text, "chat ad-management call was removed instead of receiving an empty signal")
 
 
 def verify_gallery(text: str) -> None:
