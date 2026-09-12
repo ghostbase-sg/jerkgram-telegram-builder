@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).parents[1]
 INSTALLER = ROOT / "scripts/install_jerkgram_v12w_build133_probe_hook.py"
+DOWNLOAD_PATCH = ROOT / "scripts/apply_jerkgram_build140_download_boost2.py"
 BUILD_WORKFLOW = ROOT / ".github/workflows/build.yml"
 
 NEW_ORDER = (
@@ -21,8 +22,8 @@ BUILD140_FEATURE_ORDER = (
     "verify_jerkgram_push_binding_bridge_v01.py",
     "apply_jerkgram_build140_premium_icons1.py",
     "verify_jerkgram_build140_premium_icons1.py",
-    "apply_jerkgram_build140_download_boost1.py",
-    "verify_jerkgram_build140_download_boost1.py",
+    "apply_jerkgram_build140_download_boost2.py",
+    "verify_jerkgram_build140_download_boost2.py",
     "apply_jerkgram_build140_identity.py",
     "verify_jerkgram_build140_identity.py",
 )
@@ -35,6 +36,14 @@ OLD_PAIRING = (
 
 def load_installer_module():
     spec = importlib.util.spec_from_file_location("build133_passwordless_push", INSTALLER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_download_boost_module():
+    spec = importlib.util.spec_from_file_location("build140_download_boost2", DOWNLOAD_PATCH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -76,6 +85,8 @@ class PasswordlessPushBindingWiringTests(unittest.TestCase):
             self.assertEqual(installer.count(name), 1, f"{name} must be wired exactly once")
         positions = [installer.index(name) for name in BUILD140_FEATURE_ORDER]
         self.assertEqual(positions, sorted(positions))
+        self.assertNotIn("apply_jerkgram_build140_download_boost1.py", installer)
+        self.assertNotIn("verify_jerkgram_build140_download_boost1.py", installer)
 
         module = load_installer_module()
         probe = (
@@ -91,6 +102,61 @@ class PasswordlessPushBindingWiringTests(unittest.TestCase):
         generated_positions = [generated.index(name) for name in BUILD140_FEATURE_ORDER]
         self.assertEqual(generated_positions, sorted(generated_positions))
         self.assertLess(generated_positions[-1], generated.index(module.BAZEL_ANCHOR))
+
+    def test_download_boost_matches_official_four_pending_owner_topology(self):
+        patch = load_download_boost_module()
+        source = '''import Foundation
+
+private let possiblePartLengths: [Int64] = [1]
+
+if isStory {
+    self.defaultPartSize = 512 * 1024
+} else {
+    self.defaultPartSize = 128 * 1024
+}
+self.cdnPartSize = 128 * 1024
+
+let initial = FetchingState(
+    partSize: self.defaultPartSize,
+    maxPendingParts: 6,
+    decryptionState: nil
+)
+let cdn = FetchingState(
+    partSize: self.cdnPartSize,
+    maxPendingParts: 6,
+    decryptionState: nil
+)
+let refreshed = FetchingState(
+    partSize: self.defaultPartSize,
+    maxPendingParts: 6,
+    decryptionState: nil
+)
+let cdnRefreshed = FetchingState(
+    partSize: self.cdnPartSize,
+    maxPendingParts: 6,
+    decryptionState: nil
+)
+'''
+        actual = patch.patch_fetch_v2(source)
+        self.assertEqual(
+            actual.count("maxPendingParts: jerkgramDownloadMaxPendingParts(6),"),
+            4,
+        )
+        self.assertNotIn("maxPendingParts: 6,", actual)
+        self.assertIn("self.cdnPartSize = 128 * 1024", actual)
+        self.assertEqual(actual, patch.patch_fetch_v2(actual))
+
+        broken = source.replace(
+            '''let cdnRefreshed = FetchingState(
+    partSize: self.cdnPartSize,
+    maxPendingParts: 6,
+    decryptionState: nil
+)
+''',
+            "",
+        )
+        with self.assertRaisesRegex(RuntimeError, "expected 4 anchors, found 3"):
+            patch.patch_fetch_v2(broken)
 
     def test_release_workflow_preflights_passwordless_native_push_chain(self):
         workflow = BUILD_WORKFLOW.read_text()
