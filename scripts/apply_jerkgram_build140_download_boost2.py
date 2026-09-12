@@ -22,6 +22,205 @@ STYLE_PREVIEW_RENDERER = "        case let .stylePreview(_, _, value):"
 BOOST_RENDERER = "        case let .downloadBoost(_, _, title, value):"
 
 
+NATIVE_SETTINGS_HELPER = (
+    base.SETTINGS_MARKER
+    + '''
+private let jerkgramDownloadBoostKey = "__DOWNLOAD_BOOST_KEY__"
+
+private func jerkgramDownloadBoostMode() -> String {
+    return UserDefaults.standard.string(forKey: jerkgramDownloadBoostKey) ?? "off"
+}
+
+// MARK: Jerkgram Build140 Download Boost Native Page1
+private final class GhostBaseDownloadBoostPageArguments {
+    let select: (String) -> Void
+
+    init(select: @escaping (String) -> Void) {
+        self.select = select
+    }
+}
+
+private enum GhostBaseDownloadBoostPageEntry: ItemListNodeEntry {
+    case option(Int32, String, String, Bool)
+
+    var section: ItemListSectionId {
+        return 0
+    }
+
+    var stableId: Int32 {
+        switch self {
+        case let .option(index, _, _, _):
+            return index
+        }
+    }
+
+    static func ==(
+        lhs: GhostBaseDownloadBoostPageEntry,
+        rhs: GhostBaseDownloadBoostPageEntry
+    ) -> Bool {
+        switch (lhs, rhs) {
+        case let (
+            .option(li, lv, lt, ls),
+            .option(ri, rv, rt, rs)
+        ):
+            return li == ri
+                && lv == rv
+                && lt == rt
+                && ls == rs
+        }
+    }
+
+    static func <(
+        lhs: GhostBaseDownloadBoostPageEntry,
+        rhs: GhostBaseDownloadBoostPageEntry
+    ) -> Bool {
+        return lhs.stableId < rhs.stableId
+    }
+
+    func item(
+        presentationData: ItemListPresentationData,
+        arguments: Any
+    ) -> ListViewItem {
+        let arguments =
+            arguments as! GhostBaseDownloadBoostPageArguments
+
+        switch self {
+        case let .option(_, value, title, selected):
+            return ItemListDisclosureItem(
+                presentationData: presentationData,
+                systemStyle: .glass,
+                title: title,
+                label: selected ? "✓" : "",
+                labelStyle: .text,
+                sectionId: self.section,
+                style: .blocks,
+                disclosureStyle: .none,
+                action: {
+                    arguments.select(value)
+                }
+            )
+        }
+    }
+}
+
+private func ghostBaseDownloadBoostPageEntries(
+    selected: String,
+    strings: JerkgramStrings
+) -> [GhostBaseDownloadBoostPageEntry] {
+    let modes: [(String, String)] = [
+        ("off", strings.downloadBoostValue("off")),
+        ("medium", strings.downloadBoostValue("medium")),
+        ("maximum", strings.downloadBoostValue("maximum"))
+    ]
+
+    return modes.enumerated().map { index, item in
+        return .option(
+            Int32(index),
+            item.0,
+            item.1,
+            selected == item.0
+        )
+    }
+}
+
+private func ghostBaseDownloadBoostPageController(
+    context: AccountContext,
+    selected: String,
+    select: @escaping (String) -> Void
+) -> ViewController {
+    let selectedValue = Atomic(value: selected)
+    let selectedPromise = ValuePromise(
+        selected,
+        ignoreRepeated: true
+    )
+
+    let arguments = GhostBaseDownloadBoostPageArguments(
+        select: { value in
+            let updated = selectedValue.modify { _ in value }
+            selectedPromise.set(updated)
+            select(value)
+        }
+    )
+
+    let signal = combineLatest(
+        context.sharedContext.presentationData,
+        selectedPromise.get()
+    )
+    |> deliverOnMainQueue
+    |> map { presentationData, value
+        -> (ItemListControllerState, (ItemListNodeState, Any)) in
+
+        let itemPresentationData =
+            ItemListPresentationData(presentationData)
+
+        let controllerState = ItemListControllerState(
+            presentationData: itemPresentationData,
+            title: .text(
+                presentationData.strings.jerkgram.downloadBoostTitle
+            ),
+            leftNavigationButton: nil,
+            rightNavigationButton: nil,
+            backNavigationButton: ItemListBackButton(
+                title: presentationData.strings.Common_Back
+            ),
+            animateChanges: false
+        )
+
+        let listState = ItemListNodeState(
+            presentationData: itemPresentationData,
+            entries: ghostBaseDownloadBoostPageEntries(
+                selected: value,
+                strings: presentationData.strings.jerkgram
+            ),
+            style: .blocks,
+            ensureVisibleItemTag: nil,
+            emptyStateItem: nil,
+            animateChanges: false
+        )
+
+        return (
+            controllerState,
+            (listState, arguments as Any)
+        )
+    }
+
+    return ItemListController(
+        context: context,
+        state: signal
+    )
+}
+
+'''
+).replace("__DOWNLOAD_BOOST_KEY__", base.KEY)
+
+
+NATIVE_DOWNLOAD_PAGE_WIRING = '''    // MARK: Jerkgram Build140 Download Boost Native Page Opener1
+    openDownloadBoostImpl = { [weak controller] in
+        let selected = jerkgramDownloadBoostMode()
+
+        let downloadBoostController =
+            ghostBaseDownloadBoostPageController(
+                context: context,
+                selected: selected,
+                select: { mode in
+                    UserDefaults.standard.set(
+                        mode,
+                        forKey: jerkgramDownloadBoostKey
+                    )
+                    updateState { current in
+                        var updated = current
+                        updated.downloadBoostRefreshNonce &+= 1
+                        return updated
+                    }
+                }
+            )
+
+        controller?.push(downloadBoostController)
+    }
+
+'''
+
+
 def require(value: bool, message: str) -> None:
     if not value:
         raise RuntimeError("[Build140 Download Boost2] " + message)
@@ -116,10 +315,13 @@ def patch_download_boost_renderer(text: str) -> str:
 
 
 def patch_settings_text(text: str) -> str:
-    # Boost1 owns the established settings topology. Intercept only its stale
-    # exact-string renderer replacement and bind that one operation semantically
-    # to the live selector -> stylePreview boundary.
+    # Boost1 still owns the established settings topology. Boost2 replaces only
+    # two runtime-sensitive pieces: the stale renderer match and the popup
+    # selector. The selector now mirrors the proven Send Text Style navigation
+    # pattern: a pushed ItemListController backed by Atomic + ValuePromise.
     original_replace_once = base.replace_once
+    original_settings_helper = base.SETTINGS_HELPER
+    original_download_wiring = base.DOWNLOAD_MENU_WIRING
 
     def replace_once_with_live_renderer(current: str, old: str, new: str, label: str) -> str:
         if label == "download boost item renderer":
@@ -127,10 +329,28 @@ def patch_settings_text(text: str) -> str:
         return original_replace_once(current, old, new, label)
 
     base.replace_once = replace_once_with_live_renderer
+    base.SETTINGS_HELPER = NATIVE_SETTINGS_HELPER
+    base.DOWNLOAD_MENU_WIRING = NATIVE_DOWNLOAD_PAGE_WIRING
     try:
-        return base.patch_settings_text(text)
+        result = base.patch_settings_text(text)
     finally:
         base.replace_once = original_replace_once
+        base.SETTINGS_HELPER = original_settings_helper
+        base.DOWNLOAD_MENU_WIRING = original_download_wiring
+
+    require(
+        result.count("private func ghostBaseDownloadBoostPageController(") == 1,
+        "native download page controller missing/duplicated",
+    )
+    require(
+        result.count("controller?.push(downloadBoostController)") == 1,
+        "native download page push missing/duplicated",
+    )
+    require(
+        "// MARK: Jerkgram Build140 Download Boost Menu1" not in result,
+        "legacy popup menu wiring survived",
+    )
+    return result
 
 
 def main() -> None:
@@ -148,6 +368,7 @@ def main() -> None:
     print("[Build140 Download Boost2] SOURCE PATCHED")
     print("[Build140 Download Boost2] FetchV2 four-owner topology: 4 -> 4; CDN chunk size preserved")
     print("[Build140 Download Boost2] Settings renderer: semantic selector -> stylePreview binding")
+    print("[Build140 Download Boost2] Selector UI: native pushed ItemListController")
 
 
 if __name__ == "__main__":
