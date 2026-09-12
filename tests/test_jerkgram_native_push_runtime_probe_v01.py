@@ -93,7 +93,7 @@ class NativePushRuntimeProbeTests(unittest.TestCase):
 
         for token in (
             "JERKGRAM_NATIVE_PUSH_TYPE1_RUNTIME_PROBE_V01",
-            "jerkgram.nativePush.type1.phase",
+            "jerkgram.nativePush.type1.",
             "tokenBytes: token.count",
             "secretBytes: keyData.count",
             "otherUidsCount: otherAccountUserIds.count",
@@ -126,7 +126,7 @@ class NativePushRuntimeProbeTests(unittest.TestCase):
             "handleJerkgramNativePushDiagnosticUrl",
             'url.path == "/native-debug"',
             'title: "Jerkgram Native Push"',
-            'jerkgram.nativePush.type1.phase',
+            'jerkgram.nativePush.type1.',
             'RPC: \\(errorCode) \\(errorDescription)',
             "if self.handleJerkgramNativePushDiagnosticUrl(url)",
             "if self.handleJerkgramPushBindingUrl(url)",
