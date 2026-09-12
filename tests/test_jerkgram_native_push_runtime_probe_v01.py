@@ -162,8 +162,20 @@ class NativePushRuntimeProbeTests(unittest.TestCase):
         updated = patch.patch_build_config_text(BUILD_CONFIG_FIXTURE)
 
         for marker in (
+            "=== Native Push APNs Registration ===",
+            "NotificationSettingsReadCount: %ld",
+            "AuthorizationGrantedCount: %ld",
+            "AuthorizationDeniedCount: %ld",
+            "RegisterForRemoteNotificationsCount: %ld",
+            "InvalidationRegisterCount: %ld",
+            "DidRegisterTokenCount: %ld",
+            "DidFailTokenCount: %ld",
+            "DeviceTokenLength: %@",
+            "AuthorizationStatus: %@",
+            "LastRegisterFail: %@",
             "=== Native Push Type1 ===",
             "APNsRegistered: %@",
+            "Type1EntryCount: %ld",
             "Type1RequestCount: %ld",
             "Type1SuccessCount: %ld",
             "Type1FailureCount: %ld",
