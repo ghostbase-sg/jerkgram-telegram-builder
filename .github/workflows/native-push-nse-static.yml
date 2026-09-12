@@ -1,0 +1,20 @@
+name: Native Push NSE Static
+
+on:
+  push:
+    branches:
+      - dev/native-push-nse-fix
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run bounded NSE packaging tests
+        run: |
+          python -m unittest tests.test_jerkgram_v12o_build126_keychain_packaging1
+          python -m unittest tests.test_jerkgram_native_push_nse_keychain1
