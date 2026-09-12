@@ -1,0 +1,15 @@
+name: Native Push Type1 Probe Tests
+
+on:
+  push:
+    branches:
+      - dev/native-push-type1-runtime-probe
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run native push probe contract
+        run: python3 -m unittest tests.test_jerkgram_native_push_runtime_probe_v01
