@@ -16,11 +16,13 @@ NEW_ORDER = (
     "verify_jerkgram_push_binding_bridge_v01.py",
 )
 
-PREMIUM_ICON_ORDER = (
+BUILD140_FEATURE_ORDER = (
     "apply_jerkgram_push_binding_bridge_v01.py",
     "verify_jerkgram_push_binding_bridge_v01.py",
     "apply_jerkgram_build140_premium_icons1.py",
     "verify_jerkgram_build140_premium_icons1.py",
+    "apply_jerkgram_build140_download_boost1.py",
+    "verify_jerkgram_build140_download_boost1.py",
     "apply_jerkgram_build140_identity.py",
     "verify_jerkgram_build140_identity.py",
 )
@@ -68,11 +70,11 @@ class PasswordlessPushBindingWiringTests(unittest.TestCase):
         for name in OLD_PAIRING:
             self.assertNotIn(name, generated)
 
-    def test_premium_icon_unlock_runs_after_push_binding_and_before_build140_identity(self):
+    def test_build140_features_run_after_push_binding_and_before_identity(self):
         installer = INSTALLER.read_text()
-        for name in PREMIUM_ICON_ORDER:
+        for name in BUILD140_FEATURE_ORDER:
             self.assertEqual(installer.count(name), 1, f"{name} must be wired exactly once")
-        positions = [installer.index(name) for name in PREMIUM_ICON_ORDER]
+        positions = [installer.index(name) for name in BUILD140_FEATURE_ORDER]
         self.assertEqual(positions, sorted(positions))
 
         module = load_installer_module()
@@ -86,7 +88,7 @@ class PasswordlessPushBindingWiringTests(unittest.TestCase):
             + "\n"
         )
         generated = module.patch_probe(probe)
-        generated_positions = [generated.index(name) for name in PREMIUM_ICON_ORDER]
+        generated_positions = [generated.index(name) for name in BUILD140_FEATURE_ORDER]
         self.assertEqual(generated_positions, sorted(generated_positions))
         self.assertLess(generated_positions[-1], generated.index(module.BAZEL_ANCHOR))
 
