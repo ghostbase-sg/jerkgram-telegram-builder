@@ -1,25 +1,28 @@
-name: Build140 Integration Trigger
+name: Native Push NSE Integration Trigger
 
 on:
   push:
     branches:
-      - dev/build133-runtime-repair
+      - dev/native-push-nse-fix
 
 permissions:
   actions: write
   contents: read
 
 jobs:
-  preflight-and-dispatch-build140:
+  preflight-and-dispatch:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout builder
         uses: actions/checkout@v4
 
-      - name: Verify Build140 URL routing and identity before macOS CI
+      - name: Verify native push NSE packaging before macOS CI
         run: |
           set -e
           python3 -m py_compile \
+            scripts/jerkgram_finalize_build126_keychain_package1.py \
+            scripts/jerkgram_finalize_build128_identity.py \
+            scripts/verify_jerkgram_v12s_build128_final_ipa.py \
             scripts/apply_jerkgram_push_click_bridge_v01.py \
             scripts/verify_jerkgram_push_click_bridge_v01.py \
             scripts/apply_jerkgram_webpush_registration_v01.py \
@@ -34,6 +37,9 @@ jobs:
             scripts/verify_jerkgram_v12w_build133_final_ipa.py \
             scripts/jerkgram_publish_build138_artifact.py
           python3 -m unittest \
+            tests.test_jerkgram_v12o_build126_keychain_packaging1 \
+            tests.test_jerkgram_native_push_nse_keychain1 \
+            tests.test_jerkgram_v12s_build128_file_picker_package1 \
             tests.test_jerkgram_webpush_registration_v01 \
             tests.test_jerkgram_push_binding_bridge_v01 \
             tests.test_jerkgram_push_binding_wiring_v01 \
