@@ -7,9 +7,12 @@ ROOT = Path(__file__).parents[1]
 INSTALLER = ROOT / "scripts/install_jerkgram_v12w_build133_probe_hook.py"
 BUILD_WORKFLOW = ROOT / ".github/workflows/build.yml"
 
-NEW_ORDER = (
+NATIVE_CLICK_ORDER = (
     "apply_jerkgram_push_click_bridge_v01.py",
     "verify_jerkgram_push_click_bridge_v01.py",
+)
+
+ISOLATED_TYPE10_BINDING = (
     "apply_jerkgram_webpush_registration_v01.py",
     "verify_jerkgram_webpush_registration_v01.py",
     "apply_jerkgram_push_binding_bridge_v01.py",
@@ -23,23 +26,24 @@ OLD_PAIRING = (
 
 
 def load_installer_module():
-    spec = importlib.util.spec_from_file_location("build133_passwordless_push", INSTALLER)
+    spec = importlib.util.spec_from_file_location("build133_native_type1_diag", INSTALLER)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-class PasswordlessPushBindingWiringTests(unittest.TestCase):
-    def test_native_passwordless_push_chain_is_exactly_once_in_order_before_bazel(self):
+class NativeType1PushWiringTests(unittest.TestCase):
+    def test_native_type1_diagnostic_is_isolated_from_webpush_before_bazel(self):
         installer = INSTALLER.read_text()
-        for name in NEW_ORDER:
+        for name in NATIVE_CLICK_ORDER:
             self.assertEqual(installer.count(name), 1, f"{name} must be wired exactly once")
-        for name in OLD_PAIRING:
-            self.assertNotIn(name, installer, f"legacy pairing bridge still active: {name}")
+        for name in ISOLATED_TYPE10_BINDING + OLD_PAIRING:
+            self.assertNotIn(name, installer, f"non-Type1 push bridge still active: {name}")
 
-        positions = [installer.index(name) for name in NEW_ORDER]
+        positions = [installer.index(name) for name in NATIVE_CLICK_ORDER]
         self.assertEqual(positions, sorted(positions))
+        self.assertIn("native Type1 push diagnostic", installer)
 
         module = load_installer_module()
         probe = (
@@ -52,16 +56,16 @@ class PasswordlessPushBindingWiringTests(unittest.TestCase):
             + "\n"
         )
         generated = module.patch_probe(probe)
-        generated_positions = [generated.index(name) for name in NEW_ORDER]
+        generated_positions = [generated.index(name) for name in NATIVE_CLICK_ORDER]
         self.assertEqual(generated_positions, sorted(generated_positions))
         bazel_position = generated.index(module.BAZEL_ANCHOR)
         self.assertTrue(all(position < bazel_position for position in generated_positions))
-        for name in OLD_PAIRING:
+        for name in ISOLATED_TYPE10_BINDING + OLD_PAIRING:
             self.assertNotIn(name, generated)
 
-    def test_release_workflow_preflights_passwordless_native_push_chain(self):
+    def test_release_workflow_preflights_native_type1_isolation_contract(self):
         workflow = BUILD_WORKFLOW.read_text()
-        for name in NEW_ORDER:
+        for name in NATIVE_CLICK_ORDER + ISOLATED_TYPE10_BINDING:
             self.assertIn(f"scripts/{name}", workflow)
         for name in OLD_PAIRING:
             self.assertNotIn(f"scripts/{name}", workflow)
