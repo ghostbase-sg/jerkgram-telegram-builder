@@ -158,6 +158,63 @@ let cdnRefreshed = FetchingState(
         with self.assertRaisesRegex(RuntimeError, "expected 4 anchors, found 3"):
             patch.patch_fetch_v2(broken)
 
+    def test_download_boost_renderer_accepts_materialized_attributed_selector(self):
+        patch = load_download_boost_module()
+        source = '''        case let .selector(_, _, title, value):
+            return ItemListDisclosureItem(
+                presentationData: presentationData,
+                systemStyle: .glass,
+                title: title,
+                label: "",
+                attributedLabel: ghostBaseSendStyleAttributedText(
+                    style: value,
+                    text: ghostBaseSendTextStyleTitle(
+                    value,
+                    strings: presentationData.strings.jerkgram
+                ),
+                    color: presentationData.theme.list.itemSecondaryTextColor,
+                    size: 15.0
+                ),
+                labelStyle: .text,
+                sectionId: self.section,
+                style: .blocks,
+                disclosureStyle: .arrow,
+                action: {
+                    arguments.openSendTextStyle()
+                },
+                tag: GhostBaseSettingsEntryTag.sendTextStyle
+            )
+
+        case let .stylePreview(_, _, value):
+            return ItemListDisclosureItem(
+                presentationData: presentationData,
+                systemStyle: .glass,
+                title: value,
+                label: "",
+                labelStyle: .text,
+                sectionId: self.section,
+                style: .blocks,
+                disclosureStyle: .none,
+                action: nil
+            )
+'''
+        actual = patch.patch_download_boost_renderer(source)
+
+        selector_start = actual.index("        case let .selector(_, _, title, value):")
+        boost_start = actual.index("        case let .downloadBoost(_, _, title, value):")
+        preview_start = actual.index("        case let .stylePreview(_, _, value):")
+        self.assertLess(selector_start, boost_start)
+        self.assertLess(boost_start, preview_start)
+        self.assertIn("attributedLabel: ghostBaseSendStyleAttributedText(", actual[selector_start:boost_start])
+        self.assertIn("arguments.openSendTextStyle()", actual[selector_start:boost_start])
+        self.assertIn("arguments.openDownloadBoost()", actual[boost_start:preview_start])
+        self.assertEqual(actual.count("case let .downloadBoost(_, _, title, value):"), 1)
+
+        with self.assertRaisesRegex(RuntimeError, "stylePreview boundary missing"):
+            patch.patch_download_boost_renderer(
+                source.replace("        case let .stylePreview(_, _, value):", "        case let .other(_, _, value):")
+            )
+
     def test_release_workflow_preflights_passwordless_native_push_chain(self):
         workflow = BUILD_WORKFLOW.read_text()
         for name in NEW_ORDER:
