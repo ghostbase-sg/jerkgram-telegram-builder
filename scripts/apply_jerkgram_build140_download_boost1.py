@@ -25,6 +25,15 @@ def replace_once(text, old, new, label):
     return text.replace(old, new, 1)
 
 
+DOWNLOAD_BOOST_GLOBAL_WRITE_PATTERN = re.compile(
+    r'UserDefaults\.standard\.set\(\s*mode\s*,\s*forKey:\s*jerkgramDownloadBoostKey\s*\)'
+)
+
+
+def download_boost_global_write_count(text):
+    return len(DOWNLOAD_BOOST_GLOBAL_WRITE_PATTERN.findall(text))
+
+
 def block_bounds(text, signature):
     start = text.find(signature)
     require(start >= 0, 'block missing: ' + signature)
@@ -403,7 +412,7 @@ def patch_settings_text(text):
     text = text.replace(anchor, DOWNLOAD_MENU_WIRING + anchor, 1)
 
     require(text.count(SETTINGS_MARKER) == 1, 'Settings marker final count')
-    require(text.count('UserDefaults.standard.set(mode, forKey: jerkgramDownloadBoostKey)') == 1, 'global write count')
+    require(download_boost_global_write_count(text) == 1, 'global write count')
     return text
 
 

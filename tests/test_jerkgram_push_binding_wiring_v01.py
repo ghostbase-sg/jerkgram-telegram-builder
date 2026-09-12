@@ -231,6 +231,27 @@ let cdnRefreshed = FetchingState(
         self.assertNotIn("controller.present(", wiring)
         self.assertNotIn("GhostBaseSendStyleContextSource(", wiring)
 
+    def test_download_boost_global_write_count_is_format_insensitive_and_exact(self):
+        patch = load_download_boost_module()
+        base = patch.base
+
+        one_line = "UserDefaults.standard.set(mode, forKey: jerkgramDownloadBoostKey)"
+        multiline = '''UserDefaults.standard.set(
+            mode,
+            forKey: jerkgramDownloadBoostKey
+        )'''
+
+        self.assertEqual(base.download_boost_global_write_count(one_line), 1)
+        self.assertEqual(base.download_boost_global_write_count(multiline), 1)
+        self.assertEqual(
+            base.download_boost_global_write_count(one_line + "\n" + multiline),
+            2,
+        )
+        self.assertEqual(
+            base.download_boost_global_write_count(patch.NATIVE_DOWNLOAD_PAGE_WIRING),
+            1,
+        )
+
     def test_release_workflow_preflights_passwordless_native_push_chain(self):
         workflow = BUILD_WORKFLOW.read_text()
         for name in NEW_ORDER:
