@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import sys
+
+
+ROOT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
+REGISTER = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/AccountData/RegisterNotificationToken.swift"
+BUILD_CONFIG = ROOT / "submodules/BuildConfig/Sources/BuildConfig.m"
+
+SWIFT_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics v0.1"
+OBJC_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics report v0.1"
+
+
+def require(value: bool, message: str) -> None:
+    if not value:
+        raise RuntimeError("[jerkgram-native-push-type1] " + message)
+
+
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    require(count == 1, f"{label}: expected exactly one anchor, found {count}")
+    return text.replace(old, new, 1)
+
+
+def patch_register(text: str) -> str:
+    if SWIFT_MARKER in text:
+        return text
+
+    for required in (
+        "// GHOSTBASE_V10E1_SPLIT_PUSH_TYPE1",
+        'ghostBaseRegisterDeviceKind = "Type1"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Request"',
+        'LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error"',
+        'public func _internal_registerJerkgramWebPushToken(',
+        "tokenType: 10",
+    ):
+        require(required in text, "prerequisite missing: " + required)
+
+    text = replace_once(
+        text,
+        "        var keyData = Data()\n",
+        "        var keyData = Data()\n"
+        "        var jerkgramType1Encrypt = false\n",
+        "type1 encrypt state",
+    )
+
+    text = replace_once(
+        text,
+        "        case let .aps(encrypt):\n"
+        "            mappedType = 1\n"
+        "            if encrypt {\n",
+        "        case let .aps(encrypt):\n"
+        "            mappedType = 1\n"
+        "            jerkgramType1Encrypt = encrypt\n"
+        "            if encrypt {\n",
+        "aps encrypt capture",
+    )
+
+    typed_request = '        GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Request")\n'
+    typed_request_replacement = typed_request + (
+        '        if mappedType == 1 {\n'
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Sandbox", sandbox ? "true" : "false")\n'
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Encrypt", jerkgramType1Encrypt ? "true" : "false")\n'
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1SecretLength", "\\(keyData.count)")\n'
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1OtherUidsCount", "\\(otherAccountUserIds.count)")\n'
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Error", "none")\n'
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1ErrorCode", "none")\n'
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Timestamp", "\\(Int(Date().timeIntervalSince1970))")\n'
+        '        }\n'
+    )
+    text = replace_once(text, typed_request, typed_request_replacement, "type1 request parameters")
+
+    typed_success = '            GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Success")\n'
+    typed_success_replacement = typed_success + (
+        '            if mappedType == 1 {\n'
+        '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1ErrorCode", "none")\n'
+        '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Timestamp", "\\(Int(Date().timeIntervalSince1970))")\n'
+        '            }\n'
+    )
+    text = replace_once(text, typed_success, typed_success_replacement, "type1 success result")
+
+    typed_error = '            GhostBaseV10EPushProbeCore.set("LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription)\n'
+    typed_error_replacement = typed_error + (
+        '            if mappedType == 1 {\n'
+        '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1ErrorCode", "\\(error.errorCode)")\n'
+        '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Timestamp", "\\(Int(Date().timeIntervalSince1970))")\n'
+        '            }\n'
+    )
+    text = replace_once(text, typed_error, typed_error_replacement, "type1 rpc code")
+
+    marker_anchor = '    GhostBaseV10EPushProbeCore.record("registerDeviceEntry")\n'
+    text = replace_once(text, marker_anchor, SWIFT_MARKER + "\n" + marker_anchor, "swift marker")
+    return text
+
+
+NATIVE_REPORT_HELPER = r'''
+// MARK: Jerkgram Native Push Type1 diagnostics report v0.1
+static NSString *JerkgramNativePushType1Diagnostics(void) {
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSString *prefix = @"GhostBase.V10E.Push.";
+
+    NSInteger apnsRegisteredCount = [defaults integerForKey:[prefix stringByAppendingString:@"didRegisterDeviceToken.Count"]];
+    NSInteger requestCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Request.Count"]];
+    NSInteger successCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Success.Count"]];
+    NSInteger invalidatedCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Invalidated.Count"]];
+    NSInteger errorCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Error.Count"]];
+    NSInteger failureCount = invalidatedCount + errorCount;
+
+    NSString *sandbox = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Sandbox"]] ?: @"none";
+    NSString *encrypt = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Encrypt"]] ?: @"none";
+    NSString *secretLength = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1SecretLength"]] ?: @"none";
+    NSString *otherUidsCount = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1OtherUidsCount"]] ?: @"none";
+    NSString *rpcCode = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1ErrorCode"]] ?: @"none";
+    NSString *rpcDescription = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Error"]] ?: @"none";
+    NSString *timestamp = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Timestamp"]] ?: @"none";
+
+    return [NSString stringWithFormat:
+        @"\n\n=== Native Push Type1 ===\n"
+         @"APNsRegistered: %@\n"
+         @"Type1RequestCount: %ld\n"
+         @"Type1SuccessCount: %ld\n"
+         @"Type1FailureCount: %ld\n"
+         @"Sandbox: %@\n"
+         @"Encrypt: %@\n"
+         @"SecretLength: %@\n"
+         @"OtherUidsCount: %@\n"
+         @"RPCCode: %@\n"
+         @"RPCDescription: %@\n"
+         @"Timestamp: %@\n",
+        apnsRegisteredCount > 0 ? @"true" : @"false",
+        (long)requestCount,
+        (long)successCount,
+        (long)failureCount,
+        sandbox,
+        encrypt,
+        secretLength,
+        otherUidsCount,
+        rpcCode,
+        rpcDescription,
+        timestamp
+    ];
+}
+
+'''
+
+
+def patch_build_config(text: str) -> str:
+    if OBJC_MARKER in text:
+        return text
+
+    for required in (
+        "@implementation BuildConfig (JerkgramExtensionDiagnostics)",
+        "+ (NSString *)jerkgramExtensionDiagnosticsReport {",
+        'return @"{\\"schemaVersion\\":1,\\"error\\":\\"shared-container-unavailable\\"}";',
+        'return [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] ?: @"{}";',
+    ):
+        require(required in text, "BuildConfig prerequisite missing: " + required)
+
+    text = replace_once(
+        text,
+        "@implementation BuildConfig (JerkgramExtensionDiagnostics)\n",
+        NATIVE_REPORT_HELPER + "@implementation BuildConfig (JerkgramExtensionDiagnostics)\n",
+        "native report helper",
+    )
+    text = replace_once(
+        text,
+        '        return @"{\\"schemaVersion\\":1,\\"error\\":\\"shared-container-unavailable\\"}";',
+        '        return [@"{\\"schemaVersion\\":1,\\"error\\":\\"shared-container-unavailable\\"}" stringByAppendingString:JerkgramNativePushType1Diagnostics()];',
+        "shared-container early report",
+    )
+    text = replace_once(
+        text,
+        '    return [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] ?: @"{}";',
+        '    NSString *extensionReport = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] ?: @"{}";\n'
+        '    return [extensionReport stringByAppendingString:JerkgramNativePushType1Diagnostics()];',
+        "normal extension report",
+    )
+    return text
+
+
+def main() -> None:
+    for path in (REGISTER, BUILD_CONFIG):
+        require(path.is_file(), "source owner missing: " + str(path))
+
+    REGISTER.write_text(patch_register(REGISTER.read_text(encoding="utf-8")), encoding="utf-8")
+    BUILD_CONFIG.write_text(patch_build_config(BUILD_CONFIG.read_text(encoding="utf-8")), encoding="utf-8")
+    print("[jerkgram-native-push-type1] Type1 storage + Copy Extension Diagnostics report installed")
+
+
+if __name__ == "__main__":
+    main()

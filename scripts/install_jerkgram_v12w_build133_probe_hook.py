@@ -15,6 +15,7 @@ FINAL_MARKER = "# JERKGRAM_V12W_BUILD133_FINAL_IDENTITY_HOOK"
 BUILD130_SOURCE_ANCHOR = "python3 ../../scripts/verify_jerkgram_v12s_build130_siri_failclosed1.py"
 BUILD130_FINAL_ANCHOR = "python3 ../../scripts/verify_jerkgram_v12s_build130_final_ipa.py ghostbase-final/GhostBase.ipa"
 BAZEL_ANCHOR = '"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-}'
+UNIT_TEST_MODULE = "tests.test_jerkgram_native_push_type1_diagnostics_v01"
 
 SOURCE_ORDERED = (
     "apply_jerkgram_v12t_build133_blocked_reactions1.py",
@@ -54,6 +55,8 @@ SOURCE_ORDERED = (
     "apply_jerkgram_build140_identity.py",
     "verify_jerkgram_build140_identity.py",
     "verify_jerkgram_v12w_build133_runtime_repair1.py",
+    "apply_jerkgram_native_push_type1_diagnostics_v01.py",
+    "verify_jerkgram_native_push_type1_diagnostics_v01.py",
 )
 FINAL_ORDERED = (
     "jerkgram_finalize_build133_identity.py",
@@ -78,7 +81,7 @@ def patch_probe(text: str) -> str:
 
     source_payload = (
         SOURCE_MARKER
-        + '\necho\necho "== Jerkgram Build140 runtime + passwordless Web Push + Premium app icons + Download Boost =="\n'
+        + '\necho\necho "== Jerkgram Build140 runtime + passwordless Web Push + Premium app icons + Download Boost + native Type1 diagnostics =="\n'
         + "\n".join(line(name) for name in SOURCE_ORDERED)
     )
     if SOURCE_MARKER not in text:
@@ -125,11 +128,12 @@ def patch_probe(text: str) -> str:
 
 def main() -> None:
     require(BASE_INSTALLER.is_file(), "base installer missing: " + str(BASE_INSTALLER))
+    subprocess.check_call([sys.executable, "-m", "unittest", UNIT_TEST_MODULE], cwd=str(SCRIPT_DIR.parent))
     subprocess.check_call([sys.executable, str(BASE_INSTALLER)])
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build140 probe hook] GREEN")
-    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> Premium app icons -> Download Boost2 -> identity 140 -> source gate -> Bazel -> physical identity 140")
+    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> Premium app icons -> Download Boost2 -> identity 140 -> native Type1 diagnostics -> FINAL Type1 gate -> Bazel -> physical identity 140")
 
 
 if __name__ == "__main__":
