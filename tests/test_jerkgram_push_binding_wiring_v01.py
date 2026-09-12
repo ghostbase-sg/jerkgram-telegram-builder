@@ -215,6 +215,22 @@ let cdnRefreshed = FetchingState(
                 source.replace("        case let .stylePreview(_, _, value):", "        case let .other(_, _, value):")
             )
 
+    def test_download_boost_uses_native_pushed_item_list_like_send_text_style(self):
+        patch = load_download_boost_module()
+
+        self.assertIn("private final class GhostBaseDownloadBoostPageArguments", patch.NATIVE_SETTINGS_HELPER)
+        self.assertIn("private enum GhostBaseDownloadBoostPageEntry: ItemListNodeEntry", patch.NATIVE_SETTINGS_HELPER)
+        self.assertIn("private func ghostBaseDownloadBoostPageController(", patch.NATIVE_SETTINGS_HELPER)
+        self.assertIn("ValuePromise(", patch.NATIVE_SETTINGS_HELPER)
+        self.assertIn("return ItemListController(", patch.NATIVE_SETTINGS_HELPER)
+
+        wiring = patch.NATIVE_DOWNLOAD_PAGE_WIRING
+        self.assertIn("ghostBaseDownloadBoostPageController(", wiring)
+        self.assertIn("controller?.push(downloadBoostController)", wiring)
+        self.assertNotIn("makeContextController(", wiring)
+        self.assertNotIn("controller.present(", wiring)
+        self.assertNotIn("GhostBaseSendStyleContextSource(", wiring)
+
     def test_release_workflow_preflights_passwordless_native_push_chain(self):
         workflow = BUILD_WORKFLOW.read_text()
         for name in NEW_ORDER:
