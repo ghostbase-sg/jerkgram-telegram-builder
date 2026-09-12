@@ -6,6 +6,10 @@ on:
       - dev/native-push-type1-runtime-probe
   workflow_dispatch:
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   unit:
     runs-on: ubuntu-latest
@@ -13,3 +17,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run native push probe contract
         run: python3 -m unittest tests.test_jerkgram_native_push_runtime_probe_v01
+
+  dispatch-build:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch full Jerkgram build on this branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
