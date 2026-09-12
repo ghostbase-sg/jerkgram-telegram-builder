@@ -8,13 +8,15 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.pairing import PairStatus, PairingStore, build_authorize_url
-from app.telegram_gateway import LoginChallenge
+from app.telegram_gateway import LoginChallenge, MessageEnvelope
 
 
 class FakeGateway:
     def __init__(self, *, configured: bool = True) -> None:
         self.configured = configured
         self.started: list[str] = []
+        self.revoked: list[str] = []
+        self.messages: dict[str, MessageEnvelope] = {}
 
     async def start_login(self, pair_id: str) -> LoginChallenge:
         if not self.configured:
@@ -30,6 +32,12 @@ class FakeGateway:
 
     async def close_login(self, pair_id: str) -> None:
         return None
+
+    async def revoke_session(self, pair_id: str) -> None:
+        self.revoked.append(pair_id)
+
+    def latest_message(self, pair_id: str) -> MessageEnvelope | None:
+        return self.messages.get(pair_id)
 
 
 def test_pairing_store_generates_distinct_high_entropy_ids() -> None:
@@ -53,6 +61,18 @@ def test_terminal_pair_state_cannot_regress() -> None:
 
     assert approved.status is PairStatus.APPROVED
     assert ignored.status is PairStatus.APPROVED
+
+
+def test_approved_pair_can_be_revoked_but_not_reopened() -> None:
+    store = PairingStore()
+    record = store.create(expires_at=datetime.now(timezone.utc) + timedelta(seconds=30))
+    store.transition(record.pair_id, PairStatus.APPROVED)
+
+    revoked = store.transition(record.pair_id, PairStatus.REVOKED)
+    ignored = store.transition(record.pair_id, PairStatus.APPROVED)
+
+    assert revoked.status is PairStatus.REVOKED
+    assert ignored.status is PairStatus.REVOKED
 
 
 def test_pending_pair_expires_on_read() -> None:
@@ -128,3 +148,71 @@ def test_pair_start_returns_503_when_telegram_is_not_configured() -> None:
 
     assert response.status_code == 503
     assert response.json()["detail"] == "telegram_not_configured"
+
+
+def test_latest_message_exposes_full_ephemeral_notification_context() -> None:
+    gateway = FakeGateway()
+    app = create_app(gateway=gateway)
+    with TestClient(app) as client:
+        pair = client.post("/pair/start").json()
+        pair_id = pair["pair_id"]
+        gateway.messages[pair_id] = MessageEnvelope(
+            message_id=741,
+            peer_kind="channel",
+            peer_id=100200300,
+            sender_id=998877,
+            sender_name="Test Sender",
+            chat_title="Jerkgram Test Group",
+            text="full notification body",
+            date=datetime(2026, 9, 12, 6, 45, tzinfo=timezone.utc),
+            top_message_id=700,
+        )
+
+        response = client.get(f"/pair/{pair_id}/latest-message")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "message_id": 741,
+        "peer_kind": "channel",
+        "peer_id": 100200300,
+        "sender_id": 998877,
+        "sender_name": "Test Sender",
+        "chat_title": "Jerkgram Test Group",
+        "text": "full notification body",
+        "date": "2026-09-12T06:45:00Z",
+        "top_message_id": 700,
+    }
+
+
+def test_latest_message_is_204_until_first_update_arrives() -> None:
+    gateway = FakeGateway()
+    app = create_app(gateway=gateway)
+    with TestClient(app) as client:
+        pair_id = client.post("/pair/start").json()["pair_id"]
+        response = client.get(f"/pair/{pair_id}/latest-message")
+
+    assert response.status_code == 204
+    assert response.content == b""
+
+
+def test_revoke_disconnects_and_invalidates_backend_session() -> None:
+    gateway = FakeGateway()
+    app = create_app(gateway=gateway)
+    with TestClient(app) as client:
+        pair_id = client.post("/pair/start").json()["pair_id"]
+
+        response = client.delete(f"/pair/{pair_id}")
+        status = client.get(f"/pair/{pair_id}").json()
+
+    assert response.status_code == 204
+    assert gateway.revoked == [pair_id]
+    assert status["status"] == "revoked"
+
+
+def test_revoke_unknown_pair_is_404() -> None:
+    app = create_app(gateway=FakeGateway())
+    with TestClient(app) as client:
+        response = client.delete("/pair/does-not-exist")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "pair_not_found"
