@@ -49,8 +49,8 @@ SOURCE_ORDERED = (
     "verify_jerkgram_push_binding_bridge_v01.py",
     "apply_jerkgram_build140_premium_icons1.py",
     "verify_jerkgram_build140_premium_icons1.py",
-    "apply_jerkgram_build140_download_boost1.py",
-    "verify_jerkgram_build140_download_boost1.py",
+    "apply_jerkgram_build140_download_boost2.py",
+    "verify_jerkgram_build140_download_boost2.py",
     "apply_jerkgram_build140_identity.py",
     "verify_jerkgram_build140_identity.py",
     "verify_jerkgram_v12w_build133_runtime_repair1.py",
@@ -129,7 +129,7 @@ def main() -> None:
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build140 probe hook] GREEN")
-    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> Premium app icons -> Download Boost -> identity 140 -> source gate -> Bazel -> physical identity 140")
+    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> Premium app icons -> Download Boost2 -> identity 140 -> source gate -> Bazel -> physical identity 140")
 
 
 if __name__ == "__main__":
