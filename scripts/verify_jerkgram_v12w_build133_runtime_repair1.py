@@ -12,8 +12,6 @@ ORDERED = (
     "verify_jerkgram_v12v_build133_settings1.py",
     "verify_jerkgram_v12w_build133_music_overlay1.py",
     "verify_jerkgram_push_click_bridge_v01.py",
-    "verify_jerkgram_webpush_registration_v01.py",
-    "verify_jerkgram_push_binding_bridge_v01.py",
     "verify_jerkgram_build140_identity.py",
 )
 
@@ -29,7 +27,7 @@ def main() -> None:
         require(path.is_file(), "missing verifier: " + name)
         subprocess.run([sys.executable, str(path)], check=True)
     print("[Build140 final source verifier] PREFLIGHT GREEN")
-    print("[Build140 final source verifier] runtime + click + Web Push type10 + passwordless binding + identity verified before Bazel")
+    print("[Build140 final source verifier] runtime + click + native Type1 diagnostic + identity verified before Bazel")
 
 
 if __name__ == "__main__":
