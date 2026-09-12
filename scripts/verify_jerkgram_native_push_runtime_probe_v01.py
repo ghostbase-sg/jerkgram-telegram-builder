@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Final materialized-source gate for native APNs type-1 diagnostics."""
+"""Final materialized-source gate for native APNs registration + type-1 diagnostics."""
 
 from pathlib import Path
 import sys
@@ -11,11 +11,23 @@ BUILD_CONFIG = ROOT / "submodules/BuildConfig/Sources/BuildConfig.m"
 SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 
 SWIFT_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics v0.2"
-OBJC_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics report v0.2"
+OBJC_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics report v0.3"
 
 REPORT_MARKERS = (
+    "=== Native Push APNs Registration ===",
+    "NotificationSettingsReadCount: %ld",
+    "AuthorizationGrantedCount: %ld",
+    "AuthorizationDeniedCount: %ld",
+    "RegisterForRemoteNotificationsCount: %ld",
+    "InvalidationRegisterCount: %ld",
+    "DidRegisterTokenCount: %ld",
+    "DidFailTokenCount: %ld",
+    "DeviceTokenLength: %@",
+    "AuthorizationStatus: %@",
+    "LastRegisterFail: %@",
     "=== Native Push Type1 ===",
     "APNsRegistered: %@",
+    "Type1EntryCount: %ld",
     "Type1RequestCount: %ld",
     "Type1SuccessCount: %ld",
     "Type1FailureCount: %ld",
@@ -62,9 +74,24 @@ def verify_texts(register: str, build_config: str, settings: str) -> None:
     for marker in REPORT_MARKERS:
         require(marker in build_config, "Copy Extension Diagnostics marker missing: " + marker)
 
+    for required in (
+        'notificationSettingsRead.Count',
+        'requestAuthorizationTrue.Count',
+        'requestAuthorizationFalse.Count',
+        'authorizedRegisterForRemoteNotifications.Count',
+        'invalidationRegisterForRemoteNotifications.Count',
+        'didRegisterDeviceToken.Count',
+        'didFailRegisterDeviceToken.Count',
+        'LastDeviceTokenLength',
+        'LastAuthorizationStatus',
+        'LastRegisterFail',
+        'registerDeviceType1Entry.Count',
+    ):
+        require(required in build_config, "APNs registration diagnostic source missing: " + required)
+
     require(
         build_config.count("stringByAppendingString:JerkgramNativePushType1Diagnostics()") == 2,
-        "Type1 report must be appended on normal and shared-container-error paths",
+        "native push report must be appended on normal and shared-container-error paths",
     )
 
     for required in (
@@ -93,7 +120,7 @@ def main() -> None:
         SETTINGS.read_text(encoding="utf-8"),
     )
     print("[verify-native-push-type1] FINAL MATERIALIZED SOURCE GREEN")
-    print("[verify-native-push-type1] Copy Extension Diagnostics contains Type1 request/success/failure + RPC code/description")
+    print("[verify-native-push-type1] Copy Extension Diagnostics contains APNs registration + Type1 entry/request/result diagnostics")
 
 
 if __name__ == "__main__":

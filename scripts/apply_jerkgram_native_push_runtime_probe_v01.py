@@ -3,8 +3,8 @@
 
 This patch intentionally runs after WebPush/binding verifiers and after the
 Build140 identity overlay. It does not add another registerDevice interceptor;
-it augments the already-materialized v1.0E.1 counters and appends a Type1
-section to the existing Copy Extension Diagnostics report.
+it augments the already-materialized v1.0E.1 counters and appends APNs
+registration + Type1 sections to the existing Copy Extension Diagnostics report.
 """
 
 from pathlib import Path
@@ -17,7 +17,7 @@ REGISTER_REL = Path("submodules/TelegramCore/Sources/TelegramEngine/AccountData/
 BUILD_CONFIG_REL = Path("submodules/BuildConfig/Sources/BuildConfig.m")
 
 SWIFT_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics v0.2"
-OBJC_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics report v0.2"
+OBJC_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics report v0.3"
 
 
 def require(value: bool, message: str) -> None:
@@ -143,18 +143,28 @@ def patch_register_text(text: str) -> str:
 
 
 NATIVE_REPORT_HELPER = r"""
-// MARK: Jerkgram Native Push Type1 diagnostics report v0.2
+// MARK: Jerkgram Native Push Type1 diagnostics report v0.3
 static NSString *JerkgramNativePushType1Diagnostics(void) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *prefix = @"GhostBase.V10E.Push.";
 
-    NSInteger apnsRegisteredCount = [defaults integerForKey:[prefix stringByAppendingString:@"didRegisterDeviceToken.Count"]];
+    NSInteger notificationSettingsReadCount = [defaults integerForKey:[prefix stringByAppendingString:@"notificationSettingsRead.Count"]];
+    NSInteger authorizationGrantedCount = [defaults integerForKey:[prefix stringByAppendingString:@"requestAuthorizationTrue.Count"]];
+    NSInteger authorizationDeniedCount = [defaults integerForKey:[prefix stringByAppendingString:@"requestAuthorizationFalse.Count"]];
+    NSInteger registerForRemoteNotificationsCount = [defaults integerForKey:[prefix stringByAppendingString:@"authorizedRegisterForRemoteNotifications.Count"]];
+    NSInteger invalidationRegisterCount = [defaults integerForKey:[prefix stringByAppendingString:@"invalidationRegisterForRemoteNotifications.Count"]];
+    NSInteger didRegisterTokenCount = [defaults integerForKey:[prefix stringByAppendingString:@"didRegisterDeviceToken.Count"]];
+    NSInteger didFailTokenCount = [defaults integerForKey:[prefix stringByAppendingString:@"didFailRegisterDeviceToken.Count"]];
+    NSInteger type1EntryCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Entry.Count"]];
     NSInteger requestCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Request.Count"]];
     NSInteger successCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Success.Count"]];
     NSInteger invalidatedCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Invalidated.Count"]];
     NSInteger errorCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Error.Count"]];
     NSInteger failureCount = invalidatedCount + errorCount;
 
+    NSString *deviceTokenLength = [defaults stringForKey:[prefix stringByAppendingString:@"LastDeviceTokenLength"]] ?: @"none";
+    NSString *authorizationStatus = [defaults stringForKey:[prefix stringByAppendingString:@"LastAuthorizationStatus"]] ?: @"none";
+    NSString *lastRegisterFail = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterFail"]] ?: @"none";
     NSString *sandbox = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Sandbox"]] ?: @"none";
     NSString *encrypt = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Encrypt"]] ?: @"none";
     NSString *secretLength = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1SecretLength"]] ?: @"none";
@@ -164,8 +174,20 @@ static NSString *JerkgramNativePushType1Diagnostics(void) {
     NSString *timestamp = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Timestamp"]] ?: @"none";
 
     return [NSString stringWithFormat:
-        @"\n\n=== Native Push Type1 ===\n"
+        @"\n\n=== Native Push APNs Registration ===\n"
+         @"NotificationSettingsReadCount: %ld\n"
+         @"AuthorizationGrantedCount: %ld\n"
+         @"AuthorizationDeniedCount: %ld\n"
+         @"RegisterForRemoteNotificationsCount: %ld\n"
+         @"InvalidationRegisterCount: %ld\n"
+         @"DidRegisterTokenCount: %ld\n"
+         @"DidFailTokenCount: %ld\n"
+         @"DeviceTokenLength: %@\n"
+         @"AuthorizationStatus: %@\n"
+         @"LastRegisterFail: %@\n"
+         @"\n=== Native Push Type1 ===\n"
          @"APNsRegistered: %@\n"
+         @"Type1EntryCount: %ld\n"
          @"Type1RequestCount: %ld\n"
          @"Type1SuccessCount: %ld\n"
          @"Type1FailureCount: %ld\n"
@@ -176,7 +198,18 @@ static NSString *JerkgramNativePushType1Diagnostics(void) {
          @"RPCCode: %@\n"
          @"RPCDescription: %@\n"
          @"Timestamp: %@\n",
-        apnsRegisteredCount > 0 ? @"true" : @"false",
+        (long)notificationSettingsReadCount,
+        (long)authorizationGrantedCount,
+        (long)authorizationDeniedCount,
+        (long)registerForRemoteNotificationsCount,
+        (long)invalidationRegisterCount,
+        (long)didRegisterTokenCount,
+        (long)didFailTokenCount,
+        deviceTokenLength,
+        authorizationStatus,
+        lastRegisterFail,
+        didRegisterTokenCount > 0 ? @"true" : @"false",
+        (long)type1EntryCount,
         (long)requestCount,
         (long)successCount,
         (long)failureCount,
