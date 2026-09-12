@@ -47,10 +47,11 @@ SOURCE_ORDERED = (
     "verify_jerkgram_webpush_registration_v01.py",
     "apply_jerkgram_push_binding_bridge_v01.py",
     "verify_jerkgram_push_binding_bridge_v01.py",
-    "apply_jerkgram_native_push_runtime_probe_v01.py",
     "apply_jerkgram_build140_identity.py",
     "verify_jerkgram_build140_identity.py",
     "verify_jerkgram_v12w_build133_runtime_repair1.py",
+    "apply_jerkgram_native_push_runtime_probe_v01.py",
+    "verify_jerkgram_native_push_runtime_probe_v01.py",
 )
 FINAL_ORDERED = (
     "jerkgram_finalize_build133_identity.py",
@@ -75,7 +76,7 @@ def patch_probe(text: str) -> str:
 
     source_payload = (
         SOURCE_MARKER
-        + '\necho\necho "== Jerkgram Build140 runtime + passwordless Web Push + native type1 probe =="\n'
+        + '\necho\necho "== Jerkgram Build140 runtime + passwordless Web Push + native type1 final diagnostics =="\n'
         + "\n".join(line(name) for name in SOURCE_ORDERED)
     )
     if SOURCE_MARKER not in text:
@@ -126,7 +127,7 @@ def main() -> None:
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build140 probe hook] GREEN")
-    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> native type1 diagnostics -> identity 140 -> source gate -> Bazel -> physical identity 140")
+    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> identity 140 -> runtime gate -> native Type1 diagnostics -> FINAL Type1 gate -> Bazel -> physical identity 140")
 
 
 if __name__ == "__main__":

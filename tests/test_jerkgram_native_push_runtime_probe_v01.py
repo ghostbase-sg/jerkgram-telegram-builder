@@ -4,149 +4,212 @@ import unittest
 
 
 REPO = Path(__file__).resolve().parents[1]
-PATCH = REPO / "scripts/apply_jerkgram_native_push_runtime_probe_v01.py"
+APPLY = REPO / "scripts/apply_jerkgram_native_push_runtime_probe_v01.py"
+VERIFY = REPO / "scripts/verify_jerkgram_native_push_runtime_probe_v01.py"
+INSTALLER = REPO / "scripts/install_jerkgram_v12w_build133_probe_hook.py"
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 REGISTER_FIXTURE = r'''
 import Foundation
-import SwiftSignalKit
-import Postbox
-import TelegramApi
-
-public enum NotificationTokenType {
-    case aps(encrypt: Bool)
-    case voip
-}
 
 func _internal_registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Bool, NoError> {
+    let ghostBaseRegisterDeviceKind: String
+    switch type {
+        case .aps:
+            ghostBaseRegisterDeviceKind = "Type1"
+        case .voip:
+            ghostBaseRegisterDeviceKind = "Type9"
+    }
+
+    GhostBaseV10EPushProbeCore.record("registerDeviceEntry")
+    GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Entry")
+    GhostBaseV10EPushProbeCore.set("LastRegisterDeviceKind", ghostBaseRegisterDeviceKind)
+
     return masterNotificationsKey(account: account, ignoreDisabled: false)
     |> mapToSignal { masterKey -> Signal<Bool, NoError> in
         let mappedType: Int32
         var keyData = Data()
+
         switch type {
-            case let .aps(encrypt):
-                mappedType = 1
-                if encrypt {
-                    keyData = masterKey.data
-                }
-            case .voip:
-                mappedType = 9
+        case let .aps(encrypt):
+            mappedType = 1
+            if encrypt {
                 keyData = masterKey.data
+            }
+        case .voip:
+            mappedType = 9
+            keyData = masterKey.data
         }
+
         var flags: Int32 = 0
         if excludeMutedChats {
             flags |= 1 << 0
         }
+
+        GhostBaseV10EPushProbeCore.record("registerDeviceRequest")
+        GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Request")
+        GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType", "\(mappedType)")
+        GhostBaseV10EPushProbeCore.set("LastRegisterDeviceTypeRaw", "\(mappedType)")
+        GhostBaseV10EPushProbeCore.setRegisterDeviceTypeSummary(lastType: mappedType, kind: ghostBaseRegisterDeviceKind)
+        GhostBaseV10EPushProbeCore.set("LastRegisterDeviceSecretLength", "\(keyData.count)")
         return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds.map({ $0._internalGetInt64Value() })))
         |> map { _ -> Bool in
+            GhostBaseV10EPushProbeCore.record("registerDeviceSuccess")
+            GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Success")
+            GhostBaseV10EPushProbeCore.set("LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", "none")
+            GhostBaseV10EPushProbeCore.setRegisterDeviceTypeSummary(lastType: mappedType, kind: ghostBaseRegisterDeviceKind)
             return true
         }
         |> `catch` { error -> Signal<Bool, NoError> in
+            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", error.errorDescription)
             if error.errorDescription == "TOKEN_WAS_INVALIDATED" {
+                GhostBaseV10EPushProbeCore.record("registerDeviceInvalidated")
+                GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Invalidated")
+                GhostBaseV10EPushProbeCore.setRegisterDeviceTypeSummary(lastType: mappedType, kind: ghostBaseRegisterDeviceKind)
                 return .single(false)
             } else {
+                GhostBaseV10EPushProbeCore.record("registerDeviceError")
+                GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Error")
+                GhostBaseV10EPushProbeCore.setRegisterDeviceTypeSummary(lastType: mappedType, kind: ghostBaseRegisterDeviceKind)
                 return .single(true)
             }
         }
     }
 }
+
+public enum JerkgramWebPushRegistrationResult {
+    case success
+    case failure(code: Int32, description: String)
+}
+public func _internal_registerJerkgramWebPushToken(account: Account, token: String, excludeMutedChats: Bool) -> Signal<JerkgramWebPushRegistrationResult, NoError> {
+    return account.network.request(Api.functions.account.registerDevice(flags: 0, tokenType: 10, token: token, appSandbox: .boolFalse, secret: Buffer(data: Data()), otherUids: []))
+    |> map { _ in .success }
+    |> `catch` { error in .single(.failure(code: error.errorCode, description: error.errorDescription)) }
+}
+public func _internal_unregisterJerkgramWebPushToken(account: Account, token: String) -> Signal<JerkgramWebPushRegistrationResult, NoError> {
+    return .single(.success)
+}
 '''
 
+BUILD_CONFIG_FIXTURE = r'''@implementation BuildConfig (JerkgramExtensionDiagnostics)
 
-APP_FIXTURE = r'''
-import UIKit
-
-@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate {
-    @objc var window: UIWindow?
-
-    private func handleJerkgramPushBindingUrl(_ url: URL) -> Bool {
-        return false
++ (NSString *)jerkgramExtensionDiagnosticsReport {
+    NSString *group = JerkgramResolvedDiagnosticsGroup();
+    NSURL *container = [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:group];
+    if (container == nil) {
+        return @"{\"schemaVersion\":1,\"error\":\"shared-container-unavailable\"}";
     }
-
-    private func handleJerkgramPushUrl(_ url: URL) -> Bool {
-        return false
-    }
-
-    private func handleJerkgramExternalUrl(_ url: URL) -> Bool {
-        if self.handleJerkgramPushBindingUrl(url) {
-            return true
-        }
-        if self.handleJerkgramPushUrl(url) {
-            return true
-        }
-        return false
-    }
+    NSDictionary *report = @{};
+    NSData *json = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
+    return [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] ?: @"{}";
 }
+
+@end
+'''
+
+SETTINGS_FIXTURE = r'''            switch action {
+            case "copyExtensionDiagnostics":
+                UIPasteboard.general.string = BuildConfig.jerkgramExtensionDiagnosticsReport()
+            default:
+                break
+            }
 '''
 
 
 class NativePushRuntimeProbeTests(unittest.TestCase):
-    def load_patch(self):
-        spec = importlib.util.spec_from_file_location("native_push_probe", PATCH)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
+    def test_live_v10e1_shape_is_extended_without_second_interceptor_or_semantic_change(self):
+        patch = load_module("native_push_apply", APPLY)
 
-    def test_type1_probe_records_attempt_success_and_exact_rpc_failure_without_changing_stock_return_semantics(self):
-        module = self.load_patch()
-        updated = module.patch_register_text(REGISTER_FIXTURE)
+        self.assertIn('registerDevice" + ghostBaseRegisterDeviceKind + "Request"', REGISTER_FIXTURE)
+        self.assertNotIn("JERKGRAM_NATIVE_PUSH_TYPE1_RUNTIME_PROBE_V01", REGISTER_FIXTURE)
+        self.assertNotIn(
+            'LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription',
+            REGISTER_FIXTURE,
+        )
 
+        updated = patch.patch_register_text(REGISTER_FIXTURE)
         for token in (
-            "JERKGRAM_NATIVE_PUSH_TYPE1_RUNTIME_PROBE_V01",
-            "jerkgram.nativePush.type1.",
-            "tokenBytes: token.count",
-            "secretBytes: keyData.count",
-            "otherUidsCount: otherAccountUserIds.count",
-            "mappedType == 1",
-            "recordAttempt(",
-            "recordSuccess(",
-            "recordFailure(",
+            patch.SWIFT_MARKER,
+            "LastRegisterDeviceType1Sandbox",
+            "LastRegisterDeviceType1Encrypt",
+            "LastRegisterDeviceType1SecretLength",
+            "LastRegisterDeviceType1OtherUidsCount",
+            "LastRegisterDeviceType1ErrorCode",
+            'LastRegisterDeviceType1Error", error.errorDescription',
             "error.errorCode",
-            "error.errorDescription",
         ):
             self.assertIn(token, updated)
 
-        # Stock behavior must stay byte-for-byte equivalent in meaning: only
-        # TOKEN_WAS_INVALIDATED returns false; every other RPC error returns true.
+        self.assertIn("public func _internal_registerJerkgramWebPushToken(", updated)
+        self.assertIn("tokenType: 10", updated)
         self.assertIn('if error.errorDescription == "TOKEN_WAS_INVALIDATED"', updated)
         self.assertIn("return .single(false)", updated)
-        self.assertGreaterEqual(updated.count("return .single(true)"), 1)
+        self.assertIn("return .single(true)", updated)
+        self.assertEqual(updated, patch.patch_register_text(updated))
 
-        # Diagnostics may store token/key lengths, never token/key material.
-        recorder = updated[updated.index("private enum JerkgramNativePushRuntimeProbe"):updated.index("public enum NotificationTokenType")]
-        self.assertNotIn("hexString(token)", recorder)
-        self.assertNotIn("masterKey.data", recorder)
-        self.assertNotIn("keyData.base64", recorder)
+    def test_copy_extension_report_contains_required_type1_block_without_raw_material(self):
+        patch = load_module("native_push_report", APPLY)
+        updated = patch.patch_build_config_text(BUILD_CONFIG_FIXTURE)
 
-    def test_debug_deeplink_surfaces_last_type1_result_without_touching_existing_push_routes(self):
-        module = self.load_patch()
-        updated = module.patch_app_delegate_text(APP_FIXTURE)
-
-        for token in (
-            "handleJerkgramNativePushDiagnosticUrl",
-            'url.path == "/native-debug"',
-            'title: "Jerkgram Native Push"',
-            'jerkgram.nativePush.type1.',
-            'RPC: \\(errorCode) \\(errorDescription)',
-            "if self.handleJerkgramNativePushDiagnosticUrl(url)",
-            "if self.handleJerkgramPushBindingUrl(url)",
-            "if self.handleJerkgramPushUrl(url)",
+        for marker in (
+            "=== Native Push Type1 ===",
+            "APNsRegistered: %@",
+            "Type1RequestCount: %ld",
+            "Type1SuccessCount: %ld",
+            "Type1FailureCount: %ld",
+            "Sandbox: %@",
+            "Encrypt: %@",
+            "SecretLength: %@",
+            "OtherUidsCount: %@",
+            "RPCCode: %@",
+            "RPCDescription: %@",
+            "Timestamp: %@",
         ):
-            self.assertIn(token, updated)
+            self.assertIn(marker, updated)
 
-        dispatcher = updated[updated.index("private func handleJerkgramExternalUrl"):]
-        self.assertLess(dispatcher.index("handleJerkgramNativePushDiagnosticUrl"), dispatcher.index("handleJerkgramPushBindingUrl"))
-        self.assertLess(dispatcher.index("handleJerkgramPushBindingUrl"), dispatcher.index("handleJerkgramPushUrl"))
+        self.assertEqual(
+            updated.count("stringByAppendingString:JerkgramNativePushType1Diagnostics()"),
+            2,
+        )
+        helper = updated[
+            updated.index(patch.OBJC_MARKER):
+            updated.index("@implementation BuildConfig (JerkgramExtensionDiagnostics)")
+        ]
+        for forbidden in ("hexString(token)", "p256dh", "canonicalToken", "rawBinding", "api_hash"):
+            self.assertNotIn(forbidden, helper)
+        self.assertEqual(updated, patch.patch_build_config_text(updated))
 
-    def test_patch_is_idempotent(self):
-        module = self.load_patch()
-        once_register = module.patch_register_text(REGISTER_FIXTURE)
-        twice_register = module.patch_register_text(once_register)
-        self.assertEqual(once_register, twice_register)
+    def test_final_verifier_accepts_materialized_fixture_and_real_copy_owner(self):
+        patch = load_module("native_push_apply_for_verify", APPLY)
+        verifier = load_module("native_push_verify", VERIFY)
+        register = patch.patch_register_text(REGISTER_FIXTURE)
+        build_config = patch.patch_build_config_text(BUILD_CONFIG_FIXTURE)
+        verifier.verify_texts(register, build_config, SETTINGS_FIXTURE)
 
-        once_app = module.patch_app_delegate_text(APP_FIXTURE)
-        twice_app = module.patch_app_delegate_text(once_app)
-        self.assertEqual(once_app, twice_app)
+    def test_installer_keeps_webpush_and_places_type1_verifier_last_before_bazel(self):
+        installer_text = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn('"verify_jerkgram_webpush_registration_v01.py"', installer_text)
+        self.assertIn('"verify_jerkgram_push_binding_bridge_v01.py"', installer_text)
+        self.assertIn('"apply_jerkgram_native_push_runtime_probe_v01.py"', installer_text)
+        self.assertIn('"verify_jerkgram_native_push_runtime_probe_v01.py"', installer_text)
+
+        installer = load_module("native_push_installer", INSTALLER)
+        order = installer.SOURCE_ORDERED
+        apply_name = "apply_jerkgram_native_push_runtime_probe_v01.py"
+        verify_name = "verify_jerkgram_native_push_runtime_probe_v01.py"
+
+        self.assertLess(order.index("verify_jerkgram_webpush_registration_v01.py"), order.index(apply_name))
+        self.assertLess(order.index("verify_jerkgram_push_binding_bridge_v01.py"), order.index(apply_name))
+        self.assertEqual(order[-2], apply_name)
+        self.assertEqual(order[-1], verify_name)
 
 
 if __name__ == "__main__":

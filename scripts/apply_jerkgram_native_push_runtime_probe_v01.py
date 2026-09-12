@@ -1,117 +1,22 @@
 #!/usr/bin/env python3
-"""Instrument Telegram's native APNs registerDevice(type=1) without changing behavior.
+"""Extend the existing GhostBase v1.0E.1 native APNs type-1 probe.
 
-The probe stores only non-sensitive metadata and the exact RPC result in
-UserDefaults. It never stores the APNs token, notification encryption key, API
-hash, or any other secret material.
+This patch intentionally runs after WebPush/binding verifiers and after the
+Build140 identity overlay. It does not add another registerDevice interceptor;
+it augments the already-materialized v1.0E.1 counters and appends a Type1
+section to the existing Copy Extension Diagnostics report.
 """
 
 from pathlib import Path
 import sys
 
 
-MARKER = "JERKGRAM_NATIVE_PUSH_TYPE1_RUNTIME_PROBE_V01"
+ROOT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd().resolve()
 REGISTER_REL = Path("submodules/TelegramCore/Sources/TelegramEngine/AccountData/RegisterNotificationToken.swift")
-APP_DELEGATE_REL = Path("submodules/TelegramUI/Sources/AppDelegate.swift")
+BUILD_CONFIG_REL = Path("submodules/BuildConfig/Sources/BuildConfig.m")
 
-RECORDER = r'''// JERKGRAM_NATIVE_PUSH_TYPE1_RUNTIME_PROBE_V01
-private enum JerkgramNativePushRuntimeProbe {
-    private static let defaults = UserDefaults.standard
-    private static let prefix = "jerkgram.nativePush.type1."
-
-    private static func set(_ value: Any?, _ key: String) {
-        if let value = value {
-            defaults.set(value, forKey: prefix + key)
-        } else {
-            defaults.removeObject(forKey: prefix + key)
-        }
-    }
-
-    static func recordAttempt(tokenBytes: Int, sandbox: Bool, secretBytes: Int, otherUidsCount: Int, flags: Int32) {
-        set("attempt", "phase")
-        set(Date().timeIntervalSince1970, "timestamp")
-        set(1, "mappedType")
-        set(tokenBytes, "tokenBytes")
-        set(sandbox, "sandbox")
-        set(secretBytes, "secretBytes")
-        set(otherUidsCount, "otherUidsCount")
-        set(Int(flags), "flags")
-        set(nil, "errorCode")
-        set(nil, "errorDescription")
-        defaults.synchronize()
-    }
-
-    static func recordSuccess() {
-        set("success", "phase")
-        set(Date().timeIntervalSince1970, "timestamp")
-        set(nil, "errorCode")
-        set(nil, "errorDescription")
-        defaults.synchronize()
-    }
-
-    static func recordFailure(errorCode: Int32, errorDescription: String) {
-        set("failure", "phase")
-        set(Date().timeIntervalSince1970, "timestamp")
-        set(Int(errorCode), "errorCode")
-        set(errorDescription, "errorDescription")
-        defaults.synchronize()
-    }
-}
-
-'''
-
-APP_HELPER = r'''    // JERKGRAM_NATIVE_PUSH_TYPE1_RUNTIME_PROBE_V01
-    private func handleJerkgramNativePushDiagnosticUrl(_ url: URL) -> Bool {
-        guard url.scheme?.lowercased() == "jerkgram",
-              url.host?.lowercased() == "push",
-              url.path == "/native-debug" else {
-            return false
-        }
-
-        let defaults = UserDefaults.standard
-        let prefix = "jerkgram.nativePush.type1."
-        let phase = defaults.string(forKey: prefix + "phase") ?? "no-record"
-        let mappedType = defaults.object(forKey: prefix + "mappedType") as? NSNumber
-        let tokenBytes = defaults.object(forKey: prefix + "tokenBytes") as? NSNumber
-        let sandbox = defaults.object(forKey: prefix + "sandbox") as? NSNumber
-        let secretBytes = defaults.object(forKey: prefix + "secretBytes") as? NSNumber
-        let otherUidsCount = defaults.object(forKey: prefix + "otherUidsCount") as? NSNumber
-        let flags = defaults.object(forKey: prefix + "flags") as? NSNumber
-        let errorCode = defaults.object(forKey: prefix + "errorCode") as? NSNumber
-        let errorDescription = defaults.string(forKey: prefix + "errorDescription") ?? ""
-        let timestamp = defaults.object(forKey: prefix + "timestamp") as? NSNumber
-
-        var lines: [String] = ["Phase: \(phase)"]
-        if let mappedType = mappedType { lines.append("Type: \(mappedType)") }
-        if let tokenBytes = tokenBytes { lines.append("APNs token bytes: \(tokenBytes)") }
-        if let sandbox = sandbox { lines.append("Sandbox: \(sandbox.boolValue)") }
-        if let secretBytes = secretBytes { lines.append("Secret bytes: \(secretBytes)") }
-        if let otherUidsCount = otherUidsCount { lines.append("Other UIDs: \(otherUidsCount)") }
-        if let flags = flags { lines.append("Flags: \(flags)") }
-        if let errorCode = errorCode {
-            lines.append("RPC: \(errorCode) \(errorDescription)")
-        } else if phase == "success" {
-            lines.append("RPC: SUCCESS")
-        }
-        if let timestamp = timestamp {
-            let date = Date(timeIntervalSince1970: timestamp.doubleValue)
-            lines.append("Recorded: \(date)")
-        }
-        if phase == "no-record" {
-            lines.append("Native APNs type1 registration has not been observed yet.")
-        }
-
-        let alert = UIAlertController(
-            title: "Jerkgram Native Push",
-            message: lines.joined(separator: "\n"),
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        self.window?.rootViewController?.present(alert, animated: true)
-        return true
-    }
-
-'''
+SWIFT_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics v0.2"
+OBJC_MARKER = "// MARK: Jerkgram Native Push Type1 diagnostics report v0.2"
 
 
 def require(value: bool, message: str) -> None:
@@ -119,94 +24,221 @@ def require(value: bool, message: str) -> None:
         raise RuntimeError("[native-push-type1-probe] " + message)
 
 
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    require(count == 1, f"{label}: expected exactly one anchor, found {count}")
+    return text.replace(old, new, 1)
+
+
 def patch_register_text(text: str) -> str:
-    if MARKER in text:
+    if SWIFT_MARKER in text:
         return text
 
-    enum_anchor = "public enum NotificationTokenType {"
-    require(text.count(enum_anchor) == 1, "NotificationTokenType anchor count")
-    text = text.replace(enum_anchor, RECORDER + enum_anchor, 1)
-
-    request_anchor = """        return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds.map({ $0._internalGetInt64Value() })))\n        |> map { _ -> Bool in\n            return true\n        }\n        |> `catch` { error -> Signal<Bool, NoError> in\n            if error.errorDescription == \"TOKEN_WAS_INVALIDATED\" {\n                return .single(false)\n            } else {\n                return .single(true)\n            }\n        }\n"""
-    replacement = """        if mappedType == 1 {\n            JerkgramNativePushRuntimeProbe.recordAttempt(\n                tokenBytes: token.count,\n                sandbox: sandbox,\n                secretBytes: keyData.count,\n                otherUidsCount: otherAccountUserIds.count,\n                flags: flags\n            )\n        }\n        return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds.map({ $0._internalGetInt64Value() })))\n        |> map { _ -> Bool in\n            if mappedType == 1 {\n                JerkgramNativePushRuntimeProbe.recordSuccess()\n            }\n            return true\n        }\n        |> `catch` { error -> Signal<Bool, NoError> in\n            if mappedType == 1 {\n                JerkgramNativePushRuntimeProbe.recordFailure(\n                    errorCode: error.errorCode,\n                    errorDescription: error.errorDescription\n                )\n            }\n            if error.errorDescription == \"TOKEN_WAS_INVALIDATED\" {\n                return .single(false)\n            } else {\n                return .single(true)\n            }\n        }\n"""
-    require(text.count(request_anchor) == 1, "stock registerDevice pipeline anchor count")
-    text = text.replace(request_anchor, replacement, 1)
-
-    for invariant in (
-        MARKER,
-        '"jerkgram.nativePush.type1."',
-        "mappedType == 1",
-        "recordAttempt(",
-        "tokenBytes: token.count",
-        "secretBytes: keyData.count",
-        "otherUidsCount: otherAccountUserIds.count",
-        "recordSuccess()",
-        "recordFailure(",
-        "error.errorCode",
-        "error.errorDescription",
-        'if error.errorDescription == "TOKEN_WAS_INVALIDATED"',
+    for required in (
+        'ghostBaseRegisterDeviceKind = "Type1"',
+        'ghostBaseRegisterDeviceKind = "Type9"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Request"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Success"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Invalidated"',
+        'registerDevice" + ghostBaseRegisterDeviceKind + "Error"',
+        'GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", error.errorDescription)',
+        "public func _internal_registerJerkgramWebPushToken(",
+        "tokenType: 10",
     ):
-        require(invariant in text, "missing register invariant: " + invariant)
+        require(required in text, "live v1.0E.1/WebPush prerequisite missing: " + required)
 
-    recorder = text[text.index("private enum JerkgramNativePushRuntimeProbe"):text.index(enum_anchor)]
-    for forbidden in ("hexString(token)", "masterKey.data", "keyData.base64"):
-        require(forbidden not in recorder, "sensitive recorder marker: " + forbidden)
+    text = replace_once(
+        text,
+        "        var keyData = Data()\n",
+        "        var keyData = Data()\n"
+        "        var jerkgramType1Encrypt = false\n",
+        "Type1 encrypt state",
+    )
+
+    text = replace_once(
+        text,
+        "        case let .aps(encrypt):\n"
+        "            mappedType = 1\n"
+        "            if encrypt {\n",
+        "        case let .aps(encrypt):\n"
+        "            mappedType = 1\n"
+        "            jerkgramType1Encrypt = encrypt\n"
+        "            if encrypt {\n",
+        "APS encrypt capture",
+    )
+
+    typed_request = (
+        '        GhostBaseV10EPushProbeCore.record("registerDevice" + '
+        'ghostBaseRegisterDeviceKind + "Request")\n'
+    )
+    text = replace_once(
+        text,
+        typed_request,
+        typed_request
+        + '        if mappedType == 1 {\n'
+        + '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Sandbox", sandbox ? "true" : "false")\n'
+        + '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Encrypt", jerkgramType1Encrypt ? "true" : "false")\n'
+        + '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1SecretLength", "\\(keyData.count)")\n'
+        + '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1OtherUidsCount", "\\(otherAccountUserIds.count)")\n'
+        + '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Error", "none")\n'
+        + '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1ErrorCode", "none")\n'
+        + '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Timestamp", "\\(Int(Date().timeIntervalSince1970))")\n'
+        + '        }\n',
+        "Type1 request metadata",
+    )
+
+    typed_success = (
+        '            GhostBaseV10EPushProbeCore.record("registerDevice" + '
+        'ghostBaseRegisterDeviceKind + "Success")\n'
+    )
+    text = replace_once(
+        text,
+        typed_success,
+        typed_success
+        + '            if mappedType == 1 {\n'
+        + '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Error", "none")\n'
+        + '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1ErrorCode", "none")\n'
+        + '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Timestamp", "\\(Int(Date().timeIntervalSince1970))")\n'
+        + '            }\n',
+        "Type1 success result",
+    )
+
+    generic_error = (
+        '            GhostBaseV10EPushProbeCore.set("LastRegisterDeviceError", '
+        'error.errorDescription)\n'
+    )
+    text = replace_once(
+        text,
+        generic_error,
+        generic_error
+        + '            if mappedType == 1 {\n'
+        + '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Error", error.errorDescription)\n'
+        + '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1ErrorCode", "\\(error.errorCode)")\n'
+        + '                GhostBaseV10EPushProbeCore.set("LastRegisterDeviceType1Timestamp", "\\(Int(Date().timeIntervalSince1970))")\n'
+        + '            }\n',
+        "Type1 RPC result",
+    )
+
+    marker_anchor = '    GhostBaseV10EPushProbeCore.record("registerDeviceEntry")\n'
+    text = replace_once(
+        text,
+        marker_anchor,
+        SWIFT_MARKER + "\n" + marker_anchor,
+        "Type1 marker",
+    )
+
+    require('if error.errorDescription == "TOKEN_WAS_INVALIDATED"' in text, "invalidated semantics missing")
+    require("return .single(false)" in text, "invalidated false return missing")
+    require("return .single(true)" in text, "generic error true return missing")
     return text
 
 
-def patch_app_delegate_text(text: str) -> str:
-    helper_marker = "private func handleJerkgramNativePushDiagnosticUrl(_ url: URL) -> Bool"
-    if helper_marker not in text:
-        binding_anchor = "    private func handleJerkgramPushBindingUrl(_ url: URL) -> Bool"
-        require(text.count(binding_anchor) == 1, "push binding helper anchor count")
-        text = text.replace(binding_anchor, APP_HELPER + binding_anchor, 1)
+NATIVE_REPORT_HELPER = r"""
+// MARK: Jerkgram Native Push Type1 diagnostics report v0.2
+static NSString *JerkgramNativePushType1Diagnostics(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *prefix = @"GhostBase.V10E.Push.";
 
-    dispatch_anchor = """    private func handleJerkgramExternalUrl(_ url: URL) -> Bool {\n        if self.handleJerkgramPushBindingUrl(url) {\n            return true\n        }\n        if self.handleJerkgramPushUrl(url) {\n            return true\n        }\n        return false\n    }\n"""
-    dispatch_replacement = """    private func handleJerkgramExternalUrl(_ url: URL) -> Bool {\n        if self.handleJerkgramNativePushDiagnosticUrl(url) {\n            return true\n        }\n        if self.handleJerkgramPushBindingUrl(url) {\n            return true\n        }\n        if self.handleJerkgramPushUrl(url) {\n            return true\n        }\n        return false\n    }\n"""
-    if "if self.handleJerkgramNativePushDiagnosticUrl(url)" not in text:
-        require(text.count(dispatch_anchor) == 1, "shared external URL dispatcher anchor count")
-        text = text.replace(dispatch_anchor, dispatch_replacement, 1)
+    NSInteger apnsRegisteredCount = [defaults integerForKey:[prefix stringByAppendingString:@"didRegisterDeviceToken.Count"]];
+    NSInteger requestCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Request.Count"]];
+    NSInteger successCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Success.Count"]];
+    NSInteger invalidatedCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Invalidated.Count"]];
+    NSInteger errorCount = [defaults integerForKey:[prefix stringByAppendingString:@"registerDeviceType1Error.Count"]];
+    NSInteger failureCount = invalidatedCount + errorCount;
 
-    for invariant in (
-        helper_marker,
-        'url.path == "/native-debug"',
-        'title: "Jerkgram Native Push"',
-        '"jerkgram.nativePush.type1."',
-        'lines.append("RPC: \\(errorCode) \\(errorDescription)")',
-        "if self.handleJerkgramNativePushDiagnosticUrl(url)",
-        "if self.handleJerkgramPushBindingUrl(url)",
-        "if self.handleJerkgramPushUrl(url)",
+    NSString *sandbox = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Sandbox"]] ?: @"none";
+    NSString *encrypt = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Encrypt"]] ?: @"none";
+    NSString *secretLength = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1SecretLength"]] ?: @"none";
+    NSString *otherUidsCount = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1OtherUidsCount"]] ?: @"none";
+    NSString *rpcCode = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1ErrorCode"]] ?: @"none";
+    NSString *rpcDescription = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Error"]] ?: @"none";
+    NSString *timestamp = [defaults stringForKey:[prefix stringByAppendingString:@"LastRegisterDeviceType1Timestamp"]] ?: @"none";
+
+    return [NSString stringWithFormat:
+        @"\n\n=== Native Push Type1 ===\n"
+         @"APNsRegistered: %@\n"
+         @"Type1RequestCount: %ld\n"
+         @"Type1SuccessCount: %ld\n"
+         @"Type1FailureCount: %ld\n"
+         @"Sandbox: %@\n"
+         @"Encrypt: %@\n"
+         @"SecretLength: %@\n"
+         @"OtherUidsCount: %@\n"
+         @"RPCCode: %@\n"
+         @"RPCDescription: %@\n"
+         @"Timestamp: %@\n",
+        apnsRegisteredCount > 0 ? @"true" : @"false",
+        (long)requestCount,
+        (long)successCount,
+        (long)failureCount,
+        sandbox,
+        encrypt,
+        secretLength,
+        otherUidsCount,
+        rpcCode,
+        rpcDescription,
+        timestamp
+    ];
+}
+
+"""
+
+
+def patch_build_config_text(text: str) -> str:
+    if OBJC_MARKER in text:
+        return text
+
+    for required in (
+        "@implementation BuildConfig (JerkgramExtensionDiagnostics)",
+        "+ (NSString *)jerkgramExtensionDiagnosticsReport {",
+        'return @"{\\"schemaVersion\\":1,\\"error\\":\\"shared-container-unavailable\\"}";',
+        'return [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] ?: @"{}";',
     ):
-        require(invariant in text, "missing AppDelegate invariant: " + invariant)
+        require(required in text, "BuildConfig diagnostics prerequisite missing: " + required)
 
-    dispatcher = text[text.index("private func handleJerkgramExternalUrl"):]
-    require(
-        dispatcher.index("handleJerkgramNativePushDiagnosticUrl")
-        < dispatcher.index("handleJerkgramPushBindingUrl")
-        < dispatcher.index("handleJerkgramPushUrl"),
-        "external URL dispatch order",
+    text = replace_once(
+        text,
+        "@implementation BuildConfig (JerkgramExtensionDiagnostics)\n",
+        NATIVE_REPORT_HELPER + "@implementation BuildConfig (JerkgramExtensionDiagnostics)\n",
+        "native Type1 report helper",
+    )
+    text = replace_once(
+        text,
+        '        return @"{\\"schemaVersion\\":1,\\"error\\":\\"shared-container-unavailable\\"}";',
+        '        return [@"{\\"schemaVersion\\":1,\\"error\\":\\"shared-container-unavailable\\"}" stringByAppendingString:JerkgramNativePushType1Diagnostics()];',
+        "shared-container early report",
+    )
+    text = replace_once(
+        text,
+        '    return [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] ?: @"{}";',
+        '    NSString *extensionReport = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] ?: @"{}";\n'
+        '    return [extensionReport stringByAppendingString:JerkgramNativePushType1Diagnostics()];',
+        "normal extension report",
     )
     return text
 
 
 def apply_patch(root: Path) -> None:
     register_path = root / REGISTER_REL
-    app_delegate_path = root / APP_DELEGATE_REL
-    require(register_path.is_file(), "missing " + str(register_path))
-    require(app_delegate_path.is_file(), "missing " + str(app_delegate_path))
+    build_config_path = root / BUILD_CONFIG_REL
+    for path in (register_path, build_config_path):
+        require(path.is_file(), "missing materialized owner: " + str(path))
 
-    register_text = register_path.read_text(encoding="utf-8")
-    app_text = app_delegate_path.read_text(encoding="utf-8")
-    register_path.write_text(patch_register_text(register_text), encoding="utf-8")
-    app_delegate_path.write_text(patch_app_delegate_text(app_text), encoding="utf-8")
+    register_path.write_text(
+        patch_register_text(register_path.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+    build_config_path.write_text(
+        patch_build_config_text(build_config_path.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
     print("[native-push-type1-probe] GREEN")
-    print("  register:", register_path)
-    print("  diagnostics: jerkgram://push/native-debug")
+    print("  extended existing v1.0E.1 Type1 storage")
+    print("  diagnostics owner: Copy Extension Diagnostics")
 
 
 def main() -> None:
-    root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd()
-    apply_patch(root)
+    apply_patch(ROOT)
 
 
 if __name__ == "__main__":
