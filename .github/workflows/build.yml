@@ -80,24 +80,46 @@ jobs:
             --depth 1 \
             --jobs 8
 
+      - name: Create isolated Bazel configuration repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$JERKGRAM_SOURCE_ROOT"
+
+          rm -rf build-input/configuration-repository
+          mkdir -p build-input
+          cp -R build-system/example-configuration build-input/configuration-repository
+
+          printf '%s\n' 'module(name = "build_configuration", version = "0.0.0")' \
+            > build-input/configuration-repository/MODULE.bazel
+
+          cat >> build-input/configuration-repository/variables.bzl <<'EOF'
+
+          # Added only for the isolated recon1 compile gate.
+          telegram_bazel_path = "."
+          telegram_use_xcode_managed_codesigning = False
+          EOF
+
       - name: Bazel compile full Telegram target
         shell: bash
         run: |
           set -euo pipefail
           cd "$JERKGRAM_SOURCE_ROOT"
 
-          # Telegram's supported Make.py build command is a Bazel wrapper.
-          # debug_sim_arm64 + disabled provisioning keeps this gate about
-          # source compilation, not signing or IPA publication.
-          python3 build-system/Make/Make.py \
-            --overrideXcodeVersion \
-            --cacheDir="$HOME/telegram-bazel-cache" \
-            build \
-            --configurationPath=build-system/appstore-configuration.json \
-            --xcodeManagedCodesigning \
-            --disableProvisioningProfiles \
-            --buildNumber=1 \
-            --configuration=debug_sim_arm64
+          # Direct Bazel is intentional here. Telegram 12.9.2 Make.py has the
+          # disableProvisioningProfiles build setting internally, but its
+          # `build` argparse surface does not expose the corresponding CLI flag.
+          # The Bazel flag below is the actual setting consumed by Telegram/BUILD.
+          bazelisk build \
+            -c dbg \
+            --apple_platform_type=ios \
+            --ios_multi_cpus=sim_arm64 \
+            --check_direct_dependencies=off \
+            --//Telegram:disableProvisioningProfiles \
+            --define=buildNumber=1 \
+            --features=swift.use_global_module_cache \
+            --verbose_failures \
+            //Telegram:Telegram
 
       - name: Compile-gate proof
         shell: bash
