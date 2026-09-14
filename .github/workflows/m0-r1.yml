@@ -1,0 +1,58 @@
+name: M0 R1 Real Product Dylib
+
+on:
+  push:
+    branches:
+      - m0-r1-real-link
+    paths:
+      - 'm0-r1/**'
+      - '.github/workflows/m0-r1.yml'
+
+jobs:
+  build-dylib:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          set -euxo pipefail
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk iphoneos clang --version
+
+      - name: Build real iOS dynamic library
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts/m0-r1
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang \
+            -target arm64-apple-ios13.0 \
+            -isysroot "$SDK" \
+            -dynamiclib \
+            -O2 \
+            -fPIC \
+            -fvisibility=hidden \
+            -Wl,-install_name,@rpath/Jerkgram.dylib \
+            -Wl,-current_version,0.0.1 \
+            -Wl,-compatibility_version,0.0.1 \
+            m0-r1/JerkgramBootstrap.c \
+            -o artifacts/m0-r1/Jerkgram.dylib
+
+      - name: Structural inspection
+        run: |
+          set -euxo pipefail
+          file artifacts/m0-r1/Jerkgram.dylib
+          shasum -a 256 artifacts/m0-r1/Jerkgram.dylib
+          otool -hv artifacts/m0-r1/Jerkgram.dylib
+          otool -l artifacts/m0-r1/Jerkgram.dylib
+          nm -m artifacts/m0-r1/Jerkgram.dylib || true
+          codesign -dvvv artifacts/m0-r1/Jerkgram.dylib || true
+
+      - name: Upload product dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-r1-jerkgram-dylib
+          path: artifacts/m0-r1/Jerkgram.dylib
+          if-no-files-found: error
