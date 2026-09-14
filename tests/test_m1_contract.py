@@ -3,90 +3,224 @@ import pathlib
 import re
 import unittest
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-SCHEMA = ROOT / 'Jerkgram' / 'Settings' / 'JGSettingsSchema.json'
-ADAPTER = ROOT / 'Jerkgram' / 'Adapters' / 'Telegram1294' / 'JGTelegramSettingsAdapter.m'
-UI = ROOT / 'Jerkgram' / 'UI' / 'JGSettingsViewController.m'
-STRINGS = ROOT / 'Jerkgram' / 'Localization' / 'JGStrings.m'
-STORE = ROOT / 'Jerkgram' / 'Settings' / 'JGSettingsStore.m'
-BOOTSTRAP = ROOT / 'Jerkgram' / 'Bootstrap' / 'JerkgramBootstrap.m'
 
-CANONICAL = {
-    'jerkgram.Profile.Enabled','jerkgram.Profile.ShowIds','jerkgram.Profile.ShowDCs','jerkgram.Profile.ShowRegistration',
-    'jerkgram.GhostMode.ReadMessages','jerkgram.GhostMode.TypingActions','jerkgram.GhostMode.HideRecording','jerkgram.GhostMode.HideUploading','jerkgram.GhostMode.HideStickerActivity','jerkgram.GhostMode.HideGameActivity','jerkgram.GhostMode.HideEmojiActivity','jerkgram.GhostMode.Presence','jerkgram.GhostMode.ScheduledSend',
-    'jerkgram.Messages.SaveDeleted','jerkgram.Messages.ShowDeleted','jerkgram.Messages.SaveEditHistory','jerkgram.Messages.ShowEditHistory','jerkgram.Messages.HideBlockedMessages','jerkgram.Messages.HideBlockedReactions','jerkgram.Messages.SendTextStyle','jerkgram.Messages.DeletedPortableReplies','jerkgram.Messages.PreserveDeletedMedia','jerkgram.Messages.DeletedMediaCacheLimit','jerkgram.Messages.DeletedMediaRetentionDays','jerkgram.Messages.ForwardWithoutAuthor',
-    'jerkgram.Appearance.ShowRamUnderClock','jerkgram.Appearance.MessageSeconds','jerkgram.Appearance.HideOwnPhone','jerkgram.Glass.Enabled','jerkgram.ProfileBlur.Avatar','jerkgram.ProfileBlur.Animated','jerkgram.ProfileBlur.Tint','jerkgram.ProfileBlur.Reduced',
-    'jerkgram.ProtectedContent.Enabled','jerkgram.ProtectedContent.GalleryShare','jerkgram.ProtectedContent.GallerySave','jerkgram.ProtectedContent.GalleryCopy','jerkgram.ProtectedContent.ChatSave','jerkgram.ProtectedContent.ChatCopy','jerkgram.ProtectedContent.ChatForward','jerkgram.ProtectedContent.AllowScreenshots','jerkgram.ProtectedContent.AllowScreenRecording','jerkgram.ProtectedContent.OneTimeScreenshots','jerkgram.ProtectedContent.OneTimeScreenRecording','jerkgram.ProtectedContent.OneTimeSave',
-    'jerkgram.Stories.Save','jerkgram.Stars.LocalBalance.Enabled','jerkgram.Stars.LocalBalance.Amount','jerkgram.Stars.LocalBalance.BaseAmount','jerkgram.global.DownloadBoost'
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+SCHEMA = ROOT / "Jerkgram/Settings/JGSettingsSchema.json"
+STORE = ROOT / "Jerkgram/Settings/JGSettingsStore.m"
+UI = ROOT / "Jerkgram/UI/JGSettingsViewController.m"
+ADAPTER = ROOT / "Jerkgram/Adapters/Telegram1294/JGTelegramSettingsAdapter.m"
+INTROSPECTION = ROOT / "Jerkgram/Adapters/Telegram1294/JGRuntimeIntrospection.swift"
+STRINGS = ROOT / "Jerkgram/Localization/JGStrings.m"
+WORKFLOW = ROOT / ".github/workflows/m1-settings.yml"
+BOOTSTRAP = ROOT / "Jerkgram/Bootstrap/JerkgramBootstrap.m"
+
+
+MAIN_ROUTES = [
+    ("home", "main.jerkgram", "Jerkgram/Settings/Airplane", "53606A"),
+    ("ghostMode", "main.ghost", "Chat/Context Menu/Eye", "4B5064"),
+    ("messages", "main.messages", "Chat/Context Menu/MessageBubble", "4B6F83"),
+    ("protectedContent", "main.protected", "Premium/CopyProtection/NoForward", "87452F"),
+    ("mediaStories", "main.media", "Item List/Icons/Stories", "6A5C78"),
+    ("appearance", "main.appearance", "Chat/Context Menu/ApplyTheme", "676C43"),
+    ("debugResearch", "main.debug", "Chat/Context Menu/FormatCode", "8A6138"),
+    ("about", "main.about", "Chat/Context Menu/Info", "4B4F54"),
+]
+
+BOOL_DEFAULTS = {
+    "jerkgram.Profile.Enabled": True,
+    "jerkgram.Profile.ShowIds": True,
+    "jerkgram.Profile.ShowDCs": True,
+    "jerkgram.Profile.ShowRegistration": True,
+    "jerkgram.Glass.Enabled": True,
+    "jerkgram.ProfileBlur.Avatar": True,
+    "jerkgram.ProfileBlur.Animated": True,
+    "jerkgram.ProfileBlur.Tint": True,
+    "jerkgram.ProfileBlur.Reduced": False,
+    "jerkgram.GhostMode.ReadMessages": False,
+    "jerkgram.GhostMode.TypingActions": False,
+    "jerkgram.GhostMode.HideRecording": False,
+    "jerkgram.GhostMode.HideUploading": False,
+    "jerkgram.GhostMode.HideStickerActivity": False,
+    "jerkgram.GhostMode.HideGameActivity": False,
+    "jerkgram.GhostMode.HideEmojiActivity": False,
+    "jerkgram.GhostMode.Presence": False,
+    "jerkgram.GhostMode.ScheduledSend": False,
+    "jerkgram.Messages.SaveDeleted": True,
+    "jerkgram.Messages.ShowDeleted": True,
+    "jerkgram.Messages.SaveEditHistory": True,
+    "jerkgram.Messages.ShowEditHistory": True,
+    "jerkgram.Messages.HideBlockedMessages": True,
+    "jerkgram.Messages.HideBlockedReactions": True,
+    "jerkgram.Messages.DeletedPortableReplies": True,
+    "jerkgram.Messages.PreserveDeletedMedia": True,
+    "jerkgram.Appearance.ShowRamUnderClock": False,
+    "jerkgram.Appearance.MessageSeconds": False,
+    "jerkgram.Appearance.HideOwnPhone": False,
+    "jerkgram.ProtectedContent.Enabled": True,
+    "jerkgram.ProtectedContent.GalleryShare": True,
+    "jerkgram.ProtectedContent.GallerySave": True,
+    "jerkgram.ProtectedContent.GalleryCopy": True,
+    "jerkgram.ProtectedContent.ChatSave": True,
+    "jerkgram.ProtectedContent.ChatCopy": True,
+    "jerkgram.ProtectedContent.ChatForward": True,
+    "jerkgram.ProtectedContent.AllowScreenshots": True,
+    "jerkgram.ProtectedContent.AllowScreenRecording": True,
+    "jerkgram.ProtectedContent.OneTimeScreenshots": False,
+    "jerkgram.ProtectedContent.OneTimeScreenRecording": False,
+    "jerkgram.ProtectedContent.OneTimeSave": False,
+    "jerkgram.Stories.Save": False,
+    "jerkgram.Stars.LocalBalance.Enabled": False,
 }
 
-class ContractTests(unittest.TestCase):
-    def test_schema_exists_and_is_complete(self):
-        data = json.loads(SCHEMA.read_text())
-        keys = {x['key'] for x in data['settings']}
-        self.assertEqual(keys, CANONICAL)
-        self.assertEqual(data['schemaVersion'], 1)
-        self.assertEqual(data['migrationMarker'], 'jerkgram.runtime.namespaceMigration.v1')
-        self.assertEqual(data['globalKeys'], ['jerkgram.global.DownloadBoost'])
-        self.assertEqual({x['section'] for x in data['settings']}, {
-            'Ghost Mode','Messages','Protected Content','Stories / Media','Profile','Appearance','Other'
-        })
+STRING_DEFAULTS = {
+    "jerkgram.Messages.SendTextStyle": "normal",
+    "jerkgram.Stars.LocalBalance.Amount": "0",
+    "jerkgram.Stars.LocalBalance.BaseAmount": "0",
+}
 
-    def test_account_key_contract_and_global_exception_are_literal(self):
-        text = STORE.read_text()
-        self.assertIn('jerkgram.account.%@.setting.%@', text)
-        self.assertIn('jerkgram.global.DownloadBoost', text)
-        self.assertIn('jerkgram.runtime.namespaceMigration.v1', text)
-        self.assertIn('persistentDomainForName', text)
-        self.assertNotIn('removeObjectForKey:legacy', text)
 
-    def test_migration_canonical_wins(self):
-        text = STORE.read_text()
-        self.assertRegex(text, r'if \(domain\[canonicalKey\] == nil\)')
-        self.assertIn('caseInsensitiveCompare', text)
-        self.assertIn('GhostBase.', text)
-        self.assertIn('GB.', text)
+def text(path):
+    return path.read_text(encoding="utf-8")
 
-    def test_adapter_uses_runtime_boundaries_not_fixed_offsets(self):
-        text = ADAPTER.read_text()
-        for required in ['objc_getClass', 'class_getInstanceVariable', 'ivar_getOffset', 'viewDidAppear:', 'dlsym', 'PeerInfoScreenImpl']:
-            self.assertIn(required, text)
-        self.assertNotRegex(text, r'0x[0-9a-fA-F]{5,}')
-        self.assertNotIn('PeerInfoScreenDisclosureItem', text)
-        self.assertNotIn('settingsItems', text)
-        self.assertNotIn('PeerInfoScreenNode', text)
-        self.assertIn('JGSettingsEntryAccessibilityIdentifier', text)
 
-    def test_only_settings_lifecycle_is_hooked(self):
-        text = ADAPTER.read_text()
-        self.assertEqual(text.count('method_setImplementation'), 1)
-        self.assertIn('isSettings', text)
-        self.assertNotIn('sendMessage', text)
-        self.assertNotIn('deleteMessage', text)
-        self.assertNotIn('typing', text.lower())
+class Build138ParityTests(unittest.TestCase):
+    def test_r4_is_materialized_not_staged(self):
+        self.assertFalse((ROOT / ".m1r4-payload").exists())
+        for path in (STORE, UI, ADAPTER, INTROSPECTION, STRINGS, WORKFLOW):
+            self.assertTrue(path.exists(), path)
 
-    def test_ui_is_owned_scrollable_table_and_about_identity(self):
-        text = UI.read_text()
-        self.assertIn('UITableViewController', text)
-        for section in ['Ghost Mode','Messages','Protected Content','Stories / Media','Profile','Appearance','Other','About']:
-            self.assertIn(section, text)
-        self.assertIn('Jerkgram 1.0.2', text)
-        self.assertIn('Telegram 12.9.4', text)
+    def test_rejected_runtime_paths_are_absent(self):
+        combined = "\n".join(text(p) for p in (ADAPTER, INTROSPECTION, UI) if p.exists())
+        for forbidden in (
+            "UIBarButtonItem", "ivar_getOffset", "memcpy(", "dlsym(",
+            "PeerIdV7toInt64", "settingsItems", "PeerInfoScreenDisclosureItem",
+        ):
+            self.assertNotIn(forbidden, combined)
+        self.assertNotRegex(combined, r"0x[0-9a-fA-F]{7,}")
 
-    def test_localization_has_en_and_ru_tables_same_keys(self):
-        text = STRINGS.read_text()
-        en = set(re.findall(r'@\"([^\"]+)\"\s*:\s*@\"[^\"]*\"', text.split('static NSDictionary<NSString *, NSString *> *JGRussianStrings')[0]))
-        ru_part = text.split('static NSDictionary<NSString *, NSString *> *JGRussianStrings',1)[1].split('NSString *JGLanguageCode',1)[0]
-        ru = set(re.findall(r'@\"([^\"]+)\"\s*:\s*@\"[^\"]*\"', ru_part))
-        self.assertTrue(en)
+    def test_workflow_compiles_semantic_swift_bridge(self):
+        workflow = text(WORKFLOW)
+        self.assertIn("JGRuntimeIntrospection.swift", workflow)
+        self.assertRegex(workflow, r"\bswiftc\b")
+        self.assertIn("-emit-object", workflow)
+
+    def test_account_resolution_is_semantic_and_fail_closed(self):
+        resolver = text(INTROSPECTION)
+        adapter = text(ADAPTER)
+        self.assertIn("Mirror(reflecting:", resolver)
+        self.assertIn('directChild(named: "peerId"', resolver)
+        self.assertIn('directChild(named: "namespace"', resolver)
+        self.assertIn('directChild(named: "id"', resolver)
+        self.assertIn("guard packed != 0 else", resolver)
+        self.assertIn("deactivateAccount", adapter)
+        self.assertNotIn("activateAccountPeerId:0", adapter)
+
+    def test_exact_main_settings_graph(self):
+        adapter = text(ADAPTER)
+        entries = re.findall(
+            r'JGMainRoute\(@"([^"]+)",\s*@"([^"]+)",\s*@"([^"]+)",\s*0x([0-9A-Fa-f]{6})\)',
+            adapter,
+        )
+        self.assertEqual([(a, b, c, d.upper()) for a, b, c, d in entries], MAIN_ROUTES)
+        self.assertIn('isEqual:@"myProfile"', adapter)
+        self.assertIn('isEqual:@"proxy"', adapter)
+        self.assertNotIn('route:@"root"', adapter)
+
+    def test_layout_recomputes_from_native_geometry_without_saved_translation(self):
+        adapter = text(ADAPTER)
+        for forbidden in (
+            "JGNativeBaselineYKey", "JGNativeShiftedYKey", "JGScrollBaseHeightKey",
+            "JGScrollShiftedHeightKey", "JGRestoreNativeFrames", "JGRestoreScrollHeight",
+        ):
+            self.assertNotIn(forbidden, adapter)
+        self.assertIn("JGApplyFromCurrentNativeGeometry", adapter)
+        self.assertIn("proxyView.frame", adapter)
+        self.assertIn("contentSize", adapter)
+
+    def test_display_host_is_the_only_pushed_controller(self):
+        ui = text(UI)
+        adapter = text(ADAPTER)
+        self.assertIn('_TtC7Display14ViewController', ui)
+        self.assertIn("JGCreateSettingsHost", ui)
+        self.assertNotRegex(adapter, r"pushViewController\s*:\s*settings")
+        self.assertNotRegex(ui, r"pushViewController\s*:\s*(?:child|self)")
+        self.assertNotIn("initWithRootViewController", adapter)
+
+    def test_only_build138_reachable_pages_are_exposed(self):
+        ui = text(UI)
+        match = re.search(r"JGReachableSettingsPages\(void\)\s*\{\s*return\s*@\[(.*?)\];", ui, re.S)
+        self.assertIsNotNone(match)
+        pages = re.findall(r'@"([^"]+)"', match.group(1))
+        self.assertEqual(pages, [
+            "home", "ghostMode", "messages", "protectedContent", "mediaStories",
+            "appearance", "debugResearch", "about", "stars", "dataAndBackup", "sendStyle",
+            "chatRetention",
+        ])
+        self.assertNotIn('isEqualToString:@"root"', ui)
+
+    def test_build138_settings_inventory_defaults_and_types(self):
+        data = json.loads(text(SCHEMA))
+        settings = {item["key"]: item for item in data["settings"]}
+        self.assertEqual(set(settings), set(BOOL_DEFAULTS) | set(STRING_DEFAULTS))
+        self.assertEqual(len(settings), 46)
+        for key, default in BOOL_DEFAULTS.items():
+            self.assertEqual(settings[key], {"key": key, "type": "bool", "default": default})
+        for key, default in STRING_DEFAULTS.items():
+            self.assertEqual(settings[key], {"key": key, "type": "string", "default": default})
+        self.assertNotIn("jerkgram.global.DownloadBoost", text(SCHEMA) + text(STORE) + text(UI))
+
+    def test_account_scope_and_build138_projection_contract(self):
+        store = text(STORE)
+        self.assertIn("jerkgram.account.%@.setting.%@", store)
+        self.assertIn("unscopedCanonicalValue", store)
+        self.assertNotIn("persistentDomainForName", store)
+        self.assertNotIn('@"GhostBase."', store)
+        self.assertNotIn('@"GB."', store)
+        self.assertIn("activeAccountPeerId.length == 0", store)
+
+    def test_build138_page_behavior_is_present(self):
+        ui = text(UI)
+        required = (
+            "copyExtensionDiagnostics", "openAppChannel", "openCommunity",
+            "cycleHistoryDuration", "cycleMediaLimit", "openPerChatRules",
+            "cleanupExpired", "exportArchive", "importArchive",
+            "ghostBaseSanitizeStarsAmount", "applyProtectedMasterValue",
+            "applyProtectedChildValue", "NSStrikethroughStyleAttributeName",
+            "NSUnderlineStyleAttributeName",
+        )
+        for token in required:
+            self.assertIn(token, ui)
+        self.assertNotIn("showUnavailable", ui)
+
+    def test_data_telemetry_and_retention_are_separate_from_feature_settings(self):
+        ui = text(UI)
+        self.assertIn("jerkgram.telemetry.anonymous.enabled", ui)
+        self.assertIn("jerkgram.retention.account.%lld", ui)
+        self.assertNotIn("jerkgram.telemetry.anonymous.enabled", text(SCHEMA))
+
+    def test_en_ru_localization_tables_are_complete_and_equal(self):
+        source = text(STRINGS)
+        en_part, ru_and_rest = source.split("JGRussianStrings", 1)
+        ru_part = ru_and_rest.split("NSString *JGLanguageCode", 1)[0]
+        key_re = re.compile(r'@"([^"]+)"\s*:\s*@"[^"]*"')
+        en = set(key_re.findall(en_part))
+        ru = set(key_re.findall(ru_part))
         self.assertEqual(en, ru)
-        for key in ['section.ghost','section.messages','section.protected','section.stories','section.profile','section.appearance','section.other','section.about','about.jerkgram','about.base']:
+        for key in (
+            "main.jerkgram", "main.ghost", "main.messages", "main.protected",
+            "main.media", "main.appearance", "main.debug", "main.about",
+            "home.dataBackup", "debug.copyExtensionDiagnostics",
+            "about.analyticsDescription", "data.perChat", "data.cleanup",
+        ):
             self.assertIn(key, en)
 
-    def test_bootstrap_installs_settings_adapter_only(self):
-        text = BOOTSTRAP.read_text()
-        self.assertIn('JGInstallTelegram1294SettingsAdapter', text)
-        self.assertNotRegex(text, r'GhostMode|Deleted|ProtectedContent|Notification')
+    def test_bootstrap_contains_settings_only(self):
+        bootstrap = text(BOOTSTRAP)
+        adapter = text(ADAPTER)
+        self.assertIn("JGInstallTelegram1294SettingsAdapter", bootstrap)
+        for forbidden in ("sendMessage", "deleteMessage", "markRead", "typingActivity", "APNs"):
+            self.assertNotIn(forbidden, bootstrap + adapter)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,6 @@
 #import <UIKit/UIKit.h>
 
 NS_ASSUME_NONNULL_BEGIN
-@interface JGSettingsViewController : UITableViewController
-- (instancetype)initWithAccountPeerId:(int64_t)peerId;
-@end
+FOUNDATION_EXPORT UIViewController * _Nullable JGCreateSettingsHost(int64_t accountPeerId, NSString *page);
+FOUNDATION_EXPORT NSArray<NSString *> *JGReachableSettingsPages(void);
 NS_ASSUME_NONNULL_END

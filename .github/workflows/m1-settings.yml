@@ -1,89 +1,92 @@
-name: M1 Settings 12.9.4
+name: M1 R4 Build138 Settings 12.9.4
 
 on:
   push:
     branches:
-      - dev/tg1294-m1-settings-r3
-    paths:
-      - 'Jerkgram/**'
-      - 'tests/test_m1_contract.py'
-      - '.github/workflows/m1-settings.yml'
+      - dev/tg1294-m1-parity-r4
   workflow_dispatch:
 
-jobs:
-  contract:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: M1 contract tests
-        run: python3 -m unittest -v tests/test_m1_contract.py
+permissions:
+  contents: write
 
-  build-dylib:
+jobs:
+  contract-and-build:
     runs-on: macos-26
-    needs: contract
     steps:
       - uses: actions/checkout@v4
+      - name: Build138-only contract verifier
+        run: python3 -m unittest -v tests/test_m1_contract.py
       - name: Show Apple toolchain
         run: |
           set -euxo pipefail
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-path
-          xcrun --sdk iphoneos clang --version
-      - name: Build linked iOS dylib
+          xcrun --sdk iphoneos swiftc --version
+      - name: Build normally linked iOS dylib
         run: |
           set -euxo pipefail
-          mkdir -p artifacts/m1
+          mkdir -p artifacts/m1 objects
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
-          xcrun --sdk iphoneos clang \
-            -target arm64-apple-ios13.0 \
-            -isysroot "$SDK" \
-            -dynamiclib \
-            -fobjc-arc \
-            -fblocks \
-            -fmodules \
-            -O2 \
-            -fvisibility=hidden \
-            -I Jerkgram/Settings \
-            -I Jerkgram/Localization \
-            -I Jerkgram/UI \
-            -I Jerkgram/Adapters/Telegram1294 \
+          TARGET="arm64-apple-ios13.0"
+
+          xcrun --sdk iphoneos swiftc \
+            -target "$TARGET" -sdk "$SDK" -parse-as-library -O \
+            -emit-object Jerkgram/Adapters/Telegram1294/JGRuntimeIntrospection.swift \
+            -o objects/JGRuntimeIntrospection.o
+
+          for source in \
             Jerkgram/Settings/JGSettingsStore.m \
             Jerkgram/Localization/JGStrings.m \
             Jerkgram/UI/JGSettingsViewController.m \
             Jerkgram/Adapters/Telegram1294/JGTelegramSettingsAdapter.m \
-            Jerkgram/Bootstrap/JerkgramBootstrap.m \
-            -framework Foundation \
-            -framework UIKit \
-            -Wl,-install_name,@rpath/Jerkgram.dylib \
-            -Wl,-current_version,1.0.2 \
-            -Wl,-compatibility_version,1.0.0 \
+            Jerkgram/Bootstrap/JerkgramBootstrap.m
+          do
+            object="objects/$(basename "${source%.m}").o"
+            xcrun --sdk iphoneos clang \
+              -target "$TARGET" -isysroot "$SDK" -fobjc-arc -fblocks -fmodules -O2 \
+              -fvisibility=hidden \
+              -I Jerkgram/Settings -I Jerkgram/Localization -I Jerkgram/UI \
+              -I Jerkgram/Adapters/Telegram1294 \
+              -c "$source" -o "$object"
+          done
+
+          xcrun --sdk iphoneos swiftc \
+            -target "$TARGET" -sdk "$SDK" -emit-library objects/*.o \
+            -framework Foundation -framework UIKit \
+            -Xlinker -install_name -Xlinker @rpath/Jerkgram.dylib \
+            -Xlinker -current_version -Xlinker 1.0.2 \
+            -Xlinker -compatibility_version -Xlinker 1.0.0 \
             -o artifacts/m1/Jerkgram.dylib
-      - name: Ad-hoc sign and inspect
+      - name: Sign and inspect product
         run: |
           set -euxo pipefail
           codesign --force --sign - --timestamp=none artifacts/m1/Jerkgram.dylib
           codesign --verify --strict --verbose=4 artifacts/m1/Jerkgram.dylib
           {
-            echo '=== file ==='
             file artifacts/m1/Jerkgram.dylib
-            echo '=== sha256 ==='
             shasum -a 256 artifacts/m1/Jerkgram.dylib
-            echo '=== header ==='
             otool -hv artifacts/m1/Jerkgram.dylib
-            echo '=== dylibs ==='
             otool -L artifacts/m1/Jerkgram.dylib
-            echo '=== load commands ==='
             otool -l artifacts/m1/Jerkgram.dylib | grep -A5 -E 'LC_ID_DYLIB|LC_BUILD_VERSION|LC_VERSION_MIN_IPHONEOS' || true
-            echo '=== symbols ==='
-            nm -m artifacts/m1/Jerkgram.dylib | head -n 160 || true
-            echo '=== codesign ==='
+            nm -m artifacts/m1/Jerkgram.dylib | head -n 200 || true
             codesign -dvvv artifacts/m1/Jerkgram.dylib 2>&1
           } | tee artifacts/m1/M1_BUILD_REPORT.txt
       - name: Upload M1 product
         uses: actions/upload-artifact@v4
         with:
-          name: jerkgram-m1-settings-product
-          path: |
-            artifacts/m1/Jerkgram.dylib
-            artifacts/m1/M1_BUILD_REPORT.txt
+          name: jerkgram-m1-r4-build138-product
+          path: artifacts/m1/
           if-no-files-found: error
+      - name: Publish deterministic build output branch
+        run: |
+          set -euxo pipefail
+          cp -R artifacts/m1 "$RUNNER_TEMP/m1-output"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git switch --orphan generated-m1-r4-build138
+          git rm -rf .
+          mkdir -p artifacts/m1
+          cp -R "$RUNNER_TEMP/m1-output/"* artifacts/m1/
+          git add -f artifacts/m1
+          git commit -m "build: M1 R4 Build138 product"
+          git push --force origin HEAD:refs/heads/artifacts/m1-r4-build138
