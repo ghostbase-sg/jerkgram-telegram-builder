@@ -1,0 +1,80 @@
+name: M0.5-R2 Icon Composer Probe
+
+on:
+  push:
+    branches:
+      - m05-r2-m1
+    paths:
+      - 'M05R2IconProbe/**'
+      - 'M05R2IconProbe.xcodeproj/**'
+      - '.github/workflows/m05-r2-icon-probe.yml'
+
+jobs:
+  probe:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify canonical source and Xcode file typing
+        run: |
+          set -euxo pipefail
+          xcodebuild -version
+          curl -L --fail --retry 3 -o /tmp/JerkgramGlassIconComposerPackages.zip https://raw.githubusercontent.com/ghostbase-sg/jerkgram-telegram-builder/m0-5-branding-assets/assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip
+          unzip -q /tmp/JerkgramGlassIconComposerPackages.zip -d /tmp/jg-icon
+          rm -rf M05R2IconProbe/JerkgramGlassReveal.icon
+          cp -R /tmp/jg-icon/JerkgramGlassIconComposerPackages/JerkgramGlassReveal.icon M05R2IconProbe/JerkgramGlassReveal.icon
+          test "$(shasum -a 256 M05R2IconProbe/JerkgramGlassReveal.icon/Assets/Plane.svg | awk '{print $1}')" = "9dc83c22a01878aac9f8494c509a7862fdd1679d7e7f7f0026afc367d3a7e304"
+          grep -F 'lastKnownFileType = folder.iconcomposer.icon;' M05R2IconProbe.xcodeproj/project.pbxproj
+          grep -F 'ASSETCATALOG_COMPILER_APPICON_NAME = JerkgramGlassReveal;' M05R2IconProbe.xcodeproj/project.pbxproj
+
+      - name: Build unsigned iPhoneOS probe
+        run: |
+          set -euxo pipefail
+          rm -rf artifacts/m05-r2-probe DerivedData
+          mkdir -p artifacts/m05-r2-probe
+          xcodebuild \
+            -project M05R2IconProbe.xcodeproj \
+            -target M05R2IconProbe \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath "$PWD/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build | tee artifacts/m05-r2-probe/xcodebuild.log
+          APP="$(find DerivedData/Build/Products -type d -name M05R2IconProbe.app -print -quit)"
+          test -n "$APP"
+          cp -R "$APP" artifacts/m05-r2-probe/M05R2IconProbe.app
+
+      - name: Inspect exact compiled packaging
+        run: |
+          set -euxo pipefail
+          APP=artifacts/m05-r2-probe/M05R2IconProbe.app
+          /usr/libexec/PlistBuddy -c 'Print' "$APP/Info.plist" | tee artifacts/m05-r2-probe/InfoPlist.txt
+          find "$APP" -maxdepth 2 -type f -print | sort | tee artifacts/m05-r2-probe/files.txt
+          find "$APP" -maxdepth 2 -type f \( -name '*.png' -o -name '*.car' -o -name '*.icon' -o -name '*.incs' \) -print | sort | tee artifacts/m05-r2-probe/icon-files.txt
+          if test -f "$APP/Assets.car"; then
+            xcrun --find assetutil || true
+            if xcrun --find assetutil >/dev/null 2>&1; then
+              xcrun assetutil --info "$APP/Assets.car" > artifacts/m05-r2-probe/assetutil-info.json
+            fi
+          fi
+          python3 - <<'PY' | tee artifacts/m05-r2-probe/png-dimensions.txt
+          import os, struct
+          root='artifacts/m05-r2-probe/M05R2IconProbe.app'
+          for n in sorted(os.listdir(root)):
+              p=os.path.join(root,n)
+              if n.lower().endswith('.png'):
+                  with open(p,'rb') as f:
+                      b=f.read(24)
+                  if b[:8]==b'\x89PNG\r\n\x1a\n':
+                      w,h=struct.unpack('>II',b[16:24])
+                      print(f'{n}\t{w}x{h}')
+          PY
+          shasum -a 256 "$APP/Info.plist" "$APP/Assets.car" 2>/dev/null || true
+
+      - name: Upload probe evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m05-r2-icon-composer-probe
+          path: artifacts/m05-r2-probe/**
+          if-no-files-found: error
