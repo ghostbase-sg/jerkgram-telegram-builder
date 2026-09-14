@@ -14,17 +14,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract canonical Jerkgram icon package
+      - name: Extract canonical Jerkgram icon assets
         run: |
           set -euxo pipefail
-          mkdir -p artifacts/m05-icon
-          unzip -q assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip -d artifacts/m05-icon
+          mkdir -p artifacts/m05-icon/composer artifacts/m05-icon/previews
+          unzip -q assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip -d artifacts/m05-icon/composer
+          unzip -q assets/JerkgramGlass/JerkgramGlassUIPreviews.zip -d artifacts/m05-icon/previews
           find artifacts/m05-icon -type f -print | sort
-          FOUND="artifacts/m05-icon/JerkgramGlassIconComposerPackages/JerkgramGlassReveal.icon/Assets/Plane.svg"
+          FOUND="artifacts/m05-icon/composer/JerkgramGlassIconComposerPackages/JerkgramGlassReveal.icon/Assets/Plane.svg"
           test -f "$FOUND"
           test "$(shasum -a 256 "$FOUND" | awk '{print $1}')" = "9dc83c22a01878aac9f8494c509a7862fdd1679d7e7f7f0026afc367d3a7e304"
 
-      - name: Upload extracted canonical icon package
+      - name: Upload canonical icon assets
         uses: actions/upload-artifact@v4
         with:
           name: m05-canonical-icon-assets
