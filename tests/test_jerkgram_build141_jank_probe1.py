@@ -5,7 +5,7 @@ import unittest
 
 ROOT = Path(__file__).parents[1]
 APPLY = ROOT / "scripts/apply_jerkgram_build141_jank_probe1.py"
-INSTALLER = ROOT / "scripts/install_jerkgram_build141_jank_probe_hook.py"
+INSTALLER = ROOT / "scripts/install_jerkgram_v12w_build133_probe_hook.py"
 
 
 def load_module(name: str, path: Path):
