@@ -17,6 +17,7 @@ BUILD130_FINAL_ANCHOR = "python3 ../../scripts/verify_jerkgram_v12s_build130_fin
 BAZEL_ANCHOR = '"$BAZEL_BIN" build ${BAZEL_EXTRA_ARGS:-}'
 UNIT_TEST_MODULE = "tests.test_jerkgram_native_push_type1_diagnostics_v01"
 NO_ADS_TEST_MODULE = "tests.test_jerkgram_build140_no_ads1"
+JANK_TEST_MODULE = "tests.test_jerkgram_build141_jank_probe1"
 
 SOURCE_ORDERED = (
     "apply_jerkgram_v12t_build133_blocked_reactions1.py",
@@ -57,6 +58,8 @@ SOURCE_ORDERED = (
     "verify_jerkgram_build140_no_ads1.py",
     "apply_jerkgram_build140_identity.py",
     "verify_jerkgram_build140_identity.py",
+    "apply_jerkgram_build141_jank_probe1.py",
+    "verify_jerkgram_build141_jank_probe1.py",
     "verify_jerkgram_v12w_build133_runtime_repair1.py",
     "apply_jerkgram_native_push_type1_diagnostics_v01.py",
     "verify_jerkgram_native_push_type1_diagnostics_v01.py",
@@ -84,7 +87,7 @@ def patch_probe(text: str) -> str:
 
     source_payload = (
         SOURCE_MARKER
-        + '\necho\necho "== Jerkgram Build140 runtime + passwordless Web Push + Premium app icons + Download Boost + No Ads + native Type1 diagnostics =="\n'
+        + '\necho\necho "== Jerkgram Build141 runtime + bounded Jank Probe + passwordless Web Push + Premium app icons + Download Boost + No Ads + native Type1 diagnostics =="\n'
         + "\n".join(line(name) for name in SOURCE_ORDERED)
     )
     if SOURCE_MARKER not in text:
@@ -110,7 +113,7 @@ def patch_probe(text: str) -> str:
         final_block = (
             BUILD130_FINAL_ANCHOR
             + "\n\n" + FINAL_MARKER
-            + '\necho\necho "== Jerkgram Build140 final physical identity =="\n'
+            + '\necho\necho "== Jerkgram Build141 final physical identity =="\n'
             + "\n".join(line(name, "ghostbase-final/GhostBase.ipa") for name in FINAL_ORDERED)
         )
         text = text.replace(BUILD130_FINAL_ANCHOR, final_block, 1)
@@ -120,12 +123,14 @@ def patch_probe(text: str) -> str:
     require(final_positions == sorted(final_positions), "Build133 final identity order")
     require(all(text.count(name) == 1 for name in FINAL_ORDERED), "Build133 final hook count")
     require(text.index(BUILD130_FINAL_ANCHOR) < final_positions[0], "Build133 final identity must follow Build130 verification")
-    text = text.replace("== Jerkgram Build134 final identity ==", "== Jerkgram Build140 final identity ==")
-    text = text.replace("== Jerkgram Build135 final identity ==", "== Jerkgram Build140 final identity ==")
-    text = text.replace("== Jerkgram Build136 final identity ==", "== Jerkgram Build140 final identity ==")
-    text = text.replace("== Jerkgram Build137 final identity ==", "== Jerkgram Build140 final identity ==")
-    text = text.replace("== Jerkgram Build138 final identity ==", "== Jerkgram Build140 final identity ==")
-    text = text.replace("== Jerkgram Build138 final physical identity ==", "== Jerkgram Build140 final physical identity ==")
+    text = text.replace("== Jerkgram Build134 final identity ==", "== Jerkgram Build141 final identity ==")
+    text = text.replace("== Jerkgram Build135 final identity ==", "== Jerkgram Build141 final identity ==")
+    text = text.replace("== Jerkgram Build136 final identity ==", "== Jerkgram Build141 final identity ==")
+    text = text.replace("== Jerkgram Build137 final identity ==", "== Jerkgram Build141 final identity ==")
+    text = text.replace("== Jerkgram Build138 final identity ==", "== Jerkgram Build141 final identity ==")
+    text = text.replace("== Jerkgram Build140 final identity ==", "== Jerkgram Build141 final identity ==")
+    text = text.replace("== Jerkgram Build138 final physical identity ==", "== Jerkgram Build141 final physical identity ==")
+    text = text.replace("== Jerkgram Build140 final physical identity ==", "== Jerkgram Build141 final physical identity ==")
     return text
 
 
@@ -133,11 +138,12 @@ def main() -> None:
     require(BASE_INSTALLER.is_file(), "base installer missing: " + str(BASE_INSTALLER))
     subprocess.check_call([sys.executable, "-m", "unittest", UNIT_TEST_MODULE], cwd=str(SCRIPT_DIR.parent))
     subprocess.check_call([sys.executable, "-m", "unittest", NO_ADS_TEST_MODULE], cwd=str(SCRIPT_DIR.parent))
+    subprocess.check_call([sys.executable, "-m", "unittest", JANK_TEST_MODULE], cwd=str(SCRIPT_DIR.parent))
     subprocess.check_call([sys.executable, str(BASE_INSTALLER)])
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
-    print("[Build140 probe hook] GREEN")
-    print("[Build140 probe hook] existing runtime -> click bridge -> Web Push type10 -> passwordless binding -> Premium app icons -> Download Boost2 -> No Ads -> identity 140 -> native Type1 diagnostics -> FINAL Type1 gate -> Bazel -> physical identity 140")
+    print("[Build141 probe hook] GREEN")
+    print("[Build141 probe hook] existing runtime -> Build140 identity -> bounded Jank Probe -> runtime repair -> native Type1 diagnostics -> Bazel -> physical identity")
 
 
 if __name__ == "__main__":
