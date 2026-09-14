@@ -1,0 +1,34 @@
+name: M0.5-R2 Asset Tool Capability Probe
+
+on:
+  push:
+    branches:
+      - dev/tg1294-m05r2-m1
+    paths:
+      - '.github/workflows/m05r2-asset-tools.yml'
+  workflow_dispatch:
+
+jobs:
+  asset-tool-probe:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Inspect Xcode asset tooling
+        shell: bash
+        run: |
+          mkdir -p artifacts/m05r2-asset-tools
+          xcodebuild -version > artifacts/m05r2-asset-tools/xcode-version.txt
+          (xcrun --sdk iphoneos assetutil --help || true) > artifacts/m05r2-asset-tools/assetutil-help.txt 2>&1
+          (xcrun --sdk iphoneos actool --help || true) > artifacts/m05r2-asset-tools/actool-help.txt 2>&1
+          (man assetutil 2>/dev/null | col -b || true) > artifacts/m05r2-asset-tools/assetutil-man.txt
+          (man actool 2>/dev/null | col -b || true) > artifacts/m05r2-asset-tools/actool-man.txt
+          find /Applications/Xcode.app -type f \( -name 'assetutil' -o -name 'actool' -o -iname '*rendition*' -o -iname '*assetcatalog*' -o -iname '*coreui*' \) 2>/dev/null | sort > artifacts/m05r2-asset-tools/tool-paths.txt
+          grep -Eini 'merge|insert|add|write|extract|compile|output|car|catalog' artifacts/m05r2-asset-tools/assetutil-help.txt artifacts/m05r2-asset-tools/assetutil-man.txt artifacts/m05r2-asset-tools/actool-help.txt | head -400 > artifacts/m05r2-asset-tools/relevant-lines.txt || true
+          cat artifacts/m05r2-asset-tools/relevant-lines.txt
+      - name: Upload capability report
+        uses: actions/upload-artifact@v4
+        with:
+          name: m05r2-asset-tools
+          path: artifacts/m05r2-asset-tools/**
+          if-no-files-found: error
