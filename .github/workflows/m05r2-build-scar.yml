@@ -1,0 +1,39 @@
+name: M0.5-R2 Build CAR Roundtrip Tool
+
+on:
+  push:
+    branches:
+      - dev/tg1294-m05r2-m1
+    paths:
+      - '.github/workflows/m05r2-build-scar.yml'
+  workflow_dispatch:
+
+jobs:
+  build-scar-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Jerkgram tooling branch
+        uses: actions/checkout@v4
+
+      - name: Build pinned scar 0.5.4
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPSTREAM_SHA=5b77611275909a2a05a6b57511d843485f4311e7
+          git clone https://github.com/theacrat/scar.git /tmp/scar
+          git -C /tmp/scar checkout "$UPSTREAM_SHA"
+          test "$(git -C /tmp/scar rev-parse HEAD)" = "$UPSTREAM_SHA"
+          cargo build --release --locked --manifest-path /tmp/scar/Cargo.toml
+          mkdir -p artifacts/scar-linux
+          cp /tmp/scar/target/release/scar artifacts/scar-linux/scar
+          cp /tmp/scar/LICENCE artifacts/scar-linux/SCAR-LICENCE.txt
+          printf '%s\n' "$UPSTREAM_SHA" > artifacts/scar-linux/upstream-sha.txt
+          sha256sum artifacts/scar-linux/scar > artifacts/scar-linux/scar.sha256
+          artifacts/scar-linux/scar --version | tee artifacts/scar-linux/version.txt
+
+      - name: Upload pinned tool
+        uses: actions/upload-artifact@v4
+        with:
+          name: m05r2-scar-linux
+          path: artifacts/scar-linux/**
+          if-no-files-found: error
