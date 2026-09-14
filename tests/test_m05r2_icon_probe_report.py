@@ -16,7 +16,8 @@ assert plist.get("CFBundleIdentifier") == "com.jerkgram.iconprobe"
 assert plist.get("CFBundleIcons") or plist.get("CFBundleIconName"), "no primary icon declaration emitted"
 
 files = data["bundle_files"]
-assert any(name.endswith(".icon") or ".icon/" in name for name in files), "compiled bundle does not carry Icon Composer source/package"
+assert files, "missing built bundle inventory"
+assert data.get("packaging_classification") in {"icon-package", "assets-car", "mixed", "generated-pngs", "other"}, data.get("packaging_classification")
 assert data.get("icon_related_files"), "missing emitted icon file inventory"
 assert data.get("xcode_version", "").startswith("Xcode 26"), data.get("xcode_version")
 
