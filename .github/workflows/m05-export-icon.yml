@@ -1,0 +1,32 @@
+name: M0.5 Export Canonical Icon Assets
+
+on:
+  push:
+    branches:
+      - m0-5-branding-assets
+    paths:
+      - '.github/workflows/m05-export-icon.yml'
+
+jobs:
+  export-icon-assets:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract canonical Jerkgram icon package
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts/m05-icon
+          unzip -q assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip -d artifacts/m05-icon
+          find artifacts/m05-icon -type f -print | sort
+          FOUND="$(find artifacts/m05-icon -type f -name 'Reveal Plane.svg' -print -quit)"
+          test -n "$FOUND"
+          test "$(shasum -a 256 "$FOUND" | awk '{print $1}')" = "9dc83c22a01878aac9f8494c509a7862fdd1679d7e7f7f0026afc367d3a7e304"
+
+      - name: Upload extracted canonical icon package
+        uses: actions/upload-artifact@v4
+        with:
+          name: m05-canonical-icon-assets
+          path: artifacts/m05-icon/**
+          if-no-files-found: error
