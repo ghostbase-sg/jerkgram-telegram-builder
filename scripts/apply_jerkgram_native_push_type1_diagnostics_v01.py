@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
+import re
 import sys
 
 
@@ -21,6 +22,26 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     count = text.count(old)
     require(count == 1, f"{label}: expected exactly one anchor, found {count}")
     return text.replace(old, new, 1)
+
+
+def patch_aps_encrypt_capture(text: str) -> str:
+    pattern = re.compile(
+        r"^(?P<indent>[ \t]+)case let \.aps\(encrypt\):\n"
+        r"(?P=indent)    mappedType = 1\n"
+        r"(?P=indent)    if encrypt \{\n",
+        re.MULTILINE,
+    )
+    matches = list(pattern.finditer(text))
+    require(len(matches) == 1, f"aps encrypt capture: expected exactly one semantic owner, found {len(matches)}")
+    match = matches[0]
+    indent = match.group("indent")
+    replacement = (
+        f"{indent}case let .aps(encrypt):\n"
+        f"{indent}    mappedType = 1\n"
+        f"{indent}    jerkgramType1Encrypt = encrypt\n"
+        f"{indent}    if encrypt {{\n"
+    )
+    return text[:match.start()] + replacement + text[match.end():]
 
 
 def patch_register(text: str) -> str:
@@ -47,17 +68,7 @@ def patch_register(text: str) -> str:
         "type1 encrypt state",
     )
 
-    text = replace_once(
-        text,
-        "        case let .aps(encrypt):\n"
-        "            mappedType = 1\n"
-        "            if encrypt {\n",
-        "        case let .aps(encrypt):\n"
-        "            mappedType = 1\n"
-        "            jerkgramType1Encrypt = encrypt\n"
-        "            if encrypt {\n",
-        "aps encrypt capture",
-    )
+    text = patch_aps_encrypt_capture(text)
 
     typed_request = '        GhostBaseV10EPushProbeCore.record("registerDevice" + ghostBaseRegisterDeviceKind + "Request")\n'
     typed_request_replacement = typed_request + (
