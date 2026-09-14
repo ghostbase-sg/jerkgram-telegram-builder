@@ -1,22 +1,23 @@
-name: Build140 Integration Trigger
+name: Build141 Integration Trigger
 
 on:
   push:
     branches:
       - dev/build133-runtime-repair
+      - dev/build141-jank-probe
 
 permissions:
   actions: write
   contents: read
 
 jobs:
-  preflight-and-dispatch-build140:
+  preflight-and-dispatch-build141:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout builder
         uses: actions/checkout@v4
 
-      - name: Verify Build140 URL routing and identity before macOS CI
+      - name: Verify Build141 jank probe and release chain before macOS CI
         run: |
           set -e
           python3 -m py_compile \
@@ -28,6 +29,8 @@ jobs:
             scripts/verify_jerkgram_push_binding_bridge_v01.py \
             scripts/apply_jerkgram_build140_identity.py \
             scripts/verify_jerkgram_build140_identity.py \
+            scripts/apply_jerkgram_build141_jank_probe1.py \
+            scripts/verify_jerkgram_build141_jank_probe1.py \
             scripts/install_jerkgram_v12w_build133_probe_hook.py \
             scripts/verify_jerkgram_v12w_build133_runtime_repair1.py \
             scripts/jerkgram_finalize_build133_identity.py \
@@ -40,6 +43,7 @@ jobs:
             tests.test_jerkgram_push_click_bridge_v01 \
             tests.test_jerkgram_push_external_url_routing_v01 \
             tests.test_jerkgram_build140_identity \
+            tests.test_jerkgram_build141_jank_probe1 \
             tests.test_jerkgram_v12x_build133_release_ui1 \
             tests.test_jerkgram_v12y_build133_telemetry2 \
             tests.test_jerkgram_build134_release_contract
