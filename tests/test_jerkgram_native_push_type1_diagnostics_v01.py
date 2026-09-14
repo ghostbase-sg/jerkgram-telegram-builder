@@ -34,14 +34,14 @@ func _internal_registerNotificationToken(account: Account, token: Data, type: No
         var keyData = Data()
 
         switch type {
-        case let .aps(encrypt):
-            mappedType = 1
-            if encrypt {
+            case let .aps(encrypt):
+                mappedType = 1
+                if encrypt {
+                    keyData = masterKey.data
+                }
+            case .voip:
+                mappedType = 9
                 keyData = masterKey.data
-            }
-        case .voip:
-            mappedType = 9
-            keyData = masterKey.data
         }
 
         var flags: Int32 = 0
@@ -98,7 +98,7 @@ BUILD_CONFIG_FIXTURE = r'''@implementation BuildConfig (JerkgramExtensionDiagnos
 
 
 class NativePushType1DiagnosticsTests(unittest.TestCase):
-    def test_register_patch_extends_live_v10e1_shape_without_changing_stock_semantics(self):
+    def test_register_patch_extends_official_12_9_2_nested_shape_without_changing_stock_semantics(self):
         patch = load_module("native_type1_apply", APPLY)
         actual = patch.patch_register(REGISTER_FIXTURE)
 
@@ -114,6 +114,10 @@ class NativePushType1DiagnosticsTests(unittest.TestCase):
         ):
             self.assertIn(token, actual)
 
+        self.assertIn(
+            '            case let .aps(encrypt):\n                mappedType = 1\n                jerkgramType1Encrypt = encrypt\n                if encrypt {',
+            actual,
+        )
         self.assertNotIn("GHOSTBASE_V10E1_SPLIT_PUSH_TYPE1", REGISTER_FIXTURE)
         self.assertNotIn(
             'LastRegisterDevice" + ghostBaseRegisterDeviceKind + "Error", error.errorDescription',
