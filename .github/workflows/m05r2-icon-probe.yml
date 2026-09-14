@@ -21,7 +21,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf probe artifacts/m05r2-icon-probe
+          rm -rf probe artifacts/m05r2-icon-probe artifacts/Build
           mkdir -p probe/JGIconProbe artifacts/m05r2-icon-probe/source
           unzip -q assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip -d artifacts/m05r2-icon-probe/source
           SRC="artifacts/m05r2-icon-probe/source/JerkgramGlassIconComposerPackages/JerkgramGlassReveal.icon"
@@ -36,11 +36,9 @@ jobs:
           mkdir -p probe/JGIconProbe.xcodeproj
           cat > probe/JGIconProbe/main.m <<'EOF'
           #import <UIKit/UIKit.h>
-
           @interface AppDelegate : UIResponder <UIApplicationDelegate>
           @property (nonatomic, strong) UIWindow *window;
           @end
-
           @implementation AppDelegate
           - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
               (void)application; (void)launchOptions;
@@ -52,11 +50,8 @@ jobs:
               return YES;
           }
           @end
-
           int main(int argc, char * argv[]) {
-              @autoreleasepool {
-                  return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
-              }
+              @autoreleasepool { return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class])); }
           }
           EOF
 
@@ -114,9 +109,9 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild -version | tee artifacts/m05r2-icon-probe/xcode-version.txt
-          xcodebuild -project probe/JGIconProbe.xcodeproj -target JGIconProbe -configuration Release -sdk iphoneos -derivedDataPath "$PWD/artifacts/DerivedData" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tee artifacts/m05r2-icon-probe/xcodebuild.log
-          APP="$(find artifacts/DerivedData/Build/Products -type d -name JGIconProbe.app -print -quit)"
-          test -n "$APP"
+          xcodebuild -project probe/JGIconProbe.xcodeproj -target JGIconProbe -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR="$PWD/artifacts/Build" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tee artifacts/m05r2-icon-probe/xcodebuild.log
+          APP="$PWD/artifacts/Build/JGIconProbe.app"
+          test -d "$APP"
           echo "$APP" > artifacts/m05r2-icon-probe/app-path.txt
 
       - name: Inspect exact packaging
@@ -125,7 +120,7 @@ jobs:
           set -euo pipefail
           APP="$(cat artifacts/m05r2-icon-probe/app-path.txt)"
           plutil -convert xml1 -o artifacts/m05r2-icon-probe/Info.plist.xml "$APP/Info.plist"
-          (cd "$APP" && find . -type f -o -type d | sort) > artifacts/m05r2-icon-probe/bundle-files.txt
+          (cd "$APP" && find . \( -type f -o -type d \) | sort) > artifacts/m05r2-icon-probe/bundle-files.txt
           find "$APP" -type f \( -iname '*icon*' -o -iname '*.car' -o -iname '*.png' \) -print0 | sort -z | while IFS= read -r -d '' f; do shasum -a 256 "$f"; done > artifacts/m05r2-icon-probe/icon-related-sha256.txt
           if test -f "$APP/Assets.car"; then
             xcrun --sdk iphoneos assetutil --info "$APP/Assets.car" > artifacts/m05r2-icon-probe/assets-car-info.json || true
@@ -133,35 +128,19 @@ jobs:
             echo '[]' > artifacts/m05r2-icon-probe/assets-car-info.json
           fi
           cp -R "$APP" artifacts/m05r2-icon-probe/JGIconProbe.app
-
           python3 - <<'PY'
-          import hashlib, json, os, plistlib, pathlib, subprocess
+          import hashlib, json, plistlib, pathlib
           root=pathlib.Path('artifacts/m05r2-icon-probe')
           app=pathlib.Path(root.joinpath('app-path.txt').read_text().strip())
           with open(app/'Info.plist','rb') as f: plist=plistlib.load(f)
           files=sorted(str(p.relative_to(app)) for p in app.rglob('*'))
-          icon_related=[]
-          for p in app.rglob('*'):
-              if p.is_file() and ('icon' in p.name.lower() or p.suffix.lower() in {'.png','.car'}):
-                  icon_related.append(str(p.relative_to(app)))
+          icon_related=sorted(str(p.relative_to(app)) for p in app.rglob('*') if p.is_file() and ('icon' in p.name.lower() or p.suffix.lower() in {'.png','.car'}))
           has_icon=any(p.endswith('.icon') or '.icon/' in p for p in files)
           has_car=(app/'Assets.car').exists()
           pngs=[p for p in files if p.lower().endswith('.png')]
-          if has_icon and has_car: kind='mixed'
-          elif has_icon: kind='icon-package'
-          elif has_car: kind='assets-car'
-          elif pngs: kind='generated-pngs'
-          else: kind='other'
+          kind='mixed' if has_icon and has_car else 'icon-package' if has_icon else 'assets-car' if has_car else 'generated-pngs' if pngs else 'other'
           plane=pathlib.Path('artifacts/m05r2-icon-probe/source/JerkgramGlassIconComposerPackages/JerkgramGlassReveal.icon/Assets/Plane.svg')
-          manifest={
-            'source_icon_name':'JerkgramGlassReveal',
-            'source_plane_sha256':hashlib.sha256(plane.read_bytes()).hexdigest(),
-            'xcode_version':root.joinpath('xcode-version.txt').read_text().strip().replace('\n',' '),
-            'info_plist':plist,
-            'bundle_files':files,
-            'icon_related_files':sorted(icon_related),
-            'packaging_classification':kind,
-          }
+          manifest={'source_icon_name':'JerkgramGlassReveal','source_plane_sha256':hashlib.sha256(plane.read_bytes()).hexdigest(),'xcode_version':root.joinpath('xcode-version.txt').read_text().strip().replace('\n',' '),'info_plist':plist,'bundle_files':files,'icon_related_files':icon_related,'packaging_classification':kind}
           root.joinpath('probe_manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True,default=str))
           PY
 
