@@ -30,19 +30,19 @@ jobs:
       - name: Build unsigned iPhoneOS probe
         run: |
           set -euxo pipefail
-          rm -rf artifacts/m05-r2-probe DerivedData
-          mkdir -p artifacts/m05-r2-probe
+          rm -rf artifacts/m05-r2-probe artifacts/Build build
+          mkdir -p artifacts/m05-r2-probe artifacts/Build
           xcodebuild \
             -project M05R2IconProbe.xcodeproj \
             -target M05R2IconProbe \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath "$PWD/DerivedData" \
+            CONFIGURATION_BUILD_DIR="$PWD/artifacts/Build" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             build | tee artifacts/m05-r2-probe/xcodebuild.log
-          APP="$(find DerivedData/Build/Products -type d -name M05R2IconProbe.app -print -quit)"
-          test -n "$APP"
+          APP="$PWD/artifacts/Build/M05R2IconProbe.app"
+          test -d "$APP"
           cp -R "$APP" artifacts/m05-r2-probe/M05R2IconProbe.app
 
       - name: Inspect exact compiled packaging
