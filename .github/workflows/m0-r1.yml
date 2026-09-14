@@ -40,6 +40,12 @@ jobs:
             m0-r1/JerkgramBootstrap.c \
             -o artifacts/m0-r1/Jerkgram.dylib
 
+      - name: Apply normal ad-hoc code signature
+        run: |
+          set -euxo pipefail
+          codesign --force --sign - --timestamp=none artifacts/m0-r1/Jerkgram.dylib
+          codesign --verify --strict --verbose=4 artifacts/m0-r1/Jerkgram.dylib
+
       - name: Structural inspection
         run: |
           set -euxo pipefail
@@ -48,7 +54,7 @@ jobs:
           otool -hv artifacts/m0-r1/Jerkgram.dylib
           otool -l artifacts/m0-r1/Jerkgram.dylib
           nm -m artifacts/m0-r1/Jerkgram.dylib || true
-          codesign -dvvv artifacts/m0-r1/Jerkgram.dylib || true
+          codesign -dvvv artifacts/m0-r1/Jerkgram.dylib
 
       - name: Upload product dylib
         uses: actions/upload-artifact@v4
