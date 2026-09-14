@@ -1,0 +1,176 @@
+name: M0.5-R2 Icon Composer Probe
+
+on:
+  push:
+    branches:
+      - dev/tg1294-m05r2-m1
+    paths:
+      - '.github/workflows/m05r2-icon-probe.yml'
+      - 'tests/test_m05r2_icon_probe_report.py'
+      - 'assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip'
+  workflow_dispatch:
+
+jobs:
+  icon-composer-probe:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract canonical Icon Composer package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf probe artifacts/m05r2-icon-probe
+          mkdir -p probe/JGIconProbe artifacts/m05r2-icon-probe/source
+          unzip -q assets/JerkgramGlass/JerkgramGlassIconComposerPackages.zip -d artifacts/m05r2-icon-probe/source
+          SRC="artifacts/m05r2-icon-probe/source/JerkgramGlassIconComposerPackages/JerkgramGlassReveal.icon"
+          test -d "$SRC"
+          test "$(shasum -a 256 "$SRC/Assets/Plane.svg" | awk '{print $1}')" = "9dc83c22a01878aac9f8494c509a7862fdd1679d7e7f7f0026afc367d3a7e304"
+          cp -R "$SRC" probe/JGIconProbe/JerkgramGlassReveal.icon
+
+      - name: Generate minimal Xcode 26 iOS target
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p probe/JGIconProbe.xcodeproj
+          cat > probe/JGIconProbe/main.m <<'EOF'
+          #import <UIKit/UIKit.h>
+
+          @interface AppDelegate : UIResponder <UIApplicationDelegate>
+          @property (nonatomic, strong) UIWindow *window;
+          @end
+
+          @implementation AppDelegate
+          - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+              (void)application; (void)launchOptions;
+              self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+              UIViewController *vc = [UIViewController new];
+              vc.view.backgroundColor = UIColor.systemBackgroundColor;
+              self.window.rootViewController = vc;
+              [self.window makeKeyAndVisible];
+              return YES;
+          }
+          @end
+
+          int main(int argc, char * argv[]) {
+              @autoreleasepool {
+                  return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
+              }
+          }
+          EOF
+
+          cat > probe/JGIconProbe/Info.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>CFBundleDevelopmentRegion</key><string>en</string>
+            <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+            <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+            <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>1.0</string>
+            <key>CFBundleVersion</key><string>1</string>
+            <key>LSRequiresIPhoneOS</key><true/>
+            <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
+            <key>UILaunchScreen</key><dict/>
+            <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
+          </dict></plist>
+          EOF
+
+          cat > probe/JGIconProbe.xcodeproj/project.pbxproj <<'EOF'
+          // !$*UTF8*$!
+          {
+            archiveVersion = 1;
+            classes = {};
+            objectVersion = 77;
+            objects = {
+              111111111111111111111111 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 222222222222222222222222 /* main.m */; };
+              333333333333333333333333 /* JerkgramGlassReveal.icon in Resources */ = {isa = PBXBuildFile; fileRef = 444444444444444444444444 /* JerkgramGlassReveal.icon */; };
+              555555555555555555555555 /* JGIconProbe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JGIconProbe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+              222222222222222222222222 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+              666666666666666666666666 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+              444444444444444444444444 /* JerkgramGlassReveal.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = JerkgramGlassReveal.icon; sourceTree = "<group>"; };
+              777777777777777777777777 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+              888888888888888888888888 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (111111111111111111111111 /* main.m in Sources */,); runOnlyForDeploymentPostprocessing = 0; };
+              999999999999999999999999 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (333333333333333333333333 /* JerkgramGlassReveal.icon in Resources */,); runOnlyForDeploymentPostprocessing = 0; };
+              AAAAAAAAAAAAAAAAAAAAAAAA = {isa = PBXGroup; children = (BBBBBBBBBBBBBBBBBBBBBBBB /* JGIconProbe */, CCCCCCCCCCCCCCCCCCCCCCCC /* Products */,); sourceTree = "<group>"; };
+              BBBBBBBBBBBBBBBBBBBBBBBB /* JGIconProbe */ = {isa = PBXGroup; children = (222222222222222222222222 /* main.m */, 666666666666666666666666 /* Info.plist */, 444444444444444444444444 /* JerkgramGlassReveal.icon */,); path = JGIconProbe; sourceTree = "<group>"; };
+              CCCCCCCCCCCCCCCCCCCCCCCC /* Products */ = {isa = PBXGroup; children = (555555555555555555555555 /* JGIconProbe.app */,); name = Products; sourceTree = "<group>"; };
+              DDDDDDDDDDDDDDDDDDDDDDDD /* Project */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 2660; TargetAttributes = {EEEEEEEEEEEEEEEEEEEEEEEE = {CreatedOnToolsVersion = 26.0;};};}; buildConfigurationList = FFFFFFFFFFFFFFFFFFFFFFFF; compatibilityVersion = "Xcode 16.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base,); mainGroup = AAAAAAAAAAAAAAAAAAAAAAAA; productRefGroup = CCCCCCCCCCCCCCCCCCCCCCCC; projectDirPath = ""; projectRoot = ""; targets = (EEEEEEEEEEEEEEEEEEEEEEEE,); };
+              EEEEEEEEEEEEEEEEEEEEEEEE /* JGIconProbe */ = {isa = PBXNativeTarget; buildConfigurationList = 121212121212121212121212; buildPhases = (888888888888888888888888, 777777777777777777777777, 999999999999999999999999,); buildRules = (); dependencies = (); name = JGIconProbe; productName = JGIconProbe; productReference = 555555555555555555555555; productType = "com.apple.product-type.application"; };
+              131313131313131313131313 /* Project Release */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; IPHONEOS_DEPLOYMENT_TARGET = 15.0; SDKROOT = iphoneos;}; name = Release; };
+              141414141414141414141414 /* Target Release */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = JerkgramGlassReveal; CLANG_ENABLE_MODULES = YES; CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = JGIconProbe/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 15.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; OTHER_LDFLAGS = "-framework UIKit"; PRODUCT_BUNDLE_IDENTIFIER = com.jerkgram.iconprobe; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = iphoneos; TARGETED_DEVICE_FAMILY = "1,2";}; name = Release; };
+              FFFFFFFFFFFFFFFFFFFFFFFF = {isa = XCConfigurationList; buildConfigurations = (131313131313131313131313,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+              121212121212121212121212 = {isa = XCConfigurationList; buildConfigurations = (141414141414141414141414,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+            };
+            rootObject = DDDDDDDDDDDDDDDDDDDDDDDD;
+          }
+          EOF
+
+      - name: Build probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version | tee artifacts/m05r2-icon-probe/xcode-version.txt
+          xcodebuild -project probe/JGIconProbe.xcodeproj -target JGIconProbe -configuration Release -sdk iphoneos -derivedDataPath "$PWD/artifacts/DerivedData" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tee artifacts/m05r2-icon-probe/xcodebuild.log
+          APP="$(find artifacts/DerivedData/Build/Products -type d -name JGIconProbe.app -print -quit)"
+          test -n "$APP"
+          echo "$APP" > artifacts/m05r2-icon-probe/app-path.txt
+
+      - name: Inspect exact packaging
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$(cat artifacts/m05r2-icon-probe/app-path.txt)"
+          plutil -convert xml1 -o artifacts/m05r2-icon-probe/Info.plist.xml "$APP/Info.plist"
+          (cd "$APP" && find . -type f -o -type d | sort) > artifacts/m05r2-icon-probe/bundle-files.txt
+          find "$APP" -type f \( -iname '*icon*' -o -iname '*.car' -o -iname '*.png' \) -print0 | sort -z | while IFS= read -r -d '' f; do shasum -a 256 "$f"; done > artifacts/m05r2-icon-probe/icon-related-sha256.txt
+          if test -f "$APP/Assets.car"; then
+            xcrun --sdk iphoneos assetutil --info "$APP/Assets.car" > artifacts/m05r2-icon-probe/assets-car-info.json || true
+          else
+            echo '[]' > artifacts/m05r2-icon-probe/assets-car-info.json
+          fi
+          cp -R "$APP" artifacts/m05r2-icon-probe/JGIconProbe.app
+
+          python3 - <<'PY'
+          import hashlib, json, os, plistlib, pathlib, subprocess
+          root=pathlib.Path('artifacts/m05r2-icon-probe')
+          app=pathlib.Path(root.joinpath('app-path.txt').read_text().strip())
+          with open(app/'Info.plist','rb') as f: plist=plistlib.load(f)
+          files=sorted(str(p.relative_to(app)) for p in app.rglob('*'))
+          icon_related=[]
+          for p in app.rglob('*'):
+              if p.is_file() and ('icon' in p.name.lower() or p.suffix.lower() in {'.png','.car'}):
+                  icon_related.append(str(p.relative_to(app)))
+          has_icon=any(p.endswith('.icon') or '.icon/' in p for p in files)
+          has_car=(app/'Assets.car').exists()
+          pngs=[p for p in files if p.lower().endswith('.png')]
+          if has_icon and has_car: kind='mixed'
+          elif has_icon: kind='icon-package'
+          elif has_car: kind='assets-car'
+          elif pngs: kind='generated-pngs'
+          else: kind='other'
+          plane=pathlib.Path('artifacts/m05r2-icon-probe/source/JerkgramGlassIconComposerPackages/JerkgramGlassReveal.icon/Assets/Plane.svg')
+          manifest={
+            'source_icon_name':'JerkgramGlassReveal',
+            'source_plane_sha256':hashlib.sha256(plane.read_bytes()).hexdigest(),
+            'xcode_version':root.joinpath('xcode-version.txt').read_text().strip().replace('\n',' '),
+            'info_plist':plist,
+            'bundle_files':files,
+            'icon_related_files':sorted(icon_related),
+            'packaging_classification':kind,
+          }
+          root.joinpath('probe_manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True,default=str))
+          PY
+
+      - name: Verify probe report
+        run: python3 tests/test_m05r2_icon_probe_report.py artifacts/m05r2-icon-probe
+
+      - name: Upload probe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: m05r2-icon-probe
+          path: artifacts/m05r2-icon-probe/**
+          if-no-files-found: error
