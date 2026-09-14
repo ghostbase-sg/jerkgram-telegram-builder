@@ -39,6 +39,7 @@ import TelegramCore
 
 private enum GhostBaseSettingsEntry {
     case aboutValue(Int32, Int32, String, String)
+    case other
 
     func item() -> Any {
         switch self {
@@ -48,6 +49,8 @@ private enum GhostBaseSettingsEntry {
                 label: value,
                 action: nil
             )
+        case .other:
+            return 0
         }
     }
 }
