@@ -123,19 +123,35 @@ class Build138ParityTests(unittest.TestCase):
         )
         self.assertEqual([(a, b, c, d.upper()) for a, b, c, d in entries], MAIN_ROUTES)
         self.assertIn('isEqual:@"myProfile"', adapter)
-        self.assertIn('isEqual:@"proxy"', adapter)
+        self.assertNotIn('isEqual:@"proxy"', adapter)
         self.assertNotIn('route:@"root"', adapter)
 
-    def test_layout_recomputes_from_native_geometry_without_saved_translation(self):
+    def test_layout_preserves_native_section_baseline_and_inserts_one_bounded_section(self):
         adapter = text(ADAPTER)
-        for forbidden in (
-            "JGNativeBaselineYKey", "JGNativeShiftedYKey", "JGScrollBaseHeightKey",
-            "JGScrollShiftedHeightKey", "JGRestoreNativeFrames", "JGRestoreScrollHeight",
-        ):
-            self.assertNotIn(forbidden, adapter)
-        self.assertIn("JGApplyFromCurrentNativeGeometry", adapter)
-        self.assertIn("proxyView.frame", adapter)
-        self.assertIn("contentSize", adapter)
+        self.assertIn("JGRestoreTelegramBaseline", adapter)
+        self.assertIn("JGCaptureTelegramBaseline", adapter)
+        self.assertIn("baselineContentSize.height + insertionDelta", adapter)
+        self.assertIn("CGRectGetMaxY(injected.frame) <= CGRectGetMinY(firstFollowingFrame)", adapter)
+        self.assertNotIn("JGSectionOrder", adapter)
+        self.assertNotIn("cursor = CGRectGetMaxY(frame)", adapter)
+
+        hook = re.search(
+            r"static void JGPeerInfoViewDidLayoutSubviews\(.*?\n\}", adapter, re.S
+        )
+        self.assertIsNotNone(hook)
+        body = hook.group(0)
+        self.assertLess(body.index("JGRestoreTelegramBaseline"), body.index("JGOriginalViewDidLayoutSubviews"))
+        self.assertLess(body.index("JGOriginalViewDidLayoutSubviews"), body.index("JGCaptureTelegramBaseline"))
+        self.assertLess(body.index("JGCaptureTelegramBaseline"), body.index("JGApplyParitySettingsSection"))
+
+    def test_build138_main_icon_renderer_geometry(self):
+        adapter = text(ADAPTER)
+        self.assertIn("CGSizeMake(30.0, 30.0)", adapter)
+        self.assertIn("cornerRadius:8.0", adapter)
+        self.assertIn('imageNamed:@"Item List/Icons/Gradient"', adapter)
+        self.assertIn('imageNamed:@"Item List/Icons/Backdrop"', adapter)
+        self.assertNotIn("CGRectInset(row.tile.bounds, 5.0, 5.0)", adapter)
+        self.assertNotIn("_tile.layer.cornerRadius = 7.0", adapter)
 
     def test_display_host_is_the_only_pushed_controller(self):
         ui = text(UI)

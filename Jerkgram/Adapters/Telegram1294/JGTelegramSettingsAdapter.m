@@ -25,6 +25,7 @@ static const char JGInjectedSectionKey;
 static const char JGMainTargetKey;
 static const char JGSettingsIdentityKey;
 static const char JGSettingsContextKey;
+static const char JGTelegramBaselineKey;
 
 static void (*JGOriginalViewDidAppear)(id, SEL, BOOL) = NULL;
 static void (*JGOriginalViewDidLayoutSubviews)(id, SEL) = NULL;
@@ -118,13 +119,13 @@ static UIColor *JGSampleSeparatorColor(UIView *view) {
 }
 
 static UIImage *JGAirplaneGlyph(void) {
-    // Exact Build138 Jerkgram/Settings/Airplane vector rasterized at 29 pt and treated as a template.
+    // Exact Build138 Jerkgram/Settings/Airplane SVG rasterized at 3x with its native 24 pt canvas.
     static UIImage *image;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSString *b64 = @"iVBORw0KGgoAAAANSUhEUgAAAB0AAAAdCAYAAABWk2cPAAAABmJLR0QA/wD/AP+gvaeTAAABzElEQVRIieXWz4tPYRTH8df4jowyJE02qFEWpPxIiawsLciCjZRfS0pRZGVBFjZGtlNjISN/gFgomyllYYENmYUfUSPJgmmGa/Hc23zH3Hu/z/N1x4JPnc1znnve9znPPedc/he1/hJnJY5iEh/nG7YLt/EdGV7NF2iRcKonOajdnjYNW4VLQvp+hxV2vSnYdtzEVA2ssH1/AurFQTyKABU2haXdwJbhLMYrAr/H+Qrf41TYWgzhS81JRrERLyr8l2NhO3EX0zWwzziE9TUZyLC7DtTCASEdne5pDKuxAxM1+74JpTRHS3ASLyNg00J5tLAXXzvsf1AGPIxPEbBMqMMiVUfElcqZMujrSOBDoY/COfyMfG5TGfRixBtfFdLZwo1IWIYPWFAGlZ/glLk9c1LopdAnlEYsMBO+/ihtxbAwIbbla/1CelOAGY7FQqEnNxgQJkQqMMNgChQWCvU11iVwPBVY6IqZRjCKNwnQrkbZcjzHnra1PuG+24NP4Bbum10F+1OBG4TfjOESXy+e5YHvmT2yNuMtfmBFKnQQ73C6wn9BGGX9Jb6iFydD69SDEVyr8K8x08Ea07oOQRfjDk40CYXj2NJ00H9LvwDXNyM/sKYsRgAAAABJRU5ErkJggg==";
+        NSString *b64 = @"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";
         NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:0];
-        image = [[UIImage imageWithData:data scale:1.0] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        image = [[UIImage imageWithData:data scale:3.0] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
     });
     return image;
 }
@@ -132,7 +133,47 @@ static UIImage *JGAirplaneGlyph(void) {
 static UIImage *JGSourceGlyph(NSString *route, NSString *iconName) {
     if ([route isEqualToString:@"home"]) return JGAirplaneGlyph();
     UIImage *image = [UIImage imageNamed:iconName];
-    return [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    return [image imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+}
+
+// Exact Telegram/Build138 renderSettingsIcon contract: a 30 pt tile, radius 8,
+// native glyph optical size, plus the stock Gradient and Backdrop compositing layers.
+static UIImage *JGRenderBuild138SettingsIcon(NSString *route, NSString *iconName, uint32_t rgb) {
+    CGSize size = CGSizeMake(30.0, 30.0);
+    UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGRect bounds = (CGRect){CGPointZero, size};
+    UIBezierPath *rounded = [UIBezierPath bezierPathWithRoundedRect:bounds cornerRadius:8.0];
+    [rounded addClip];
+    [JGColorFromRGB(rgb) setFill];
+    UIRectFill(bounds);
+
+    UIImage *gradient = [UIImage imageNamed:@"Item List/Icons/Gradient"];
+    [gradient drawInRect:bounds blendMode:kCGBlendModePlusLighter alpha:1.0];
+    UIImage *backdrop = [UIImage imageNamed:@"Item List/Icons/Backdrop"];
+    [backdrop drawInRect:bounds blendMode:kCGBlendModeOverlay alpha:1.0];
+
+    UIImage *glyph = JGSourceGlyph(route, iconName);
+    CGImageRef mask = glyph.CGImage;
+    if (mask != NULL) {
+        CGSize glyphSize = glyph.size;
+        CGRect glyphRect = CGRectMake(floor((size.width - glyphSize.width) * 0.5),
+                                      floor((size.height - glyphSize.height) * 0.5),
+                                      glyphSize.width, glyphSize.height);
+        CGContextSaveGState(context);
+        CGContextTranslateCTM(context, 0.0, size.height);
+        CGContextScaleCTM(context, 1.0, -1.0);
+        CGRect flippedRect = CGRectMake(glyphRect.origin.x,
+                                        size.height - CGRectGetMaxY(glyphRect),
+                                        glyphRect.size.width, glyphRect.size.height);
+        CGContextClipToMask(context, flippedRect, mask);
+        CGContextSetFillColorWithColor(context, UIColor.whiteColor.CGColor);
+        CGContextFillRect(context, flippedRect);
+        CGContextRestoreGState(context);
+    }
+    UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return result;
 }
 
 @interface JGMainSettingsTarget : NSObject
@@ -154,7 +195,6 @@ static UIImage *JGSourceGlyph(NSString *route, NSString *iconName) {
 
 @interface JGMainSettingsRow : UIControl
 @property(nonatomic, readonly) UIImageView *tile;
-@property(nonatomic, readonly) UIImageView *glyph;
 @property(nonatomic, readonly) UILabel *titleLabel;
 @property(nonatomic, readonly) UIImageView *arrow;
 @property(nonatomic, readonly) UIView *separator;
@@ -166,15 +206,8 @@ static UIImage *JGSourceGlyph(NSString *route, NSString *iconName) {
     if (self) {
         _tile = [[UIImageView alloc] initWithFrame:CGRectZero];
         _tile.userInteractionEnabled = NO;
-        _tile.layer.cornerRadius = 7.0;
-        _tile.layer.cornerCurve = kCACornerCurveContinuous;
-        _tile.clipsToBounds = YES;
+        _tile.contentMode = UIViewContentModeCenter;
         [self addSubview:_tile];
-
-        _glyph = [[UIImageView alloc] initWithFrame:CGRectZero];
-        _glyph.contentMode = UIViewContentModeScaleAspectFit;
-        _glyph.tintColor = UIColor.whiteColor;
-        [_tile addSubview:_glyph];
 
         _titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         _titleLabel.adjustsFontForContentSizeCategory = YES;
@@ -232,8 +265,7 @@ static UIImage *JGSourceGlyph(NSString *route, NSString *iconName) {
     for (NSInteger i = 0; i < self.rows.count; i++) {
         JGMainSettingsRow *row = self.rows[i];
         row.frame = CGRectMake(0.0, self.rowHeight * i, self.bounds.size.width, self.rowHeight);
-        row.tile.frame = CGRectMake(16.0, floor((self.rowHeight - 29.0) * 0.5), 29.0, 29.0);
-        row.glyph.frame = CGRectInset(row.tile.bounds, 5.0, 5.0);
+        row.tile.frame = CGRectMake(16.0, floor((self.rowHeight - 30.0) * 0.5), 30.0, 30.0);
         CGFloat arrowW = row.arrow.image.size.width ?: 7.0;
         CGFloat arrowH = row.arrow.image.size.height ?: 12.0;
         row.arrow.frame = CGRectMake(self.bounds.size.width - 7.0 - arrowW, floor((self.rowHeight - arrowH) * 0.5), arrowW, arrowH);
@@ -268,8 +300,7 @@ static UIImage *JGSourceGlyph(NSString *route, NSString *iconName) {
         row.titleLabel.text = JGString(entry[@"title"]);
         row.titleLabel.font = font;
         row.titleLabel.textColor = textColor;
-        row.tile.backgroundColor = JGColorFromRGB([entry[@"rgb"] unsignedIntValue]);
-        row.glyph.image = JGSourceGlyph(route, entry[@"icon"]);
+        row.tile.image = JGRenderBuild138SettingsIcon(route, entry[@"icon"], [entry[@"rgb"] unsignedIntValue]);
         row.arrow.tintColor = arrowColor;
         row.separator.backgroundColor = separatorColor;
         [row removeTarget:nil action:NULL forControlEvents:UIControlEventTouchUpInside];
@@ -285,28 +316,20 @@ static void JGRemoveInjectedSection(UIViewController *controller, NSArray<NSDict
     JGMainSettingsSectionView *injected = objc_getAssociatedObject(controller, &JGInjectedSectionKey);
     [injected removeFromSuperview];
     objc_setAssociatedObject(controller, &JGInjectedSectionKey, nil, OBJC_ASSOCIATION_ASSIGN);
+    objc_setAssociatedObject(controller, &JGTelegramBaselineKey, nil, OBJC_ASSOCIATION_ASSIGN);
 }
 
-static NSInteger JGSectionOrder(NSString *key) {
-    static NSArray<NSString *> *order;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        order = @[@"edit", @"phone", @"accounts", @"myProfile", @"ghostbase", @"proxy", @"apps", @"shortcuts", @"advanced", @"payment", @"extra", @"support"];
-    });
-    NSUInteger index = [order indexOfObject:key];
-    return index == NSNotFound ? NSIntegerMax : (NSInteger)index;
-}
-
-static NSArray<NSDictionary *> *JGOrderedNativeSections(NSArray<NSDictionary *> *sections, UIView *parent) {
+static NSArray<NSDictionary *> *JGNativeSectionViews(NSArray<NSDictionary *> *sections, UIView *parent) {
     NSMutableArray<NSDictionary *> *valid = [NSMutableArray array];
     for (NSDictionary *entry in sections) {
         UIView *view = JGNodeView(entry[@"node"]);
-        if (view != nil && view.superview == parent && JGSectionOrder(entry[@"key"]) != NSIntegerMax) {
-            [valid addObject:entry];
+        if (view != nil && view.superview == parent) {
+            [valid addObject:@{ @"key": entry[@"key"] ?: @"unknown", @"view": view }];
         }
     }
     [valid sortUsingComparator:^NSComparisonResult(NSDictionary *lhs, NSDictionary *rhs) {
-        NSInteger a = JGSectionOrder(lhs[@"key"]), b = JGSectionOrder(rhs[@"key"]);
+        CGFloat a = CGRectGetMinY([lhs[@"view"] frame]);
+        CGFloat b = CGRectGetMinY([rhs[@"view"] frame]);
         if (a < b) return NSOrderedAscending;
         if (a > b) return NSOrderedDescending;
         return NSOrderedSame;
@@ -314,98 +337,101 @@ static NSArray<NSDictionary *> *JGOrderedNativeSections(NSArray<NSDictionary *> 
     return valid;
 }
 
-// Telegram remains the source of truth for section membership, width, height and the
-// first section origin. We deterministically derive every y-position from that current
-// native snapshot, so repeated callbacks cannot accumulate a previous translation.
-static void JGApplyFromCurrentNativeGeometry(UIViewController *controller,
-                                             NSArray<NSDictionary *> *sections,
-                                             JGMainSettingsSectionView *injected,
-                                             UIView *myProfileView,
-                                             UIView *proxyView,
-                                             UIScrollView *scrollView) {
-    UIView *parent = myProfileView.superview;
-    NSArray<NSDictionary *> *ordered = JGOrderedNativeSections(sections, parent);
-    if (ordered.count == 0) return;
-    UIView *first = JGNodeView(ordered.firstObject[@"node"]);
-    CGFloat cursor = CGRectGetMinY(first.frame);
-    CGFloat width = CGRectGetWidth(myProfileView.frame);
-    CGFloat x = CGRectGetMinX(myProfileView.frame);
-    CGFloat nativeRowHeight = CGRectGetHeight(myProfileView.bounds);
-    injected.rowHeight = nativeRowHeight > 1.0 ? nativeRowHeight : JGFallbackRowHeight;
-    CGFloat injectedHeight = injected.rowHeight * JGMainRoutes().count;
-    BOOL inserted = NO;
-
-    for (NSDictionary *entry in ordered) {
-        UIView *view = JGNodeView(entry[@"node"]);
-        CGRect frame = view.frame;
-        frame.origin.y = cursor;
-        view.frame = frame;
-        cursor = CGRectGetMaxY(frame) + JGSectionSpacing;
-        if ([entry[@"key"] isEqual:@"myProfile"]) {
-            injected.frame = CGRectMake(x, cursor, width, injectedHeight);
-            cursor = CGRectGetMaxY(injected.frame) + JGSectionSpacing;
-            inserted = YES;
-        }
-    }
-    if (!inserted) return;
-
-    // Explicit structural assertion for the required after-My-Profile/before-Proxy order.
-    if (proxyView != nil && CGRectGetMinY(proxyView.frame) < CGRectGetMaxY(injected.frame)) {
-        CGRect proxyFrame = proxyView.frame;
-        proxyFrame.origin.y = CGRectGetMaxY(injected.frame) + JGSectionSpacing;
-        proxyView.frame = proxyFrame;
-    }
-
-    CGFloat contentHeight = cursor - JGSectionSpacing + 6.0;
-    CGFloat minimumHeight = scrollView.bounds.size.height + 140.0 - scrollView.adjustedContentInset.bottom;
-    scrollView.contentSize = CGSizeMake(scrollView.bounds.size.width, MAX(contentHeight, minimumHeight));
-    [parent bringSubviewToFront:injected];
-}
-
-static void JGApplyParitySettingsSection(UIViewController *controller) {
+static NSDictionary *JGResolveSettingsContext(UIViewController *controller) {
     NSNumber *isSettings = objc_getAssociatedObject(controller, &JGSettingsIdentityKey);
     if (isSettings == nil) {
         isSettings = [JGRuntimeIntrospection isSettingsFromObject:controller];
         objc_setAssociatedObject(controller, &JGSettingsIdentityKey, isSettings, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    if (!isSettings.boolValue) return;
+    if (!isSettings.boolValue) return nil;
 
     NSDictionary *context = objc_getAssociatedObject(controller, &JGSettingsContextKey);
     NSArray<NSDictionary *> *sections = context[@"sections"];
-    NSNumber *account = context[@"account"];
-    if (sections == nil || account == nil) {
-        sections = [JGRuntimeIntrospection regularSectionNodesFromObject:controller];
-        account = [JGRuntimeIntrospection accountPeerIdFromObject:controller];
-        NSString *languageCode = [JGRuntimeIntrospection languageCodeFromObject:controller] ?: @"en";
-        if (sections.count != 0 && account.longLongValue != 0) {
-            context = @{ @"sections": sections, @"account": account, @"language": languageCode };
-            objc_setAssociatedObject(controller, &JGSettingsContextKey, context, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    BOOL cachedNodesAreLive = NO;
+    for (NSDictionary *entry in sections) {
+        UIView *view = JGNodeView(entry[@"node"]);
+        if ([entry[@"key"] isEqual:@"myProfile"] && view.superview != nil) {
+            cachedNodesAreLive = YES;
+            break;
         }
     }
-    if (sections.count == 0) return;
+    if (context != nil && cachedNodesAreLive) return context;
 
-    UIView *anySectionView = nil;
-    for (NSDictionary *entry in sections) {
-        UIView *candidate = JGNodeView(entry[@"node"]);
-        if (candidate != nil) { anySectionView = candidate; break; }
+    sections = [JGRuntimeIntrospection regularSectionNodesFromObject:controller];
+    NSNumber *account = [JGRuntimeIntrospection accountPeerIdFromObject:controller];
+    NSString *languageCode = [JGRuntimeIntrospection languageCodeFromObject:controller] ?: @"en";
+    if (sections.count == 0 || account.longLongValue == 0) return nil;
+    context = @{ @"sections": sections, @"account": account, @"language": languageCode };
+    objc_setAssociatedObject(controller, &JGSettingsContextKey, context, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return context;
+}
+
+// Restore the exact frames captured after Telegram's preceding native layout. This runs
+// before Telegram's next layout callback, so Telegram never receives our translated frames.
+static void JGRestoreTelegramBaseline(UIViewController *controller) {
+    NSDictionary *baseline = objc_getAssociatedObject(controller, &JGTelegramBaselineKey);
+    for (NSDictionary *entry in baseline[@"sections"]) {
+        UIView *view = entry[@"view"];
+        UIView *parent = entry[@"parent"];
+        if (view.superview == parent) view.frame = [entry[@"frame"] CGRectValue];
     }
-    UIScrollView *scrollView = JGNearestScrollView(anySectionView);
+    UIScrollView *scrollView = baseline[@"scrollView"];
+    if (scrollView != nil) scrollView.contentSize = [baseline[@"contentSize"] CGSizeValue];
+    JGMainSettingsSectionView *injected = objc_getAssociatedObject(controller, &JGInjectedSectionKey);
+    injected.hidden = YES;
+}
 
-    if (account == nil || account.longLongValue == 0) {
+// Capture only complete Telegram-owned section container views, in Telegram's current
+// visual order. No child row is ever included or moved independently.
+static void JGCaptureTelegramBaseline(UIViewController *controller) {
+    NSDictionary *context = JGResolveSettingsContext(controller);
+    NSArray<NSDictionary *> *sections = context[@"sections"];
+    UIView *myProfileView = nil;
+    for (NSDictionary *entry in sections) {
+        if ([entry[@"key"] isEqual:@"myProfile"]) {
+            myProfileView = JGNodeView(entry[@"node"]);
+            break;
+        }
+    }
+    UIView *parent = myProfileView.superview;
+    UIScrollView *scrollView = JGNearestScrollView(myProfileView);
+    if (parent == nil || scrollView == nil) return;
+
+    NSArray<NSDictionary *> *ordered = JGNativeSectionViews(sections, parent);
+    NSMutableArray<NSDictionary *> *snapshot = [NSMutableArray arrayWithCapacity:ordered.count];
+    for (NSDictionary *entry in ordered) {
+        UIView *view = entry[@"view"];
+        [snapshot addObject:@{
+            @"key": entry[@"key"], @"view": view, @"parent": parent,
+            @"frame": [NSValue valueWithCGRect:view.frame]
+        }];
+    }
+    NSDictionary *baseline = @{
+        @"sections": snapshot,
+        @"scrollView": scrollView,
+        @"contentSize": [NSValue valueWithCGSize:scrollView.contentSize]
+    };
+    objc_setAssociatedObject(controller, &JGTelegramBaselineKey, baseline, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+static void JGApplyParitySettingsSection(UIViewController *controller) {
+    NSDictionary *context = JGResolveSettingsContext(controller);
+    NSArray<NSDictionary *> *sections = context[@"sections"];
+    NSNumber *account = context[@"account"];
+    NSDictionary *baseline = objc_getAssociatedObject(controller, &JGTelegramBaselineKey);
+    if (context == nil || sections.count == 0 || baseline == nil || account.longLongValue == 0) {
         [[JGSettingsStore sharedStore] deactivateAccount];
         JGRemoveInjectedSection(controller, sections);
         return;
     }
 
     UIView *myProfileView = nil;
-    UIView *proxyView = nil;
     for (NSDictionary *entry in sections) {
         if ([entry[@"key"] isEqual:@"myProfile"]) {
             myProfileView = JGNodeView(entry[@"node"]);
-        } else if ([entry[@"key"] isEqual:@"proxy"]) {
-            proxyView = JGNodeView(entry[@"node"]);
         }
     }
+    UIScrollView *scrollView = baseline[@"scrollView"];
     if (myProfileView == nil || myProfileView.superview == nil || scrollView == nil) {
         [[JGSettingsStore sharedStore] deactivateAccount];
         JGRemoveInjectedSection(controller, sections);
@@ -429,7 +455,53 @@ static void JGApplyParitySettingsSection(UIViewController *controller) {
         [parent addSubview:injected];
     }
     [injected configureWithController:controller accountPeerId:account.longLongValue sampleView:myProfileView];
-    JGApplyFromCurrentNativeGeometry(controller, sections, injected, myProfileView, proxyView, scrollView);
+
+    NSArray<NSDictionary *> *nativeSections = baseline[@"sections"];
+    NSInteger myProfileIndex = NSNotFound;
+    CGRect myProfileFrame = CGRectZero;
+    for (NSInteger index = 0; index < nativeSections.count; index++) {
+        NSDictionary *entry = nativeSections[index];
+        if ([entry[@"key"] isEqual:@"myProfile"] && entry[@"view"] == myProfileView) {
+            myProfileIndex = index;
+            myProfileFrame = [entry[@"frame"] CGRectValue];
+            break;
+        }
+    }
+    if (myProfileIndex == NSNotFound) return;
+
+    CGFloat nativeRowHeight = CGRectGetHeight(myProfileFrame);
+    injected.rowHeight = nativeRowHeight > 1.0 ? nativeRowHeight : JGFallbackRowHeight;
+    CGFloat injectedHeight = injected.rowHeight * JGMainRoutes().count;
+    CGFloat insertionDelta = JGSectionSpacing + injectedHeight;
+    injected.frame = CGRectMake(CGRectGetMinX(myProfileFrame),
+                                CGRectGetMaxY(myProfileFrame) + JGSectionSpacing,
+                                CGRectGetWidth(myProfileFrame), injectedHeight);
+    injected.hidden = NO;
+
+    CGRect firstFollowingFrame = CGRectNull;
+    for (NSInteger index = 0; index < nativeSections.count; index++) {
+        NSDictionary *entry = nativeSections[index];
+        UIView *view = entry[@"view"];
+        CGRect frame = [entry[@"frame"] CGRectValue];
+        if (index > myProfileIndex) {
+            frame.origin.y += insertionDelta;
+            if (CGRectIsNull(firstFollowingFrame) && CGRectGetHeight(frame) > 1.0) {
+                firstFollowingFrame = frame;
+            }
+        }
+        view.frame = frame;
+    }
+
+    CGSize baselineContentSize = [baseline[@"contentSize"] CGSizeValue];
+    scrollView.contentSize = CGSizeMake(baselineContentSize.width,
+                                        baselineContentSize.height + insertionDelta);
+    BOOL bounded = CGRectIsNull(firstFollowingFrame) ||
+        CGRectGetMaxY(injected.frame) <= CGRectGetMinY(firstFollowingFrame);
+    if (!bounded) {
+        JGRestoreTelegramBaseline(controller);
+        return;
+    }
+    [parent bringSubviewToFront:injected];
 }
 
 static void JGPeerInfoViewDidAppear(id self, SEL _cmd, BOOL animated) {
@@ -441,9 +513,14 @@ static void JGPeerInfoViewDidAppear(id self, SEL _cmd, BOOL animated) {
 }
 
 static void JGPeerInfoViewDidLayoutSubviews(id self, SEL _cmd) {
+    if ([self isKindOfClass:UIViewController.class]) {
+        JGRestoreTelegramBaseline((UIViewController *)self);
+    }
     if (JGOriginalViewDidLayoutSubviews != NULL) JGOriginalViewDidLayoutSubviews(self, _cmd);
     if (![self isKindOfClass:UIViewController.class]) return;
-    JGApplyParitySettingsSection((UIViewController *)self);
+    UIViewController *controller = (UIViewController *)self;
+    JGCaptureTelegramBaseline(controller);
+    JGApplyParitySettingsSection(controller);
 }
 
 static void JGTryInstallAdapter(void) {

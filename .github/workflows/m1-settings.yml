@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build138-only contract verifier
-        run: python3 -m unittest -v tests/test_m1_contract.py
+        run: python3 -m unittest -v tests/test_m1_contract.py tests/test_m1_main_settings_layout.py
       - name: Show Apple toolchain
         run: |
           set -euxo pipefail
@@ -77,16 +77,3 @@ jobs:
           name: jerkgram-m1-r4-build138-product
           path: artifacts/m1/
           if-no-files-found: error
-      - name: Publish deterministic build output branch
-        run: |
-          set -euxo pipefail
-          cp -R artifacts/m1 "$RUNNER_TEMP/m1-output"
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git switch --orphan generated-m1-r4-build138
-          git rm -rf .
-          mkdir -p artifacts/m1
-          cp -R "$RUNNER_TEMP/m1-output/"* artifacts/m1/
-          git add -f artifacts/m1
-          git commit -m "build: M1 R4 Build138 product"
-          git push --force origin HEAD:refs/heads/artifacts/m1-r4-build138
