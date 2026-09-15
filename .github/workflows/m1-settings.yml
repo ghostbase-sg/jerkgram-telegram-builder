@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build138-only contract verifier
-        run: python3 -m unittest -v tests/test_m1_contract.py tests/test_m1_main_settings_layout.py
+        run: python3 -m unittest -v tests/test_m1_contract.py tests/test_m1_main_settings_layout.py tests/test_m1_swiftcall_ir_verifier.py
       - name: Show Apple toolchain
         run: |
           set -euxo pipefail

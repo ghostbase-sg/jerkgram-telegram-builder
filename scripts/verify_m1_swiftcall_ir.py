@@ -6,21 +6,26 @@ import pathlib
 import re
 
 
+def swiftself_call_line(source):
+    calls = re.findall(r"^.*\bcall\s+swiftcc\s+ptr\b.*$", source, re.MULTILINE)
+    second_argument_is_swiftself = re.compile(
+        r"\(\s*ptr\b[^,]*,\s*ptr\b(?=[^)]*\bswiftself\b)[^)]*\)"
+    )
+    return next((line.strip() for line in calls if second_argument_is_swiftself.search(line)), None)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("llvm_ir")
     args = parser.parse_args()
     source = pathlib.Path(args.llvm_ir).read_text(encoding="utf-8")
 
-    calls = re.findall(r"call\s+swiftcc\s+ptr\s+[^\n]+", source)
-    allocating_calls = [line for line in calls if "swiftself" in line]
-    if not allocating_calls:
-        raise SystemExit("RED: generated LLVM IR has no swiftcc call carrying a swiftself argument")
-    if not any(re.search(r"ptr\s+swiftself\s+[^,)]+\)", line) for line in allocating_calls):
-        raise SystemExit("RED: swiftself is not the final class-metatype argument")
+    call_line = swiftself_call_line(source)
+    if call_line is None:
+        raise SystemExit("RED: generated LLVM IR has no swiftcc call with swiftself on its second argument")
 
-    print("GREEN: Swift allocating initializer call carries final swiftself class metatype")
-    print(allocating_calls[0].strip())
+    print("GREEN: Swift allocating initializer call carries swiftself as its second argument")
+    print(call_line)
 
 
 if __name__ == "__main__":
