@@ -1,4 +1,4 @@
-name: M1 R4 Build138 Settings 12.9.4
+name: M1 R4.2 Build138 Settings Lifecycle 12.9.4
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
 
           xcrun --sdk iphoneos swiftc \
             -target "$TARGET" -sdk "$SDK" -emit-library objects/*.o \
-            -framework Foundation -framework UIKit \
+            -framework Foundation -framework UIKit -framework QuartzCore \
             -Xlinker -install_name -Xlinker @rpath/Jerkgram.dylib \
             -Xlinker -current_version -Xlinker 1.0.2 \
             -Xlinker -compatibility_version -Xlinker 1.0.0 \
@@ -74,6 +74,6 @@ jobs:
       - name: Upload M1 product
         uses: actions/upload-artifact@v4
         with:
-          name: jerkgram-m1-r4-build138-product
+          name: jerkgram-m1-r4-2-build138-product
           path: artifacts/m1/
           if-no-files-found: error

@@ -6,6 +6,7 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import <mach-o/dyld.h>
+#import <QuartzCore/QuartzCore.h>
 
 // Implemented in JGRuntimeIntrospection.swift. This is the only bridge from ObjC into
 // private Swift object structure: semantic Mirror lookup, never byte offsets.
@@ -26,11 +27,25 @@ static const char JGMainTargetKey;
 static const char JGSettingsIdentityKey;
 static const char JGSettingsContextKey;
 static const char JGTelegramBaselineKey;
+static const char JGObservedControllerKey;
+static const char JGObservedSubclassKey;
+static const char JGOwnContentSizeMutationKey;
 
 static void (*JGOriginalViewDidAppear)(id, SEL, BOOL) = NULL;
 static void (*JGOriginalViewDidLayoutSubviews)(id, SEL) = NULL;
 static BOOL JGAdapterInstalled = NO;
 static BOOL JGDyldCallbackRegistered = NO;
+
+@interface JGWeakControllerBox : NSObject
+@property(nonatomic, weak) UIViewController *controller;
+@end
+@implementation JGWeakControllerBox
+@end
+
+static void JGCaptureTelegramBaseline(UIViewController *controller);
+static void JGApplyParitySettingsSection(UIViewController *controller);
+static void JGTraceLayoutState(UIViewController *controller, NSString *callback, NSValue * _Nullable requestedContentSize);
+static void JGInstallScrollCompletionObserver(UIScrollView *scrollView, UIViewController *controller);
 
 static NSDictionary *JGMainRoute(NSString *route, NSString *title, NSString *icon, uint32_t rgb) {
     return @{ @"route": route, @"title": title, @"icon": icon, @"rgb": @(rgb) };
@@ -366,6 +381,106 @@ static NSDictionary *JGResolveSettingsContext(UIViewController *controller) {
     return context;
 }
 
+static NSURL *JGLayoutTraceURL(void) {
+    NSURL *caches = [NSFileManager.defaultManager URLsForDirectory:NSCachesDirectory inDomains:NSUserDomainMask].firstObject;
+    NSURL *directory = [caches URLByAppendingPathComponent:@"Jerkgram" isDirectory:YES];
+    [NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:nil error:nil];
+    return [directory URLByAppendingPathComponent:@"M1LayoutTrace.jsonl"];
+}
+
+static dispatch_queue_t JGLayoutTraceQueue(void) {
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        queue = dispatch_queue_create("com.jerkgram.m1.layout-trace", DISPATCH_QUEUE_SERIAL);
+    });
+    return queue;
+}
+
+static NSString *JGPointerString(id object) {
+    return object == nil ? @"nil" : [NSString stringWithFormat:@"%p", object];
+}
+
+static void JGTraceLayoutState(UIViewController *controller, NSString *callback, NSValue *requestedContentSize) {
+    if (controller == nil) return;
+    NSDictionary *context = JGResolveSettingsContext(controller);
+    NSArray<NSDictionary *> *sections = context[@"sections"] ?: @[];
+    UIView *myProfileView = nil;
+    for (NSDictionary *entry in sections) {
+        if ([entry[@"key"] isEqual:@"myProfile"]) {
+            myProfileView = JGNodeView(entry[@"node"]);
+            break;
+        }
+    }
+    UIView *parent = myProfileView.superview;
+    NSArray<NSDictionary *> *ordered = parent == nil ? @[] : JGNativeSectionViews(sections, parent);
+    NSMutableArray *native = [NSMutableArray arrayWithCapacity:ordered.count];
+    NSInteger myProfileIndex = NSNotFound;
+    NSDictionary *wallet = nil;
+    for (NSInteger index = 0; index < ordered.count; index++) {
+        NSDictionary *entry = ordered[index];
+        UIView *view = entry[@"view"];
+        NSString *key = entry[@"key"] ?: @"unknown";
+        NSDictionary *item = @{
+            @"key": key,
+            @"identity": JGPointerString(view),
+            @"frame": NSStringFromCGRect(view.frame)
+        };
+        [native addObject:item];
+        if ([key isEqual:@"myProfile"]) myProfileIndex = index;
+        if ([key isEqual:@"payment"]) wallet = item;
+    }
+    UIScrollView *scrollView = JGNearestScrollView(myProfileView);
+    NSDictionary *baseline = objc_getAssociatedObject(controller, &JGTelegramBaselineKey);
+    JGMainSettingsSectionView *injected = objc_getAssociatedObject(controller, &JGInjectedSectionKey);
+    CGSize baselineSize = [baseline[@"contentSize"] CGSizeValue];
+    NSMutableDictionary *record = [@{
+        @"timestamp": @(CACurrentMediaTime()),
+        @"callback": callback ?: @"unknown",
+        @"controller": [NSString stringWithFormat:@"%@:%@", NSStringFromClass(controller.class), JGPointerString(controller)],
+        @"jerkgramExists": @(injected.superview != nil),
+        @"nativeSectionCount": @(native.count),
+        @"nativeSections": native,
+        @"myProfileIndex": myProfileIndex == NSNotFound ? @(-1) : @(myProfileIndex),
+        @"wallet": wallet ?: (id)NSNull.null,
+        @"telegramBaselineContentSize": NSStringFromCGSize(baselineSize),
+        @"jerkgramFrame": injected == nil ? @"nil" : NSStringFromCGRect(injected.frame),
+        @"finalContentSize": scrollView == nil ? @"nil" : NSStringFromCGSize(scrollView.contentSize)
+    } mutableCopy];
+    if (requestedContentSize != nil) record[@"requestedContentSize"] = NSStringFromCGSize(requestedContentSize.CGSizeValue);
+
+    NSData *json = [NSJSONSerialization dataWithJSONObject:record options:NSJSONWritingSortedKeys error:nil];
+    if (json == nil) return;
+    NSMutableData *line = [json mutableCopy];
+    [line appendBytes:"\n" length:1];
+    dispatch_async(JGLayoutTraceQueue(), ^{
+        NSURL *url = JGLayoutTraceURL();
+        NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:url.path error:nil];
+        if ([attributes fileSize] > 2 * 1024 * 1024) [NSData.data writeToURL:url atomically:YES];
+        NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:url.path];
+        if (handle == nil) {
+            [line writeToURL:url atomically:YES];
+        } else {
+            [handle seekToEndOfFile];
+            [handle writeData:line];
+            [handle closeFile];
+        }
+    });
+}
+
+NSString *JGCopyM1LayoutTrace(void) {
+    __block NSData *data = nil;
+    dispatch_sync(JGLayoutTraceQueue(), ^{ data = [NSData dataWithContentsOfURL:JGLayoutTraceURL()]; });
+    return data == nil ? @"" : [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] ?: @"";
+}
+
+static void JGSetContentSizeFromAdapter(UIScrollView *scrollView, CGSize size) {
+    if (scrollView == nil) return;
+    objc_setAssociatedObject(scrollView, &JGOwnContentSizeMutationKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    scrollView.contentSize = size;
+    objc_setAssociatedObject(scrollView, &JGOwnContentSizeMutationKey, nil, OBJC_ASSOCIATION_ASSIGN);
+}
+
 // Restore the exact frames captured after Telegram's preceding native layout. This runs
 // before Telegram's next layout callback, so Telegram never receives our translated frames.
 static void JGRestoreTelegramBaseline(UIViewController *controller) {
@@ -376,7 +491,7 @@ static void JGRestoreTelegramBaseline(UIViewController *controller) {
         if (view.superview == parent) view.frame = [entry[@"frame"] CGRectValue];
     }
     UIScrollView *scrollView = baseline[@"scrollView"];
-    if (scrollView != nil) scrollView.contentSize = [baseline[@"contentSize"] CGSizeValue];
+    if (scrollView != nil) JGSetContentSizeFromAdapter(scrollView, [baseline[@"contentSize"] CGSizeValue]);
     JGMainSettingsSectionView *injected = objc_getAssociatedObject(controller, &JGInjectedSectionKey);
     injected.hidden = YES;
 }
@@ -396,6 +511,8 @@ static void JGCaptureTelegramBaseline(UIViewController *controller) {
     UIView *parent = myProfileView.superview;
     UIScrollView *scrollView = JGNearestScrollView(myProfileView);
     if (parent == nil || scrollView == nil) return;
+
+    JGInstallScrollCompletionObserver(scrollView, controller);
 
     NSArray<NSDictionary *> *ordered = JGNativeSectionViews(sections, parent);
     NSMutableArray<NSDictionary *> *snapshot = [NSMutableArray arrayWithCapacity:ordered.count];
@@ -493,8 +610,8 @@ static void JGApplyParitySettingsSection(UIViewController *controller) {
     }
 
     CGSize baselineContentSize = [baseline[@"contentSize"] CGSizeValue];
-    scrollView.contentSize = CGSizeMake(baselineContentSize.width,
-                                        baselineContentSize.height + insertionDelta);
+    JGSetContentSizeFromAdapter(scrollView, CGSizeMake(baselineContentSize.width,
+                                                       baselineContentSize.height + insertionDelta));
     BOOL bounded = CGRectIsNull(firstFollowingFrame) ||
         CGRectGetMaxY(injected.frame) <= CGRectGetMinY(firstFollowingFrame);
     if (!bounded) {
@@ -504,23 +621,88 @@ static void JGApplyParitySettingsSection(UIViewController *controller) {
     [parent bringSubviewToFront:injected];
 }
 
+static void JGCallOriginalSetContentSize(UIScrollView *scrollView, SEL selector, CGSize size) {
+    struct objc_super superInfo = {
+        .receiver = scrollView,
+        .super_class = class_getSuperclass(object_getClass(scrollView))
+    };
+    ((void (*)(struct objc_super *, SEL, CGSize))objc_msgSendSuper)(&superInfo, selector, size);
+}
+
+static void JGObservedScrollSetContentSize(UIScrollView *scrollView, SEL selector, CGSize size) {
+    if ([objc_getAssociatedObject(scrollView, &JGOwnContentSizeMutationKey) boolValue]) {
+        JGCallOriginalSetContentSize(scrollView, selector, size);
+        return;
+    }
+    JGWeakControllerBox *box = objc_getAssociatedObject(scrollView, &JGObservedControllerKey);
+    UIViewController *controller = box.controller;
+    if (controller == nil) {
+        JGCallOriginalSetContentSize(scrollView, selector, size);
+        return;
+    }
+
+    // Build138's PeerInfoScreenNode writes contentSize only after updating every
+    // regular section frame.  Treat this instance-local UIKit setter as the native
+    // layout completion marker; no Swift value or private object layout crosses it.
+    objc_setAssociatedObject(controller, &JGSettingsContextKey, nil, OBJC_ASSOCIATION_ASSIGN);
+    JGTraceLayoutState(controller, @"scroll.setContentSize.beforeOriginal", [NSValue valueWithCGSize:size]);
+    JGCallOriginalSetContentSize(scrollView, selector, size);
+    JGTraceLayoutState(controller, @"scroll.setContentSize.afterOriginal", [NSValue valueWithCGSize:size]);
+    JGCaptureTelegramBaseline(controller);
+    JGApplyParitySettingsSection(controller);
+    JGTraceLayoutState(controller, @"scroll.setContentSize.afterApply", [NSValue valueWithCGSize:size]);
+}
+
+static void JGInstallScrollCompletionObserver(UIScrollView *scrollView, UIViewController *controller) {
+    if (scrollView == nil || controller == nil) return;
+    JGWeakControllerBox *box = objc_getAssociatedObject(scrollView, &JGObservedControllerKey);
+    if (box == nil) {
+        box = [JGWeakControllerBox new];
+        objc_setAssociatedObject(scrollView, &JGObservedControllerKey, box, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    box.controller = controller;
+
+    Class currentClass = object_getClass(scrollView);
+    if ([NSStringFromClass(currentClass) hasPrefix:@"JGObservedSettingsScroll_"]) return;
+    @synchronized (currentClass) {
+        Class subclass = objc_getAssociatedObject(currentClass, &JGObservedSubclassKey);
+        if (subclass == Nil) {
+            NSString *name = [NSString stringWithFormat:@"JGObservedSettingsScroll_%p", currentClass];
+            subclass = objc_allocateClassPair(currentClass, name.UTF8String, 0);
+            Method setter = class_getInstanceMethod(currentClass, @selector(setContentSize:));
+            if (subclass == Nil || setter == NULL ||
+                !class_addMethod(subclass, @selector(setContentSize:), (IMP)JGObservedScrollSetContentSize, method_getTypeEncoding(setter))) {
+                if (subclass != Nil) objc_disposeClassPair(subclass);
+                return;
+            }
+            objc_registerClassPair(subclass);
+            objc_setAssociatedObject(currentClass, &JGObservedSubclassKey, subclass, OBJC_ASSOCIATION_ASSIGN);
+        }
+        object_setClass(scrollView, subclass);
+    }
+}
+
 static void JGPeerInfoViewDidAppear(id self, SEL _cmd, BOOL animated) {
     if (JGOriginalViewDidAppear != NULL) JGOriginalViewDidAppear(self, _cmd, animated);
     UIViewController *controller = [self isKindOfClass:UIViewController.class] ? (UIViewController *)self : nil;
     if (controller == nil) return;
+    JGTraceLayoutState(controller, @"viewDidAppear.afterOriginal", nil);
     [controller.view setNeedsLayout];
-    dispatch_async(dispatch_get_main_queue(), ^{ [controller.view setNeedsLayout]; });
 }
 
 static void JGPeerInfoViewDidLayoutSubviews(id self, SEL _cmd) {
     if ([self isKindOfClass:UIViewController.class]) {
-        JGRestoreTelegramBaseline((UIViewController *)self);
+        UIViewController *controller = (UIViewController *)self;
+        JGTraceLayoutState(controller, @"viewDidLayoutSubviews.enter", nil);
+        JGRestoreTelegramBaseline(controller);
     }
     if (JGOriginalViewDidLayoutSubviews != NULL) JGOriginalViewDidLayoutSubviews(self, _cmd);
     if (![self isKindOfClass:UIViewController.class]) return;
     UIViewController *controller = (UIViewController *)self;
+    JGTraceLayoutState(controller, @"viewDidLayoutSubviews.afterOriginal", nil);
     JGCaptureTelegramBaseline(controller);
     JGApplyParitySettingsSection(controller);
+    JGTraceLayoutState(controller, @"viewDidLayoutSubviews.afterApply", nil);
 }
 
 static void JGTryInstallAdapter(void) {

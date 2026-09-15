@@ -1,6 +1,7 @@
 #import "JGSettingsViewController.h"
 #import "JGSettingsStore.h"
 #import "JGStrings.h"
+#import "JGTelegramSettingsAdapter.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 
@@ -546,7 +547,8 @@ static NSString *JGStyleLabel(NSString *value) {
 }
 
 - (void)copyExtensionDiagnostics {
-    UIPasteboard.generalPasteboard.string = [NSString stringWithFormat:@"Jerkgram 1.0.2\nBuild 138\nTelegram 12.9.4\nAccount %lld\nDisplay host: %@", (long long)self.accountPeerId, NSStringFromClass([self hostController].class)];
+    NSString *layoutTrace = JGCopyM1LayoutTrace();
+    UIPasteboard.generalPasteboard.string = [NSString stringWithFormat:@"Jerkgram 1.0.2\nBuild 138\nTelegram 12.9.4\nAccount %lld\nDisplay host: %@\n\nM1 layout trace (JSONL):\n%@", (long long)self.accountPeerId, NSStringFromClass([self hostController].class), layoutTrace];
 }
 
 static NSString *ghostBaseSanitizeStarsAmount(NSString *text) {

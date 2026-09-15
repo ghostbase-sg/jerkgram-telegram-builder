@@ -1,9 +1,13 @@
 import unittest
+import pathlib
+import re
 
 
 ROW_COUNT = 8
 ROW_HEIGHT = 52.0
 SECTION_SPACING = 24.0
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+ADAPTER = ROOT / "Jerkgram/Adapters/Telegram1294/JGTelegramSettingsAdapter.m"
 
 
 def apply_insertion(baseline_frames, my_profile_index, baseline_content_height):
@@ -58,6 +62,44 @@ class MainSettingsLayoutModelTests(unittest.TestCase):
         delta = SECTION_SPACING + ROW_COUNT * ROW_HEIGHT
         self.assertEqual(shifted[1][1], changed[1][1] + delta)
         self.assertEqual(content, 932.0 + delta)
+
+    def test_late_native_layout_has_an_authoritative_completion_boundary(self):
+        """Catch a regression to controller-layout-only finalization.
+
+        Build138 writes every native section frame before assigning the Settings
+        scroll view's contentSize.  R4 must observe that exact instance boundary
+        and rederive the injected layout after the native setter returns.
+        """
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("JGObservedScrollSetContentSize", adapter)
+        self.assertIn("JGInstallScrollCompletionObserver", adapter)
+        self.assertIn("JGTraceLayoutState", adapter)
+        self.assertNotIn("dispatch_after", adapter)
+
+        hook = re.search(
+            r"static void JGObservedScrollSetContentSize\(.*?\n\}", adapter, re.S
+        )
+        self.assertIsNotNone(hook)
+        body = hook.group(0)
+        cache_refresh = "objc_setAssociatedObject(controller, &JGSettingsContextKey, nil"
+        self.assertIn(cache_refresh, body)
+        self.assertLess(body.index("JGCallOriginalSetContentSize"), body.index("JGCaptureTelegramBaseline"))
+        self.assertLess(body.index(cache_refresh), body.index("JGCaptureTelegramBaseline"))
+        self.assertLess(body.index("JGCaptureTelegramBaseline"), body.index("JGApplyParitySettingsSection"))
+
+    def test_late_native_baseline_replaces_the_prior_transformed_state(self):
+        first = apply_insertion(self.baseline, 0, 900.0)
+        late_baseline = [
+            ("My Profile", 118.0, 52.0),
+            ("Wallet", 194.0, 52.0),
+            ("Advanced", 270.0, 260.0),
+            ("Support", 554.0, 104.0),
+        ]
+        late = apply_insertion(late_baseline, 0, 918.0)
+        delta = SECTION_SPACING + ROW_COUNT * ROW_HEIGHT
+        self.assertNotEqual(first, late)
+        self.assertEqual(late[1][1], ("Wallet", 194.0 + delta, 52.0))
+        self.assertEqual(late[2], 918.0 + delta)
 
 
 if __name__ == "__main__":
