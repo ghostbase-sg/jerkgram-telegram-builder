@@ -34,9 +34,22 @@ arbitrary delay and no cumulative frame delta.
 
 ## Navigation boundary
 
-Every pushed page is an actual runtime `_TtC7Display14ViewController`. The
-Jerkgram UITableView controller is a child view controller only; it is never
-pushed directly through Telegram's `Display.NavigationController`.
+R4.2 allocated `_TtC7Display14ViewController` and invoked UIKit's inherited
+`initWithNibName:bundle:`. That bypassed Display's Swift designated initializer
+and left required Display state uninitialized, explaining the common crash when
+any of the eight routes entered the host lifecycle.
+
+The production 12.9.4 `TelegramUIFramework` export trie contains both the ObjC
+class and the allocating Swift initializer
+`_$s7Display14ViewControllerC29navigationBarPresentationDataAcA010NavigationefG0CSg_tcfC`.
+Its nil Optional reference argument has a single nullable-pointer ABI. R4.3
+resolves that exact export, verifies its image with `dladdr`, invokes it with the
+Swift calling convention, and rejects any missing or foreign symbol. Selector
+availability is not initializer proof.
+
+Every pushed page is therefore a fully initialized actual runtime
+`_TtC7Display14ViewController`. The Jerkgram table controller is a child only;
+it is never pushed directly through Telegram's `Display.NavigationController`.
 
 ## Explicitly rejected paths
 

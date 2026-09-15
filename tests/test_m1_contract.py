@@ -92,7 +92,7 @@ class Build138ParityTests(unittest.TestCase):
     def test_rejected_runtime_paths_are_absent(self):
         combined = "\n".join(text(p) for p in (ADAPTER, INTROSPECTION, UI) if p.exists())
         for forbidden in (
-            "UIBarButtonItem", "ivar_getOffset", "memcpy(", "dlsym(",
+            "UIBarButtonItem", "ivar_getOffset", "memcpy(",
             "PeerIdV7toInt64", "settingsItems", "PeerInfoScreenDisclosureItem",
         ):
             self.assertNotIn(forbidden, combined)
@@ -158,6 +158,17 @@ class Build138ParityTests(unittest.TestCase):
         adapter = text(ADAPTER)
         self.assertIn('_TtC7Display14ViewController', ui)
         self.assertIn("JGCreateSettingsHost", ui)
+        self.assertEqual(ui.count("dlsym("), 1)
+        self.assertIn(
+            '$s7Display14ViewControllerC29navigationBarPresentationDataAcA010NavigationefG0CSg_tcfC',
+            ui,
+        )
+        self.assertIn("dladdr(initializerAddress", ui)
+        self.assertIn("/Frameworks/TelegramUIFramework.framework/TelegramUIFramework", ui)
+        self.assertIn("__attribute__((swiftcall))", ui)
+        self.assertIn("__bridge_transfer UIViewController", ui)
+        self.assertNotIn("initWithNibName:bundle:", ui)
+        self.assertNotIn("instancesRespondToSelector", ui)
         self.assertNotRegex(adapter, r"pushViewController\s*:\s*settings")
         self.assertNotRegex(ui, r"pushViewController\s*:\s*(?:child|self)")
         self.assertNotIn("initWithRootViewController", adapter)
@@ -173,6 +184,26 @@ class Build138ParityTests(unittest.TestCase):
             "chatRetention",
         ])
         self.assertNotIn('isEqualToString:@"root"', ui)
+
+    def test_every_main_and_nested_route_uses_the_shared_display_host(self):
+        ui = text(UI)
+        adapter = text(ADAPTER)
+        declared = re.search(
+            r"JGReachableSettingsPages\(void\)\s*\{\s*return\s*@\[(.*?)\];",
+            ui,
+            re.S,
+        )
+        self.assertIsNotNone(declared)
+        reachable = set(re.findall(r'@"([^"]+)"', declared.group(1)))
+        implemented = set(re.findall(r'self\.page isEqualToString:@"([^"]+)"', ui))
+        implemented.update(re.findall(r'JGBasePage\(self\.page\) isEqualToString:@"([^"]+)"', ui))
+        self.assertEqual(implemented, reachable)
+        self.assertEqual(ui.count("JGCreateSettingsHost("), 2)  # declaration + nested push
+        self.assertEqual(adapter.count("JGCreateSettingsHost("), 1)  # all eight main rows
+        self.assertEqual(ui.count("pushViewController:next"), 1)
+        self.assertEqual(adapter.count("pushViewController:next"), 1)
+        for nested in ("stars", "dataAndBackup", "sendStyle", "chatRetention"):
+            self.assertIn(nested, reachable)
 
     def test_build138_settings_inventory_defaults_and_types(self):
         data = json.loads(text(SCHEMA))
@@ -207,6 +238,12 @@ class Build138ParityTests(unittest.TestCase):
         for token in required:
             self.assertIn(token, ui)
         self.assertNotIn("showUnavailable", ui)
+        self.assertIn("JGStyledText", ui)
+        self.assertIn('cell.detailTextLabel.text = [selected isEqualToString:value] ? @"✓" : @""', ui)
+        self.assertIn('@"Build124 Canary"', ui)
+        self.assertIn('@"Archive v2"', ui)
+        self.assertNotIn("UIActivityViewController", ui)
+        self.assertNotIn("UIDocumentPickerViewController", ui)
 
     def test_data_telemetry_and_retention_are_separate_from_feature_settings(self):
         ui = text(UI)

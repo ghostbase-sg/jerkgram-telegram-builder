@@ -16,6 +16,11 @@ feature hooks.
   Settings hook, eight-row main section, layout, and Display host navigation.
 - `UI/JGSettingsViewController.m` owns only reachable Build138 routes and
   settings-local actions. `.root` is absent.
+- `JGCreateSettingsHost(accountPeerId,page)` is the sole navigation boundary.
+  It invokes the exported production 12.9.4 Swift allocating initializer for
+  `Display.ViewController`, verifies the export image and returned class, then
+  embeds Jerkgram UIKit content as a child. It never calls an inherited UIKit
+  initializer on the Display class.
 - `Settings/JGSettingsStore.m` owns a cached typed inventory of exactly 46
   Build138 values. Account keys use
   `jerkgram.account.<peerId>.setting.<baseKey>`; active-account canonical keys
@@ -27,4 +32,3 @@ feature hooks.
 
 All Jerkgram routes use a real Display host. UIKit child controllers are never
 placed directly on Telegram's navigation stack.
-

@@ -2,11 +2,21 @@
 #import "JGSettingsStore.h"
 #import "JGStrings.h"
 #import "JGTelegramSettingsAdapter.h"
+#import <dlfcn.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
 
 static NSString * const JGTelemetryPreferenceKey = @"jerkgram.telemetry.anonymous.enabled";
 static const char JGHostedChildKey;
+
+// Production Telegram 12.9.4 exports this allocating initializer from
+// TelegramUIFramework. Its sole argument is an Optional reference type, so nil
+// has the stable single-pointer Swift ABI used here. This is the designated
+// Display.ViewController initialization path; the inherited UIKit nib
+// initializer must never be used for this class.
+static const char * const JGDisplayViewControllerInitializerSymbol =
+    "$s7Display14ViewControllerC29navigationBarPresentationDataAcA010NavigationefG0CSg_tcfC";
+typedef void *(__attribute__((swiftcall)) *JGDisplayViewControllerInitializer)(void *);
 
 static NSDictionary *JGRow(NSString *kind, NSString *titleKey, NSString *settingKey, NSString *page, NSString *action) {
     NSMutableDictionary *row = [@{ @"kind": kind ?: @"", @"title": titleKey ?: @"" } mutableCopy];
@@ -24,6 +34,18 @@ NSArray<NSString *> *JGReachableSettingsPages(void) {
     return @[@"home", @"ghostMode", @"messages", @"protectedContent", @"mediaStories", @"appearance", @"debugResearch", @"about", @"stars", @"dataAndBackup", @"sendStyle", @"chatRetention"];
 }
 
+static NSString *JGBasePage(NSString *page) {
+    NSRange separator = [page rangeOfString:@"/"];
+    return separator.location == NSNotFound ? page : [page substringToIndex:separator.location];
+}
+
+static int64_t JGChatPeerIdFromPage(NSString *page) {
+    if (![JGBasePage(page) isEqualToString:@"chatRetention"]) return 0;
+    NSRange separator = [page rangeOfString:@"/"];
+    if (separator.location == NSNotFound) return 0;
+    return [[page substringFromIndex:separator.location + 1] longLongValue];
+}
+
 static NSString *JGPageTitleKey(NSString *page) {
     NSDictionary *map = @{
         @"home": @"page.home", @"ghostMode": @"page.ghost", @"messages": @"page.messages",
@@ -31,7 +53,7 @@ static NSString *JGPageTitleKey(NSString *page) {
         @"debugResearch": @"page.debug", @"about": @"page.about", @"stars": @"page.stars",
         @"dataAndBackup": @"page.data", @"sendStyle": @"page.sendStyle", @"chatRetention": @"data.perChat"
     };
-    return map[page] ?: @"main.jerkgram";
+    return map[JGBasePage(page)] ?: @"main.jerkgram";
 }
 
 static NSString *JGRetentionStorageKey(int64_t accountPeerId) {
@@ -97,6 +119,40 @@ static void JGSaveRetention(int64_t accountPeerId, NSDictionary *value) {
     if (data != nil) [NSUserDefaults.standardUserDefaults setObject:data forKey:JGRetentionStorageKey(accountPeerId)];
 }
 
+static NSMutableDictionary *JGLoadChatRetention(int64_t accountPeerId, int64_t chatPeerId) {
+    NSMutableDictionary *account = JGLoadRetention(accountPeerId);
+    NSMutableDictionary *value = [@{
+        @"captureEnabled": @YES,
+        @"history": account[@"history"] ?: @"30d",
+        @"media": account[@"media"] ?: @(1073741824LL),
+    } mutableCopy];
+    for (NSDictionary *override in account[@"chatOverrides"]) {
+        if ([override[@"chatPeerId"] longLongValue] != chatPeerId) continue;
+        if ([override[@"captureEnabled"] isKindOfClass:NSNumber.class]) value[@"captureEnabled"] = override[@"captureEnabled"];
+        if ([override[@"historyDuration"] isKindOfClass:NSString.class]) value[@"history"] = JGHistoryDisplayValue(override[@"historyDuration"]);
+        if ([override[@"mediaByteLimit"] isKindOfClass:NSString.class]) value[@"media"] = JGMediaDisplayValue(override[@"mediaByteLimit"]);
+        break;
+    }
+    return value;
+}
+
+static void JGSaveChatRetention(int64_t accountPeerId, int64_t chatPeerId, NSDictionary *chat) {
+    if (accountPeerId == 0 || chatPeerId == 0) return;
+    NSMutableDictionary *account = JGLoadRetention(accountPeerId);
+    NSMutableArray *overrides = [NSMutableArray array];
+    for (NSDictionary *existing in account[@"chatOverrides"]) {
+        if ([existing[@"chatPeerId"] longLongValue] != chatPeerId) [overrides addObject:existing];
+    }
+    [overrides addObject:@{
+        @"chatPeerId": @(chatPeerId),
+        @"captureEnabled": @([chat[@"captureEnabled"] boolValue]),
+        @"historyDuration": JGHistoryStorageValue(chat[@"history"]),
+        @"mediaByteLimit": JGMediaStorageValue(chat[@"media"]),
+    }];
+    account[@"chatOverrides"] = overrides;
+    JGSaveRetention(accountPeerId, account);
+}
+
 static NSString *JGHistoryLabel(NSString *value) {
     if ([value isEqualToString:@"off"]) return JGString(@"data.disabled");
     if ([value isEqualToString:@"7d"]) return JGString(@"data.7days");
@@ -121,7 +177,28 @@ static NSString *JGStyleLabel(NSString *value) {
     return JGString(map[value] ?: @"style.normal");
 }
 
-@interface JGParitySettingsController : UITableViewController <UIDocumentPickerDelegate>
+static NSAttributedString *JGStyledText(NSString *style, NSString *text, UIColor *color, CGFloat size) {
+    NSString *visibleText = text ?: @"";
+    if ([style isEqualToString:@"spoiler"]) {
+        NSMutableString *masked = [NSMutableString stringWithCapacity:visibleText.length];
+        NSCharacterSet *alphanumerics = NSCharacterSet.alphanumericCharacterSet;
+        for (NSUInteger index = 0; index < visibleText.length; index++) {
+            unichar character = [visibleText characterAtIndex:index];
+            [masked appendString:[alphanumerics characterIsMember:character] ? @"#" : [NSString stringWithCharacters:&character length:1]];
+        }
+        visibleText = masked;
+    }
+    UIFont *font = [UIFont systemFontOfSize:size];
+    NSMutableDictionary *attributes = [@{NSFontAttributeName: font, NSForegroundColorAttributeName: color ?: UIColor.labelColor} mutableCopy];
+    if ([style isEqualToString:@"bold"]) attributes[NSFontAttributeName] = [UIFont boldSystemFontOfSize:size];
+    else if ([style isEqualToString:@"italic"]) attributes[NSFontAttributeName] = [UIFont italicSystemFontOfSize:size];
+    else if ([style isEqualToString:@"monospace"]) attributes[NSFontAttributeName] = [UIFont monospacedSystemFontOfSize:size weight:UIFontWeightRegular];
+    else if ([style isEqualToString:@"strikethrough"]) attributes[NSStrikethroughStyleAttributeName] = @(NSUnderlineStyleSingle);
+    else if ([style isEqualToString:@"underline"]) attributes[NSUnderlineStyleAttributeName] = @(NSUnderlineStyleSingle);
+    return [[NSAttributedString alloc] initWithString:visibleText attributes:attributes];
+}
+
+@interface JGParitySettingsController : UITableViewController
 @property(nonatomic) int64_t accountPeerId;
 @property(nonatomic, copy) NSString *page;
 @property(nonatomic) NSArray<NSDictionary *> *sections;
@@ -255,7 +332,6 @@ static NSString *JGStyleLabel(NSString *value) {
         self.sections = @[
             JGSection(@"stars.section", nil, @[
                 JGRow(@"switch", @"stars.local", @"jerkgram.Stars.LocalBalance.Enabled", nil, nil),
-                JGRow(@"starsInfo", @"stars.balance", @"jerkgram.Stars.LocalBalance.Amount", nil, nil),
             ]),
             JGSection(@"stars.change.section", @"stars.hint", @[
                 JGRow(@"text", @"stars.balance", @"jerkgram.Stars.LocalBalance.Amount", nil, @"editStars"),
@@ -290,7 +366,7 @@ static NSString *JGStyleLabel(NSString *value) {
             JGRow(@"styleOption", @"style.underline", @"underline", nil, nil),
             JGRow(@"styleOption", @"style.spoiler", @"spoiler", nil, nil),
         ])];
-    } else if ([self.page isEqualToString:@"chatRetention"]) {
+    } else if ([JGBasePage(self.page) isEqualToString:@"chatRetention"]) {
         self.sections = @[JGSection(@"data.perChat", nil, @[
             JGRow(@"retentionSwitch", @"data.saveThisChat", nil, nil, @"chatCapture"),
             JGRow(@"retentionHistory", @"data.history", nil, nil, @"chatDuration"),
@@ -309,6 +385,17 @@ static NSString *JGStyleLabel(NSString *value) {
     return key.length ? JGString(key) : nil;
 }
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    if ([self.page isEqualToString:@"stars"] && section == 0) {
+        BOOL enabled = [[JGSettingsStore sharedStore] boolForKey:@"jerkgram.Stars.LocalBalance.Enabled"];
+        NSString *amount = [[JGSettingsStore sharedStore] stringForKey:@"jerkgram.Stars.LocalBalance.Amount"] ?: @"0";
+        return [NSString stringWithFormat:@"%@ · %@ ⭐", JGString(enabled ? @"home.local" : @"home.off"), amount.length ? amount : @"0"];
+    }
+    if ([JGBasePage(self.page) isEqualToString:@"chatRetention"] && section == 0) {
+        int64_t chatPeerId = JGChatPeerIdFromPage(self.page);
+        return [JGLanguageCode() isEqualToString:@"ru"]
+            ? [NSString stringWithFormat:@"Правило относится только к чату ID %lld текущего аккаунта.", (long long)chatPeerId]
+            : [NSString stringWithFormat:@"This rule applies only to chat ID %lld in the current account.", (long long)chatPeerId];
+    }
     NSString *key = self.sections[section][@"footer"];
     return key.length ? JGString(key) : nil;
 }
@@ -364,6 +451,13 @@ static NSString *JGStyleLabel(NSString *value) {
 }
 
 - (void)retentionSwitchChanged:(UISwitch *)sender {
+    if ([sender.accessibilityIdentifier isEqualToString:@"chatCapture"]) {
+        int64_t chatPeerId = JGChatPeerIdFromPage(self.page);
+        NSMutableDictionary *chat = JGLoadChatRetention(self.accountPeerId, chatPeerId);
+        chat[@"captureEnabled"] = @(sender.isOn);
+        JGSaveChatRetention(self.accountPeerId, chatPeerId, chat);
+        return;
+    }
     NSMutableDictionary *retention = JGLoadRetention(self.accountPeerId);
     retention[@"archiveSecretChats"] = @(sender.isOn);
     JGSaveRetention(self.accountPeerId, retention);
@@ -386,7 +480,12 @@ static NSString *JGStyleLabel(NSString *value) {
             toggle.accessibilityIdentifier = JGTelemetryPreferenceKey;
             [toggle addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
         } else if ([kind isEqualToString:@"retentionSwitch"]) {
-            toggle.on = [JGLoadRetention(self.accountPeerId)[@"archiveSecretChats"] boolValue];
+            if ([row[@"action"] isEqualToString:@"chatCapture"]) {
+                toggle.on = [JGLoadChatRetention(self.accountPeerId, JGChatPeerIdFromPage(self.page))[@"captureEnabled"] boolValue];
+            } else {
+                toggle.on = [JGLoadRetention(self.accountPeerId)[@"archiveSecretChats"] boolValue];
+            }
+            toggle.accessibilityIdentifier = row[@"action"];
             [toggle addTarget:self action:@selector(retentionSwitchChanged:) forControlEvents:UIControlEventValueChanged];
         } else {
             NSString *key = row[@"key"];
@@ -398,7 +497,10 @@ static NSString *JGStyleLabel(NSString *value) {
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if ([kind isEqualToString:@"disclosure"] || [kind isEqualToString:@"sendStyle"] || [kind isEqualToString:@"stars"] || [kind isEqualToString:@"channel"]) {
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-        if ([kind isEqualToString:@"sendStyle"]) cell.detailTextLabel.text = JGStyleLabel([[JGSettingsStore sharedStore] stringForKey:@"jerkgram.Messages.SendTextStyle"]);
+        if ([kind isEqualToString:@"sendStyle"]) {
+            NSString *selected = [[JGSettingsStore sharedStore] stringForKey:@"jerkgram.Messages.SendTextStyle"];
+            cell.detailTextLabel.attributedText = JGStyledText(selected, JGStyleLabel(selected), UIColor.secondaryLabelColor, 15.0);
+        }
         if ([kind isEqualToString:@"stars"]) {
             BOOL enabled = [[JGSettingsStore sharedStore] boolForKey:@"jerkgram.Stars.LocalBalance.Enabled"];
             NSString *amount = [[JGSettingsStore sharedStore] stringForKey:@"jerkgram.Stars.LocalBalance.Amount"];
@@ -411,49 +513,48 @@ static NSString *JGStyleLabel(NSString *value) {
         NSString *body = JGString(@"style.example.body");
         NSString *prefix = JGString(@"style.example.prefix");
         NSString *selected = [[JGSettingsStore sharedStore] stringForKey:@"jerkgram.Messages.SendTextStyle"];
-        NSMutableAttributedString *preview = [[NSMutableAttributedString alloc] initWithString:[prefix stringByAppendingString:body]];
-        NSRange bodyRange = NSMakeRange(prefix.length, body.length);
-        if ([selected isEqualToString:@"bold"]) [preview addAttribute:NSFontAttributeName value:[UIFont boldSystemFontOfSize:17.0] range:bodyRange];
-        else if ([selected isEqualToString:@"italic"]) [preview addAttribute:NSFontAttributeName value:[UIFont italicSystemFontOfSize:17.0] range:bodyRange];
-        else if ([selected isEqualToString:@"monospace"]) [preview addAttribute:NSFontAttributeName value:[UIFont monospacedSystemFontOfSize:17.0 weight:UIFontWeightRegular] range:bodyRange];
-        else if ([selected isEqualToString:@"strikethrough"]) [preview addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlineStyleSingle) range:bodyRange];
-        else if ([selected isEqualToString:@"underline"]) [preview addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:bodyRange];
-        else if ([selected isEqualToString:@"spoiler"]) [preview addAttribute:NSBackgroundColorAttributeName value:UIColor.secondaryLabelColor range:bodyRange];
+        NSMutableAttributedString *preview = [[NSMutableAttributedString alloc] initWithString:prefix attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:15.0], NSForegroundColorAttributeName: UIColor.labelColor}];
+        [preview appendAttributedString:JGStyledText(selected, body, UIColor.labelColor, 15.0)];
         cell.textLabel.attributedText = preview;
         cell.textLabel.numberOfLines = 0;
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if ([kind isEqualToString:@"styleOption"]) {
         NSString *selected = [[JGSettingsStore sharedStore] stringForKey:@"jerkgram.Messages.SendTextStyle"];
-        cell.accessoryType = [selected isEqualToString:row[@"key"]] ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+        NSString *value = row[@"key"];
+        cell.textLabel.attributedText = JGStyledText(value, title, UIColor.labelColor, 17.0);
+        cell.detailTextLabel.text = [selected isEqualToString:value] ? @"✓" : @"";
+        cell.accessoryType = UITableViewCellAccessoryNone;
     } else if ([kind isEqualToString:@"value"]) {
         NSString *action = row[@"action"];
         if ([action isEqualToString:@"version"]) cell.detailTextLabel.text = @"1.0.2";
         else if ([action isEqualToString:@"build"]) cell.detailTextLabel.text = @"138";
         else cell.detailTextLabel.text = @"12.9.4";
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    } else if ([kind isEqualToString:@"starsInfo"]) {
-        NSString *amount = [[JGSettingsStore sharedStore] stringForKey:@"jerkgram.Stars.LocalBalance.Amount"];
-        cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ ⭐", amount.length ? amount : @"0"];
-        cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if ([kind isEqualToString:@"text"]) {
         cell.detailTextLabel.text = [[JGSettingsStore sharedStore] stringForKey:row[@"key"]];
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     } else if ([kind isEqualToString:@"retentionHistory"]) {
-        cell.detailTextLabel.text = JGHistoryLabel(JGLoadRetention(self.accountPeerId)[@"history"]);
+        BOOL chatPage = [JGBasePage(self.page) isEqualToString:@"chatRetention"];
+        NSDictionary *value = chatPage ? JGLoadChatRetention(self.accountPeerId, JGChatPeerIdFromPage(self.page)) : JGLoadRetention(self.accountPeerId);
+        cell.detailTextLabel.text = JGHistoryLabel(value[@"history"]);
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     } else if ([kind isEqualToString:@"retentionMedia"]) {
-        cell.detailTextLabel.text = JGMediaLabel(JGLoadRetention(self.accountPeerId)[@"media"]);
+        BOOL chatPage = [JGBasePage(self.page) isEqualToString:@"chatRetention"];
+        NSDictionary *value = chatPage ? JGLoadChatRetention(self.accountPeerId, JGChatPeerIdFromPage(self.page)) : JGLoadRetention(self.accountPeerId);
+        cell.detailTextLabel.text = JGMediaLabel(value[@"media"]);
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     } else if ([kind isEqualToString:@"dataSummary"]) {
         NSDictionary *retention = JGLoadRetention(self.accountPeerId);
-        cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · %@ · %@ %lld", JGHistoryLabel(retention[@"history"]), JGMediaLabel(retention[@"media"]), [JGLanguageCode() isEqualToString:@"ru"] ? @"аккаунт" : @"account", (long long)self.accountPeerId];
+        cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · %@ · ID %lld", JGHistoryLabel(retention[@"history"]), JGMediaLabel(retention[@"media"]), (long long)self.accountPeerId];
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if ([kind isEqualToString:@"actionValue"]) {
         cell.textLabel.textColor = self.view.tintColor;
-        cell.detailTextLabel.text = [row[@"action"] isEqualToString:@"export"] ? @"Build138 Stable" : @"Archive v2";
+        cell.detailTextLabel.text = [row[@"action"] isEqualToString:@"export"] ? @"Build124 Canary" : @"Archive v2";
     } else if ([kind isEqualToString:@"accountInfo"]) {
-        cell.textLabel.text = [NSString stringWithFormat:@"%@ %lld", [JGLanguageCode() isEqualToString:@"ru"] ? @"Telegram ID" : @"Telegram ID", (long long)self.accountPeerId];
-        cell.textLabel.font = [UIFont monospacedDigitSystemFontOfSize:14 weight:UIFontWeightRegular];
+        cell.textLabel.text = [JGLanguageCode() isEqualToString:@"ru"]
+            ? [NSString stringWithFormat:@"Архив относится только к аккаунту Telegram ID %lld.", (long long)self.accountPeerId]
+            : [NSString stringWithFormat:@"This archive belongs only to Telegram account ID %lld.", (long long)self.accountPeerId];
+        cell.textLabel.numberOfLines = 0;
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if ([kind isEqualToString:@"action"]) {
         cell.textLabel.textColor = self.view.tintColor;
@@ -474,7 +575,17 @@ static NSString *JGStyleLabel(NSString *value) {
 }
 
 - (void)cycleHistoryDuration {
-    NSArray *choices = @[@"off", @"7d", @"30d", @"90d", @"forever"];
+    BOOL chatPage = [JGBasePage(self.page) isEqualToString:@"chatRetention"];
+    NSArray *choices = chatPage ? @[@"7d", @"30d", @"90d", @"forever"] : @[@"off", @"7d", @"30d", @"90d", @"forever"];
+    if (chatPage) {
+        int64_t chatPeerId = JGChatPeerIdFromPage(self.page);
+        NSMutableDictionary *chat = JGLoadChatRetention(self.accountPeerId, chatPeerId);
+        NSUInteger index = [choices indexOfObject:chat[@"history"]];
+        chat[@"history"] = choices[(index == NSNotFound ? 0 : index + 1) % choices.count];
+        JGSaveChatRetention(self.accountPeerId, chatPeerId, chat);
+        [self rebuildSections];
+        return;
+    }
     NSMutableDictionary *retention = JGLoadRetention(self.accountPeerId);
     NSUInteger index = [choices indexOfObject:retention[@"history"]];
     retention[@"history"] = choices[(index == NSNotFound ? 0 : index + 1) % choices.count];
@@ -484,6 +595,15 @@ static NSString *JGStyleLabel(NSString *value) {
 
 - (void)cycleMediaLimit {
     NSArray *choices = @[@0, @(250LL*1024*1024), @(500LL*1024*1024), @(1073741824LL), @(2LL*1024*1024*1024), @(5LL*1024*1024*1024), @(-1)];
+    if ([JGBasePage(self.page) isEqualToString:@"chatRetention"]) {
+        int64_t chatPeerId = JGChatPeerIdFromPage(self.page);
+        NSMutableDictionary *chat = JGLoadChatRetention(self.accountPeerId, chatPeerId);
+        NSUInteger index = [choices indexOfObject:chat[@"media"]];
+        chat[@"media"] = choices[(index == NSNotFound ? 0 : index + 1) % choices.count];
+        JGSaveChatRetention(self.accountPeerId, chatPeerId, chat);
+        [self rebuildSections];
+        return;
+    }
     NSMutableDictionary *retention = JGLoadRetention(self.accountPeerId);
     NSUInteger index = [choices indexOfObject:retention[@"media"]];
     retention[@"media"] = choices[(index == NSNotFound ? 0 : index + 1) % choices.count];
@@ -496,7 +616,8 @@ static NSString *JGStyleLabel(NSString *value) {
     [alert addTextFieldWithConfigurationHandler:^(UITextField *field) { field.keyboardType = UIKeyboardTypeNumberPad; field.placeholder = @"Telegram chat ID"; }];
     [alert addAction:[UIAlertAction actionWithTitle:JGString(@"action.cancel") style:UIAlertActionStyleCancel handler:nil]];
     [alert addAction:[UIAlertAction actionWithTitle:JGString(@"action.done") style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-        if (alert.textFields.firstObject.text.longLongValue != 0) [self pushPage:@"chatRetention"];
+        int64_t chatPeerId = alert.textFields.firstObject.text.longLongValue;
+        if (chatPeerId != 0) [self pushPage:[NSString stringWithFormat:@"chatRetention/%lld", (long long)chatPeerId]];
     }]];
     [[self hostController] presentViewController:alert animated:YES completion:nil];
 }
@@ -506,44 +627,13 @@ static NSString *JGStyleLabel(NSString *value) {
     // Build138 cleanup has no product data to remove and is a deterministic no-op.
 }
 
-- (NSURL *)settingsArchiveURL {
-    return [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Jerkgram-138-%lld.json", (long long)self.accountPeerId]]];
-}
-
-- (NSDictionary *)settingsArchive {
-    NSMutableDictionary *values = [NSMutableDictionary dictionary];
-    for (JGSettingDescriptor *descriptor in [JGSettingDescriptor allDescriptors]) {
-        values[descriptor.key] = descriptor.type == JGSettingValueTypeBool ? @([[JGSettingsStore sharedStore] boolForKey:descriptor.key]) : ([[JGSettingsStore sharedStore] stringForKey:descriptor.key] ?: @"");
-    }
-    return @{@"format": @"JerkgramArchiveV2", @"build": @138, @"accountPeerId": @(self.accountPeerId), @"settings": values, @"retention": JGLoadRetention(self.accountPeerId)};
-}
-
 - (void)exportArchive {
-    NSData *data = [NSJSONSerialization dataWithJSONObject:[self settingsArchive] options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:nil];
-    NSURL *url = [self settingsArchiveURL];
-    if (![data writeToURL:url atomically:YES]) return;
-    UIActivityViewController *share = [[UIActivityViewController alloc] initWithActivityItems:@[url] applicationActivities:nil];
-    share.popoverPresentationController.sourceView = self.view;
-    [[self hostController] presentViewController:share animated:YES completion:nil];
+    // Build138's archive owner includes event/media stores that are intentionally
+    // outside M1. Keep the Stable row visible, but do not emit a partial archive.
 }
 
 - (void)importArchive {
-    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[@"public.json", @"public.data"] inMode:UIDocumentPickerModeImport];
-    picker.delegate = self;
-    [[self hostController] presentViewController:picker animated:YES completion:nil];
-}
-
-- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
-    NSData *data = [NSData dataWithContentsOfURL:urls.firstObject];
-    NSDictionary *archive = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
-    if (![archive[@"format"] isEqual:@"JerkgramArchiveV2"] || [archive[@"accountPeerId"] longLongValue] != self.accountPeerId) return;
-    NSDictionary *values = archive[@"settings"];
-    for (JGSettingDescriptor *descriptor in [JGSettingDescriptor allDescriptors]) {
-        id value = values[descriptor.key];
-        if (descriptor.type == JGSettingValueTypeBool && [value isKindOfClass:NSNumber.class]) [[JGSettingsStore sharedStore] setBool:[value boolValue] forKey:descriptor.key];
-        if (descriptor.type == JGSettingValueTypeString && [value isKindOfClass:NSString.class]) [[JGSettingsStore sharedStore] setString:value forKey:descriptor.key];
-    }
-    [self rebuildSections];
+    // Refuse partial imports until the Build138 event/archive owner is migrated.
 }
 
 - (void)copyExtensionDiagnostics {
@@ -606,15 +696,24 @@ static NSString *ghostBaseSanitizeStarsAmount(NSString *text) {
 @end
 
 UIViewController *JGCreateSettingsHost(int64_t accountPeerId, NSString *page) {
-    if (accountPeerId == 0 || ![JGReachableSettingsPages() containsObject:page]) return nil;
+    NSString *basePage = JGBasePage(page);
+    if (accountPeerId == 0 || ![JGReachableSettingsPages() containsObject:basePage]) return nil;
+    if ([basePage isEqualToString:@"chatRetention"] && JGChatPeerIdFromPage(page) == 0) return nil;
     Class displayClass = objc_getClass("_TtC7Display14ViewController");
     if (displayClass == Nil || ![displayClass isSubclassOfClass:UIViewController.class]) return nil;
 
-    SEL initSelector = sel_registerName("initWithNibName:bundle:");
-    if (![displayClass instancesRespondToSelector:initSelector]) return nil;
-    id allocated = ((id (*)(id, SEL))objc_msgSend)(displayClass, sel_registerName("alloc"));
-    UIViewController *host = ((id (*)(id, SEL, NSString *, NSBundle *))objc_msgSend)(allocated, initSelector, nil, nil);
-    if (![host isKindOfClass:UIViewController.class]) return nil;
+    void *initializerAddress = dlsym(RTLD_DEFAULT, JGDisplayViewControllerInitializerSymbol);
+    if (initializerAddress == NULL) return nil;
+    Dl_info symbolInfo = {0};
+    if (dladdr(initializerAddress, &symbolInfo) == 0 || symbolInfo.dli_fname == NULL) return nil;
+    NSString *imagePath = [NSString stringWithUTF8String:symbolInfo.dli_fname];
+    if (![imagePath hasSuffix:@"/Frameworks/TelegramUIFramework.framework/TelegramUIFramework"]) return nil;
+
+    JGDisplayViewControllerInitializer initializeDisplayController =
+        (JGDisplayViewControllerInitializer)initializerAddress;
+    void *ownedHost = initializeDisplayController(NULL);
+    UIViewController *host = (__bridge_transfer UIViewController *)ownedHost;
+    if (![host isKindOfClass:displayClass]) return nil;
 
     JGParitySettingsController *child = [[JGParitySettingsController alloc] initWithAccountPeerId:accountPeerId page:page];
     host.title = JGString(JGPageTitleKey(page));
