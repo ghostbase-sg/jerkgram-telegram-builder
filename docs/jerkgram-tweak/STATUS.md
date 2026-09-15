@@ -16,13 +16,19 @@
   native section containers, and derives one bounded insertion from that baseline;
 - Build138 main icons now use the exact 30 pt/radius-8 renderer contract, exact RGB values,
   production 12.9.4 source-named glyphs, and the tweak-owned Build138 Airplane artwork;
-- R4.3 removes the inherited UIKit initializer and uses the exact exported
-  production 12.9.4 Display designated allocating initializer with image and
-  class validation;
+- R4.3 removed the inherited UIKit initializer but still called the Swift
+  allocating initializer with only its explicit Optional argument; DEVICE-RUNTIME
+  showed that all routes continued to crash;
+- R4.4 passes the runtime Display class metatype through a `swift_context`
+  parameter, so Apple clang emits it as the hidden `swiftself` argument required
+  by the production allocating initializer; symbol-image and result-class
+  validation remain fail-closed;
+- R4.4 records monotonic `tap`, host-initializer, child-construction and push
+  timings under the `JGM1Nav` log prefix without changing Settings layout;
 - all eight main routes plus Stars, Data & Backup, Send Style and per-chat
   retention resolve through the one shared host factory;
-- Build138-only lifecycle/layout/host/route verifiers are staged; Apple
-  compilation and R4.3 device navigation validation remain pending;
+- Build138-only lifecycle/layout/host/route and LLVM `swiftself` verifiers are
+  staged; Apple compilation and R4.4 device navigation validation remain pending;
 - main route: eight rows, after My Profile and before the first following stock section;
 - `.root`: not reachable and not implemented as a route;
 - account resolution: semantic and fail-closed;
@@ -37,4 +43,5 @@ Build138 event/archive owners are not migrated yet, so R4.3 refuses to create
 or consume a misleading partial archive.
 
 See `M1_LAYOUT_RACE_RESEARCH.md` for the exact trace and acceptance contract.
-M1 remains device-parity pending.
+M1 remains device-parity pending. If R4.4 still crashes, no further Swift
+initializer variants are permitted without an actual iOS `.ips` crash report.

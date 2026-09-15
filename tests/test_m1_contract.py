@@ -13,6 +13,7 @@ INTROSPECTION = ROOT / "Jerkgram/Adapters/Telegram1294/JGRuntimeIntrospection.sw
 STRINGS = ROOT / "Jerkgram/Localization/JGStrings.m"
 WORKFLOW = ROOT / ".github/workflows/m1-settings.yml"
 BOOTSTRAP = ROOT / "Jerkgram/Bootstrap/JerkgramBootstrap.m"
+SWIFTCALL_IR_VERIFIER = ROOT / "scripts/verify_m1_swiftcall_ir.py"
 
 
 MAIN_ROUTES = [
@@ -172,6 +173,43 @@ class Build138ParityTests(unittest.TestCase):
         self.assertNotRegex(adapter, r"pushViewController\s*:\s*settings")
         self.assertNotRegex(ui, r"pushViewController\s*:\s*(?:child|self)")
         self.assertNotIn("initWithRootViewController", adapter)
+
+    def test_display_allocating_initializer_receives_swiftself_metatype(self):
+        ui = text(UI)
+        workflow = text(WORKFLOW)
+        self.assertRegex(
+            ui,
+            r"typedef\s+void\s+\*\(\*JGDisplayViewControllerInitializer\)\(\s*"
+            r"void\s*\*,\s*void\s*\*\s*__attribute__\(\(swift_context\)\)\s*\)\s*"
+            r"__attribute__\(\(swiftcall\)\)",
+        )
+        self.assertIn(
+            "initializeDisplayController(NULL, (__bridge void *)displayClass)",
+            ui,
+        )
+        self.assertNotIn("initializeDisplayController(NULL);", ui)
+        self.assertIn("-S -emit-llvm", workflow)
+        self.assertIn("scripts/verify_m1_swiftcall_ir.py", workflow)
+        self.assertTrue(SWIFTCALL_IR_VERIFIER.exists())
+
+    def test_navigation_trace_covers_tap_host_child_and_push(self):
+        ui = text(UI)
+        adapter = text(ADAPTER)
+        for stage in (
+            '"tap"',
+            '"host.begin"',
+            '"host.initializer.begin"',
+            '"host.initializer.end"',
+            '"child.begin"',
+            '"child.end"',
+            '"push.begin"',
+            '"push.end"',
+        ):
+            self.assertIn(stage, ui + adapter)
+        self.assertIn("CACurrentMediaTime()", ui)
+        self.assertIn("CACurrentMediaTime()", adapter)
+        self.assertIn("JGSettingsNavigationTrace", ui)
+        self.assertIn("JGSettingsNavigationTrace", adapter)
 
     def test_only_build138_reachable_pages_are_exposed(self):
         ui = text(UI)

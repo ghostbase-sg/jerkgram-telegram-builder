@@ -201,10 +201,16 @@ static UIImage *JGRenderBuild138SettingsIcon(NSString *route, NSString *iconName
 - (void)openRoute:(UIControl *)sender {
     NSString *route = sender.accessibilityIdentifier;
     if (route.length == 0 || self.accountPeerId == 0) return;
-    UIViewController *next = JGCreateSettingsHost(self.accountPeerId, route);
+    CFTimeInterval tapTimestamp = JGSettingsNavigationTimestamp();
+    JGSettingsNavigationTrace(route, @"tap", tapTimestamp);
+    UIViewController *next = JGCreateSettingsHost(self.accountPeerId, route, tapTimestamp);
     if (next == nil) return;
     UINavigationController *navigation = self.controller.navigationController;
-    if (navigation != nil) [navigation pushViewController:next animated:YES];
+    if (navigation != nil) {
+        JGSettingsNavigationTrace(route, @"push.begin", tapTimestamp);
+        [navigation pushViewController:next animated:YES];
+        JGSettingsNavigationTrace(route, @"push.end", tapTimestamp);
+    }
 }
 @end
 

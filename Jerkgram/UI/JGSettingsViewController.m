@@ -5,18 +5,33 @@
 #import <dlfcn.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
+#import <os/log.h>
+#import <QuartzCore/QuartzCore.h>
 
 static NSString * const JGTelemetryPreferenceKey = @"jerkgram.telemetry.anonymous.enabled";
 static const char JGHostedChildKey;
 
 // Production Telegram 12.9.4 exports this allocating initializer from
-// TelegramUIFramework. Its sole argument is an Optional reference type, so nil
-// has the stable single-pointer Swift ABI used here. This is the designated
-// Display.ViewController initialization path; the inherited UIKit nib
-// initializer must never be used for this class.
+// TelegramUIFramework. The explicit Optional reference argument is followed by
+// the hidden swiftself class-metatype context required by a Swift allocating
+// initializer. This is the designated Display.ViewController initialization
+// path; the inherited UIKit nib initializer must never be used for this class.
 static const char * const JGDisplayViewControllerInitializerSymbol =
     "$s7Display14ViewControllerC29navigationBarPresentationDataAcA010NavigationefG0CSg_tcfC";
-typedef void *(__attribute__((swiftcall)) *JGDisplayViewControllerInitializer)(void *);
+typedef void *(*JGDisplayViewControllerInitializer)(
+    void *, void * __attribute__((swift_context))
+) __attribute__((swiftcall));
+
+CFTimeInterval JGSettingsNavigationTimestamp(void) {
+    return CACurrentMediaTime();
+}
+
+void JGSettingsNavigationTrace(NSString *route, NSString *stage, CFTimeInterval tapTimestamp) {
+    CFTimeInterval elapsedMilliseconds = MAX(0.0, (CACurrentMediaTime() - tapTimestamp) * 1000.0);
+    os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_INFO,
+                     "JGM1Nav route=%{public}@ stage=%{public}@ elapsed_ms=%.3f main=%{public}d",
+                     route ?: @"", stage ?: @"", elapsedMilliseconds, NSThread.isMainThread);
+}
 
 static NSDictionary *JGRow(NSString *kind, NSString *titleKey, NSString *settingKey, NSString *page, NSString *action) {
     NSMutableDictionary *row = [@{ @"kind": kind ?: @"", @"title": titleKey ?: @"" } mutableCopy];
@@ -565,8 +580,14 @@ static NSAttributedString *JGStyledText(NSString *style, NSString *text, UIColor
 - (UIViewController *)hostController { return self.parentViewController ?: self; }
 
 - (void)pushPage:(NSString *)page {
-    UIViewController *next = JGCreateSettingsHost(self.accountPeerId, page);
-    if (next != nil) [[self hostController].navigationController pushViewController:next animated:YES];
+    CFTimeInterval tapTimestamp = JGSettingsNavigationTimestamp();
+    JGSettingsNavigationTrace(page, @"tap", tapTimestamp);
+    UIViewController *next = JGCreateSettingsHost(self.accountPeerId, page, tapTimestamp);
+    if (next != nil) {
+        JGSettingsNavigationTrace(page, @"push.begin", tapTimestamp);
+        [[self hostController].navigationController pushViewController:next animated:YES];
+        JGSettingsNavigationTrace(page, @"push.end", tapTimestamp);
+    }
 }
 
 - (void)openURLString:(NSString *)value {
@@ -695,7 +716,8 @@ static NSString *ghostBaseSanitizeStarsAmount(NSString *text) {
 }
 @end
 
-UIViewController *JGCreateSettingsHost(int64_t accountPeerId, NSString *page) {
+UIViewController *JGCreateSettingsHost(int64_t accountPeerId, NSString *page, CFTimeInterval tapTimestamp) {
+    JGSettingsNavigationTrace(page, @"host.begin", tapTimestamp);
     NSString *basePage = JGBasePage(page);
     if (accountPeerId == 0 || ![JGReachableSettingsPages() containsObject:basePage]) return nil;
     if ([basePage isEqualToString:@"chatRetention"] && JGChatPeerIdFromPage(page) == 0) return nil;
@@ -711,11 +733,15 @@ UIViewController *JGCreateSettingsHost(int64_t accountPeerId, NSString *page) {
 
     JGDisplayViewControllerInitializer initializeDisplayController =
         (JGDisplayViewControllerInitializer)initializerAddress;
-    void *ownedHost = initializeDisplayController(NULL);
+    JGSettingsNavigationTrace(page, @"host.initializer.begin", tapTimestamp);
+    void *ownedHost = initializeDisplayController(NULL, (__bridge void *)displayClass);
+    JGSettingsNavigationTrace(page, @"host.initializer.end", tapTimestamp);
     UIViewController *host = (__bridge_transfer UIViewController *)ownedHost;
     if (![host isKindOfClass:displayClass]) return nil;
 
+    JGSettingsNavigationTrace(page, @"child.begin", tapTimestamp);
     JGParitySettingsController *child = [[JGParitySettingsController alloc] initWithAccountPeerId:accountPeerId page:page];
+    JGSettingsNavigationTrace(page, @"child.end", tapTimestamp);
     host.title = JGString(JGPageTitleKey(page));
     host.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeNever;
     [host addChildViewController:child];
@@ -725,5 +751,6 @@ UIViewController *JGCreateSettingsHost(int64_t accountPeerId, NSString *page) {
     [hostView addSubview:child.view];
     [child didMoveToParentViewController:host];
     objc_setAssociatedObject(host, &JGHostedChildKey, child, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    JGSettingsNavigationTrace(page, @"host.ready", tapTimestamp);
     return host;
 }

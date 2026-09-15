@@ -21,16 +21,30 @@ The latter is the allocating entry point for
 verifier reads the production Mach-O export trie directly; it does not infer
 this boundary from a historical build.
 
-## Correction
+## R4.3 correction and device result
 
-`JGCreateSettingsHost` now resolves only that exact exported entry point,
-requires it to originate in `TelegramUIFramework`, invokes it using Swift's
-calling convention with a nil Optional reference, transfers ownership to ARC,
-and verifies that the returned object is a runtime Display controller. Failure
-at any check returns nil and performs no push.
+R4.3 resolved only that exact exported entry point and proved its image owner,
+but declared the allocating initializer as a one-parameter `swiftcall` function.
+DEVICE-RUNTIME showed that every route still crashed. The omitted parameter was
+the hidden class-metatype `swiftself` context required by a Swift allocating
+initializer.
+
+## R4.4 correction
+
+The function pointer now has two parameters: the explicit nil Optional reference
+and a final `swift_context` class metatype. The call passes the runtime
+`_TtC7Display14ViewController` class object as that context. The Apple workflow
+emits LLVM IR from the actual Objective-C implementation and rejects the build
+unless the call is `swiftcc` and its final argument is marked `swiftself`.
+
+The existing symbol-image and returned-class checks remain fail-closed. All tap,
+initializer, child-construction and push boundaries emit monotonic `JGM1Nav`
+timings for the same route.
 
 All eight main destinations and all reachable nested destinations use this one
 factory. No plain UIKit controller or separate navigation controller is pushed.
+If this ABI-correct invocation still crashes on device, investigation stops at
+this boundary until the actual iOS `.ips` report is available.
 
 ## M1-only limitation
 
