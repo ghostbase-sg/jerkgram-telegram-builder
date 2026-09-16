@@ -110,8 +110,8 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "crypto.getRandomValues(new Uint8Array(24))",
             "jerkgram.notifications.pairing.v1",
             "jerkgram.notifications.installation.v1",
-            "sessionStorage.setItem",
-            "localStorage.setItem",
+            "localStorage.setItem(JERKGRAM_PAIRING_KEY",
+            "localStorage.setItem(INSTALLATION_ID_KEY",
             "jerkgram://push/authorize?v=1",
             "token=${encodeURIComponent(tokenValue)}",
             "nonce=${encodeURIComponent(nonce)}",
@@ -127,6 +127,34 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, patched)
 
+    def test_pairing_is_short_lived_and_survives_pwa_process_restart(self):
+        module = load_patcher()
+        patched = module.patch_sign_qr_text(SIGN_QR_FIXTURE)
+        for token in (
+            "PAIRING_LIFETIME_MS = 120_000",
+            "Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS",
+            "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
+        ):
+            self.assertIn(token, patched)
+        self.assertNotIn("sessionStorage", patched)
+
+    def test_setup_requires_home_screen_and_notification_permission_before_exporting_token(self):
+        module = load_patcher()
+        patched = module.patch_sign_qr_text(SIGN_QR_FIXTURE)
+        for token in (
+            "function isJerkgramStandalone()",
+            "Add Jerkgram Notifications to the Home Screen first.",
+            "Notification.requestPermission()",
+            "Allow notifications in iOS Settings to continue.",
+            "Web Push is not available in this browser.",
+        ):
+            self.assertIn(token, patched)
+
+        self.assertLess(
+            patched.index("Notification.requestPermission()"),
+            patched.index("const loginToken = await exportOrImportLoginToken();"),
+        )
+
     def test_success_reconciles_actual_webk_user_before_native_can_mark_active(self):
         module = load_patcher()
         patched = module.patch_sign_qr_text(SIGN_QR_FIXTURE)
@@ -137,12 +165,10 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "jerkgram://push/reconcile?v=1",
             "user=${encodeURIComponent(userId)}",
             "installation=${encodeURIComponent(installationId)}",
-            "sessionStorage.removeItem(JERKGRAM_PAIRING_KEY)",
+            "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
         ):
             self.assertIn(token, patched)
 
-        # Pinned Web K owns user installation through the auth-flow api manager.
-        # The account must be installed locally before native reconciliation is sent.
         self.assertLess(
             patched.index("await managers.apiManager.setUser(authorization.user)"),
             patched.index("reconcileWithJerkgram(String(authorization.user.id))"),
