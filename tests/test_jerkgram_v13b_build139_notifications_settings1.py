@@ -136,9 +136,11 @@ class Build139NotificationsSettingsContract(unittest.TestCase):
 
         for token in (
             'case "notificationsEnable":',
+            "let nativeAccountId = context.account.id.int64",
+            "let telegramUserId = context.account.peerId.id._internalGetInt64Value()",
             "JerkgramNotificationsStore.shared.beginPairing(",
-            "nativeAccountId: context.account.id.int64",
-            "telegramUserId: context.account.peerId.id._internalGetInt64Value()",
+            "nativeAccountId: nativeAccountId",
+            "telegramUserId: telegramUserId",
             'https://pixxxionix.github.io/jerkgram-notifications/',
             "UIApplication.shared.open(url)",
             "refreshResearchPage()",
