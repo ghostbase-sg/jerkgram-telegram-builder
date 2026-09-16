@@ -1,10 +1,10 @@
-name: Jerkgram 12.9.2 Build138
+name: Jerkgram 12.9.2 Build139
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - Jerkgram-12.9.2
+      - dev/build139-notifications-foundation
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -30,209 +30,53 @@ jobs:
 
       - name: Install Bazelisk
         run: |
-          set -e
+          set -euo pipefail
           if ! command -v bazelisk >/dev/null 2>&1; then
             brew install bazelisk
           fi
-          bazelisk --version || true
+          bazelisk --version
 
       - name: Prepare clean Official Telegram source
         run: |
-          set -e
+          set -euo pipefail
           chmod +x scripts/prepare_source_official.sh
           scripts/prepare_source_official.sh
 
       - name: Apply legacy compatibility baseline
         run: |
-          set -e
+          set -euo pipefail
           python3 scripts/apply_ghostbase_v10q_sh2_ot2_combined.py
 
-      - name: Build Jerkgram
+      - name: Preflight Build139 notification contracts
         run: |
-          set -e
-
-          # Current release-line Python must at least parse before touching the
-          # materialized Official source. Historical 115-122 hooks are the same
-          # chain that already produced Build123 and are exercised below.
+          set -euo pipefail
           python3 -m py_compile \
-            scripts/apply_jerkgram_v12l_build123_state_runtime1.py \
-            scripts/apply_jerkgram_v12l_build123_message_fidelity1.py \
-            scripts/apply_jerkgram_v12l_build123_profile_ui1.py \
-            scripts/apply_jerkgram_v12l_build123_settings_ui1.py \
-            scripts/verify_jerkgram_v12l_build123_release_recovery1.py \
-            scripts/install_jerkgram_v12l_build123_probe_hook.py \
-            scripts/apply_jerkgram_build124_telegram_api_credentials1.py \
-            scripts/verify_jerkgram_build124_telegram_api_credentials1.py \
-            scripts/verify_jerkgram_build124_telegram_api_ipa1.py \
-            scripts/install_jerkgram_build124_telegram_api_probe_hook1.py \
-            scripts/apply_jerkgram_v12m_build124_profile_edit_glass1.py \
-            scripts/verify_jerkgram_v12m_build124_profile_edit_glass1.py \
-            scripts/apply_jerkgram_v12m_build124_profile_more1.py \
-            scripts/verify_jerkgram_v12m_build124_profile_more1.py \
-            scripts/apply_jerkgram_v12m_build124_links_glass1.py \
-            scripts/verify_jerkgram_v12m_build124_links_glass1.py \
-            scripts/apply_jerkgram_v12m_build124_single_forward1.py \
-            scripts/verify_jerkgram_v12m_build124_single_forward1.py \
-            scripts/apply_jerkgram_v12m_build124_sensitive_settings1.py \
-            scripts/verify_jerkgram_v12m_build124_sensitive_settings1.py \
-            scripts/apply_jerkgram_v12m_build124_archive_import_runtime1.py \
-            scripts/verify_jerkgram_v12m_build124_archive_import_runtime1.py \
-            scripts/apply_jerkgram_v12m_build124_archive_export_runtime1.py \
-            scripts/verify_jerkgram_v12m_build124_archive_export_runtime1.py \
-            scripts/apply_jerkgram_v12m_build124_protected_forward1.py \
-            scripts/verify_jerkgram_v12m_build124_protected_forward1.py \
-            scripts/apply_jerkgram_v12m_build124_deleted_entities1.py \
-            scripts/verify_jerkgram_v12m_build124_deleted_entities1.py \
-            scripts/apply_jerkgram_v12m_build124_edit_history1.py \
-            scripts/verify_jerkgram_v12m_build124_edit_history1.py \
-            scripts/apply_jerkgram_v12m_build124_auth_keyboard1.py \
-            scripts/verify_jerkgram_v12m_build124_auth_keyboard1.py \
-            scripts/apply_jerkgram_v12m_build124_bot_localization1.py \
-            scripts/verify_jerkgram_v12m_build124_bot_localization1.py \
-            scripts/apply_jerkgram_v12m_build124_lifecycle_freeze1.py \
-            scripts/verify_jerkgram_v12m_build124_lifecycle_freeze1.py \
-            scripts/apply_jerkgram_v12m_build124_onetime_persistence1.py \
-            scripts/verify_jerkgram_v12m_build124_onetime_persistence1.py \
-            scripts/apply_jerkgram_v12m_build124_onetime_viewed1.py \
-            scripts/verify_jerkgram_v12m_build124_onetime_viewed1.py \
-            scripts/apply_jerkgram_v12m_build124_settings_redesign1.py \
-            scripts/verify_jerkgram_v12m_build124_settings_redesign1.py \
-            scripts/apply_jerkgram_v12n_build125_profile_edit1.py \
-            scripts/verify_jerkgram_v12n_build125_profile_edit1.py \
-            scripts/apply_jerkgram_v12n_build125_single_forward1.py \
-            scripts/verify_jerkgram_v12n_build125_single_forward1.py \
-            scripts/apply_jerkgram_v12n_build125_circle_viewed1.py \
-            scripts/verify_jerkgram_v12n_build125_circle_viewed1.py \
-            scripts/apply_jerkgram_v12n_build125_links_bounds1.py \
-            scripts/verify_jerkgram_v12n_build125_links_bounds1.py \
-            scripts/apply_jerkgram_v12n_build125_protected_cache1.py \
-            scripts/verify_jerkgram_v12n_build125_protected_cache1.py \
-            scripts/apply_jerkgram_v12n_build125_auth_ghost_localization1.py \
-            scripts/verify_jerkgram_v12n_build125_auth_ghost_localization1.py \
-            scripts/install_jerkgram_v12n_build125_probe_hook.py \
-            scripts/verify_jerkgram_v12n_build125_wiring1.py \
-            scripts/install_jerkgram_v12m_build124_probe_hook.py \
-            scripts/verify_jerkgram_v12m_build124_wiring1.py \
-            scripts/jerkgram_finalize_build125_identity.py \
-            scripts/verify_jerkgram_v12n_build125_final_ipa.py \
-            scripts/jerkgram_publish_build125_artifact.py \
-            scripts/apply_jerkgram_v12o_build126_bio_corner_mask1.py \
-            scripts/apply_jerkgram_v12o_build126_voice_viewed_state1.py \
-            scripts/apply_jerkgram_v12o_build126_circle_viewed_state1.py \
-            scripts/apply_jerkgram_v12o_build126_forward_menu_owner1.py \
-            scripts/apply_jerkgram_v12p_build127_onetime_native_status1.py \
-            scripts/apply_jerkgram_v12q_build128_bio_corner_owner1.py \
-            scripts/apply_jerkgram_v12r_build129_protected_chat_forward1.py \
-            scripts/apply_jerkgram_v12s_build130_siri_failclosed1.py \
-            scripts/verify_jerkgram_v12s_build130_siri_failclosed1.py \
-            scripts/install_jerkgram_v12s_build130_probe_hook.py \
-            scripts/jerkgram_finalize_build126_keychain_package1.py \
-            scripts/jerkgram_finalize_build128_file_picker_package1.py \
-            scripts/jerkgram_finalize_build128_identity.py \
-            scripts/verify_jerkgram_v12s_build128_final_ipa.py \
-            scripts/jerkgram_finalize_build130_identity.py \
-            scripts/verify_jerkgram_v12s_build130_final_ipa.py \
-            scripts/jerkgram_publish_build130_artifact.py \
-            scripts/apply_jerkgram_v12t_build133_blocked_reactions1.py \
-            scripts/verify_jerkgram_v12t_build133_blocked_reactions1.py \
-            scripts/apply_jerkgram_v12u_build133_blocked_activity1.py \
-            scripts/verify_jerkgram_v12u_build133_blocked_activity1.py \
-            scripts/apply_jerkgram_v12v_build133_settings1.py \
-            scripts/verify_jerkgram_v12v_build133_settings1.py \
-            scripts/apply_jerkgram_v12z_build134_context_localization1.py \
-            scripts/verify_jerkgram_v12z_build134_context_localization1.py \
-            scripts/apply_jerkgram_v12za_build134_gift_localization1.py \
-            scripts/verify_jerkgram_v12za_build134_gift_localization1.py \
-            scripts/apply_jerkgram_v12zb_build135_visibility_runtime1.py \
-            scripts/verify_jerkgram_v12zb_build135_visibility_runtime1.py \
-            scripts/apply_jerkgram_v12zc_build136_visible_order_cache1.py \
-            scripts/verify_jerkgram_v12zc_build136_visible_order_cache1.py \
-            scripts/apply_jerkgram_v12zd_build137_performance1.py \
-            scripts/verify_jerkgram_v12zd_build137_performance1.py \
-            scripts/apply_jerkgram_build137_performance2.py \
-            scripts/verify_jerkgram_build137_performance2.py \
-            scripts/apply_jerkgram_v12w_build133_music_overlay1.py \
-            scripts/verify_jerkgram_v12w_build133_music_overlay1.py \
+            scripts/apply_jerkgram_v13a_build139_notifications_foundation1.py \
+            scripts/verify_jerkgram_v13a_build139_notifications_foundation1.py \
+            scripts/apply_jerkgram_v13b_build139_notifications_settings1.py \
+            scripts/verify_jerkgram_v13b_build139_notifications_settings1.py \
+            scripts/apply_jerkgram_v13c_build139_release_identity1.py \
+            scripts/verify_jerkgram_v13c_build139_release_identity1.py \
             scripts/install_jerkgram_v12w_build133_probe_hook.py \
-            scripts/jerkgram_finalize_build133_identity.py \
-            scripts/verify_jerkgram_v12w_build133_final_ipa.py \
-            scripts/jerkgram_publish_build133_artifact.py \
-            scripts/jerkgram_publish_build135_artifact.py \
-            scripts/jerkgram_publish_build138_artifact.py
+            scripts/jerkgram_finalize_build139_identity.py \
+            scripts/verify_jerkgram_build139_final_ipa.py \
+            scripts/jerkgram_publish_build139_artifact.py
 
-          # Preserve the established late-release regression gates.
-          python3 -m unittest tests.test_jerkgram_v12h_build119_hybrid_ui1
-          python3 -m unittest tests.test_jerkgram_v12i_build120_profile_blur_lifecycle1
-          python3 -m unittest tests.test_jerkgram_v12j_build121_sticker_recovery1
-          python3 -m unittest tests.test_jerkgram_v12k_build122_reply_sticker_contract1
-          python3 -m unittest tests.test_jerkgram_v12k_build122_edit_caption_history1
-          python3 -m unittest tests.test_jerkgram_v12k_build122_settings_release1
-          python3 -m unittest tests.test_jerkgram_v12l_build123_release_recovery1
+          python3 -m unittest -v \
+            tests.test_jerkgram_v13a_build139_notifications_foundation1 \
+            tests.test_jerkgram_v13b_build139_notifications_settings1 \
+            tests.test_jerkgram_build139_release_contract \
+            tests.test_jerkgram_build134_release_contract \
+            tests.test_jerkgram_v12zd_build137_performance1 \
+            tests.test_jerkgram_build137_performance2
 
-          # Build124 RED->GREEN contracts. These exercise patch functions only;
-          # materialized-source verifiers execute inside the probe before Bazel.
-          python3 -m unittest tests.test_jerkgram_build124_telegram_api_credentials1
-          python3 -m unittest tests.test_jerkgram_build124_telegram_api_probe_hook1
-          python3 -m unittest tests.test_jerkgram_build124_telegram_api_source_owner1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_credentials1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_final_ipa_wiring1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_canary_publication1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_profile_edit_glass1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_profile_more1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_links_glass1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_single_forward1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_sensitive_settings1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_archive_import_runtime1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_archive_import_refresh1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_archive_export_runtime1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_protected_forward1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_deleted_entities1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_edit_history1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_auth_keyboard1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_bot_localization1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_lifecycle_freeze1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_onetime_persistence1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_onetime_viewed1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_settings_redesign1
-          python3 -m unittest tests.test_jerkgram_v12m_build124_wiring1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_profile_edit1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_single_forward1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_circle_viewed1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_links_bounds1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_protected_cache1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_auth_ghost_localization1
-          python3 -m unittest tests.test_jerkgram_v12n_build125_wiring1
-          python3 -m unittest tests.test_jerkgram_v12o_build126_bot_token_wiring1
-          python3 -m unittest tests.test_jerkgram_v12o_build126_bio_corner_mask1
-          python3 -m unittest tests.test_jerkgram_v12o_build126_voice_viewed_state1
-          python3 -m unittest tests.test_jerkgram_v12o_build126_circle_viewed_state1
-          python3 -m unittest tests.test_jerkgram_v12o_build126_forward_menu_owner1
-          python3 -m unittest tests.test_jerkgram_v12p_build127_onetime_native_status1
-          python3 -m unittest tests.test_jerkgram_v12q_build128_bio_corner_owner1
-          python3 -m unittest tests.test_jerkgram_v12r_build129_protected_chat_forward1
-          python3 -m unittest tests.test_jerkgram_v12s_build130_siri_failclosed1
-          python3 -m unittest tests.test_jerkgram_v12s_build128_file_picker_package1
-          python3 -m unittest tests.test_jerkgram_v12o_build126_keychain_packaging1
-          python3 -m unittest tests.test_jerkgram_v12o_build126_release_contract1
+      - name: Materialize canonical Jerkgram source and build
+        run: |
+          set -euo pipefail
 
-          # Build133 runtime-repair contracts. Materialized owner verifiers run
-          # again from the probe immediately before Bazel.
-          python3 -m unittest tests.test_jerkgram_v12t_build133_blocked_reactions1
-          python3 -m unittest tests.test_jerkgram_v12u_build133_blocked_activity1
-          python3 -m unittest tests.test_jerkgram_v12v_build133_settings1
-          python3 -m unittest tests.test_jerkgram_v12w_build133_music_overlay1
-          python3 -m unittest tests.test_jerkgram_v12x_build133_release_ui1
-          python3 -m unittest tests.test_jerkgram_v12y_build133_telemetry2
-          python3 -m unittest tests.test_jerkgram_v12z_build134_context_localization1
-          python3 -m unittest tests.test_ghostbase_v10zb_seasonal_gifts_localization
-          python3 -m unittest tests.test_jerkgram_v12zb_build135_visibility_runtime1
-          python3 -m unittest tests.test_jerkgram_v12zc_build136_visible_order_cache1
-          python3 -m unittest tests.test_jerkgram_v12zd_build137_performance1
-          python3 -m unittest tests.test_jerkgram_build137_performance2
-          python3 -m unittest tests.test_jerkgram_build134_release_contract
-
-          # Canonical materialization chain. The legacy-named root installer delegates
-          # to Build130/Build125, then appends v12t/v12u/v12v/v12w before Bazel.
+          # Keep the exact stable Build138 lineage. Each historical installer is
+          # idempotent and the final v12w installer appends the approved Build139
+          # notification patches before Bazel.
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
@@ -248,59 +92,34 @@ jobs:
           chmod +x scripts/bazel_build_probe_official.sh
           scripts/bazel_build_probe_official.sh
 
-      - name: Upload materialized Build133 diagnostic owners
+      - name: Upload materialized Build139 diagnostic owners
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Build133-materialized-owner-diagnostics
+          name: Build139-materialized-owner-diagnostics
           path: |
-            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
-            work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift
-            work/swiftgram-src/submodules/JerkgramCore/Sources/JerkgramStore.swift
-            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
-            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode/Sources/ChatMessageInteractiveMediaNode.swift
+            work/swiftgram-src/submodules/JerkgramCore/Sources/JerkgramNotifications.swift
             work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
-            work/swiftgram-src/submodules/SettingsUI/Sources/Jerkgram/JerkgramStarsEditorController.swift
-            work/swiftgram-src/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
-            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
             work/swiftgram-src/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/ApiUtils/ReactionsMessageAttribute.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/State/MessageReactions.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeers.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountViewTracker.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/ChatList.swift
-            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/EarliestUnseenPersonalMentionMessage.swift
-            work/swiftgram-src/submodules/TelegramUI/Sources/AccountContext.swift
-            work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
-            work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
-            work/swiftgram-src/submodules/ChatListUI/Sources/Node/ChatListNodeLocation.swift
-            work/swiftgram-src/submodules/ChatListUI/Sources/Node/ChatListNodeEntries.swift
-            work/swiftgram-src/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Auth/AuthTransfer.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Privacy/ActiveSessionsContext.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/SharedAccountContext.swift
-            work/swiftgram-src/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift
-            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift
-            work/swiftgram-src/submodules/TelegramUI/Sources/OverlayAudioPlayerController.swift
-            work/swiftgram-src/submodules/TelegramUI/Sources/OverlayAudioPlayerControllerNode.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/ChatList.swift
           if-no-files-found: warn
 
-      - name: Publish Jerkgram Build138 artifact
+      - name: Publish Jerkgram Build139 artifact
         if: success()
         run: |
-          set -e
-          python3 scripts/jerkgram_publish_build138_artifact.py
+          set -euo pipefail
+          python3 scripts/jerkgram_publish_build139_artifact.py
 
-      - name: Upload Jerkgram Build138
+      - name: Upload Jerkgram Build139
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Build138
+          name: Jerkgram-Build139
           path: |
-            artifacts/Jerkgram-Build138.ipa
-            artifacts/Jerkgram-Build138-info.txt
+            artifacts/Jerkgram-Build139.ipa
+            artifacts/Jerkgram-Build139-info.txt
           if-no-files-found: error
