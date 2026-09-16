@@ -141,8 +141,10 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
         ):
             self.assertIn(token, patched)
 
+        # Pinned Web K owns user installation through the auth-flow api manager.
+        # The account must be installed locally before native reconciliation is sent.
         self.assertLess(
-            patched.index("rootScope.managers.appUsersManager.setUser(authorization.user)"),
+            patched.index("await managers.apiManager.setUser(authorization.user)"),
             patched.index("reconcileWithJerkgram(String(authorization.user.id))"),
         )
 
