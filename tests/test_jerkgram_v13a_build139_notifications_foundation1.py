@@ -17,6 +17,9 @@ def load_patcher():
     return module
 
 
+APP_FIXTURE = '''import Foundation\nimport UIKit\n\nfinal class AppDelegate {\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n}\n'''
+
+
 class Build139NotificationsFoundationContract(unittest.TestCase):
     def test_account_state_is_versioned_account_scoped_and_revocation_ready(self):
         module = load_patcher()
@@ -35,13 +38,14 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             "public let nativeAccountId: Int64",
             "public let telegramUserId: Int64",
             "public var telegramAuthorizationHash: Int64?",
+            "public var installationId: String?",
             "public var pendingPairing: JerkgramNotificationPendingPairing?",
             "public var bridgeProtocolVersion: Int",
             "public static let bridgeProtocolVersion = 1",
         ):
             self.assertIn(token, source)
 
-    def test_pending_pairing_is_short_lived_single_use_and_does_not_guess_an_account(self):
+    def test_pairing_is_short_lived_single_use_and_not_active_until_pwa_user_reconciles(self):
         module = load_patcher()
         source = module.NOTIFICATIONS_SOURCE
 
@@ -52,9 +56,15 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             "unexpiredPending.count == 1",
             "usedPairingNonces.contains(nonce)",
             "usedPairingNonces.append(nonce)",
+            "public func acceptPairingAuthorization(",
+            "record.telegramAuthorizationHash = authorizationHash",
+            "record.lifecycleState = .connecting",
             "public func completePairing(",
             "record.telegramUserId == telegramUserId",
             "record.pendingPairing?.nonce == nonce",
+            "record.telegramAuthorizationHash != nil",
+            "record.installationId = installationId",
+            "record.lifecycleState = .active",
         ):
             self.assertIn(token, source)
 
@@ -63,8 +73,7 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
 
     def test_authorize_bridge_requires_v1_nonce_token_and_exact_pending_account(self):
         module = load_patcher()
-        fixture = '''import Foundation\nimport UIKit\n\nfinal class AppDelegate {\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n}\n'''
-        patched = module.patch_app_delegate_text(fixture)
+        patched = module.patch_app_delegate_text(APP_FIXTURE)
 
         for token in (
             "import JerkgramCore",
@@ -79,23 +88,44 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             "recordId.int64 == pending.nativeAccountId",
             "context.account.peerId.id._internalGetInt64Value() == pending.telegramUserId",
             "approveAuthTransferToken(",
-            "session.hash",
-            "completePairing(",
+            "authorizationHash: session.hash",
+            "acceptPairingAuthorization(",
             "if self.handleJerkgramNotificationsAuthorizeUrl(url)",
         ):
             self.assertIn(token, patched)
 
         self.assertNotIn("activeAccounts.primary", patched)
 
-    def test_authorize_bridge_consumes_malformed_jerkgram_authorize_urls_locally(self):
+    def test_reconcile_bridge_requires_same_nonce_expected_user_and_valid_installation_id(self):
         module = load_patcher()
-        fixture = '''import Foundation\nimport UIKit\n\nfinal class AppDelegate {\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n}\n'''
-        patched = module.patch_app_delegate_text(fixture)
+        patched = module.patch_app_delegate_text(APP_FIXTURE)
+
+        for token in (
+            "private func handleJerkgramNotificationsReconcileUrl(_ url: URL) -> Bool",
+            'url.path == "/reconcile"',
+            'Set(values.keys) == Set(["v", "nonce", "user", "installation"])',
+            'values["v"] == "1"',
+            'values["nonce"]',
+            'values["user"]',
+            'values["installation"]',
+            "UUID(uuidString: installationId) != nil",
+            "JerkgramNotificationsStore.shared.completePairing(",
+            "telegramUserId: telegramUserId",
+            "installationId: installationId",
+            "nonce: nonce",
+            "if self.handleJerkgramNotificationsReconcileUrl(url)",
+        ):
+            self.assertIn(token, patched)
+
+    def test_authorize_and_reconcile_bridges_consume_malformed_routes_locally(self):
+        module = load_patcher()
+        patched = module.patch_app_delegate_text(APP_FIXTURE)
         self.assertIn("return true", patched)
         self.assertIn("url.absoluteString.utf8.count <= 3072", patched)
         self.assertIn("queryItems.count == values.count", patched)
         self.assertIn("nonce.count >= 32", patched)
         self.assertIn("tokenData.count <= 1024", patched)
+        self.assertIn("telegramUserId > 0", patched)
 
 
 if __name__ == "__main__":
