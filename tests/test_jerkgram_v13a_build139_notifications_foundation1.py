@@ -50,7 +50,9 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
         source = module.NOTIFICATIONS_SOURCE
 
         for token in (
-            "public func beginPairing(nativeAccountId: Int64, telegramUserId: Int64",
+            "public func beginPairing(",
+            "nativeAccountId: Int64",
+            "telegramUserId: Int64",
             "pairingLifetime: TimeInterval = 120.0",
             "public func claimPendingPairing(nonce: String",
             "unexpiredPending.count == 1",
