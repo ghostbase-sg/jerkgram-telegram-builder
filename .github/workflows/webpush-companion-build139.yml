@@ -1,0 +1,93 @@
+name: Build139 Jerkgram Notifications PWA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev/build139-notifications-pwa
+    paths:
+      - "webpush-companion/**"
+      - "tests/test_webk_jerkgram_login_token_v02.py"
+      - ".github/workflows/webpush-companion-build139.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  companion:
+    runs-on: ubuntu-latest
+    env:
+      TWEB_COMMIT: e9428f2a90f73d750f16a0b85817820516466364
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Run Build139 PWA contracts
+        run: |
+          set -euo pipefail
+          python -m unittest -v tests.test_webk_jerkgram_login_token_v02
+          node tests/webpush_handoff_test.mjs
+
+      - name: Fetch pinned Telegram Web K
+        run: |
+          set -euo pipefail
+          git clone --recurse-submodules https://github.com/morethanwords/tweb.git tweb
+          cd tweb
+          git checkout "$TWEB_COMMIT"
+          git submodule update --init --recursive
+          test "$(git rev-parse HEAD)" = "$TWEB_COMMIT"
+
+      - name: Apply Jerkgram notification companion patches
+        run: |
+          set -euo pipefail
+          python webpush-companion/apply_webk_jerkgram_push_v01.py "$GITHUB_WORKSPACE/tweb"
+          python webpush-companion/apply_webk_jerkgram_login_token_v02.py "$GITHUB_WORKSPACE/tweb"
+          python webpush-companion/apply_webk_jerkgram_branding_v01.py "$GITHUB_WORKSPACE/tweb"
+          python webpush-companion/apply_webk_jerkgram_privacy_v01.py "$GITHUB_WORKSPACE/tweb"
+
+      - name: Install Web K dependencies
+        working-directory: tweb
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.16.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Typecheck patched Web K
+        working-directory: tweb
+        run: pnpm run typecheck
+
+      - name: Build patched Web K
+        working-directory: tweb
+        run: pnpm exec vite build
+
+      - name: Package notification-only PWA
+        run: |
+          set -euo pipefail
+          python webpush-companion/package_webk_dist_v01.py "$GITHUB_WORKSPACE/tweb"
+
+      - name: Verify Build139 pairing markers
+        run: |
+          set -euo pipefail
+          grep -R -q 'jerkgram://push/authorize?v=1' tweb/dist/*.js
+          grep -R -q 'jerkgram://push/reconcile?v=1' tweb/dist/*.js
+          grep -R -q 'jerkgram.notifications.installation.v1' tweb/dist/*.js
+          grep -R -q 'jerkgram.notifications.pairing.v1' tweb/dist/*.js
+          grep -R -q 'Continue Setup' tweb/dist/*.js
+          if grep -R -q 'jerkgram://push/register\|jerkgram://push/unregister' tweb/dist/*.js; then
+            echo 'legacy subscription-credential bridge survived' >&2
+            exit 1
+          fi
+
+      - name: Upload PWA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-Notifications-Build139-PWA
+          path: tweb/dist
+          if-no-files-found: error
+          compression-level: 9
