@@ -7,6 +7,7 @@ on:
     paths:
       - "scripts/*build139*notifications*"
       - "tests/test_jerkgram_v13a_build139_notifications_foundation1.py"
+      - "tests/test_jerkgram_v13b_build139_notifications_settings1.py"
       - ".github/workflows/build139-contracts.yml"
 
 permissions:
@@ -20,5 +21,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run Build139 notification foundation contract
-        run: python -m unittest -v tests.test_jerkgram_v13a_build139_notifications_foundation1
+      - name: Run Build139 notification contracts
+        run: |
+          python -m unittest -v \
+            tests.test_jerkgram_v13a_build139_notifications_foundation1 \
+            tests.test_jerkgram_v13b_build139_notifications_settings1
