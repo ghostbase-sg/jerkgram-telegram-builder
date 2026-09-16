@@ -8,6 +8,7 @@ on:
     paths:
       - "webpush-companion/**"
       - "tests/test_webk_jerkgram_login_token_v02.py"
+      - "tests/test_webk_jerkgram_companion_shell_v02.py"
       - ".github/workflows/webpush-companion-build139.yml"
 
 permissions:
@@ -31,7 +32,9 @@ jobs:
       - name: Run Build139 PWA contracts
         run: |
           set -euo pipefail
-          python -m unittest -v tests.test_webk_jerkgram_login_token_v02
+          python -m unittest -v \
+            tests.test_webk_jerkgram_login_token_v02 \
+            tests.test_webk_jerkgram_companion_shell_v02
           node tests/webpush_handoff_test.mjs
 
       - name: Fetch pinned Telegram Web K
@@ -48,6 +51,7 @@ jobs:
           set -euo pipefail
           python webpush-companion/apply_webk_jerkgram_push_v01.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_login_token_v02.py "$GITHUB_WORKSPACE/tweb"
+          python webpush-companion/apply_webk_jerkgram_companion_shell_v02.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_branding_v01.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_privacy_v01.py "$GITHUB_WORKSPACE/tweb"
 
@@ -71,7 +75,7 @@ jobs:
           set -euo pipefail
           python webpush-companion/package_webk_dist_v01.py "$GITHUB_WORKSPACE/tweb"
 
-      - name: Verify Build139 pairing markers
+      - name: Verify Build139 pairing and shell markers
         run: |
           set -euo pipefail
           grep -R -q 'jerkgram://push/authorize?v=1' tweb/dist/*.js
@@ -79,6 +83,9 @@ jobs:
           grep -R -q 'jerkgram.notifications.installation.v1' tweb/dist/*.js
           grep -R -q 'jerkgram.notifications.pairing.v1' tweb/dist/*.js
           grep -R -q 'Continue Setup' tweb/dist/*.js
+          grep -R -q 'Manage in Jerkgram' tweb/dist/*.js
+          grep -R -q 'Push subscription' tweb/dist/*.js
+          grep -R -q 'Needs attention' tweb/dist/*.js
           if grep -R -q 'jerkgram://push/register\|jerkgram://push/unregister' tweb/dist/*.js; then
             echo 'legacy subscription-credential bridge survived' >&2
             exit 1
