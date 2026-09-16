@@ -41,17 +41,23 @@ SOURCE_ORDERED = (
     "verify_jerkgram_build137_performance2.py",
     "apply_jerkgram_v12w_build133_music_overlay1.py",
     "verify_jerkgram_v12w_build133_music_overlay1.py",
+    "apply_jerkgram_v13a_build139_notifications_foundation1.py",
+    "verify_jerkgram_v13a_build139_notifications_foundation1.py",
+    "apply_jerkgram_v13b_build139_notifications_settings1.py",
+    "verify_jerkgram_v13b_build139_notifications_settings1.py",
+    "apply_jerkgram_v13c_build139_release_identity1.py",
+    "verify_jerkgram_v13c_build139_release_identity1.py",
     "verify_jerkgram_v12w_build133_runtime_repair1.py",
 )
 FINAL_ORDERED = (
-    "jerkgram_finalize_build133_identity.py",
-    "verify_jerkgram_v12w_build133_final_ipa.py",
+    "jerkgram_finalize_build139_identity.py",
+    "verify_jerkgram_build139_final_ipa.py",
 )
 
 
 def require(value: bool, message: str) -> None:
     if not value:
-        raise RuntimeError("[Build133 probe hook] " + message)
+        raise RuntimeError("[Build139 probe hook] " + message)
 
 
 def line(name: str, argument: str | None = None) -> str:
@@ -66,15 +72,12 @@ def patch_probe(text: str) -> str:
 
     source_payload = (
         SOURCE_MARKER
-        + '\necho\necho "== Jerkgram Build137 performance hardening =="\n'
+        + '\necho\necho "== Jerkgram Build139 notifications foundation =="\n'
         + "\n".join(line(name) for name in SOURCE_ORDERED)
     )
     if SOURCE_MARKER not in text:
-        require(all(text.count(name) == 0 for name in SOURCE_ORDERED), "partial preexisting Build133 source block")
-        source_block = (
-            BUILD130_SOURCE_ANCHOR
-            + "\n\n" + source_payload
-        )
+        require(all(text.count(name) == 0 for name in SOURCE_ORDERED), "partial preexisting Build139 source block")
+        source_block = BUILD130_SOURCE_ANCHOR + "\n\n" + source_payload
         text = text.replace(BUILD130_SOURCE_ANCHOR, source_block, 1)
     else:
         source_start = text.index(SOURCE_MARKER)
@@ -83,32 +86,30 @@ def patch_probe(text: str) -> str:
         source_end = end_mark if 0 <= end_mark < bazel_start else bazel_start
         text = text[:source_start] + source_payload + "\n" + text[source_end:]
 
-    require(text.count(SOURCE_MARKER) == 1, "Build133 source marker count")
+    require(text.count(SOURCE_MARKER) == 1, "Build139 source marker count")
     source_positions = [text.index(name) for name in SOURCE_ORDERED]
-    require(source_positions == sorted(source_positions), "Build133 source apply/verifier order")
-    require(all(text.count(name) == 1 for name in SOURCE_ORDERED), "Build133 source hook count")
-    require(text.index(BUILD130_SOURCE_ANCHOR) < source_positions[0], "Build133 must follow Build130")
-    require(source_positions[-1] < text.index(BAZEL_ANCHOR), "Build133 final source verifier must precede Bazel")
+    require(source_positions == sorted(source_positions), "Build139 source apply/verifier order")
+    require(all(text.count(name) == 1 for name in SOURCE_ORDERED), "Build139 source hook count")
+    require(text.index(BUILD130_SOURCE_ANCHOR) < source_positions[0], "Build139 must follow Build130")
+    require(source_positions[-1] < text.index(BAZEL_ANCHOR), "Build139 final source verifier must precede Bazel")
 
+    final_payload = (
+        FINAL_MARKER
+        + '\necho\necho "== Jerkgram Build139 final identity =="\n'
+        + "\n".join(line(name, "ghostbase-final/GhostBase.ipa") for name in FINAL_ORDERED)
+    )
     if FINAL_MARKER not in text:
-        require(all(text.count(name) == 0 for name in FINAL_ORDERED), "partial preexisting Build133 final block")
-        final_block = (
-            BUILD130_FINAL_ANCHOR
-            + "\n\n" + FINAL_MARKER
-            + '\necho\necho "== Jerkgram Build138 final identity =="\n'
-            + "\n".join(line(name, "ghostbase-final/GhostBase.ipa") for name in FINAL_ORDERED)
-        )
-        text = text.replace(BUILD130_FINAL_ANCHOR, final_block, 1)
+        require(all(text.count(name) == 0 for name in FINAL_ORDERED), "partial preexisting Build139 final block")
+        text = text.replace(BUILD130_FINAL_ANCHOR, BUILD130_FINAL_ANCHOR + "\n\n" + final_payload, 1)
+    else:
+        final_start = text.index(FINAL_MARKER)
+        text = text[:final_start] + final_payload + "\n"
 
-    require(text.count(FINAL_MARKER) == 1, "Build133 final marker count")
+    require(text.count(FINAL_MARKER) == 1, "Build139 final marker count")
     final_positions = [text.index(name) for name in FINAL_ORDERED]
-    require(final_positions == sorted(final_positions), "Build133 final identity order")
-    require(all(text.count(name) == 1 for name in FINAL_ORDERED), "Build133 final hook count")
-    require(text.index(BUILD130_FINAL_ANCHOR) < final_positions[0], "Build133 final identity must follow Build130 verification")
-    text = text.replace("== Jerkgram Build134 final identity ==", "== Jerkgram Build136 final identity ==")
-    text = text.replace("== Jerkgram Build135 final identity ==", "== Jerkgram Build136 final identity ==")
-    text = text.replace("== Jerkgram Build136 final identity ==", "== Jerkgram Build138 final identity ==")
-    text = text.replace("== Jerkgram Build137 final identity ==", "== Jerkgram Build138 final identity ==")
+    require(final_positions == sorted(final_positions), "Build139 final identity order")
+    require(all(text.count(name) == 1 for name in FINAL_ORDERED), "Build139 final hook count")
+    require(text.index(BUILD130_FINAL_ANCHOR) < final_positions[0], "Build139 final identity must follow Build130 verification")
     return text
 
 
@@ -117,8 +118,8 @@ def main() -> None:
     subprocess.check_call([sys.executable, str(BASE_INSTALLER)])
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
-    print("[Build138 probe hook] GREEN")
-    print("[Build138 probe hook] Telemetry 2.1 -> reactions/activity/navigation -> Settings2 -> localization -> visible preview/unread/account runtime -> visible ordering/cache -> performance hardening -> music -> final source gate -> Bazel")
+    print("[Build139 probe hook] GREEN")
+    print("[Build139 probe hook] Build138 stable chain -> notification state/bridge -> native settings/revoke -> Build139 release identity -> final source gate -> Bazel")
 
 
 if __name__ == "__main__":
