@@ -63,17 +63,18 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
         for forbidden in ("name: 'signIn'", "name: 'authCode'", "name: 'password'", "name: 'signUp'", "name: 'signImport'"):
             self.assertNotIn(forbidden, patched)
 
-    def test_signed_in_boot_keeps_push_runtime_but_hides_telegram_shell(self):
+    def test_signed_in_boot_keeps_only_push_runtime_and_hides_telegram_shell(self):
         module = load_patcher()
         patched = module.patch_bootstrap_text(BOOTSTRAP_FIXTURE)
         for token in (
-            "appDialogsManager.start()",
+            "uiNotificationsManager.constructAndStartAll()",
             "mountJerkgramNotificationsShell()",
             "pageChatsEl.style.display = 'none'",
             "disposeActiveAuthFlow()",
         ):
             self.assertIn(token, patched)
-        self.assertLess(patched.index("appDialogsManager.start()"), patched.index("mountJerkgramNotificationsShell()"))
+        self.assertNotIn("appDialogsManager.start()", patched)
+        self.assertLess(patched.index("uiNotificationsManager.constructAndStartAll()"), patched.index("mountJerkgramNotificationsShell()"))
 
     def test_active_shell_is_telegram_like_and_management_stays_native(self):
         module = load_patcher()
