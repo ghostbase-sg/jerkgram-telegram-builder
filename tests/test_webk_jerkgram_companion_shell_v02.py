@@ -104,6 +104,19 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
+    def test_signed_in_shell_can_finish_reconcile_after_pwa_process_restart(self):
+        module = load_patcher()
+        source = module.SHELL_SOURCE
+        for token in (
+            "jerkgram.notifications.pairing.v1",
+            "jerkgram.notifications.installation.v1",
+            "PAIRING_LIFETIME_MS = 120_000",
+            "jerkgram://push/reconcile?v=1",
+            "String(self.id)",
+            "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
+        ):
+            self.assertIn(token, source)
+
     def test_tree_patch_is_idempotent(self):
         module = load_patcher()
         with tempfile.TemporaryDirectory() as directory:
