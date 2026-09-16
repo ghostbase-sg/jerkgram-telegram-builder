@@ -52,6 +52,7 @@ jobs:
           python webpush-companion/apply_webk_jerkgram_push_v01.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_login_token_v02.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_companion_shell_v02.py "$GITHUB_WORKSPACE/tweb"
+          python webpush-companion/apply_webk_jerkgram_notification_runtime_v03.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_branding_v01.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_privacy_v01.py "$GITHUB_WORKSPACE/tweb"
 
