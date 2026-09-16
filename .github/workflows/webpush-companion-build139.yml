@@ -54,6 +54,7 @@ jobs:
           python webpush-companion/apply_webk_jerkgram_companion_shell_v02.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_notification_runtime_v03.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_shell_typecheck_v04.py "$GITHUB_WORKSPACE/tweb"
+          python webpush-companion/apply_webk_jerkgram_device_model_v05.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_branding_v01.py "$GITHUB_WORKSPACE/tweb"
           python webpush-companion/apply_webk_jerkgram_privacy_v01.py "$GITHUB_WORKSPACE/tweb"
 
@@ -88,6 +89,7 @@ jobs:
           grep -R -q 'Manage in Jerkgram' tweb/dist/*.js
           grep -R -q 'Push subscription' tweb/dist/*.js
           grep -R -q 'Needs attention' tweb/dist/*.js
+          grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
           if grep -R -q 'jerkgram://push/register\|jerkgram://push/unregister' tweb/dist/*.js; then
             echo 'legacy subscription-credential bridge survived' >&2
             exit 1
