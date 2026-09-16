@@ -43,6 +43,7 @@ SOURCE_ORDERED = (
     "verify_jerkgram_v12w_build133_music_overlay1.py",
     "apply_jerkgram_v13a0_build139_appdelegate_import_compat.py",
     "apply_jerkgram_v13a_build139_notifications_foundation1.py",
+    "apply_jerkgram_v13a1_build139_reconcile_compile_fix1.py",
     "verify_jerkgram_v13a_build139_notifications_foundation1.py",
     "apply_jerkgram_v13b_build139_notifications_settings1.py",
     "verify_jerkgram_v13b_build139_notifications_settings1.py",
@@ -120,7 +121,7 @@ def main() -> None:
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build139 probe hook] GREEN")
-    print("[Build139 probe hook] Build138 stable chain -> AppDelegate import normalization -> notification state/bridge -> native settings/revoke -> Build139 release identity -> final source gate -> Bazel")
+    print("[Build139 probe hook] Build138 stable chain -> AppDelegate import normalization -> notification state/bridge -> reconcile compile normalization -> native settings/revoke -> Build139 release identity -> final source gate -> Bazel")
 
 
 if __name__ == "__main__":
