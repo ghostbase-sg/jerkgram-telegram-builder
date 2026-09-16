@@ -32,6 +32,7 @@ type PairingState = {
 
 const JERKGRAM_PAIRING_KEY = 'jerkgram.notifications.pairing.v1';
 const INSTALLATION_ID_KEY = 'jerkgram.notifications.installation.v1';
+const PAIRING_LIFETIME_MS = 120_000;
 const FETCH_INTERVAL = 2;
 
 function tokenToBase64Url(token: Uint8Array | number[]): string {
@@ -41,6 +42,11 @@ function tokenToBase64Url(token: Uint8Array | number[]): string {
 function makePairingNonce(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return tokenToBase64Url(bytes);
+}
+
+function isJerkgramStandalone(): boolean {
+  const nav = navigator as Navigator & {standalone?: boolean};
+  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
 }
 
 function getOrCreateInstallationId(): string {
@@ -53,21 +59,29 @@ function getOrCreateInstallationId(): string {
 }
 
 function readPairingState(): PairingState | undefined {
-  const raw = sessionStorage.getItem(JERKGRAM_PAIRING_KEY);
+  const raw = localStorage.getItem(JERKGRAM_PAIRING_KEY);
   if(!raw) return undefined;
 
   try {
     const parsed = JSON.parse(raw) as PairingState;
-    if(!parsed.nonce || typeof parsed.createdAt !== 'number') return undefined;
+    if(!parsed.nonce || typeof parsed.createdAt !== 'number') {
+      localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+      return undefined;
+    }
+    if(Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
+      localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+      return undefined;
+    }
     return parsed;
   } catch(_) {
+    localStorage.removeItem(JERKGRAM_PAIRING_KEY);
     return undefined;
   }
 }
 
 function storePairingState(nonce: string): void {
   const value: PairingState = {nonce, createdAt: Date.now()};
-  sessionStorage.setItem(JERKGRAM_PAIRING_KEY, JSON.stringify(value));
+  localStorage.setItem(JERKGRAM_PAIRING_KEY, JSON.stringify(value));
 }
 
 export default function SignQRCard(_props: {spec: Spec}) {
@@ -109,7 +123,7 @@ export default function SignQRCard(_props: {spec: Spec}) {
     const installationId = getOrCreateInstallationId();
     const nonce = pairing.nonce;
     const url = `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(nonce)}`;
-    sessionStorage.removeItem(JERKGRAM_PAIRING_KEY);
+    localStorage.removeItem(JERKGRAM_PAIRING_KEY);
     window.location.assign(url);
   }
 
@@ -120,37 +134,29 @@ export default function SignQRCard(_props: {spec: Spec}) {
     toIm();
   }
 
-  async function pollForAcceptedLogin(): Promise<void> {
-    if(polling || stopped || !readPairingState()) return;
-    polling = true;
-    try {
-      while(!stopped && readPairingState()) {
-        try {
-          const loginToken = await exportOrImportLoginToken();
-          if(loginToken._ === 'auth.loginTokenSuccess') {
-            await handleLoginSuccess(loginToken.authorization as any as AuthAuthorization.authAuthorization);
-            return;
-          }
-        } catch(error) {
-          if((error as ApiError).type === 'SESSION_PASSWORD_NEEDED') {
-            setStatus('Additional Telegram verification is required. Restart setup in Jerkgram.');
-            sessionStorage.removeItem(JERKGRAM_PAIRING_KEY);
-            return;
-          }
-        }
-        await pause(FETCH_INTERVAL * 1000);
-      }
-    } finally {
-      polling = false;
-    }
-  }
-
   async function continueSetup(): Promise<void> {
     if(busy()) return;
-    setBusy(true);
-    setStatus('Preparing secure connection…');
 
+    if(!isJerkgramStandalone()) {
+      setStatus('Add Jerkgram Notifications to the Home Screen first.');
+      return;
+    }
+    if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setStatus('Web Push is not available in this browser.');
+      return;
+    }
+
+    setBusy(true);
     try {
+      if(Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+      if(Notification.permission !== 'granted') {
+        setStatus('Allow notifications in iOS Settings to continue.');
+        return;
+      }
+
+      setStatus('Preparing secure connection…');
       const loginToken = await exportOrImportLoginToken();
       if(loginToken._ === 'auth.loginTokenSuccess') {
         await handleLoginSuccess(loginToken.authorization as any as AuthAuthorization.authAuthorization);
@@ -171,12 +177,37 @@ export default function SignQRCard(_props: {spec: Spec}) {
     } catch(error) {
       if((error as ApiError).type === 'SESSION_PASSWORD_NEEDED') {
         setStatus('Additional Telegram verification is required. Restart setup in Jerkgram.');
-        sessionStorage.removeItem(JERKGRAM_PAIRING_KEY);
+        localStorage.removeItem(JERKGRAM_PAIRING_KEY);
       } else {
         setStatus('Could not prepare setup. Try again.');
       }
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function pollForAcceptedLogin(): Promise<void> {
+    if(polling || stopped || !readPairingState()) return;
+    polling = true;
+    try {
+      while(!stopped && readPairingState()) {
+        try {
+          const loginToken = await exportOrImportLoginToken();
+          if(loginToken._ === 'auth.loginTokenSuccess') {
+            await handleLoginSuccess(loginToken.authorization as any as AuthAuthorization.authAuthorization);
+            return;
+          }
+        } catch(error) {
+          if((error as ApiError).type === 'SESSION_PASSWORD_NEEDED') {
+            setStatus('Additional Telegram verification is required. Restart setup in Jerkgram.');
+            localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+            return;
+          }
+        }
+        await pause(FETCH_INTERVAL * 1000);
+      }
+    } finally {
+      polling = false;
     }
   }
 
@@ -195,6 +226,10 @@ export default function SignQRCard(_props: {spec: Spec}) {
     if(readPairingState()) {
       setStatus('Waiting for confirmation in Jerkgram…');
       void pollForAcceptedLogin();
+    } else if(!isJerkgramStandalone()) {
+      setStatus('Add Jerkgram Notifications to the Home Screen first.');
+    } else if('Notification' in window && Notification.permission === 'denied') {
+      setStatus('Allow notifications in iOS Settings to continue.');
     }
   });
 
@@ -255,8 +290,8 @@ def patch_tree(root: Path) -> None:
 def main() -> None:
     patch_tree(ROOT)
     print("[jerkgram-login-token-v02] OK")
-    print("  replaced:", SIGN_QR)
-    print("  flow: export login token -> Jerkgram accept -> Web K success -> reconcile user/install/nonce")
+    print("  flow: Home Screen + permission -> export login token -> Jerkgram accept -> Web K success -> reconcile")
+    print("  pairing: origin-local, 120 second TTL, survives standalone process restart")
 
 
 if __name__ == "__main__":
