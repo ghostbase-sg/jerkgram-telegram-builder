@@ -97,14 +97,22 @@ public final class JerkgramNotificationsStore {
         self.defaults = defaults
     }
 
-    public func record(nativeAccountId: Int64) -> JerkgramNotificationAccountRecord? {
+    public func record(nativeAccountId: Int64, now: Date = Date()) -> JerkgramNotificationAccountRecord? {
         return self.queue.sync {
-            self.loadRecords()[String(nativeAccountId)]
+            var records = self.loadRecords()
+            self.expirePendingPairings(records: &records, now: now.timeIntervalSince1970)
+            self.saveRecords(records)
+            return records[String(nativeAccountId)]
         }
     }
 
     @discardableResult
-    public func beginPairing(nativeAccountId: Int64, telegramUserId: Int64, now: Date = Date(), pairingLifetime: TimeInterval = 120.0) -> Bool {
+    public func beginPairing(
+        nativeAccountId: Int64,
+        telegramUserId: Int64,
+        now: Date = Date(),
+        pairingLifetime: TimeInterval = 120.0
+    ) -> Bool {
         return self.queue.sync {
             var records = self.loadRecords()
             let timestamp = now.timeIntervalSince1970
@@ -126,7 +134,9 @@ public final class JerkgramNotificationsStore {
                 nativeAccountId: nativeAccountId,
                 telegramUserId: telegramUserId
             )
-            guard record.telegramUserId == telegramUserId else {
+            guard record.telegramUserId == telegramUserId,
+                  record.telegramAuthorizationHash == nil else {
+                self.saveRecords(records)
                 return false
             }
             record.lifecycleState = .connecting
@@ -159,7 +169,8 @@ public final class JerkgramNotificationsStore {
             let unexpiredPending = records.values.compactMap { record -> JerkgramNotificationPendingPairing? in
                 guard let pending = record.pendingPairing,
                       pending.expiresAt > timestamp,
-                      pending.nonce == nil else {
+                      pending.nonce == nil,
+                      record.telegramAuthorizationHash == nil else {
                     return nil
                 }
                 return pending
@@ -187,7 +198,7 @@ public final class JerkgramNotificationsStore {
     }
 
     @discardableResult
-    public func completePairing(
+    public func acceptPairingAuthorization(
         nativeAccountId: Int64,
         telegramUserId: Int64,
         authorizationHash: Int64,
@@ -197,15 +208,52 @@ public final class JerkgramNotificationsStore {
             var records = self.loadRecords()
             guard var record = records[String(nativeAccountId)],
                   record.telegramUserId == telegramUserId,
-                  record.pendingPairing?.nonce == nonce else {
+                  record.pendingPairing?.nonce == nonce,
+                  record.telegramAuthorizationHash == nil else {
                 return false
             }
             record.telegramAuthorizationHash = authorizationHash
             record.pendingRevokeAuthorizationHash = nil
-            record.pendingPairing = nil
-            record.lifecycleState = .active
+            record.lifecycleState = .connecting
             record.bridgeProtocolVersion = Self.bridgeProtocolVersion
             records[String(nativeAccountId)] = record
+            self.saveRecords(records)
+            return true
+        }
+    }
+
+    @discardableResult
+    public func completePairing(
+        telegramUserId: Int64,
+        installationId: String,
+        nonce: String,
+        now: Date = Date()
+    ) -> Bool {
+        return self.queue.sync {
+            guard UUID(uuidString: installationId) != nil else {
+                return false
+            }
+            var records = self.loadRecords()
+            let timestamp = now.timeIntervalSince1970
+            let matches = records.values.filter { record in
+                guard let pending = record.pendingPairing else {
+                    return false
+                }
+                return pending.nonce == nonce && pending.expiresAt > timestamp
+            }
+            guard matches.count == 1,
+                  var record = matches.first,
+                  record.telegramUserId == telegramUserId,
+                  record.pendingPairing?.nonce == nonce,
+                  record.telegramAuthorizationHash != nil else {
+                return false
+            }
+            record.installationId = installationId
+            record.pendingPairing = nil
+            record.pendingRevokeAuthorizationHash = nil
+            record.lifecycleState = .active
+            record.bridgeProtocolVersion = Self.bridgeProtocolVersion
+            records[String(record.nativeAccountId)] = record
             self.saveRecords(records)
             return true
         }
@@ -218,8 +266,22 @@ public final class JerkgramNotificationsStore {
                 return
             }
             record.pendingPairing = nil
-            record.lifecycleState = .error
+            record.lifecycleState = record.telegramAuthorizationHash == nil ? .error : .repairRequired
             records[String(nativeAccountId)] = record
+            self.saveRecords(records)
+        }
+    }
+
+    public func markPairingMismatch(nonce: String) {
+        self.queue.sync {
+            var records = self.loadRecords()
+            guard let key = records.first(where: { $0.value.pendingPairing?.nonce == nonce })?.key,
+                  var record = records[key] else {
+                return
+            }
+            record.pendingPairing = nil
+            record.lifecycleState = record.telegramAuthorizationHash == nil ? .error : .repairRequired
+            records[key] = record
             self.saveRecords(records)
         }
     }
@@ -246,6 +308,9 @@ public final class JerkgramNotificationsStore {
                 return
             }
             record.telegramAuthorizationHash = nil
+            record.installationId = nil
+            record.pushPermissionState = nil
+            record.pushSubscriptionState = nil
             record.pendingRevokeAuthorizationHash = nil
             record.pendingPairing = nil
             record.lifecycleState = .disconnected
@@ -289,7 +354,7 @@ public final class JerkgramNotificationsStore {
             }
             record.pendingPairing = nil
             if record.lifecycleState == .connecting {
-                record.lifecycleState = .disconnected
+                record.lifecycleState = record.telegramAuthorizationHash == nil ? .disconnected : .repairRequired
             }
             records[key] = record
         }
@@ -328,8 +393,6 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
             return false
         }
 
-        // The custom scheme is transport, not trust. Malformed Jerkgram authorize
-        // URLs are consumed here and never fall through to Telegram's generic URL parser.
         guard url.absoluteString.utf8.count <= 3072,
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return true
@@ -386,15 +449,11 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] sharedApplicationContext in
-            guard let self else {
-                return
-            }
+            guard let self else { return }
             let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] activeAccounts in
-                guard let self else {
-                    return
-                }
+                guard let self else { return }
 
                 var targetContext: AccountContext?
                 for (recordId, context, _) in activeAccounts.accounts {
@@ -414,9 +473,7 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
                 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] user in
-                    guard let self else {
-                        return
-                    }
+                    guard let self else { return }
                     let accountLabel: String
                     if let username = user?.username, !username.isEmpty {
                         accountLabel = "@\(username)"
@@ -439,9 +496,7 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
                     )
                     alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
                     alert.addAction(UIAlertAction(title: "Connect", style: .default, handler: { [weak self] _ in
-                        guard let self else {
-                            return
-                        }
+                        guard let self else { return }
                         let activeSessionsContext = context.engine.privacy.activeSessions()
                         let _ = (approveAuthTransferToken(
                             account: context.account,
@@ -449,10 +504,8 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
                             activeSessionsContext: activeSessionsContext
                         )
                         |> deliverOnMainQueue).start(next: { [weak self] session in
-                            guard let self else {
-                                return
-                            }
-                            let stored = JerkgramNotificationsStore.shared.completePairing(
+                            guard let self else { return }
+                            let stored = JerkgramNotificationsStore.shared.acceptPairingAuthorization(
                                 nativeAccountId: pending.nativeAccountId,
                                 telegramUserId: pending.telegramUserId,
                                 authorizationHash: session.hash,
@@ -464,7 +517,7 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
                             }
                             let done = UIAlertController(
                                 title: "Jerkgram Notifications",
-                                message: "Notification session connected. Return to Jerkgram Notifications to finish setup.",
+                                message: "Telegram approved the notification session. Return to Jerkgram Notifications to finish verification.",
                                 preferredStyle: .alert
                             )
                             done.addAction(UIAlertAction(title: "OK", style: .default))
@@ -483,6 +536,70 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
 '''
 
 
+RECONCILE_HELPER = r'''    private func handleJerkgramNotificationsReconcileUrl(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "jerkgram",
+              url.host?.lowercased() == "push",
+              url.path == "/reconcile" else {
+            return false
+        }
+        guard url.absoluteString.utf8.count <= 3072,
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return true
+        }
+
+        let queryItems = components.queryItems ?? []
+        var values: [String: String] = [:]
+        for item in queryItems {
+            guard values[item.name] == nil, let value = item.value else {
+                return true
+            }
+            values[item.name] = value
+        }
+        guard queryItems.count == values.count,
+              Set(values.keys) == Set(["v", "nonce", "user", "installation"]),
+              values["v"] == "1",
+              let nonce = values["nonce"],
+              nonce.count >= 32,
+              nonce.count <= 128,
+              nonce.allSatisfy({ character in
+                  switch character {
+                  case "A"..."Z", "a"..."z", "0"..."9", "-", "_": return true
+                  default: return false
+                  }
+              }),
+              let rawUserId = values["user"],
+              rawUserId.count <= 20,
+              rawUserId.allSatisfy({ $0 >= "0" && $0 <= "9" }),
+              let telegramUserId = Int64(rawUserId),
+              telegramUserId > 0,
+              let installationId = values["installation"],
+              UUID(uuidString: installationId) != nil else {
+            return true
+        }
+
+        let completed = JerkgramNotificationsStore.shared.completePairing(
+            telegramUserId: telegramUserId,
+            installationId: installationId,
+            nonce: nonce
+        )
+        if !completed {
+            JerkgramNotificationsStore.shared.markPairingMismatch(nonce: nonce)
+            return true
+        }
+
+        let done = UIAlertController(
+            title: "Jerkgram Notifications",
+            message: "Notifications are connected for this account.",
+            preferredStyle: .alert
+        )
+        done.addAction(UIAlertAction(title: "OK", style: .default))
+        self.mainWindow?.viewController?.present(done, animated: true)
+        return true
+    }
+
+'''
+
+
 def require(value: bool, message: str) -> None:
     if not value:
         raise RuntimeError("[Build139 Notifications foundation] " + message)
@@ -494,20 +611,31 @@ def patch_app_delegate_text(text: str) -> str:
         require(import_anchor in text, "AppDelegate Foundation import missing")
         text = text.replace(import_anchor, import_anchor + "import JerkgramCore\n", 1)
 
-    marker = "private func handleJerkgramNotificationsAuthorizeUrl(_ url: URL) -> Bool"
+    authorize_marker = "private func handleJerkgramNotificationsAuthorizeUrl(_ url: URL) -> Bool"
+    reconcile_marker = "private func handleJerkgramNotificationsReconcileUrl(_ url: URL) -> Bool"
     open_anchor = """    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n"""
-    patched_open = """    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        if self.handleJerkgramNotificationsAuthorizeUrl(url) {\n            return true\n        }\n        self.openUrl(url: url)\n        return true\n    }\n"""
+    old_patched_open = """    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        if self.handleJerkgramNotificationsAuthorizeUrl(url) {\n            return true\n        }\n        self.openUrl(url: url)\n        return true\n    }\n"""
+    patched_open = """    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        if self.handleJerkgramNotificationsAuthorizeUrl(url) {\n            return true\n        }\n        if self.handleJerkgramNotificationsReconcileUrl(url) {\n            return true\n        }\n        self.openUrl(url: url)\n        return true\n    }\n"""
 
-    if marker not in text:
+    if authorize_marker not in text:
         require(text.count(open_anchor) == 1, "AppDelegate open-url anchor count")
-        text = text.replace(open_anchor, AUTHORIZE_HELPER + open_anchor, 1)
+        text = text.replace(open_anchor, AUTHORIZE_HELPER + RECONCILE_HELPER + open_anchor, 1)
+    elif reconcile_marker not in text:
+        marker_index = text.index(authorize_marker)
+        next_dispatch = text.find("    func application(_ application: UIApplication, open url: URL", marker_index)
+        require(next_dispatch >= 0, "AppDelegate dispatch missing after authorize helper")
+        text = text[:next_dispatch] + RECONCILE_HELPER + text[next_dispatch:]
 
     if patched_open not in text:
-        require(text.count(open_anchor) == 1, "AppDelegate authorize dispatch anchor count")
-        text = text.replace(open_anchor, patched_open, 1)
+        if old_patched_open in text:
+            text = text.replace(old_patched_open, patched_open, 1)
+        else:
+            require(text.count(open_anchor) == 1, "AppDelegate notification dispatch anchor count")
+            text = text.replace(open_anchor, patched_open, 1)
 
     for token in (
-        marker,
+        authorize_marker,
+        reconcile_marker,
         'values["v"] == "1"',
         'values["nonce"]',
         'values["token"]',
@@ -516,7 +644,12 @@ def patch_app_delegate_text(text: str) -> str:
         "context.account.peerId.id._internalGetInt64Value() == pending.telegramUserId",
         "approveAuthTransferToken(",
         "authorizationHash: session.hash",
+        "JerkgramNotificationsStore.shared.acceptPairingAuthorization(",
+        'url.path == "/reconcile"',
+        "JerkgramNotificationsStore.shared.completePairing(",
+        "installationId: installationId",
         "if self.handleJerkgramNotificationsAuthorizeUrl(url)",
+        "if self.handleJerkgramNotificationsReconcileUrl(url)",
     ):
         require(token in text, "missing AppDelegate invariant: " + token)
     require("activeAccounts.primary" not in text, "pairing must never guess the primary account")
@@ -529,7 +662,7 @@ def main() -> None:
     NOTIFICATIONS.write_text(NOTIFICATIONS_SOURCE + "\n", encoding="utf-8")
     APP_DELEGATE.write_text(patch_app_delegate_text(APP_DELEGATE.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build139 Notifications foundation] SOURCE PATCHED")
-    print("[Build139 Notifications foundation] bridge v1 / account-scoped pending pairing / exact account accept / authorization hash persistence")
+    print("[Build139 Notifications foundation] accept remains CONNECTING; PWA user-id reconcile is required before ACTIVE")
 
 
 if __name__ == "__main__":
