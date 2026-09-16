@@ -1,0 +1,211 @@
+name: Deploy Jerkgram Notifications Build139 Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "jerkgram-notifications-pages"
+  cancel-in-progress: false
+
+env:
+  # After this one-time workflow migration, ordinary PWA updates only require
+  # changing this builder commit SHA.
+  JERKGRAM_BUILDER_COMMIT: 6567182931ae3c641e06b532c7cfe2035327094f
+  TWEB_COMMIT: e9428f2a90f73d750f16a0b85817820516466364
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch pinned Jerkgram companion source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/ghostbase-sg/jerkgram-telegram-builder.git builder
+          cd builder
+          git checkout "$JERKGRAM_BUILDER_COMMIT"
+          test "$(git rev-parse HEAD)" = "$JERKGRAM_BUILDER_COMMIT"
+
+      - name: Run Build139 PWA contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd builder
+          python -m unittest -v \
+            tests.test_webk_jerkgram_login_token_v02 \
+            tests.test_webk_jerkgram_companion_shell_v02 \
+            tests.test_webk_jerkgram_repair_v06
+          node tests/webpush_handoff_test.mjs
+
+      - name: Fetch pinned Telegram Web K
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --recurse-submodules https://github.com/morethanwords/tweb.git tweb
+          cd tweb
+          git checkout "$TWEB_COMMIT"
+          git submodule update --init --recursive
+          test "$(git rev-parse HEAD)" = "$TWEB_COMMIT"
+
+      - name: Apply Jerkgram notification companion patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python builder/webpush-companion/apply_webk_jerkgram_push_v01.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_login_token_v02.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_companion_shell_v02.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_notification_runtime_v03.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_shell_typecheck_v04.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_device_model_v05.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_repair_v06.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_branding_v01.py "$GITHUB_WORKSPACE/tweb"
+          python builder/webpush-companion/apply_webk_jerkgram_privacy_v01.py "$GITHUB_WORKSPACE/tweb"
+
+      - name: Install Web K dependencies
+        working-directory: tweb
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@11.16.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Typecheck patched Web K
+        working-directory: tweb
+        run: pnpm run typecheck
+
+      - name: Build patched Web K
+        working-directory: tweb
+        run: pnpm exec vite build
+
+      - name: Package notification-only PWA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python builder/webpush-companion/package_webk_dist_v01.py "$GITHUB_WORKSPACE/tweb"
+
+          cp tweb/LICENSE tweb/dist/LICENSE-GPL-3.0.txt
+          cat > tweb/dist/SOURCE.md <<EOF
+          # Jerkgram Notifications Build139 Test
+
+          Notification-only companion for Jerkgram.
+
+          This build contains modified Telegram Web K code and is distributed
+          under the GNU General Public License v3.
+
+          Upstream Telegram Web K:
+          https://github.com/morethanwords/tweb/tree/${TWEB_COMMIT}
+
+          Jerkgram modifications used for this build:
+          https://github.com/ghostbase-sg/jerkgram-telegram-builder/tree/${JERKGRAM_BUILDER_COMMIT}
+
+          See LICENSE-GPL-3.0.txt for the license text.
+          EOF
+
+      - name: Verify deployable Build139 test
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f tweb/dist/index.html
+          test -f tweb/dist/open.html
+          test -f tweb/dist/handoff.js
+          test -f tweb/dist/tap-fallback.js
+          test -f tweb/dist/site.webmanifest
+          test -f tweb/dist/site_apple.webmanifest
+          test -f tweb/dist/LICENSE-GPL-3.0.txt
+          test -f tweb/dist/SOURCE.md
+
+          grep -q '<title>Jerkgram Notifications</title>' tweb/dist/index.html
+          grep -q '"name": "Jerkgram Notifications"' tweb/dist/site.webmanifest
+
+          grep -R -q 'jerkgram://push/authorize?v=1' tweb/dist/*.js
+          grep -R -q 'jerkgram://push/reconcile?v=1' tweb/dist/*.js
+          grep -R -q 'jerkgram.notifications.installation.v1' tweb/dist/*.js
+          grep -R -q 'jerkgram.notifications.pairing.v1' tweb/dist/*.js
+          grep -R -q 'Continue Setup' tweb/dist/*.js
+          grep -R -q 'Manage in Jerkgram' tweb/dist/*.js
+          grep -R -q 'Repair Notifications' tweb/dist/*.js
+          grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
+          grep -q 'jerkgram://push/open' tweb/dist/handoff.js
+
+          if grep -R -q 'jerkgram://push/register\|jerkgram://push/unregister' tweb/dist/*.js; then
+            echo 'Legacy subscription-credential bridge survived' >&2
+            exit 1
+          fi
+
+          if grep -I -n 'web.telegram.org' tweb/dist/index.html tweb/dist/site*.webmanifest; then
+            echo 'Telegram Web origin leaked into deployable metadata' >&2
+            exit 1
+          fi
+
+          if grep -I -n 'https://t.me\|https://telegram.me' tweb/dist/site*.webmanifest; then
+            echo 'Telegram scope extension leaked into companion manifest' >&2
+            exit 1
+          fi
+
+          if find tweb/dist -type f -name '*.map' -print -quit | grep -q .; then
+            echo 'Source map leaked into deployable companion' >&2
+            exit 1
+          fi
+
+          for forbidden in assets/emoji assets/tgs assets/audio assets/img/screenshot.jpg; do
+            if test -e "tweb/dist/$forbidden"; then
+              echo "Forbidden Web K asset leaked: $forbidden" >&2
+              exit 1
+            fi
+          done
+
+          python - <<'PY'
+          from pathlib import Path
+          root = Path('tweb/dist')
+          files = [p for p in root.rglob('*') if p.is_file()]
+          total = sum(p.stat().st_size for p in files)
+          print(f'deployable files={len(files)} bytes={total}')
+          if len(files) > 500:
+              raise SystemExit(f'too many files: {len(files)}')
+          if total > 20 * 1024 * 1024:
+              raise SystemExit(f'deployable unexpectedly large: {total} bytes')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: tweb/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
