@@ -6,16 +6,25 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCHER = REPO / "webpush-companion/apply_webk_jerkgram_companion_shell_v02.py"
+RUNTIME_PATCHER = REPO / "webpush-companion/apply_webk_jerkgram_notification_runtime_v03.py"
 
 
-def load_patcher():
-    if not PATCHER.is_file():
-        raise AssertionError(f"missing Build139 companion shell patcher: {PATCHER}")
-    spec = importlib.util.spec_from_file_location("webk_companion_shell_v02", PATCHER)
+def load_module(path: Path, name: str):
+    if not path.is_file():
+        raise AssertionError(f"missing Build139 patcher: {path}")
+    spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def load_patcher():
+    return load_module(PATCHER, "webk_companion_shell_v02")
+
+
+def load_runtime_patcher():
+    return load_module(RUNTIME_PATCHER, "webk_notification_runtime_v03")
 
 
 MOUNT_AUTH_FIXTURE = r'''import {render} from 'solid-js/web';
@@ -64,7 +73,7 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             self.assertNotIn(forbidden, patched)
 
     def test_signed_in_boot_keeps_only_push_runtime_and_hides_telegram_shell(self):
-        module = load_patcher()
+        module = load_runtime_patcher()
         patched = module.patch_bootstrap_text(BOOTSTRAP_FIXTURE)
         for token in (
             "uiNotificationsManager.constructAndStartAll()",
@@ -119,7 +128,8 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             self.assertIn(token, source)
 
     def test_tree_patch_is_idempotent(self):
-        module = load_patcher()
+        shell_module = load_patcher()
+        runtime_module = load_runtime_patcher()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             mount = root / "src/pages/mountAuthFlow.tsx"
@@ -128,13 +138,15 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             mount.write_text(MOUNT_AUTH_FIXTURE, encoding="utf-8")
             bootstrap.write_text(BOOTSTRAP_FIXTURE, encoding="utf-8")
 
-            module.patch_tree(root)
+            shell_module.patch_tree(root)
+            runtime_module.patch_tree(root)
             first_mount = mount.read_text(encoding="utf-8")
             first_bootstrap = bootstrap.read_text(encoding="utf-8")
             shell = root / "src/lib/jerkgramNotificationsShell.ts"
             first_shell = shell.read_text(encoding="utf-8")
 
-            module.patch_tree(root)
+            shell_module.patch_tree(root)
+            runtime_module.patch_tree(root)
             self.assertEqual(first_mount, mount.read_text(encoding="utf-8"))
             self.assertEqual(first_bootstrap, bootstrap.read_text(encoding="utf-8"))
             self.assertEqual(first_shell, shell.read_text(encoding="utf-8"))
