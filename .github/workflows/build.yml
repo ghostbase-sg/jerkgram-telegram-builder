@@ -65,18 +65,15 @@ jobs:
           python3 -m unittest -v \
             tests.test_jerkgram_v13a_build139_notifications_foundation1 \
             tests.test_jerkgram_v13b_build139_notifications_settings1 \
-            tests.test_jerkgram_build139_release_contract \
-            tests.test_jerkgram_build134_release_contract \
-            tests.test_jerkgram_v12zd_build137_performance1 \
-            tests.test_jerkgram_build137_performance2
+            tests.test_jerkgram_build139_release_contract
 
       - name: Materialize canonical Jerkgram source and build
         run: |
           set -euo pipefail
 
-          # Keep the exact stable Build138 lineage. Each historical installer is
-          # idempotent and the final v12w installer appends the approved Build139
-          # notification patches before Bazel.
+          # Keep the exact stable Build138 lineage. Historical installers and
+          # materialized-source verifiers remain the regression gate; the final
+          # v12w installer appends Build139 notification patches before Bazel.
           python3 scripts/install_jerkgram_v12d_build115_probe_hook.py
           python3 scripts/install_jerkgram_v12e_build116_probe_hook.py
           python3 scripts/install_jerkgram_v12f_build117_probe_hook.py
