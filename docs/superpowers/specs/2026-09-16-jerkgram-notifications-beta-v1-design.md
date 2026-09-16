@@ -90,12 +90,14 @@ NotificationAccount
 - pushPermissionState
 - pushSubscriptionState
 - pendingPairing metadata
-- pendingRevoke metadata
+- pendingRevoke/orphanedRevoke metadata
 ```
 
 Beta v1 exposes only one active `NotificationAccount` in UI, but the storage and code boundaries must permit multiple independent instances later.
 
 Release target: the number of notification-enabled accounts must not have a separate hardcoded PWA limit. If Jerkgram can host seven accounts, all seven should eventually be able to have their own notification authorization inside one installed PWA.
+
+Beta must not rely on upstream Telegram Web K's own account-switcher limit or UI assumptions as the future Jerkgram account limit. The implementation boundary must make it possible to add account-scoped session/storage namespaces or otherwise adapt Web K's underlying multi-account machinery for Jerkgram's required account count.
 
 ## 6. Pairing and authentication
 
@@ -110,12 +112,12 @@ The target flow is based on Telegram's login-token/QR-login protocol rather than
 1. The user opens the notification settings for native Account A and selects Enable Notifications.
 2. Jerkgram creates a short-lived local pending-pairing record bound to Account A.
 3. The user opens the installed Jerkgram Notifications PWA.
-4. The PWA obtains a short-lived Telegram login token using the Web K authorization flow and creates a cryptographically random one-time pairing nonce.
+4. The PWA obtains a short-lived Telegram login token using `auth.exportLoginToken` and creates a cryptographically random one-time pairing nonce.
 5. The PWA hands the temporary token and nonce to Jerkgram through the pairing transport.
 6. Jerkgram accepts the handoff only if a matching non-expired local pending pairing exists.
 7. Jerkgram displays an explicit confirmation naming Account A.
-8. On confirmation, Account A calls the Telegram acceptance method for the login token.
-9. The returned new authorization metadata, including its authorization hash when available from Telegram's authorization object, is associated with Account A for targeted later revocation.
+8. On confirmation, Account A calls `auth.acceptLoginToken(token)`.
+9. Telegram returns the new session's `Authorization`, including its session `hash`; Jerkgram associates that hash with Account A for targeted later revocation.
 10. The newly authorized PWA validates that its Telegram user ID matches Account A before marking pairing complete.
 
 The PWA must never ask for or store a native account's phone number, SMS code, password or 2FA password as part of this pairing UX.
@@ -223,10 +225,12 @@ native Disable Notifications
 → revoke the dedicated Telegram notification authorization
 → confirm successful revoke
 → clear native binding metadata
-→ remove/disable the corresponding push binding
-→ clear PWA-local account binding state
-→ show Not Connected
+→ mark PWA binding/subscription cleanup required
+→ PWA reconciles/cleans its local binding state on the next reachable lifecycle opportunity
+→ show Not Connected in native Jerkgram once Telegram revocation is confirmed
 ```
+
+The authoritative security event is revocation of the Telegram notification authorization. PWA-local storage cleanup may be asynchronous if the PWA is not currently open, because the native app cannot directly erase another origin's browser storage.
 
 Invariant: `OFF` / `Not Connected` must not be shown while the dedicated Telegram notification authorization is still known to be active.
 
@@ -234,11 +238,17 @@ If revocation fails, the UI stays in Disconnecting/Error with Retry rather than 
 
 ### 8.3 Native account logout
 
-Native account logout must attempt to revoke that account's notification authorization first.
+Native account logout must first make a best-effort attempt to revoke that account's notification authorization via `account.resetAuthorization(hash)` while the native Telegram account is still authorized.
 
 If revocation succeeds, logout proceeds normally.
 
-If revocation fails because of connectivity or a temporary Telegram restriction, logout must still be allowed. Jerkgram records a pending revoke task and retries when possible. Push lifecycle must never trap a user inside an account they want to log out of.
+If revocation fails because of connectivity or a temporary Telegram restriction, logout must still be allowed. Jerkgram must not retain the user's native Telegram auth key merely to retry Push cleanup after the user has logged out.
+
+Instead, Jerkgram stores only non-secret orphan/pending cleanup metadata sufficient to recognize the old notification binding. The dedicated notification authorization may remain visible in Telegram Devices until the PWA next becomes reachable.
+
+On the next PWA launch/reconciliation handshake, if native Jerkgram reports that the binding/account no longer exists or is marked orphaned, the PWA must self-revoke its own Telegram notification authorization (for example through its own logout path) and clear its local binding state.
+
+This is an explicit limitation of the backend-free design: if cross-session revoke fails at the exact moment of native logout and the PWA is never opened again, immediate remote cleanup cannot be guaranteed by Jerkgram after the native Telegram auth has been destroyed. The user can still terminate the leftover session manually from Telegram Devices. Push lifecycle must never trap a user inside an account they want to log out of.
 
 ### 8.4 Session removed manually from Telegram Devices
 
@@ -270,13 +280,19 @@ A site update must not force all users to pair again.
 
 ## 9. Revocation mechanism
 
-The intended native revoke mechanism is account-scoped Telegram authorization management rather than a generic local logout toggle.
+The normal native revoke mechanism is Telegram's account-scoped session management:
 
-Jerkgram should retain enough authorization metadata to identify and terminate exactly the notification authorization associated with the native account. Multi-account design requires Account B revocation to have no effect on A/C/etc.
+```text
+account.resetAuthorization(notificationAuthorizationHash)
+```
+
+The hash comes from the `Authorization` returned by `auth.acceptLoginToken` / the account authorizations list and identifies the dedicated notification session.
+
+Jerkgram must retain only enough non-secret metadata to identify and terminate exactly the notification authorization associated with the native account. Multi-account design requires Account B revocation to have no effect on A/C/etc.
 
 Telegram may temporarily refuse cross-session revocation under freshness/security restrictions. This must be represented as an operational failure/pending revoke rather than silently ignored.
 
-The PWA may also need a self-logout/recovery path as a fallback, but the normal user-facing owner of connect/disconnect is native Jerkgram.
+The PWA therefore also needs a self-logout/recovery path for orphan cleanup. That path is not a second user-facing Disconnect control: native Jerkgram remains the normal owner of connect/disconnect, while PWA self-logout is an internal lifecycle recovery mechanism.
 
 ## 10. UX
 
@@ -407,7 +423,7 @@ notification click
 Jerkgram Beta should preserve or implement the same conceptual fallback for iOS reliability:
 
 ```text
-jerkgram://push/open?... 
+jerkgram://push/open?...
 ↕ fallback
 /open.html?to=<validated native URL>
 ```
@@ -424,20 +440,21 @@ This is another useful behavior confirmed by the public Komet PWA, but Jerkgram'
 
 ## 15. Multi-account release path
 
-After Beta v1 is stable, the release extension is conceptually N independent `NotificationAccount` objects inside one PWA installation.
+After Beta v1 is stable, the release target is N independent `NotificationAccount` objects inside one installed PWA.
 
 Requirements for the later multi-account release:
 
 - no separate Home Screen icon per account;
 - one independent Telegram notification authorization per native Telegram account;
-- no PWA-side fixed account-count limit;
-- account-scoped storage namespaces and lifecycle state;
+- no Jerkgram-imposed PWA account-count limit separate from the native client;
+- do not inherit an upstream Web K account-switcher/UI limit as the Jerkgram product limit;
+- account-scoped storage/session namespaces or an equivalent isolated underlying session manager;
 - revoke one account without affecting others;
 - route each notification to the matching native account before opening the peer;
-- logging out Account B only revokes/queues revocation for B;
+- logging out Account B only revokes/queues cleanup for B;
 - UI can list the connected native accounts and their independent states.
 
-Beta must not introduce storage keys, singletons or APIs that make this extension require a complete redesign.
+Beta v1 does not have to solve the full N-account storage implementation. It must, however, avoid global singleton state and APIs that would force a complete redesign when the release implementation adds multiple simultaneous Telegram Web K notification authorizations.
 
 ## 16. Testing and release gate
 
@@ -462,18 +479,19 @@ Device-runtime verification must cover at least:
 15. Disable Notifications actually removes the dedicated Telegram authorization;
 16. revoke failure produces an honest retry state;
 17. native logout is not blocked by revoke failure;
-18. manual Telegram Devices termination becomes Reconnect/Repair;
-19. iOS permission off/on lifecycle;
-20. PWA/service-worker update without forced re-pairing;
-21. PushSubscription change/loss repair;
-22. malformed/replayed/expired pairing handoffs are rejected;
-23. malformed notification routing cannot trigger sensitive native actions.
+18. failed revoke during native logout produces an orphan marker and later PWA self-logout cleanup;
+19. manual Telegram Devices termination becomes Reconnect/Repair;
+20. iOS permission off/on lifecycle;
+21. PWA/service-worker update without forced re-pairing;
+22. PushSubscription change/loss repair;
+23. malformed/replayed/expired pairing handoffs are rejected;
+24. malformed notification routing cannot trigger sensitive native actions.
 
 ## 17. Development and production workflow
 
 All remaining Beta work happens on the test/development path first.
 
-The existing public-test deployment may contain iterative commits and diagnostics. It remains disposable/laboratory infrastructure.
+The existing test deployment may contain iterative commits and diagnostics. It remains laboratory infrastructure.
 
 Do not populate `jerkgram/Jerkgram-Push` with development history during Beta work.
 
@@ -501,7 +519,7 @@ Known design deltas include:
 - current passwordless patch explicitly excludes Web K logout paths;
 - final account-scoped state machine is not yet implemented;
 - final security validation/replay resistance is not yet implemented;
-- final multi-account-ready storage model is not yet implemented;
+- final multi-account-ready storage abstraction is not yet implemented;
 - final Devices branding must be proven on real hardware;
 - final production shell/security hardening is not yet implemented.
 
@@ -515,9 +533,10 @@ The implementation must preserve these invariants:
 2. No native-account phone/password/2FA login UI in the PWA.
 3. One notification authorization belongs to exactly one native Telegram account.
 4. `Not Connected` means the dedicated authorization is actually revoked or no longer exists; no false OFF state.
-5. Native account logout cannot be blocked indefinitely by Push cleanup.
-6. No Jerkgram-owned backend stores Telegram sessions for Beta v1.
-7. Production JS/service-worker code is part of the security boundary and must be auditable.
-8. Tap routing is validated as untrusted input.
-9. Beta UI is single-account, architecture is multi-account-ready.
-10. Production deployment occurs only after the test-origin device-runtime release gate passes.
+5. Native account logout cannot be blocked indefinitely by Push cleanup and must not retain the native auth key solely for cleanup.
+6. If logout-time revoke fails, later cleanup is performed by the orphaned notification PWA session when it next reconciles with Jerkgram; immediate cleanup cannot be guaranteed without a backend once the native auth is gone.
+7. No Jerkgram-owned backend stores Telegram sessions for Beta v1.
+8. Production JS/service-worker code is part of the security boundary and must be auditable.
+9. Tap routing is validated as untrusted input.
+10. Beta UI is single-account, architecture is multi-account-ready and must not inherit Web K UI account-count limits as Jerkgram limits.
+11. Production deployment occurs only after the test-origin device-runtime release gate passes.
