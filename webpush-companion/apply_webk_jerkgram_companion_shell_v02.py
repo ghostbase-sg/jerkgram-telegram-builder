@@ -53,6 +53,15 @@ SHELL_SOURCE = r'''import rootScope from '@lib/rootScope';
 
 let mounted = false;
 
+const JERKGRAM_PAIRING_KEY = 'jerkgram.notifications.pairing.v1';
+const INSTALLATION_ID_KEY = 'jerkgram.notifications.installation.v1';
+const PAIRING_LIFETIME_MS = 120_000;
+
+type PairingState = {
+  nonce: string;
+  createdAt: number;
+};
+
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag);
   if(text !== undefined) element.textContent = text;
@@ -68,6 +77,34 @@ function userLabel(user: any): string {
   if(user?.username) return '@' + user.username;
   const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
   return name || 'Telegram account';
+}
+
+function readPendingPairing(): PairingState | undefined {
+  const raw = localStorage.getItem(JERKGRAM_PAIRING_KEY);
+  if(!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as PairingState;
+    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
+      localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+      return undefined;
+    }
+    return parsed;
+  } catch(_) {
+    localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+    return undefined;
+  }
+}
+
+function recoverPendingReconcile(self: any): boolean {
+  const pairing = readPendingPairing();
+  const installationId = localStorage.getItem(INSTALLATION_ID_KEY);
+  if(!pairing || !installationId || !self?.id) return false;
+
+  const userId = String(self.id);
+  const url = `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(pairing.nonce)}`;
+  localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+  window.location.assign(url);
+  return true;
 }
 
 async function getSubscriptionState(): Promise<'connected' | 'missing' | 'unavailable'> {
@@ -182,6 +219,11 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     try { self = await rootScope.managers.appUsersManager.getSelf(); } catch(_) {}
     accountValue.textContent = userLabel(self);
 
+    // If iOS killed the standalone process after Telegram accepted the login token
+    // but before the deep-link reconcile was delivered, the short-lived local
+    // pairing record lets the signed-in companion finish that one pending handoff.
+    if(self && recoverPendingReconcile(self)) return;
+
     const standalone = isStandalone();
     const permission = 'Notification' in window ? Notification.permission : 'denied';
     const subscription = await getSubscriptionState();
@@ -227,7 +269,6 @@ def patch_mount_auth_text(text: str) -> str:
     end_marker = "\nif(import.meta.hot)"
     end = text.find(end_marker, start)
     if end < 0:
-        # Minimal unit-test fixtures may not carry the HMR trailer.
         end = len(text)
     return text[:start] + AUTH_STATE_FUNCTION + text[end:]
 
@@ -254,7 +295,7 @@ def main() -> None:
     print("[jerkgram-companion-shell-v02] OK")
     print("  auth: all unauthorised states -> Jerkgram login-token setup")
     print("  signed in: Telegram runtime retained for push, Telegram chat UI hidden")
-    print("  shell: account + permission + session + subscription + native management")
+    print("  shell: account + permission + session + subscription + pending reconcile recovery")
 
 
 if __name__ == "__main__":
