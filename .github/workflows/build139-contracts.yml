@@ -5,9 +5,12 @@ on:
     branches:
       - dev/build139-notifications-foundation
     paths:
-      - "scripts/*build139*notifications*"
+      - "scripts/*build139*"
+      - "scripts/install_jerkgram_v12w_build133_probe_hook.py"
       - "tests/test_jerkgram_v13a_build139_notifications_foundation1.py"
       - "tests/test_jerkgram_v13b_build139_notifications_settings1.py"
+      - "tests/test_jerkgram_build139_release_contract.py"
+      - ".github/workflows/build.yml"
       - ".github/workflows/build139-contracts.yml"
 
 permissions:
@@ -25,4 +28,5 @@ jobs:
         run: |
           python -m unittest -v \
             tests.test_jerkgram_v13a_build139_notifications_foundation1 \
-            tests.test_jerkgram_v13b_build139_notifications_settings1
+            tests.test_jerkgram_v13b_build139_notifications_settings1 \
+            tests.test_jerkgram_build139_release_contract
