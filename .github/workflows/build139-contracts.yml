@@ -9,6 +9,7 @@ on:
       - "scripts/install_jerkgram_v12w_build133_probe_hook.py"
       - "tests/test_jerkgram_build139_appdelegate_import_compat.py"
       - "tests/test_jerkgram_v13a_build139_notifications_foundation1.py"
+      - "tests/test_jerkgram_v13a1_build139_reconcile_compile_fix1.py"
       - "tests/test_jerkgram_v13b_build139_notifications_settings1.py"
       - "tests/test_jerkgram_build139_release_contract.py"
       - ".github/workflows/build.yml"
@@ -30,5 +31,6 @@ jobs:
           python -m unittest -v \
             tests.test_jerkgram_build139_appdelegate_import_compat \
             tests.test_jerkgram_v13a_build139_notifications_foundation1 \
+            tests.test_jerkgram_v13a1_build139_reconcile_compile_fix1 \
             tests.test_jerkgram_v13b_build139_notifications_settings1 \
             tests.test_jerkgram_build139_release_contract

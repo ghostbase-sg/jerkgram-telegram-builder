@@ -53,6 +53,7 @@ jobs:
           python3 -m py_compile \
             scripts/apply_jerkgram_v13a_build139_notifications_foundation1.py \
             scripts/verify_jerkgram_v13a_build139_notifications_foundation1.py \
+            scripts/apply_jerkgram_v13a1_build139_reconcile_compile_fix1.py \
             scripts/apply_jerkgram_v13b_build139_notifications_settings1.py \
             scripts/verify_jerkgram_v13b_build139_notifications_settings1.py \
             scripts/apply_jerkgram_v13c_build139_release_identity1.py \
@@ -64,6 +65,7 @@ jobs:
 
           python3 -m unittest -v \
             tests.test_jerkgram_v13a_build139_notifications_foundation1 \
+            tests.test_jerkgram_v13a1_build139_reconcile_compile_fix1 \
             tests.test_jerkgram_v13b_build139_notifications_settings1 \
             tests.test_jerkgram_build139_release_contract
 
