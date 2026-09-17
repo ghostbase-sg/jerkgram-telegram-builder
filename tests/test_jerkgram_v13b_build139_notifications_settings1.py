@@ -161,6 +161,20 @@ items[.advanced]!.append(
         }
     )
 )
+items[.advanced]!.append(
+    PeerInfoScreenDisclosureItem(
+        id: 7,
+        text: presentationData.strings.jerkgram.about,
+        icon: UIImage(bundleImageName: "Chat/Context Menu/Info"),
+        action: {
+            UserDefaults.standard.set(
+                "about",
+                forKey: "jerkgram.Settings.InitialPage"
+            )
+            interaction.openSettings(.ghostbase)
+        }
+    )
+)
 '''
 
 STRINGS_FIXTURE = r'''import Foundation
@@ -171,62 +185,60 @@ public struct JerkgramStrings {
 
 
 class Build139NotificationsSettingsContract(unittest.TestCase):
-    def test_main_jerkgram_row_opens_reachable_root_containing_notifications(self):
+    def test_notifications_is_a_direct_main_settings_row_without_nested_jerkgram_root(self):
         module = load_patcher()
         self.assertTrue(hasattr(module, "patch_main_items_text"))
 
         patched_settings = module.patch_settings_text(SETTINGS_FIXTURE)
         patched_main_items = module.patch_main_items_text(MAIN_ITEMS_FIXTURE)
 
-        self.assertIn('case "root":\n        page = .root', patched_settings)
+        self.assertIn('case "notifications":\n        page = .notifications', patched_settings)
         self.assertIn(
             'text: presentationData.strings.jerkgram.settingsTitle',
             patched_main_items,
         )
         self.assertIn(
-            '"root",\n                forKey: "jerkgram.Settings.InitialPage"',
+            '"home",\n                forKey: "jerkgram.Settings.InitialPage"',
             patched_main_items,
         )
-        self.assertIn(".notifications)", patched_settings)
-
-    def test_notifications_row_is_wired_into_the_live_root_array(self):
-        module = load_patcher()
-        decoy = r'''private let staleAboutRows: [GhostBaseSettingsEntry] = [
-    .disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)
-]
-
-'''
-        live_source = SETTINGS_FIXTURE.replace(
-            '.disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)',
-            '.disclosure(1, 9, strings.about, "Chat/Context Menu/Info", .about)',
-            1,
-        )
-
-        patched = module.patch_settings_text(decoy + live_source)
-        root_start, root_end = module.block_bounds(patched, "if page == .root {")
-        root = patched[root_start:root_end]
-        decoy_after = patched[:root_start]
-
-        self.assertEqual(root.count(".notifications)"), 1)
+        self.assertIn("text: presentationData.strings.jerkgram.notifications", patched_main_items)
         self.assertIn(
-            '.disclosure(1, 10, strings.notifications, "Chat/Context Menu/MessageBubble", .notifications)',
-            root,
+            '"notifications",\n                forKey: "jerkgram.Settings.InitialPage"',
+            patched_main_items,
         )
-        self.assertNotIn(".notifications)", decoy_after)
+        self.assertNotIn("BUILD139_NOTIFICATIONS_ROOT_ROUTE1", patched_main_items)
 
-    def test_materialized_verifier_rejects_a_destination_outside_live_root(self):
+        root_start, root_end = module.block_bounds(patched_settings, "if page == .root {")
+        self.assertNotIn(".notifications)", patched_settings[root_start:root_end])
+
+    def test_notifications_row_is_wired_into_the_live_main_settings_group(self):
+        module = load_patcher()
+        decoy = MAIN_ITEMS_FIXTURE.replace(
+            "// MARK: GhostBase v1.0R Main Settings Group\n", "", 1
+        ).replace(
+            "// MARK: Jerkgram v1.2D BUILD115_MAIN_SETTINGS_LOCALIZATION1\n", "", 1
+        )
+        patched = module.patch_main_items_text(decoy + MAIN_ITEMS_FIXTURE)
+        marker = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_MAIN_ROW1"
+        live = patched[patched.index(marker):]
+        decoy_after = patched[:patched.index(marker)]
+
+        self.assertEqual(live.count("strings.jerkgram.notifications"), 1)
+        self.assertIn(
+            'text: presentationData.strings.jerkgram.notifications',
+            live,
+        )
+        self.assertNotIn("strings.jerkgram.notifications", decoy_after)
+
+    def test_materialized_verifier_rejects_a_main_row_without_notifications_route(self):
         patcher = load_patcher()
         verifier = load_verifier()
-        patched = patcher.patch_settings_text(SETTINGS_FIXTURE)
-        root_start, root_end = patcher.block_bounds(patched, "if page == .root {")
-        root = patched[root_start:root_end]
-        notification_row = next(line for line in root.splitlines() if ".notifications)" in line)
-        broken_root = root.replace(notification_row + "\n", "", 1)
-        broken = notification_row + "\n" + patched[:root_start] + broken_root + patched[root_end:]
+        patched = patcher.patch_main_items_text(MAIN_ITEMS_FIXTURE)
+        broken = patched.replace('"notifications"', '"home"', 1)
 
-        self.assertTrue(hasattr(verifier, "verify_settings_text"))
+        self.assertTrue(hasattr(verifier, "verify_main_items_text"))
         with self.assertRaises(RuntimeError):
-            verifier.verify_settings_text(broken)
+            verifier.verify_main_items_text(broken)
 
     def test_notifications_is_a_native_settings_destination_with_account_scoped_status(self):
         module = load_patcher()

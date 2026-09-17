@@ -12,7 +12,7 @@ MAIN_ITEMS = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/So
 
 MARKER = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_SETTINGS1"
 STRINGS_MARKER = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_SETTINGS_STRINGS1"
-MAIN_ROUTE_MARKER = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_ROOT_ROUTE1"
+MAIN_ROW_MARKER = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_MAIN_ROW1"
 TEST_COMPANION_URL = "https://pixxxionix.github.io/jerkgram-notifications/"
 
 
@@ -260,29 +260,77 @@ def patch_root_notifications_row(text: str) -> str:
 
 
 def patch_main_items_text(text: str) -> str:
-    if MAIN_ROUTE_MARKER in text:
-        require(text.count(MAIN_ROUTE_MARKER) == 1, "main settings route marker is ambiguous")
-        marker_start = text.index(MAIN_ROUTE_MARKER)
+    if MAIN_ROW_MARKER in text:
+        require(text.count(MAIN_ROW_MARKER) == 1, "main settings row marker is ambiguous")
+        marker_start = text.index(MAIN_ROW_MARKER)
         route_end = text.find("interaction.openSettings(.ghostbase)", marker_start)
-        require(route_end >= 0, "marked Jerkgram main row action missing")
+        require(route_end >= 0, "marked Notifications main row action missing")
         route = text[marker_start:route_end]
-        require('"root"' in route, "marked Jerkgram main row does not target root")
+        require("strings.jerkgram.notifications" in route, "marked Notifications main row title missing")
+        require('"notifications"' in route, "marked Notifications main row route missing")
         return text
 
-    title = "text: presentationData.strings.jerkgram.settingsTitle"
-    title_index = text.find(title)
-    require(title_index >= 0, "localized Jerkgram main row missing")
-    row_start = text.rfind("items[.", 0, title_index)
-    route_end = text.find("interaction.openSettings(.ghostbase)", title_index)
-    require(row_start >= 0 and route_end >= 0, "Jerkgram main row bounds missing")
-    route = text[row_start:route_end]
-    pattern = re.compile(
-        r'(UserDefaults\.standard\.set\(\s*)"home"(,\s*forKey:\s*"jerkgram\.Settings\.InitialPage")',
-        re.S,
-    )
-    route, count = pattern.subn(r'\1"root"\2', route, count=1)
-    require(count == 1, "Jerkgram main row home route missing")
-    return text[:row_start] + MAIN_ROUTE_MARKER + "\n" + route + text[route_end:]
+    group_marker = "// MARK: Jerkgram v1.2D BUILD115_MAIN_SETTINGS_LOCALIZATION1"
+    require(text.count(group_marker) == 1, "localized Jerkgram main settings group marker mismatch")
+    group_start = text.index(group_marker)
+    about_title = "text: presentationData.strings.jerkgram.about"
+    about_index = text.find(about_title, group_start)
+    require(about_index >= 0, "localized Jerkgram About main row missing")
+    about_row_start = text.rfind("items[.", group_start, about_index)
+    require(about_row_start >= group_start, "Jerkgram About main row start missing")
+
+    open_index = text.find("(", about_row_start)
+    require(open_index >= 0, "Jerkgram About append opening bracket missing")
+    depth = 0
+    in_string = False
+    escaped = False
+    about_row_end = None
+    for index in range(open_index, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                about_row_end = index + 1
+                break
+    require(about_row_end is not None, "Jerkgram About append closing bracket missing")
+
+    group = text[group_start:about_row_end]
+    sections = re.findall(r"items\[\.(\w+)\]!\.append", group)
+    require(sections and len(set(sections)) == 1, "Jerkgram main settings section mismatch")
+    ids = [int(value) for value in re.findall(r"PeerInfoScreenDisclosureItem\(\s*id:\s*(\d+)", group)]
+    require(ids, "Jerkgram main settings ids missing")
+    indent_start = text.rfind("\n", 0, about_row_start) + 1
+    indent = text[indent_start:about_row_start]
+    section = sections[0]
+    notification_id = max(ids) + 1
+    row = f'''{MAIN_ROW_MARKER}
+{indent}items[.{section}]!.append(
+{indent}    PeerInfoScreenDisclosureItem(
+{indent}        id: {notification_id},
+{indent}        text: presentationData.strings.jerkgram.notifications,
+{indent}        icon: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"),
+{indent}        action: {{
+{indent}            UserDefaults.standard.set(
+{indent}                "notifications",
+{indent}                forKey: "jerkgram.Settings.InitialPage"
+{indent}            )
+{indent}            interaction.openSettings(.ghostbase)
+{indent}        }}
+{indent}    )
+{indent})'''
+    return text[:about_row_end] + "\n" + row + text[about_row_end:]
 
 
 def patch_strings_text(text: str) -> str:
@@ -304,8 +352,8 @@ def patch_settings_text(text: str) -> str:
     text = replace_once(
         text,
         '    switch rawPage {\n    case "ghostMode":\n',
-        '    switch rawPage {\n    case "root":\n        page = .root\n    case "ghostMode":\n',
-        "root settings controller route",
+        '    switch rawPage {\n    case "notifications":\n        page = .notifications\n    case "ghostMode":\n',
+        "notifications settings controller route",
     )
 
     text = replace_once(
@@ -328,8 +376,6 @@ def patch_settings_text(text: str) -> str:
         "        case .debugResearch:\n            return strings.debugResearch\n        case .notifications:\n            return strings.notifications\n        case .about:\n",
         "localized notifications page title",
     )
-
-    text = patch_root_notifications_row(text)
 
     entries_anchor = "private func ghostBaseSettingsEntries("
     require(text.count(entries_anchor) == 1, "settings entries owner mismatch")

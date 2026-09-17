@@ -61,29 +61,30 @@ def verify_settings_text(settings: str) -> None:
     ):
         require(token in settings, "settings invariant missing: " + token)
     require("push.jerkgram.app" not in settings, "production push origin leaked into Build139 test flow")
-    require('case "root":\n        page = .root' in settings, "controller does not expose the Jerkgram root route")
+    require(
+        'case "notifications":\n        page = .notifications' in settings,
+        "controller does not expose the direct Notifications route",
+    )
 
     root_start, root_end = block_bounds(settings, "if page == .root {")
     root = settings[root_start:root_end]
-    require(root.count(".notifications)") == 1, "live root must contain exactly one Notifications destination")
-    require("strings.notifications" in root, "live root Notifications title missing")
-    require('"Chat/Context Menu/MessageBubble"' in root, "live root Notifications icon missing")
+    require(".notifications)" not in root, "nested Notifications destination survived in Jerkgram root")
 
 
 def verify_main_items_text(main_items: str) -> None:
-    marker = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_ROOT_ROUTE1"
-    require(main_items.count(marker) == 1, "Jerkgram root route marker count != 1")
+    marker = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_MAIN_ROW1"
+    require(main_items.count(marker) == 1, "Notifications main row marker count != 1")
     start = main_items.index(marker)
     end = main_items.find("interaction.openSettings(.ghostbase)", start)
-    require(end >= 0, "Jerkgram main row action missing")
+    require(end >= 0, "Notifications main row action missing")
     route = main_items[start:end]
     require(
-        "text: presentationData.strings.jerkgram.settingsTitle" in route,
-        "root route is not owned by the visible Jerkgram row",
+        "text: presentationData.strings.jerkgram.notifications" in route,
+        "visible Notifications main row title missing",
     )
     require(
-        '"root"' in route and 'forKey: "jerkgram.Settings.InitialPage"' in route,
-        "visible Jerkgram row does not target root",
+        '"notifications"' in route and 'forKey: "jerkgram.Settings.InitialPage"' in route,
+        "visible Notifications main row does not target Notifications",
     )
 
 
