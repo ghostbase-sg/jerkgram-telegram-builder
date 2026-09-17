@@ -72,6 +72,22 @@ private enum GhostBaseSettingsPage: Equatable {
     }
 }
 
+public func ghostBaseSettingsController(context: AccountContext) -> ViewController {
+    let rawPage = UserDefaults.standard.string(
+        forKey: "GhostBase.Settings.InitialPage"
+    ) ?? "home"
+
+    let page: GhostBaseSettingsPage
+    switch rawPage {
+    case "ghostMode":
+        page = .ghostMode
+    default:
+        page = .home
+    }
+
+    return ghostBaseSettingsPageController(context: context, page: page)
+}
+
 private func ghostBaseSettingsEntries(state: GhostBaseSettingsState, context: AccountContext, page: GhostBaseSettingsPage, strings: JerkgramStrings) -> [GhostBaseSettingsEntry] {
     if page == .root {
         return [
@@ -115,6 +131,38 @@ private func controller(context: AccountContext) {
 }
 '''
 
+MAIN_ITEMS_FIXTURE = r'''// MARK: GhostBase v1.0R Main Settings Group
+// MARK: Jerkgram v1.2D BUILD115_MAIN_SETTINGS_LOCALIZATION1
+items[.advanced]!.append(
+    PeerInfoScreenDisclosureItem(
+        id: 0,
+        text: presentationData.strings.jerkgram.settingsTitle,
+        icon: UIImage(bundleImageName: "GhostBaseHome"),
+        action: {
+            UserDefaults.standard.set(
+                "home",
+                forKey: "GhostBase.Settings.InitialPage"
+            )
+            interaction.openSettings(.ghostbase)
+        }
+    )
+)
+items[.advanced]!.append(
+    PeerInfoScreenDisclosureItem(
+        id: 1,
+        text: presentationData.strings.jerkgram.ghostMode,
+        icon: UIImage(bundleImageName: "GhostBaseGhostMode"),
+        action: {
+            UserDefaults.standard.set(
+                "ghostMode",
+                forKey: "GhostBase.Settings.InitialPage"
+            )
+            interaction.openSettings(.ghostbase)
+        }
+    )
+)
+'''
+
 STRINGS_FIXTURE = r'''import Foundation
 public struct JerkgramStrings {
     public let languageCode: String
@@ -123,6 +171,24 @@ public struct JerkgramStrings {
 
 
 class Build139NotificationsSettingsContract(unittest.TestCase):
+    def test_main_jerkgram_row_opens_reachable_root_containing_notifications(self):
+        module = load_patcher()
+        self.assertTrue(hasattr(module, "patch_main_items_text"))
+
+        patched_settings = module.patch_settings_text(SETTINGS_FIXTURE)
+        patched_main_items = module.patch_main_items_text(MAIN_ITEMS_FIXTURE)
+
+        self.assertIn('case "root":\n        page = .root', patched_settings)
+        self.assertIn(
+            'text: presentationData.strings.jerkgram.settingsTitle',
+            patched_main_items,
+        )
+        self.assertIn(
+            '"root",\n                forKey: "GhostBase.Settings.InitialPage"',
+            patched_main_items,
+        )
+        self.assertIn(".notifications)", patched_settings)
+
     def test_notifications_row_is_wired_into_the_live_root_array(self):
         module = load_patcher()
         decoy = r'''private let staleAboutRows: [GhostBaseSettingsEntry] = [

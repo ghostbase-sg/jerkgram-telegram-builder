@@ -8,9 +8,11 @@ import re
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 STRINGS = ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+MAIN_ITEMS = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift"
 
 MARKER = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_SETTINGS1"
 STRINGS_MARKER = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_SETTINGS_STRINGS1"
+MAIN_ROUTE_MARKER = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_ROOT_ROUTE1"
 TEST_COMPANION_URL = "https://pixxxionix.github.io/jerkgram-notifications/"
 
 
@@ -257,6 +259,32 @@ def patch_root_notifications_row(text: str) -> str:
     return text[:start] + root + text[end:]
 
 
+def patch_main_items_text(text: str) -> str:
+    if MAIN_ROUTE_MARKER in text:
+        require(text.count(MAIN_ROUTE_MARKER) == 1, "main settings route marker is ambiguous")
+        marker_start = text.index(MAIN_ROUTE_MARKER)
+        route_end = text.find("interaction.openSettings(.ghostbase)", marker_start)
+        require(route_end >= 0, "marked Jerkgram main row action missing")
+        route = text[marker_start:route_end]
+        require('"root"' in route, "marked Jerkgram main row does not target root")
+        return text
+
+    title = "text: presentationData.strings.jerkgram.settingsTitle"
+    title_index = text.find(title)
+    require(title_index >= 0, "localized Jerkgram main row missing")
+    row_start = text.rfind("items[.", 0, title_index)
+    route_end = text.find("interaction.openSettings(.ghostbase)", title_index)
+    require(row_start >= 0 and route_end >= 0, "Jerkgram main row bounds missing")
+    route = text[row_start:route_end]
+    pattern = re.compile(
+        r'(UserDefaults\.standard\.set\(\s*)"home"(,\s*forKey:\s*"GhostBase\.Settings\.InitialPage")',
+        re.S,
+    )
+    route, count = pattern.subn(r'\1"root"\2', route, count=1)
+    require(count == 1, "Jerkgram main row home route missing")
+    return text[:row_start] + MAIN_ROUTE_MARKER + "\n" + route + text[route_end:]
+
+
 def patch_strings_text(text: str) -> str:
     if STRINGS_MARKER in text:
         require(text.count(STRINGS_MARKER) == 1, "strings marker is ambiguous")
@@ -272,6 +300,13 @@ def patch_settings_text(text: str) -> str:
         return text
 
     require("import JerkgramCore" in text, "JerkgramCore import missing")
+
+    text = replace_once(
+        text,
+        '    switch rawPage {\n    case "ghostMode":\n',
+        '    switch rawPage {\n    case "root":\n        page = .root\n    case "ghostMode":\n',
+        "root settings controller route",
+    )
 
     text = replace_once(
         text,
@@ -334,8 +369,10 @@ def patch_settings_text(text: str) -> str:
 def main() -> None:
     require(SETTINGS.is_file(), "Settings owner missing: " + str(SETTINGS))
     require(STRINGS.is_file(), "JerkgramStrings owner missing: " + str(STRINGS))
+    require(MAIN_ITEMS.is_file(), "Main settings owner missing: " + str(MAIN_ITEMS))
     SETTINGS.write_text(patch_settings_text(SETTINGS.read_text(encoding="utf-8")), encoding="utf-8")
     STRINGS.write_text(patch_strings_text(STRINGS.read_text(encoding="utf-8")), encoding="utf-8")
+    MAIN_ITEMS.write_text(patch_main_items_text(MAIN_ITEMS.read_text(encoding="utf-8")), encoding="utf-8")
     print("[Build139 Notifications settings] SOURCE PATCHED")
     print("[Build139 Notifications settings] native account owns enable/disable; explicit disable waits for targeted revoke")
 

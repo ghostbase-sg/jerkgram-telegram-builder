@@ -7,6 +7,7 @@ import os
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
 SETTINGS = ROOT / "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
 STRINGS = ROOT / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+MAIN_ITEMS = ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift"
 
 
 def require(value: bool, message: str) -> None:
@@ -60,6 +61,7 @@ def verify_settings_text(settings: str) -> None:
     ):
         require(token in settings, "settings invariant missing: " + token)
     require("push.jerkgram.app" not in settings, "production push origin leaked into Build139 test flow")
+    require('case "root":\n        page = .root' in settings, "controller does not expose the Jerkgram root route")
 
     root_start, root_end = block_bounds(settings, "if page == .root {")
     root = settings[root_start:root_end]
@@ -68,13 +70,33 @@ def verify_settings_text(settings: str) -> None:
     require('"Chat/Context Menu/MessageBubble"' in root, "live root Notifications icon missing")
 
 
+def verify_main_items_text(main_items: str) -> None:
+    marker = "// MARK: Jerkgram v1.3B BUILD139_NOTIFICATIONS_ROOT_ROUTE1"
+    require(main_items.count(marker) == 1, "Jerkgram root route marker count != 1")
+    start = main_items.index(marker)
+    end = main_items.find("interaction.openSettings(.ghostbase)", start)
+    require(end >= 0, "Jerkgram main row action missing")
+    route = main_items[start:end]
+    require(
+        "text: presentationData.strings.jerkgram.settingsTitle" in route,
+        "root route is not owned by the visible Jerkgram row",
+    )
+    require(
+        '"root"' in route and 'forKey: "GhostBase.Settings.InitialPage"' in route,
+        "visible Jerkgram row does not target root",
+    )
+
+
 def main() -> None:
     require(SETTINGS.is_file(), "Settings owner missing")
     require(STRINGS.is_file(), "JerkgramStrings missing")
+    require(MAIN_ITEMS.is_file(), "Main settings owner missing")
     settings = SETTINGS.read_text(encoding="utf-8")
     strings = STRINGS.read_text(encoding="utf-8")
+    main_items = MAIN_ITEMS.read_text(encoding="utf-8")
 
     verify_settings_text(settings)
+    verify_main_items_text(main_items)
 
     for token in (
         "var notifications: String",
