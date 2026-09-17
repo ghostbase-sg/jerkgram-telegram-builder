@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import re
 
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
@@ -197,6 +198,65 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def block_bounds(text: str, signature: str) -> tuple[int, int]:
+    start = text.find(signature)
+    require(start >= 0, "missing block: " + signature)
+    brace = text.find("{", start)
+    require(brace >= 0, "missing opening brace: " + signature)
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(brace, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return start, index + 1
+    raise RuntimeError("[Build139 Notifications settings] unbalanced block: " + signature)
+
+
+def patch_root_notifications_row(text: str) -> str:
+    start, end = block_bounds(text, "if page == .root {")
+    root = text[start:end]
+    require(".notifications)" not in root, "live root already contains Notifications without marker")
+
+    about_pattern = re.compile(
+        r'(?m)^(?P<indent>[ \t]*)\.disclosure\(\s*(?P<section>\d+),\s*(?P<index>\d+),\s*strings\.about,\s*"[^"]+",\s*\.about\)(?P<comma>,?)\s*$'
+    )
+    matches = list(about_pattern.finditer(root))
+    require(len(matches) == 1, f"live root About row: expected one, found {len(matches)}")
+    match = matches[0]
+    section = int(match.group("section"))
+    disclosure_ids = [
+        int(value)
+        for value in re.findall(rf"\.disclosure\(\s*{section},\s*(\d+)", root)
+    ]
+    require(disclosure_ids, "live root disclosure ids missing")
+    notifications_index = max(disclosure_ids) + 1
+    about_line = match.group(0).rstrip()
+    if not about_line.endswith(","):
+        about_line += ","
+    notifications_row = (
+        f'\n{match.group("indent")}.disclosure({section}, {notifications_index}, strings.notifications, '
+        '"Chat/Context Menu/MessageBubble", .notifications)'
+    )
+    root = root[:match.start()] + about_line + notifications_row + root[match.end():]
+    require(root.count(".notifications)") == 1, "Notifications destination is not unique in live root")
+    return text[:start] + root + text[end:]
+
+
 def patch_strings_text(text: str) -> str:
     if STRINGS_MARKER in text:
         require(text.count(STRINGS_MARKER) == 1, "strings marker is ambiguous")
@@ -234,13 +294,7 @@ def patch_settings_text(text: str) -> str:
         "localized notifications page title",
     )
 
-    root_about = '.disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)'
-    require(text.count(root_about) == 1, "root About row anchor mismatch")
-    text = text.replace(
-        root_about,
-        root_about + ',\n            .disclosure(0, 10, strings.notifications, "Chat/Context Menu/MessageBubble", .notifications)',
-        1,
-    )
+    text = patch_root_notifications_row(text)
 
     entries_anchor = "private func ghostBaseSettingsEntries("
     require(text.count(entries_anchor) == 1, "settings entries owner mismatch")

@@ -5,12 +5,23 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PATCHER = REPO / "scripts/apply_jerkgram_v13b_build139_notifications_settings1.py"
+VERIFIER = REPO / "scripts/verify_jerkgram_v13b_build139_notifications_settings1.py"
 
 
 def load_patcher():
     if not PATCHER.is_file():
         raise AssertionError(f"missing Build139 notification settings patcher: {PATCHER}")
     spec = importlib.util.spec_from_file_location("build139_notifications_settings", PATCHER)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_verifier():
+    if not VERIFIER.is_file():
+        raise AssertionError(f"missing Build139 notification settings verifier: {VERIFIER}")
+    spec = importlib.util.spec_from_file_location("build139_notifications_settings_verifier", VERIFIER)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
@@ -112,6 +123,45 @@ public struct JerkgramStrings {
 
 
 class Build139NotificationsSettingsContract(unittest.TestCase):
+    def test_notifications_row_is_wired_into_the_live_root_array(self):
+        module = load_patcher()
+        decoy = r'''private let staleAboutRows: [GhostBaseSettingsEntry] = [
+    .disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)
+]
+
+'''
+        live_source = SETTINGS_FIXTURE.replace(
+            '.disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)',
+            '.disclosure(1, 9, strings.about, "Chat/Context Menu/Info", .about)',
+            1,
+        )
+
+        patched = module.patch_settings_text(decoy + live_source)
+        root_start, root_end = module.block_bounds(patched, "if page == .root {")
+        root = patched[root_start:root_end]
+        decoy_after = patched[:root_start]
+
+        self.assertEqual(root.count(".notifications)"), 1)
+        self.assertIn(
+            '.disclosure(1, 10, strings.notifications, "Chat/Context Menu/MessageBubble", .notifications)',
+            root,
+        )
+        self.assertNotIn(".notifications)", decoy_after)
+
+    def test_materialized_verifier_rejects_a_destination_outside_live_root(self):
+        patcher = load_patcher()
+        verifier = load_verifier()
+        patched = patcher.patch_settings_text(SETTINGS_FIXTURE)
+        root_start, root_end = patcher.block_bounds(patched, "if page == .root {")
+        root = patched[root_start:root_end]
+        notification_row = next(line for line in root.splitlines() if ".notifications)" in line)
+        broken_root = root.replace(notification_row + "\n", "", 1)
+        broken = notification_row + "\n" + patched[:root_start] + broken_root + patched[root_end:]
+
+        self.assertTrue(hasattr(verifier, "verify_settings_text"))
+        with self.assertRaises(RuntimeError):
+            verifier.verify_settings_text(broken)
+
     def test_notifications_is_a_native_settings_destination_with_account_scoped_status(self):
         module = load_patcher()
         patched = module.patch_settings_text(SETTINGS_FIXTURE)
