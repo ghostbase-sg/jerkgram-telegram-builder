@@ -74,7 +74,7 @@ private enum GhostBaseSettingsPage: Equatable {
 
 public func ghostBaseSettingsController(context: AccountContext) -> ViewController {
     let rawPage = UserDefaults.standard.string(
-        forKey: "GhostBase.Settings.InitialPage"
+        forKey: "jerkgram.Settings.InitialPage"
     ) ?? "home"
 
     let page: GhostBaseSettingsPage
@@ -141,7 +141,7 @@ items[.advanced]!.append(
         action: {
             UserDefaults.standard.set(
                 "home",
-                forKey: "GhostBase.Settings.InitialPage"
+                forKey: "jerkgram.Settings.InitialPage"
             )
             interaction.openSettings(.ghostbase)
         }
@@ -155,7 +155,7 @@ items[.advanced]!.append(
         action: {
             UserDefaults.standard.set(
                 "ghostMode",
-                forKey: "GhostBase.Settings.InitialPage"
+                forKey: "jerkgram.Settings.InitialPage"
             )
             interaction.openSettings(.ghostbase)
         }
@@ -184,7 +184,7 @@ class Build139NotificationsSettingsContract(unittest.TestCase):
             patched_main_items,
         )
         self.assertIn(
-            '"root",\n                forKey: "GhostBase.Settings.InitialPage"',
+            '"root",\n                forKey: "jerkgram.Settings.InitialPage"',
             patched_main_items,
         )
         self.assertIn(".notifications)", patched_settings)

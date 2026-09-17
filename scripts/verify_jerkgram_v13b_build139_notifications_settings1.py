@@ -82,7 +82,7 @@ def verify_main_items_text(main_items: str) -> None:
         "root route is not owned by the visible Jerkgram row",
     )
     require(
-        '"root"' in route and 'forKey: "GhostBase.Settings.InitialPage"' in route,
+        '"root"' in route and 'forKey: "jerkgram.Settings.InitialPage"' in route,
         "visible Jerkgram row does not target root",
     )
 

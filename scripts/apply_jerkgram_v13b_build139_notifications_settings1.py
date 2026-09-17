@@ -277,7 +277,7 @@ def patch_main_items_text(text: str) -> str:
     require(row_start >= 0 and route_end >= 0, "Jerkgram main row bounds missing")
     route = text[row_start:route_end]
     pattern = re.compile(
-        r'(UserDefaults\.standard\.set\(\s*)"home"(,\s*forKey:\s*"GhostBase\.Settings\.InitialPage")',
+        r'(UserDefaults\.standard\.set\(\s*)"home"(,\s*forKey:\s*"jerkgram\.Settings\.InitialPage")',
         re.S,
     )
     route, count = pattern.subn(r'\1"root"\2', route, count=1)
