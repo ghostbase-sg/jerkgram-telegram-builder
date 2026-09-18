@@ -136,6 +136,8 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS",
             "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
             "pairing.accountNumber !== getCurrentAccount()",
+            "reconcileAttemptedAt?: number",
+            "RECONCILE_RETRY_DELAY_MS = 5_000",
         ):
             self.assertIn(token, patched)
         self.assertNotIn("sessionStorage", patched)
@@ -167,9 +169,17 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "jerkgram://push/reconcile?v=1",
             "user=${encodeURIComponent(userId)}",
             "installation=${encodeURIComponent(installationId)}",
-            "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
+            "markReconcileAttempt(pairing)",
+            "armPairingCleanupAfterNativeHandoff()",
+            "document.visibilityState === 'hidden'",
+            "window.addEventListener('pagehide', onPageHide, {once: true})",
         ):
             self.assertIn(token, patched)
+
+        self.assertNotIn(
+            "localStorage.removeItem(JERKGRAM_PAIRING_KEY);\n    window.location.assign(url);",
+            patched,
+        )
 
         self.assertLess(
             patched.index("await managers.apiManager.setUser(authorization.user)"),
