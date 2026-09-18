@@ -240,9 +240,11 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     subscriptionRow.value.textContent = subscription === 'connected' ? 'Connected' : subscription === 'missing' ? 'Repair required' : 'Unavailable';
     subscriptionRow.dot.className = 'jg-dot ' + (subscription === 'connected' ? 'ok' : subscription === 'unavailable' ? 'bad' : '');
 
-    const active = standalone && permission === 'granted' && subscription === 'connected';
-    statePill.textContent = active ? 'Active' : 'Needs attention';
-    statePill.className = active ? '' : 'attention';
+    // Native Jerkgram is the authority for binding ACTIVE after user-id reconcile.
+    // The PWA can only prove its own local notification transport readiness.
+    const transportReady = standalone && permission === 'granted' && subscription === 'connected';
+    statePill.textContent = transportReady ? 'Push ready' : 'Needs attention';
+    statePill.className = transportReady ? '' : 'attention';
     statePill.id = 'jg-state-pill';
     permissionButton.hidden = permission !== 'default';
   }
