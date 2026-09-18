@@ -33,12 +33,14 @@ assert.equal(
 );
 assert.equal(buildJerkgramTapIdentity({custom: {msg_id: '1'}}), null);
 assert.equal(buildJerkgramTapIdentity({custom: {from_id: '1'}}), null);
+assert.equal(buildJerkgramTapIdentity({custom: {from_id: '1', msg_id: '1'}}), null);
 
 const validUrl = 'jerkgram://push/open?kind=user&peer=100&user=42&msg=7';
 assert.equal(normalizeJerkgramOpenUrl(validUrl), validUrl);
 assert.equal(normalizeJerkgramOpenUrl('jerkgram://push/open?kind=user'), null);
-assert.equal(normalizeJerkgramOpenUrl('jerkgram://push/open?kind=evil&peer=100'), null);
-assert.equal(normalizeJerkgramOpenUrl('jerkgram://push/open?kind=user&peer=100&x=1'), null);
+assert.equal(normalizeJerkgramOpenUrl('jerkgram://push/open?kind=user&peer=100&msg=7'), null);
+assert.equal(normalizeJerkgramOpenUrl('jerkgram://push/open?kind=evil&peer=100&user=42'), null);
+assert.equal(normalizeJerkgramOpenUrl('jerkgram://push/open?kind=user&peer=100&user=42&x=1'), null);
 assert.equal(normalizeJerkgramOpenUrl('https://example.com/'), null);
 
 const now = 1_000_000;
