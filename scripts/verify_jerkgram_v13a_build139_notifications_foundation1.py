@@ -28,6 +28,8 @@ def main() -> None:
         "public var telegramAuthorizationHash: Int64?",
         "public var installationId: String?",
         "public func claimPendingPairing(nonce: String",
+        "public func claimDirectPairing(",
+        "record.pendingPairing == nil",
         "unexpiredPending.count == 1",
         "usedPairingNonces.append(nonce)",
         "public func acceptPairingAuthorization(",
@@ -50,6 +52,9 @@ def main() -> None:
         'url.path == "/authorize"',
         'values["v"] == "1"',
         "JerkgramNotificationsStore.shared.claimPendingPairing(nonce: nonce)",
+        "JerkgramNotificationsStore.shared.claimDirectPairing(",
+        "candidates.count == 1",
+        "Choose the account in Jerkgram Notifications settings",
         "recordId.int64 == pending.nativeAccountId",
         "context.account.peerId.id._internalGetInt64Value() == pending.telegramUserId",
         "approveAuthTransferToken(",
@@ -68,6 +73,7 @@ def main() -> None:
     ):
         require(token in app, "AppDelegate invariant missing: " + token)
     require("activeAccounts.primary" not in app, "authorize route guesses primary account")
+    require("candidates.count == 1" in app, "direct authorize must fail closed for multiple accounts")
     print("[Build139 Notifications foundation verify] GREEN")
 
 
