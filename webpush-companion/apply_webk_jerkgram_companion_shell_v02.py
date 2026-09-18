@@ -146,7 +146,7 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     #jg-notifications-shell{position:fixed;inset:0;z-index:2147483646;overflow:auto;background:#f1f1f6;color:#000;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
     #jg-notifications-wrap{width:min(100% - 32px,430px);margin:0 auto;padding:max(36px,env(safe-area-inset-top)) 0 max(32px,env(safe-area-inset-bottom));box-sizing:border-box}
     #jg-notifications-hero{text-align:center;padding:12px 12px 26px}
-    #jg-notifications-icon{width:76px;height:76px;margin:0 auto 17px;border-radius:23px;display:grid;place-items:center;background:linear-gradient(145deg,#56aaf3,#2a8be8);box-shadow:0 9px 24px rgba(43,139,232,.22);font-size:34px}
+    #jg-notifications-icon{width:84px;height:84px;margin:0 auto 18px;border-radius:24px;display:block;box-shadow:0 10px 28px rgba(0,0,0,.16)}
     #jg-notifications-hero h1{font-size:25px;line-height:1.2;letter-spacing:-.35px;margin:0;font-weight:700}
     #jg-notifications-hero p{font-size:14px;line-height:1.4;color:#777;margin:7px 0 0}
     .jg-section-title{font-size:13px;line-height:1.25;color:#6d6d72;text-transform:uppercase;margin:22px 16px 7px}
@@ -173,10 +173,14 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
 
   const hero = make('header');
   hero.id = 'jg-notifications-hero';
-  const icon = make('div', '🔔');
+  const icon = make('img');
   icon.id = 'jg-notifications-icon';
+  icon.src = './assets/img/logo_filled_rounded.png';
+  icon.alt = 'Jerkgram';
+  icon.width = 84;
+  icon.height = 84;
   const title = make('h1', 'Jerkgram Notifications');
-  const subtitle = make('p', 'Notifications for Jerkgram without keeping the main app open.');
+  const subtitle = make('p', 'Notifications stay available even when Jerkgram is closed.');
   const statePill = make('div', 'Checking…');
   statePill.id = 'jg-state-pill';
   hero.append(icon, title, subtitle, statePill);
@@ -191,7 +195,7 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
   accountDot.className = 'jg-dot ok';
   const accountCopy = make('div');
   accountCopy.className = 'jg-row-copy';
-  const accountLabel = make('div', 'Session');
+  const accountLabel = make('div', 'Telegram account');
   accountLabel.className = 'jg-label';
   const accountValue = make('div', 'Loading account…');
   accountValue.className = 'jg-value';
@@ -214,9 +218,9 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     return {dot, value};
   }
 
-  const permissionRow = statusRow('Permission');
-  const sessionRow = statusRow('Session');
-  const subscriptionRow = statusRow('Push subscription');
+  const permissionRow = statusRow('iOS notifications');
+  const sessionRow = statusRow('Notification session');
+  const subscriptionRow = statusRow('Push connection');
 
   const finishButton = make('button', 'Finish Setup in Jerkgram');
   finishButton.id = 'jg-finish'; finishButton.type = 'button'; finishButton.hidden = true;
@@ -228,7 +232,7 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
   const permissionButton = make('button', 'Allow Notifications');
   permissionButton.id = 'jg-permission'; permissionButton.type = 'button'; permissionButton.hidden = true;
 
-  const footnote = make('p', 'Connection and account management stay in Jerkgram.');
+  const footnote = make('p', 'To switch accounts or turn notifications off, use Jerkgram.');
   footnote.id = 'jg-footnote';
 
   wrap.append(hero, accountTitle, accountCard, statusTitle, statusCard, finishButton, manage, permissionButton, footnote);
