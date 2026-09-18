@@ -158,7 +158,7 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             patched.index("const loginToken = await exportOrImportLoginToken();"),
         )
 
-    def test_success_stores_actual_webk_user_and_never_auto_reconciles(self):
+    def test_success_reconciles_once_with_actual_webk_user(self):
         module = load_patcher()
         patched = module.patch_sign_qr_text(SIGN_QR_FIXTURE)
 
@@ -167,16 +167,18 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "String(authorization.user.id)",
             "storeAcceptedUserId(String(authorization.user.id))",
             "telegramUserId: userId",
+            "jerkgram://push/reconcile?v=1",
+            "reconcileWithJerkgram(String(authorization.user.id))",
+            "Finishing setup in Jerkgram…",
             "await toIm()",
         ):
             self.assertIn(token, patched)
 
         for forbidden in (
-            "jerkgram://push/reconcile?v=1",
-            "reconcileWithJerkgram(",
             "RECONCILE_RETRY_DELAY_MS",
             "markReconcileAttempt(",
             "armPairingCleanupAfterNativeHandoff(",
+            "setTimeout(() =>",
         ):
             self.assertNotIn(forbidden, patched)
 
@@ -186,7 +188,7 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
         )
         self.assertLess(
             patched.index("storeAcceptedUserId(String(authorization.user.id))"),
-            patched.index("await toIm()"),
+            patched.index("reconcileWithJerkgram(String(authorization.user.id))"),
         )
 
     def test_companion_exposes_only_continue_setup_and_never_phone_passkey_or_2fa_ui(self):
@@ -195,10 +197,8 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
 
         for token in (
             "Jerkgram Notifications",
-            "Open Jerkgram",
-            "Settings → Jerkgram → Jerkgram Notifications.",
-            "Tap Enable Notifications, then return here.",
-            "I enabled it — Continue",
+            "Connect with Jerkgram",
+            "Jerkgram will open and ask you to confirm the account.",
             "No phone number, QR code, or Telegram password is entered here.",
             "./assets/img/logo_filled_rounded.png",
             "Additional Telegram verification is required. Restart setup in Jerkgram.",
