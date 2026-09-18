@@ -88,6 +88,8 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
     def test_active_shell_is_telegram_like_and_management_stays_native(self):
         module = load_patcher()
         source = module.SHELL_SOURCE
+        self.assertIn("import {getCurrentAccount} from '@lib/accounts/getCurrentAccount';", source)
+
         for token in (
             "Jerkgram Notifications",
             "Active",
