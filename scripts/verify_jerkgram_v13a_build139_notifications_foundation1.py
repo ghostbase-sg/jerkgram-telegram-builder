@@ -78,7 +78,7 @@ def main() -> None:
     direct_start = state.find("public func claimDirectPairing(")
     direct_end = state.find("@discardableResult", direct_start)
     require(direct_start >= 0 and direct_end > direct_start, "direct pairing helper bounds missing")
-    direct_block = core[direct_start:direct_end]
+    direct_block = state[direct_start:direct_end]
     require("record.pendingPairing == nil" not in direct_block, "same-account retry is blocked by stale pending state")
     require("record.telegramAuthorizationHash == nil" in direct_block, "direct retry lost authorization-hash safety gate")
     print("[Build139 Notifications foundation verify] GREEN")
