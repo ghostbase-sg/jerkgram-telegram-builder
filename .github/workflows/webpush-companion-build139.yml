@@ -95,14 +95,15 @@ jobs:
           grep -R -q 'jerkgram.notifications.pairing.v1' tweb/dist/*.js
           grep -R -q 'Open Jerkgram' tweb/dist/*.js
           grep -R -q 'Settings → Jerkgram → Jerkgram Notifications' tweb/dist/*.js
-          grep -R -q 'I started it in Jerkgram' tweb/dist/*.js
+          grep -R -q 'I enabled it' tweb/dist/*.js
           grep -R -q 'Finish Setup in Jerkgram' tweb/dist/*.js
           grep -R -q 'Manage in Jerkgram' tweb/dist/*.js
           grep -R -q 'Repair Notifications' tweb/dist/*.js
           grep -R -q 'Push ready' tweb/dist/*.js
-          grep -R -q 'Push subscription' tweb/dist/*.js
+          grep -R -q 'Push connection' tweb/dist/*.js
           grep -R -q 'Needs attention' tweb/dist/*.js
           grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
+          grep -R -q 'assets/img/logo_filled_rounded.png' tweb/dist/*.js
           test -f tweb/dist/assets/img/pattern.svg
           grep -q 'id="column-left"' tweb/dist/index.html
           grep -q 'class="sidebar-slider tabs-container"' tweb/dist/index.html
