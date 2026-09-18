@@ -96,6 +96,7 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             "Permission",
             "Session",
             "Push subscription",
+            "Finish Setup in Jerkgram",
             "Manage in Jerkgram",
             "navigator.serviceWorker.ready",
             "pushManager.getSubscription()",
@@ -119,31 +120,35 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
-    def test_signed_in_shell_can_finish_reconcile_after_pwa_process_restart(self):
+    def test_signed_in_shell_finishes_reconcile_only_after_explicit_tap(self):
         module = load_patcher()
         source = module.SHELL_SOURCE
         for token in (
             "jerkgram.notifications.pairing.v1",
             "jerkgram.notifications.installation.v1",
             "PAIRING_LIFETIME_MS = 120_000",
+            "telegramUserId?: string",
             "jerkgram://push/reconcile?v=1",
             "String(self.id)",
-            "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
             "pairing.accountNumber !== getCurrentAccount()",
-            "reconcileAttemptedAt?: number",
-            "RECONCILE_RETRY_DELAY_MS = 5_000",
-            "markReconcileAttempt(pairing)",
-            "armPairingCleanupAfterNativeHandoff()",
+            "pairing.telegramUserId && pairing.telegramUserId !== userId",
+            "Finish Setup in Jerkgram",
+            "finishButton.addEventListener('click'",
+            "buildPendingReconcileUrl(self)",
+            "clearPairingAfterManualHandoff()",
             "document.visibilityState === 'hidden'",
             "window.addEventListener('pagehide', onPageHide, {once: true})",
-            "Date.now() - pairing.reconcileAttemptedAt < RECONCILE_RETRY_DELAY_MS",
         ):
             self.assertIn(token, source)
 
-        self.assertNotIn(
-            "localStorage.removeItem(JERKGRAM_PAIRING_KEY);\n  window.location.assign(url);",
-            source,
-        )
+        for forbidden in (
+            "recoverPendingReconcile(",
+            "RECONCILE_RETRY_DELAY_MS",
+            "Date.now() - pairing.reconcileAttemptedAt",
+            "window.setTimeout(() => void refresh(), 800)",
+            "window.setTimeout(() => void refresh(), 2500)",
+        ):
+            self.assertNotIn(forbidden, source)
 
     def test_tree_patch_is_idempotent(self):
         shell_module = load_patcher()
