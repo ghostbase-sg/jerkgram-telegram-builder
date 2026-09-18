@@ -17,6 +17,7 @@ import type {DcId} from '@types';
 import {AuthAuthorization, AuthLoginToken} from '@layer';
 import App from '@config/app';
 import AccountController from '@lib/accounts/accountController';
+import {getCurrentAccount} from '@lib/accounts/getCurrentAccount';
 
 import AuthCard from '@/pages/AuthCard';
 import {CardSpec, useAuthFlow} from '@/pages/authFlow';
@@ -28,6 +29,7 @@ type Spec = Extract<CardSpec, {name: 'signQR'}>;
 type PairingState = {
   nonce: string;
   createdAt: number;
+  accountNumber: number;
 };
 
 const JERKGRAM_PAIRING_KEY = 'jerkgram.notifications.pairing.v1';
@@ -64,7 +66,7 @@ function readPairingState(): PairingState | undefined {
 
   try {
     const parsed = JSON.parse(raw) as PairingState;
-    if(!parsed.nonce || typeof parsed.createdAt !== 'number') {
+    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4) {
       localStorage.removeItem(JERKGRAM_PAIRING_KEY);
       return undefined;
     }
@@ -80,7 +82,7 @@ function readPairingState(): PairingState | undefined {
 }
 
 function storePairingState(nonce: string): void {
-  const value: PairingState = {nonce, createdAt: Date.now()};
+  const value: PairingState = {nonce, createdAt: Date.now(), accountNumber: getCurrentAccount()};
   localStorage.setItem(JERKGRAM_PAIRING_KEY, JSON.stringify(value));
 }
 
@@ -117,6 +119,11 @@ export default function SignQRCard(_props: {spec: Spec}) {
     const pairing = readPairingState();
     if(!pairing) {
       setStatus('Setup expired. Restart setup in Jerkgram.');
+      return;
+    }
+
+    if(pairing.accountNumber !== getCurrentAccount()) {
+      setStatus('Setup state changed. Restart setup in Jerkgram.');
       return;
     }
 
