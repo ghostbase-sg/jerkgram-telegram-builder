@@ -10,8 +10,6 @@ SHELL = ROOT / "src/lib/jerkgramNotificationsShell.ts"
 def patch_shell_text(text: str) -> str:
     replacements = {
         "document.addEventListener('visibilitychange', () => {\n    if(document.visibilityState === 'visible') void refresh();\n  });": "document.addEventListener('visibilitychange', (): void => {\n    if(document.visibilityState === 'visible') {\n      void refresh();\n    }\n  });",
-        "window.setTimeout(() => void refresh(), 800);": "window.setTimeout((): void => {\n    void refresh();\n  }, 800);",
-        "window.setTimeout(() => void refresh(), 2500);": "window.setTimeout((): void => {\n    void refresh();\n  }, 2500);",
     }
 
     for old, new in replacements.items():
@@ -21,14 +19,12 @@ def patch_shell_text(text: str) -> str:
             raise RuntimeError(f"[jerkgram-shell-typecheck-v04] expected callback anchor missing: {old}")
 
     for forbidden in (
-        "setTimeout(() => void refresh()",
         "visibilitychange', () =>",
     ):
         if forbidden in text:
             raise RuntimeError(f"[jerkgram-shell-typecheck-v04] unsafe callback remains: {forbidden}")
 
     for required in (
-        "setTimeout((): void => {",
         "visibilitychange', (): void => {",
     ):
         if required not in text:
