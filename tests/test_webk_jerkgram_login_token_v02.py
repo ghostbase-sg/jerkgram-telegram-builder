@@ -115,6 +115,7 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "jerkgram://push/authorize?v=1",
             "token=${encodeURIComponent(tokenValue)}",
             "nonce=${encodeURIComponent(nonce)}",
+            "accountNumber: getCurrentAccount()",
         ):
             self.assertIn(token, patched)
 
@@ -134,6 +135,7 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "PAIRING_LIFETIME_MS = 120_000",
             "Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS",
             "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
+            "pairing.accountNumber !== getCurrentAccount()",
         ):
             self.assertIn(token, patched)
         self.assertNotIn("sessionStorage", patched)
