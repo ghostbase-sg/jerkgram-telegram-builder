@@ -136,8 +136,7 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS",
             "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
             "pairing.accountNumber !== getCurrentAccount()",
-            "reconcileAttemptedAt?: number",
-            "RECONCILE_RETRY_DELAY_MS = 5_000",
+            "telegramUserId?: string",
         ):
             self.assertIn(token, patched)
         self.assertNotIn("sessionStorage", patched)
@@ -159,31 +158,35 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             patched.index("const loginToken = await exportOrImportLoginToken();"),
         )
 
-    def test_success_reconciles_actual_webk_user_before_native_can_mark_active(self):
+    def test_success_stores_actual_webk_user_and_never_auto_reconciles(self):
         module = load_patcher()
         patched = module.patch_sign_qr_text(SIGN_QR_FIXTURE)
 
         for token in (
             "authorization.user.id",
             "String(authorization.user.id)",
-            "jerkgram://push/reconcile?v=1",
-            "user=${encodeURIComponent(userId)}",
-            "installation=${encodeURIComponent(installationId)}",
-            "markReconcileAttempt(pairing)",
-            "armPairingCleanupAfterNativeHandoff()",
-            "document.visibilityState === 'hidden'",
-            "window.addEventListener('pagehide', onPageHide, {once: true})",
+            "storeAcceptedUserId(String(authorization.user.id))",
+            "telegramUserId: userId",
+            "await toIm()",
         ):
             self.assertIn(token, patched)
 
-        self.assertNotIn(
-            "localStorage.removeItem(JERKGRAM_PAIRING_KEY);\n    window.location.assign(url);",
-            patched,
-        )
+        for forbidden in (
+            "jerkgram://push/reconcile?v=1",
+            "reconcileWithJerkgram(",
+            "RECONCILE_RETRY_DELAY_MS",
+            "markReconcileAttempt(",
+            "armPairingCleanupAfterNativeHandoff(",
+        ):
+            self.assertNotIn(forbidden, patched)
 
         self.assertLess(
             patched.index("await managers.apiManager.setUser(authorization.user)"),
-            patched.index("reconcileWithJerkgram(String(authorization.user.id))"),
+            patched.index("storeAcceptedUserId(String(authorization.user.id))"),
+        )
+        self.assertLess(
+            patched.index("storeAcceptedUserId(String(authorization.user.id))"),
+            patched.index("await toIm()"),
         )
 
     def test_companion_exposes_only_continue_setup_and_never_phone_passkey_or_2fa_ui(self):
@@ -192,9 +195,10 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
 
         for token in (
             "Jerkgram Notifications",
-            "Continue Setup",
-            "Started setup by mistake? Open Jerkgram",
             "Open Jerkgram",
+            "Settings → Jerkgram → Jerkgram Notifications.",
+            "Tap Enable Notifications, then return here.",
+            "I started it in Jerkgram — Continue",
             "Additional Telegram verification is required. Restart setup in Jerkgram.",
         ):
             self.assertIn(token, patched)
