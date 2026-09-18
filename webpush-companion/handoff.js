@@ -37,19 +37,20 @@ export function buildJerkgramHandoffData(push) {
     return null;
   }
 
-  const out = {kind, peer};
   const receiver = positiveIntegerString(data.user_id);
+  if (!receiver) return null;
+
+  const out = {kind, peer, user: receiver};
   const msg = positiveIntegerString(custom.msg_id, 2147483647);
   const thread = positiveIntegerString(custom.top_msg_id, 2147483647);
 
-  if (receiver) out.user = receiver;
   if (msg) out.msg = msg;
   if (thread) out.thread = thread;
   return out;
 }
 
 function appendHandoffParams(url, data) {
-  if (data.user) url.searchParams.set('user', data.user);
+  url.searchParams.set('user', data.user);
   url.searchParams.set('kind', data.kind);
   url.searchParams.set('peer', data.peer);
   if (data.msg) url.searchParams.set('msg', data.msg);
@@ -70,14 +71,16 @@ export function buildJerkgramNativeUrl(search) {
   const peer = positiveIntegerString(source.get('peer'));
   if (!peer || !['user', 'chat', 'channel'].includes(kind)) return null;
 
+  const receiver = positiveIntegerString(source.get('user'));
+  if (!receiver) return null;
+
   const url = new URL('jerkgram://push/open');
   url.searchParams.set('kind', kind);
   url.searchParams.set('peer', peer);
+  url.searchParams.set('user', receiver);
 
-  const receiver = positiveIntegerString(source.get('user'));
   const msg = positiveIntegerString(source.get('msg'), 2147483647);
   const thread = positiveIntegerString(source.get('thread'), 2147483647);
-  if (receiver) url.searchParams.set('user', receiver);
   if (msg) url.searchParams.set('msg', msg);
   if (thread) url.searchParams.set('thread', thread);
   return url.href;
@@ -88,7 +91,7 @@ export function buildJerkgramNativeUrlFromPush(push) {
   if (!data) return null;
 
   const params = new URLSearchParams();
-  if (data.user) params.set('user', data.user);
+  params.set('user', data.user);
   params.set('kind', data.kind);
   params.set('peer', data.peer);
   if (data.msg) params.set('msg', data.msg);
