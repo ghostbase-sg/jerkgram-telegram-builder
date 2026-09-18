@@ -30,8 +30,8 @@ def patch_shell_text(text: str) -> str:
 
     text = replace_once(
         text,
-        "#jg-manage,#jg-permission{width:100%;",
-        "#jg-manage,#jg-permission,#jg-repair{width:100%;",
+        "#jg-finish,#jg-manage,#jg-permission{width:100%;",
+        "#jg-finish,#jg-manage,#jg-permission,#jg-repair{width:100%;",
         "shared button style",
     )
     text = replace_once(
@@ -62,8 +62,8 @@ def patch_shell_text(text: str) -> str:
 
     text = replace_once(
         text,
-        "  wrap.append(hero, accountTitle, accountCard, statusTitle, statusCard, manage, permissionButton, footnote);",
-        "  wrap.append(hero, accountTitle, accountCard, statusTitle, statusCard, manage, permissionButton, repairButton, footnote);",
+        "  wrap.append(hero, accountTitle, accountCard, statusTitle, statusCard, finishButton, manage, permissionButton, footnote);",
+        "  wrap.append(hero, accountTitle, accountCard, statusTitle, statusCard, finishButton, manage, permissionButton, repairButton, footnote);",
         "repair button append",
     )
 
