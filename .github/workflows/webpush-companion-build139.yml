@@ -93,11 +93,13 @@ jobs:
           grep -R -q 'jerkgram://push/reconcile?v=1' tweb/dist/*.js
           grep -R -q 'jerkgram.notifications.installation.v1' tweb/dist/*.js
           grep -R -q 'jerkgram.notifications.pairing.v1' tweb/dist/*.js
-          grep -R -q 'Continue Setup' tweb/dist/*.js
+          grep -R -q 'Open Jerkgram' tweb/dist/*.js
+          grep -R -q 'Settings → Jerkgram → Jerkgram Notifications' tweb/dist/*.js
+          grep -R -q 'I started it in Jerkgram' tweb/dist/*.js
+          grep -R -q 'Finish Setup in Jerkgram' tweb/dist/*.js
           grep -R -q 'Manage in Jerkgram' tweb/dist/*.js
           grep -R -q 'Repair Notifications' tweb/dist/*.js
           grep -R -q 'Push ready' tweb/dist/*.js
-          grep -R -q 'Setup state changed. Restart setup in Jerkgram.' tweb/dist/*.js
           grep -R -q 'Push subscription' tweb/dist/*.js
           grep -R -q 'Needs attention' tweb/dist/*.js
           grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
@@ -108,6 +110,11 @@ jobs:
           grep -q 'id="column-right"' tweb/dist/index.html
           if grep -R -q 'jerkgram://push/register\|jerkgram://push/unregister' tweb/dist/*.js; then
             echo 'legacy subscription-credential bridge survived' >&2
+            exit 1
+          fi
+
+          if grep -R -q 'reconcileAttemptedAt\|RECONCILE_RETRY_DELAY_MS\|Setup state changed. Restart setup in Jerkgram.' tweb/dist/*.js; then
+            echo 'legacy automatic reconcile/retry flow survived' >&2
             exit 1
           fi
 
