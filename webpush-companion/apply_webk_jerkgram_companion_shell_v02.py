@@ -57,11 +57,13 @@ let mounted = false;
 const JERKGRAM_PAIRING_KEY = 'jerkgram.notifications.pairing.v1';
 const INSTALLATION_ID_KEY = 'jerkgram.notifications.installation.v1';
 const PAIRING_LIFETIME_MS = 120_000;
+const RECONCILE_RETRY_DELAY_MS = 5_000;
 
 type PairingState = {
   nonce: string;
   createdAt: number;
   accountNumber: number;
+  reconcileAttemptedAt?: number;
 };
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
@@ -86,7 +88,7 @@ function readPendingPairing(): PairingState | undefined {
   if(!raw) return undefined;
   try {
     const parsed = JSON.parse(raw) as PairingState;
-    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4 || Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
+    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4 || (parsed.reconcileAttemptedAt !== undefined && (typeof parsed.reconcileAttemptedAt !== 'number' || !Number.isFinite(parsed.reconcileAttemptedAt))) || Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
       localStorage.removeItem(JERKGRAM_PAIRING_KEY);
       return undefined;
     }
@@ -97,15 +99,46 @@ function readPendingPairing(): PairingState | undefined {
   }
 }
 
+function markReconcileAttempt(pairing: PairingState): void {
+  localStorage.setItem(JERKGRAM_PAIRING_KEY, JSON.stringify({
+    ...pairing,
+    reconcileAttemptedAt: Date.now()
+  } satisfies PairingState));
+}
+
+function armPairingCleanupAfterNativeHandoff(): void {
+  let timer = 0;
+
+  const disarm = () => {
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    window.removeEventListener('pagehide', onPageHide);
+    if(timer) window.clearTimeout(timer);
+  };
+  const clearPairing = () => {
+    localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+    disarm();
+  };
+  const onVisibilityChange = () => {
+    if(document.visibilityState === 'hidden') clearPairing();
+  };
+  const onPageHide = () => clearPairing();
+
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  window.addEventListener('pagehide', onPageHide, {once: true});
+  timer = window.setTimeout(disarm, RECONCILE_RETRY_DELAY_MS);
+}
+
 function recoverPendingReconcile(self: any): boolean {
   const pairing = readPendingPairing();
   const installationId = localStorage.getItem(INSTALLATION_ID_KEY);
   if(!pairing || !installationId || !self?.id) return false;
   if(pairing.accountNumber !== getCurrentAccount()) return false;
+  if(pairing.reconcileAttemptedAt && Date.now() - pairing.reconcileAttemptedAt < RECONCILE_RETRY_DELAY_MS) return false;
 
   const userId = String(self.id);
   const url = `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(pairing.nonce)}`;
-  localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+  markReconcileAttempt(pairing);
+  armPairingCleanupAfterNativeHandoff();
   window.location.assign(url);
   return true;
 }
