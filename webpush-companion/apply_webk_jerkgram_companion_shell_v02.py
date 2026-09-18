@@ -57,13 +57,12 @@ let mounted = false;
 const JERKGRAM_PAIRING_KEY = 'jerkgram.notifications.pairing.v1';
 const INSTALLATION_ID_KEY = 'jerkgram.notifications.installation.v1';
 const PAIRING_LIFETIME_MS = 120_000;
-const RECONCILE_RETRY_DELAY_MS = 5_000;
 
 type PairingState = {
   nonce: string;
   createdAt: number;
   accountNumber: number;
-  reconcileAttemptedAt?: number;
+  telegramUserId?: string;
 };
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
@@ -88,7 +87,7 @@ function readPendingPairing(): PairingState | undefined {
   if(!raw) return undefined;
   try {
     const parsed = JSON.parse(raw) as PairingState;
-    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4 || (parsed.reconcileAttemptedAt !== undefined && (typeof parsed.reconcileAttemptedAt !== 'number' || !Number.isFinite(parsed.reconcileAttemptedAt))) || Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
+    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4 || (parsed.telegramUserId !== undefined && !/^[1-9][0-9]{0,19}$/.test(parsed.telegramUserId)) || Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
       localStorage.removeItem(JERKGRAM_PAIRING_KEY);
       return undefined;
     }
@@ -99,24 +98,23 @@ function readPendingPairing(): PairingState | undefined {
   }
 }
 
-function markReconcileAttempt(pairing: PairingState): void {
-  localStorage.setItem(JERKGRAM_PAIRING_KEY, JSON.stringify({
-    ...pairing,
-    reconcileAttemptedAt: Date.now()
-  } satisfies PairingState));
+function buildPendingReconcileUrl(self: any): string | undefined {
+  const pairing = readPendingPairing();
+  const installationId = localStorage.getItem(INSTALLATION_ID_KEY);
+  if(!pairing || !installationId || !self?.id) return undefined;
+  if(pairing.accountNumber !== getCurrentAccount()) return undefined;
+
+  const userId = String(self.id);
+  if(pairing.telegramUserId && pairing.telegramUserId !== userId) return undefined;
+
+  return `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(pairing.nonce)}`;
 }
 
-function armPairingCleanupAfterNativeHandoff(): void {
-  let timer = 0;
-
-  const disarm = () => {
-    document.removeEventListener('visibilitychange', onVisibilityChange);
-    window.removeEventListener('pagehide', onPageHide);
-    if(timer) window.clearTimeout(timer);
-  };
+function clearPairingAfterManualHandoff(): void {
   const clearPairing = () => {
     localStorage.removeItem(JERKGRAM_PAIRING_KEY);
-    disarm();
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    window.removeEventListener('pagehide', onPageHide);
   };
   const onVisibilityChange = () => {
     if(document.visibilityState === 'hidden') clearPairing();
@@ -125,22 +123,6 @@ function armPairingCleanupAfterNativeHandoff(): void {
 
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', onPageHide, {once: true});
-  timer = window.setTimeout(disarm, RECONCILE_RETRY_DELAY_MS);
-}
-
-function recoverPendingReconcile(self: any): boolean {
-  const pairing = readPendingPairing();
-  const installationId = localStorage.getItem(INSTALLATION_ID_KEY);
-  if(!pairing || !installationId || !self?.id) return false;
-  if(pairing.accountNumber !== getCurrentAccount()) return false;
-  if(pairing.reconcileAttemptedAt && Date.now() - pairing.reconcileAttemptedAt < RECONCILE_RETRY_DELAY_MS) return false;
-
-  const userId = String(self.id);
-  const url = `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(pairing.nonce)}`;
-  markReconcileAttempt(pairing);
-  armPairingCleanupAfterNativeHandoff();
-  window.location.assign(url);
-  return true;
 }
 
 async function getSubscriptionState(): Promise<'connected' | 'missing' | 'unavailable'> {
@@ -176,8 +158,9 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     .jg-row-copy{min-width:0;flex:1}.jg-label{font-size:16px;line-height:1.2}.jg-value{font-size:13px;color:#8e8e93;line-height:1.25;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     #jg-state-pill{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:7px 11px;border-radius:999px;background:rgba(52,199,89,.12);color:#248a3d;font-size:13px;font-weight:600}
     #jg-state-pill.attention{background:rgba(255,159,10,.14);color:#b36700}
-    #jg-manage,#jg-permission{width:100%;border:0;border-radius:12px;padding:13px 15px;font:600 16px/1.2 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
-    #jg-manage{margin-top:22px;background:#3390ec;color:#fff}
+    #jg-finish,#jg-manage,#jg-permission{width:100%;border:0;border-radius:12px;padding:13px 15px;font:600 16px/1.2 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    #jg-finish{margin-top:22px;background:#34c759;color:#fff}
+    #jg-manage{margin-top:10px;background:#3390ec;color:#fff}
     #jg-permission{margin-top:10px;background:#fff;color:#3390ec}
     #jg-footnote{font-size:12px;line-height:1.4;color:#8e8e93;text-align:center;margin:13px 16px 0}
     @media (prefers-color-scheme: dark){#jg-notifications-shell{background:#000;color:#fff}.jg-card,#jg-permission{background:#1c1c1e}.jg-section-title,#jg-notifications-hero p,#jg-footnote{color:#8e8e93}.jg-row+.jg-row:before{background:rgba(84,84,88,.65)}#jg-permission{color:#64b5f6}}
@@ -276,7 +259,7 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     // Native Jerkgram is the authority for binding ACTIVE after user-id reconcile.
     // The PWA can only prove its own local notification transport readiness.
     const transportReady = standalone && permission === 'granted' && subscription === 'connected';
-    statePill.textContent = transportReady ? 'Push ready' : 'Needs attention';
+    statePill.textContent = pendingReconcileUrl ? 'Finish setup' : (transportReady ? 'Push ready' : 'Needs attention');
     statePill.className = transportReady ? '' : 'attention';
     statePill.id = 'jg-state-pill';
     permissionButton.hidden = permission !== 'default';
@@ -293,8 +276,6 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
   });
 
   await refresh();
-  window.setTimeout(() => void refresh(), 800);
-  window.setTimeout(() => void refresh(), 2500);
 }
 '''
 
@@ -333,7 +314,7 @@ def main() -> None:
     print("[jerkgram-companion-shell-v02] OK")
     print("  auth: all unauthorised states -> Jerkgram login-token setup")
     print("  signed in: Telegram runtime retained for push, Telegram chat UI hidden")
-    print("  shell: account + permission + session + subscription + pending reconcile recovery")
+    print("  shell: account + permission + session + subscription + explicit native finish")
 
 
 if __name__ == "__main__":
