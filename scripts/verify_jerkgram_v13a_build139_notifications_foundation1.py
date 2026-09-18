@@ -29,7 +29,7 @@ def main() -> None:
         "public var installationId: String?",
         "public func claimPendingPairing(nonce: String",
         "public func claimDirectPairing(",
-        "record.pendingPairing == nil",
+        "A direct PWA retry for the same native account supersedes",
         "unexpiredPending.count == 1",
         "usedPairingNonces.append(nonce)",
         "public func acceptPairingAuthorization(",
@@ -74,6 +74,13 @@ def main() -> None:
         require(token in app, "AppDelegate invariant missing: " + token)
     require("activeAccounts.primary" not in app, "authorize route guesses primary account")
     require("candidates.count == 1" in app, "direct authorize must fail closed for multiple accounts")
+
+    direct_start = core.find("public func claimDirectPairing(")
+    direct_end = core.find("@discardableResult", direct_start)
+    require(direct_start >= 0 and direct_end > direct_start, "direct pairing helper bounds missing")
+    direct_block = core[direct_start:direct_end]
+    require("record.pendingPairing == nil" not in direct_block, "same-account retry is blocked by stale pending state")
+    require("record.telegramAuthorizationHash == nil" in direct_block, "direct retry lost authorization-hash safety gate")
     print("[Build139 Notifications foundation verify] GREEN")
 
 
