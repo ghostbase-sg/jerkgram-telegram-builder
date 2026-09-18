@@ -56,7 +56,7 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             "pairingLifetime: TimeInterval = 120.0",
             "public func claimPendingPairing(nonce: String",
             "public func claimDirectPairing(",
-            "record.pendingPairing == nil",
+            "A direct PWA retry for the same native account supersedes",
             "unexpiredPending.count == 1",
             "usedPairingNonces.contains(nonce)",
             "usedPairingNonces.append(nonce)",
@@ -103,6 +103,12 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
 
         self.assertNotIn("activeAccounts.primary", patched)
         self.assertIn("candidates.count == 1", patched)
+
+        direct_start = patched.index("public func claimDirectPairing(")
+        direct_end = patched.index("@discardableResult", direct_start)
+        direct_block = patched[direct_start:direct_end]
+        self.assertNotIn("record.pendingPairing == nil", direct_block)
+        self.assertIn("record.telegramAuthorizationHash == nil", direct_block)
 
     def test_reconcile_bridge_requires_same_nonce_expected_user_and_valid_installation_id(self):
         module = load_patcher()
