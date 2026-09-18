@@ -20,7 +20,7 @@ concurrency:
 env:
   # After this one-time workflow migration, ordinary PWA updates only require
   # changing this builder commit SHA.
-  JERKGRAM_BUILDER_COMMIT: 7e0b696111cf0c5aa6f3427b0c9d0647aeb9d4f6
+  JERKGRAM_BUILDER_COMMIT: a103ad4b5e81439d68d178ba50053f252dd32aea
   TWEB_COMMIT: e9428f2a90f73d750f16a0b85817820516466364
 
 jobs:
@@ -55,7 +55,8 @@ jobs:
           python -m unittest -v \
             tests.test_webk_jerkgram_login_token_v02 \
             tests.test_webk_jerkgram_companion_shell_v02 \
-            tests.test_webk_jerkgram_repair_v06
+            tests.test_webk_jerkgram_repair_v06 \
+            tests.test_webk_companion_package_v01
           node tests/webpush_handoff_test.mjs
           node tests/webpush_tap_fallback_test.mjs
 
@@ -137,6 +138,11 @@ jobs:
           test -f tweb/dist/site_apple.webmanifest
           test -f tweb/dist/LICENSE-GPL-3.0.txt
           test -f tweb/dist/SOURCE.md
+          test -f tweb/dist/assets/img/pattern.svg
+          grep -q 'id="column-left"' tweb/dist/index.html
+          grep -q 'class="sidebar-slider tabs-container"' tweb/dist/index.html
+          grep -q 'id="column-center"' tweb/dist/index.html
+          grep -q 'id="column-right"' tweb/dist/index.html
 
           grep -q '<title>Jerkgram Notifications</title>' tweb/dist/index.html
           grep -q '"name": "Jerkgram Notifications"' tweb/dist/site.webmanifest
