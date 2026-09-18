@@ -20,7 +20,7 @@ concurrency:
 env:
   # After this one-time workflow migration, ordinary PWA updates only require
   # changing this builder commit SHA.
-  JERKGRAM_BUILDER_COMMIT: 6567182931ae3c641e06b532c7cfe2035327094f
+  JERKGRAM_BUILDER_COMMIT: 3f4f929d54d409545dd3aa4a34eb5c96e5d18bb5
   TWEB_COMMIT: e9428f2a90f73d750f16a0b85817820516466364
 
 jobs:
@@ -57,6 +57,7 @@ jobs:
             tests.test_webk_jerkgram_companion_shell_v02 \
             tests.test_webk_jerkgram_repair_v06
           node tests/webpush_handoff_test.mjs
+          node tests/webpush_tap_fallback_test.mjs
 
       - name: Fetch pinned Telegram Web K
         shell: bash
