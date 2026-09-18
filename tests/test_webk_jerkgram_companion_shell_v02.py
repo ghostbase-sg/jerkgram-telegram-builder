@@ -124,6 +124,7 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             "jerkgram://push/reconcile?v=1",
             "String(self.id)",
             "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
+            "pairing.accountNumber !== getCurrentAccount()",
         ):
             self.assertIn(token, source)
 
