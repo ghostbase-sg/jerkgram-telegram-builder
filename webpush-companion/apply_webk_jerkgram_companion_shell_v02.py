@@ -19,6 +19,7 @@ AUTH_STATE_FUNCTION = r'''function authStateToCardSpec(_authState: MountAuthFlow
 
 
 BOOTSTRAP_SOURCE = r'''import rootScope from '@lib/rootScope';
+import {getCurrentAccount} from '@lib/accounts/getCurrentAccount';
 import mountJerkgramNotificationsShell from '@lib/jerkgramNotificationsShell';
 
 import {disposeActiveAuthFlow} from '@/pages/mountAuthFlow';
@@ -60,6 +61,7 @@ const PAIRING_LIFETIME_MS = 120_000;
 type PairingState = {
   nonce: string;
   createdAt: number;
+  accountNumber: number;
 };
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
@@ -84,7 +86,7 @@ function readPendingPairing(): PairingState | undefined {
   if(!raw) return undefined;
   try {
     const parsed = JSON.parse(raw) as PairingState;
-    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
+    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4 || Date.now() - parsed.createdAt > PAIRING_LIFETIME_MS) {
       localStorage.removeItem(JERKGRAM_PAIRING_KEY);
       return undefined;
     }
@@ -99,6 +101,7 @@ function recoverPendingReconcile(self: any): boolean {
   const pairing = readPendingPairing();
   const installationId = localStorage.getItem(INSTALLATION_ID_KEY);
   if(!pairing || !installationId || !self?.id) return false;
+  if(pairing.accountNumber !== getCurrentAccount()) return false;
 
   const userId = String(self.id);
   const url = `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(pairing.nonce)}`;
