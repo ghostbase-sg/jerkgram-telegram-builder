@@ -93,9 +93,10 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
         for token in (
             "Jerkgram Notifications",
             "Push ready",
-            "Permission",
-            "Session",
-            "Push subscription",
+            "iOS notifications",
+            "Notification session",
+            "Push connection",
+            "./assets/img/logo_filled_rounded.png",
             "Finish Setup in Jerkgram",
             "Manage in Jerkgram",
             "navigator.serviceWorker.ready",
@@ -103,6 +104,7 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             "Notification.permission",
             "rootScope.managers.appUsersManager.getSelf()",
             "jerkgram://push",
+            "To switch accounts or turn notifications off, use Jerkgram.",
             "prefers-color-scheme: dark",
         ):
             self.assertIn(token, source)
