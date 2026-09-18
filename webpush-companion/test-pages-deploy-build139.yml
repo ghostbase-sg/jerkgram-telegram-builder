@@ -20,7 +20,7 @@ concurrency:
 env:
   # After this one-time workflow migration, ordinary PWA updates only require
   # changing this builder commit SHA.
-  JERKGRAM_BUILDER_COMMIT: 93207bca355b70473c8e70b0dba10b662d416dee
+  JERKGRAM_BUILDER_COMMIT: 5a1ceb5988c49ae63fca9c5e923b82a62fd0c937
   TWEB_COMMIT: e9428f2a90f73d750f16a0b85817820516466364
 
 jobs:
