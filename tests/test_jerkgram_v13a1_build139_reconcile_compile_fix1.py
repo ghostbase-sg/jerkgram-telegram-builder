@@ -16,6 +16,14 @@ def make_source(account_block: str, present_prefix: str, duplicate_reconcile_gua
         "private func handleJerkgramNotificationsAuthorizeUrl(_ url: URL) -> Bool {\n"
         + module.GUARD
         + account_block
+        + "                    let chooseAccount = UIAlertController()\n"
+        + "                    "
+        + present_prefix
+        + "chooseAccount, animated: true)\n"
+        + "                    let startFailed = UIAlertController()\n"
+        + "                    "
+        + present_prefix
+        + "startFailed, animated: true)\n"
         + "                    let alert = UIAlertController()\n"
         + "                    "
         + present_prefix
@@ -58,7 +66,7 @@ class Build139ReconcileCompileFixTests(unittest.TestCase):
         self.assertNotIn("user?.username", result)
         self.assertNotIn("else if let user", result)
         self.assertNotIn(module.OLD_PRESENT_PREFIX, result)
-        self.assertEqual(result.count(module.NEW_PRESENT_PREFIX), 3)
+        self.assertEqual(result.count(module.NEW_PRESENT_PREFIX), 5)
 
     def test_clean_source_is_idempotent(self):
         source = make_source(module.NEW_ACCOUNT_LABEL_BLOCK, module.NEW_PRESENT_PREFIX)
