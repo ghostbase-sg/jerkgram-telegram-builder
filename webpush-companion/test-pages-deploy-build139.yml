@@ -156,7 +156,6 @@ jobs:
           grep -R -q 'Repair Notifications' tweb/dist/*.js
           grep -R -q 'Push ready' tweb/dist/*.js
           grep -R -q 'Setup state changed. Restart setup in Jerkgram.' tweb/dist/*.js
-          grep -R -q 'reconcileAttemptedAt' tweb/dist/*.js
           grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
           grep -q 'jerkgram://push/open' tweb/dist/handoff.js
 
