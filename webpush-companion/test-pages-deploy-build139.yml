@@ -20,7 +20,7 @@ concurrency:
 env:
   # After this one-time workflow migration, ordinary PWA updates only require
   # changing this builder commit SHA.
-  JERKGRAM_BUILDER_COMMIT: 3f4f929d54d409545dd3aa4a34eb5c96e5d18bb5
+  JERKGRAM_BUILDER_COMMIT: fc992caa3740e4a4719afb04f106ea52c8459318
   TWEB_COMMIT: e9428f2a90f73d750f16a0b85817820516466364
 
 jobs:
@@ -148,6 +148,8 @@ jobs:
           grep -R -q 'Continue Setup' tweb/dist/*.js
           grep -R -q 'Manage in Jerkgram' tweb/dist/*.js
           grep -R -q 'Repair Notifications' tweb/dist/*.js
+          grep -R -q 'Push ready' tweb/dist/*.js
+          grep -R -q 'Setup state changed. Restart setup in Jerkgram.' tweb/dist/*.js
           grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
           grep -q 'jerkgram://push/open' tweb/dist/handoff.js
 
