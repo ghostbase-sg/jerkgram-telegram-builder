@@ -40,6 +40,7 @@ jobs:
             tests.test_webk_jerkgram_companion_shell_v02 \
             tests.test_webk_jerkgram_repair_v06
           node tests/webpush_handoff_test.mjs
+          node tests/webpush_tap_fallback_test.mjs
 
       - name: Fetch pinned Telegram Web K
         run: |
