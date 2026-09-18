@@ -218,6 +218,9 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
   const sessionRow = statusRow('Session');
   const subscriptionRow = statusRow('Push subscription');
 
+  const finishButton = make('button', 'Finish Setup in Jerkgram');
+  finishButton.id = 'jg-finish'; finishButton.type = 'button'; finishButton.hidden = true;
+
   const manage = make('button', 'Manage in Jerkgram');
   manage.id = 'jg-manage'; manage.type = 'button';
   manage.addEventListener('click', () => window.location.assign('jerkgram://push'));
@@ -228,7 +231,7 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
   const footnote = make('p', 'Connection and account management stay in Jerkgram.');
   footnote.id = 'jg-footnote';
 
-  wrap.append(hero, accountTitle, accountCard, statusTitle, statusCard, manage, permissionButton, footnote);
+  wrap.append(hero, accountTitle, accountCard, statusTitle, statusCard, finishButton, manage, permissionButton, footnote);
   shell.append(wrap);
   document.head.append(style);
   document.body.append(shell);
@@ -238,10 +241,8 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     try { self = await rootScope.managers.appUsersManager.getSelf(); } catch(_) {}
     accountValue.textContent = userLabel(self);
 
-    // If iOS killed the standalone process after Telegram accepted the login token
-    // but before the deep-link reconcile was delivered, the short-lived local
-    // pairing record lets the signed-in companion finish that one pending handoff.
-    if(self && recoverPendingReconcile(self)) return;
+    const pendingReconcileUrl = self ? buildPendingReconcileUrl(self) : undefined;
+    finishButton.hidden = !pendingReconcileUrl;
 
     const standalone = isStandalone();
     const permission = 'Notification' in window ? Notification.permission : 'denied';
@@ -264,6 +265,17 @@ export default async function mountJerkgramNotificationsShell(): Promise<void> {
     statePill.id = 'jg-state-pill';
     permissionButton.hidden = permission !== 'default';
   }
+
+  finishButton.addEventListener('click', async() => {
+    const self = await rootScope.managers.appUsersManager.getSelf();
+    const url = buildPendingReconcileUrl(self);
+    if(!url) {
+      await refresh();
+      return;
+    }
+    clearPairingAfterManualHandoff();
+    window.location.assign(url);
+  });
 
   permissionButton.addEventListener('click', async() => {
     if(!('Notification' in window)) return;
