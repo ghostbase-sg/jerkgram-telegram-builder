@@ -157,6 +157,7 @@ jobs:
           grep -R -q 'Push ready' tweb/dist/*.js
           grep -R -q 'Setup state changed. Restart setup in Jerkgram.' tweb/dist/*.js
           grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
+          grep -R -q 'assets/img/logo_filled_rounded.png' tweb/dist/*.js
           grep -q 'jerkgram://push/open' tweb/dist/handoff.js
 
           if grep -R -q 'jerkgram://push/register\|jerkgram://push/unregister' tweb/dist/*.js; then
