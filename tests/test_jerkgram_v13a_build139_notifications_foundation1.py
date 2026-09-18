@@ -55,6 +55,8 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             "telegramUserId: Int64",
             "pairingLifetime: TimeInterval = 120.0",
             "public func claimPendingPairing(nonce: String",
+            "public func claimDirectPairing(",
+            "record.pendingPairing == nil",
             "unexpiredPending.count == 1",
             "usedPairingNonces.contains(nonce)",
             "usedPairingNonces.append(nonce)",
@@ -87,6 +89,9 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             'values["nonce"]',
             'values["token"]',
             "JerkgramNotificationsStore.shared.claimPendingPairing(nonce: nonce)",
+            "JerkgramNotificationsStore.shared.claimDirectPairing(",
+            "candidates.count == 1",
+            "Choose the account in Jerkgram Notifications settings",
             "recordId.int64 == pending.nativeAccountId",
             "context.account.peerId.id._internalGetInt64Value() == pending.telegramUserId",
             "approveAuthTransferToken(",
@@ -97,6 +102,7 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             self.assertIn(token, patched)
 
         self.assertNotIn("activeAccounts.primary", patched)
+        self.assertIn("candidates.count == 1", patched)
 
     def test_reconcile_bridge_requires_same_nonce_expected_user_and_valid_installation_id(self):
         module = load_patcher()
