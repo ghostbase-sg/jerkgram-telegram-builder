@@ -1,6 +1,8 @@
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+import unittest
 
 
 def test_companion_packaging_is_notification_only(tmp_path: Path):
@@ -31,6 +33,7 @@ def test_companion_packaging_is_notification_only(tmp_path: Path):
         "icon_square_512.png",
         "logo_filled_rounded.png",
         "logo_plain.svg",
+        "pattern.svg",
     ):
         (public / "assets/img" / name).write_bytes(b"asset")
 
@@ -91,21 +94,34 @@ def test_companion_packaging_is_notification_only(tmp_path: Path):
     assert not (dist / "assets/audio").exists()
     assert not (dist / "STALE-BUNDLE.js").exists()
 
-    # Keep only the two inert DOM roots that stock Web K's startup expects.
+    assert (dist / "assets/img/pattern.svg").exists()
+
+    # Web K evaluates sidebar-related modules before the notification auth card
+    # mounts. Preserve their required DOM roots, but keep the whole skeleton inert.
     html = (dist / "index.html").read_text()
-    assert 'id="page-chats"' in html
-    assert 'id="main-columns"' in html
-    assert 'style="display: none;"' in html
-    for forbidden in (
-        "sidebar-left-overlay",
-        "chatlist-container",
-        "folders-container",
-        "search-container",
-        "column-left",
-        "column-center",
-        "column-right",
-        "sidebar-search",
-        "stories-viewer",
-        "browsehappy.com",
+    for required in (
+        'class="sidebar-left-overlay" style="display: none;"',
+        'id="page-chats"',
+        'id="main-columns"',
+        'id="column-left"',
+        'class="sidebar-slider tabs-container"',
+        'id="chatlist-container"',
+        'id="folders-container"',
+        'id="search-container"',
+        'id="column-center"',
+        'id="column-right"',
+        'id="stories-viewer" style="display: none;"',
     ):
-        assert forbidden not in html
+        assert required in html
+    assert 'id="page-chats"' in html and 'style="display: none;"' in html
+    assert "browsehappy.com" not in html
+
+
+class CompanionPackageV01Unittest(unittest.TestCase):
+    def test_packaged_startup_skeleton_and_assets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            test_companion_packaging_is_notification_only(Path(directory))
+
+
+if __name__ == "__main__":
+    unittest.main()
