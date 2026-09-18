@@ -32,6 +32,7 @@ PUBLIC_ALLOWLIST = {
     "assets/img/icon_square_512.png",
     "assets/img/logo_filled_rounded.png",
     "assets/img/logo_plain.svg",
+    "assets/img/pattern.svg",
 }
 
 # The reduced auth/pairing shell still inherits a small amount of Web K CSS.
@@ -66,15 +67,40 @@ def minimize_index_shell(index_path: Path) -> None:
 
     text = index_path.read_text(encoding="utf-8")
 
-    # Vite keeps Telegram Web K's dormant chat-list/sidebar HTML in index.html
-    # even though the companion never boots appDialogsManager. Stock src/index.ts
-    # still dereferences #page-chats and #main-columns on the signed-in path, so
-    # retain only those two inert roots instead of deleting the container outright.
+    # Several Web K modules are evaluated before the notification auth card mounts.
+    # Their constructors resolve the stock sidebar roots even though the companion
+    # never starts the Telegram dialogs UI. Keep the minimum compatible skeleton
+    # completely hidden so module evaluation is safe without exposing Telegram UI.
     legacy_start = '<div class="sidebar-left-overlay"></div>'
     legacy_end = '<div id="stories-viewer"></div>'
-    minimal_shell = '''<div id="page-chats" style="display: none;">
-      <div id="main-columns"></div>
-    </div>'''
+    minimal_shell = '''<div class="sidebar-left-overlay" style="display: none;"></div>
+    <div class="whole page-chats" style="display: none;" id="page-chats">
+      <div id="main-columns" class="tabs-container" data-animation="navigation">
+        <div class="tabs-tab chatlist-container sidebar sidebar-left main-column sidebar-left-common" id="column-left">
+          <div class="sidebar-slider tabs-container">
+            <div class="tabs-tab sidebar-slider-item item-main active">
+              <div class="sidebar-header main-search-sidebar-header can-have-forum">
+                <div class="sidebar-header__btn-container left-sidebar-burger">
+                  <div class="animated-menu-icon"></div>
+                  <div class="btn-icon sidebar-back-button"></div>
+                </div>
+              </div>
+              <div class="sidebar-content transition zoom-fade can-have-forum">
+                <div class="transition-item active" id="chatlist-container">
+                  <div class="tabs-container" id="folders-container"></div>
+                </div>
+                <div class="transition-item sidebar-search" id="search-container"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tabs-tab main-column" id="column-center"></div>
+        <div class="tabs-tab sidebar sidebar-right main-column" id="column-right">
+          <div class="sidebar-content sidebar-slider tabs-container"></div>
+        </div>
+      </div>
+    </div>
+    <div id="stories-viewer" style="display: none;"></div>'''
 
     if legacy_start in text:
         if text.count(legacy_start) != 1 or text.count(legacy_end) != 1:
@@ -96,24 +122,24 @@ def minimize_index_shell(index_path: Path) -> None:
         end = text.index(ie_end, start) + len(ie_end)
         text = text[:start] + text[end:]
 
-    for required_root in ('id="page-chats"', 'id="main-columns"'):
+    for required_root in (
+        'class="sidebar-left-overlay" style="display: none;"',
+        'id="page-chats"',
+        'id="main-columns"',
+        'id="column-left"',
+        'class="sidebar-slider tabs-container"',
+        'id="chatlist-container"',
+        'id="folders-container"',
+        'id="search-container"',
+        'id="column-center"',
+        'id="column-right"',
+        'id="stories-viewer" style="display: none;"',
+    ):
         if text.count(required_root) != 1:
             raise SystemExit(f"[jerkgram-webk-package] startup root count changed: {required_root}")
 
-    for forbidden in (
-        "sidebar-left-overlay",
-        "chatlist-container",
-        "folders-container",
-        "search-container",
-        "column-left",
-        "column-center",
-        "column-right",
-        "sidebar-search",
-        "stories-viewer",
-        "browsehappy.com",
-    ):
-        if forbidden in text:
-            raise SystemExit(f"[jerkgram-webk-package] forbidden Telegram shell escaped index filter: {forbidden}")
+    if "browsehappy.com" in text:
+        raise SystemExit("[jerkgram-webk-package] legacy browser navigation escaped index filter")
 
     index_path.write_text(text, encoding="utf-8")
 
@@ -131,6 +157,7 @@ required = [
     DIST / "assets/img/apple-touch-icon.png",
     DIST / "assets/img/logo_filled_rounded.png",
     DIST / "assets/img/logo_plain.svg",
+    DIST / "assets/img/pattern.svg",
 ]
 missing = [str(path.relative_to(DIST)) for path in required if not path.exists()]
 if missing:
@@ -146,4 +173,4 @@ for forbidden in (
     if forbidden.exists():
         raise SystemExit(f"[jerkgram-webk-package] forbidden asset escaped filter: {forbidden.relative_to(DIST)}")
 
-print(f"[jerkgram-webk-package] OK: copied {copied} public runtime assets; removed {removed_maps} source maps; minimized index shell")
+print(f"[jerkgram-webk-package] OK: copied {copied} public runtime assets; removed {removed_maps} source maps; preserved hidden startup skeleton")
