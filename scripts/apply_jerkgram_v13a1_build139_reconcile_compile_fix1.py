@@ -85,15 +85,15 @@ def normalize_text(text: str) -> str:
     old_present_count = text.count(OLD_PRESENT_PREFIX)
     new_present_count = text.count(NEW_PRESENT_PREFIX)
     require(
-        old_present_count + new_present_count == 3,
-        f"expected exactly three notification alert presentations, found old={old_present_count} new={new_present_count}",
+        old_present_count + new_present_count == 5,
+        f"expected exactly five notification alert presentations, found old={old_present_count} new={new_present_count}",
     )
     text = text.replace(OLD_PRESENT_PREFIX, NEW_PRESENT_PREFIX)
 
     require(OLD_ACCOUNT_LABEL_BLOCK not in text, "optional TelegramUser account-label implementation survived normalization")
     require(NEW_ACCOUNT_LABEL_BLOCK in text, "String account-label implementation missing after normalization")
     require(OLD_PRESENT_PREFIX not in text, "ContainableController UIKit presentation survived normalization")
-    require(text.count(NEW_PRESENT_PREFIX) == 3, "root UIViewController presentation count mismatch after normalization")
+    require(text.count(NEW_PRESENT_PREFIX) == 5, "root UIViewController presentation count mismatch after normalization")
     return text
 
 
