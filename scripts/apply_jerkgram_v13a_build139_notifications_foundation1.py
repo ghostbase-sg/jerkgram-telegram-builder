@@ -235,11 +235,14 @@ public final class JerkgramNotificationsStore {
                 telegramUserId: telegramUserId
             )
             guard record.telegramUserId == telegramUserId,
-                  record.telegramAuthorizationHash == nil,
-                  record.pendingPairing == nil else {
+                  record.telegramAuthorizationHash == nil else {
                 self.saveRecords(records)
                 return nil
             }
+
+            // A direct PWA retry for the same native account supersedes an
+            // unfinished older pending pairing. The older nonce is already
+            // recorded in usedNonces and cannot be replayed successfully.
 
             let pending = JerkgramNotificationPendingPairing(
                 nativeAccountId: nativeAccountId,
