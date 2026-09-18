@@ -10,6 +10,7 @@ on:
       - "tests/test_webk_jerkgram_login_token_v02.py"
       - "tests/test_webk_jerkgram_companion_shell_v02.py"
       - "tests/test_webk_jerkgram_repair_v06.py"
+      - "tests/test_webk_companion_package_v01.py"
       - "tests/webpush_handoff_test.mjs"
       - "tests/webpush_tap_fallback_test.mjs"
       - ".github/workflows/webpush-companion-build139.yml"
@@ -38,7 +39,8 @@ jobs:
           python -m unittest -v \
             tests.test_webk_jerkgram_login_token_v02 \
             tests.test_webk_jerkgram_companion_shell_v02 \
-            tests.test_webk_jerkgram_repair_v06
+            tests.test_webk_jerkgram_repair_v06 \
+            tests.test_webk_companion_package_v01
           node tests/webpush_handoff_test.mjs
           node tests/webpush_tap_fallback_test.mjs
 
@@ -99,6 +101,11 @@ jobs:
           grep -R -q 'Push subscription' tweb/dist/*.js
           grep -R -q 'Needs attention' tweb/dist/*.js
           grep -R -q 'Jerkgram Notifications' tweb/dist/*.js
+          test -f tweb/dist/assets/img/pattern.svg
+          grep -q 'id="column-left"' tweb/dist/index.html
+          grep -q 'class="sidebar-slider tabs-container"' tweb/dist/index.html
+          grep -q 'id="column-center"' tweb/dist/index.html
+          grep -q 'id="column-right"' tweb/dist/index.html
           if grep -R -q 'jerkgram://push/register\|jerkgram://push/unregister' tweb/dist/*.js; then
             echo 'legacy subscription-credential bridge survived' >&2
             exit 1
