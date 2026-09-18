@@ -75,8 +75,8 @@ def main() -> None:
     require("activeAccounts.primary" not in app, "authorize route guesses primary account")
     require("candidates.count == 1" in app, "direct authorize must fail closed for multiple accounts")
 
-    direct_start = core.find("public func claimDirectPairing(")
-    direct_end = core.find("@discardableResult", direct_start)
+    direct_start = state.find("public func claimDirectPairing(")
+    direct_end = state.find("@discardableResult", direct_start)
     require(direct_start >= 0 and direct_end > direct_start, "direct pairing helper bounds missing")
     direct_block = core[direct_start:direct_end]
     require("record.pendingPairing == nil" not in direct_block, "same-account retry is blocked by stale pending state")
