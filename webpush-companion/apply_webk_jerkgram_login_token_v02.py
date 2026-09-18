@@ -99,7 +99,7 @@ function storeAcceptedUserId(userId: string): void {
 export default function SignQRCard(_props: {spec: Spec}) {
   const {managers, toIm} = useAuthFlow();
   const [busy, setBusy] = createSignal(false);
-  const [status, setStatus] = createSignal('Start setup in Jerkgram first.');
+  const [status, setStatus] = createSignal('Ready to connect.');
   let stopped = false;
   let polling = false;
   const options: {dcId?: DcId, ignoreErrors: true} = {ignoreErrors: true};
@@ -125,10 +125,28 @@ export default function SignQRCard(_props: {spec: Spec}) {
     return loginToken as AuthLoginToken;
   }
 
+  function reconcileWithJerkgram(userId: string): void {
+    const pairing = readPairingState();
+    if(!pairing) {
+      setStatus('Setup expired. Tap Connect with Jerkgram again.');
+      return;
+    }
+    if(pairing.accountNumber !== getCurrentAccount()) {
+      setStatus('Setup state changed. Tap Connect with Jerkgram again.');
+      return;
+    }
+
+    const installationId = getOrCreateInstallationId();
+    const url = `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(pairing.nonce)}`;
+    setStatus('Finishing setup in Jerkgram…');
+    window.location.assign(url);
+  }
+
   async function handleLoginSuccess(authorization: AuthAuthorization.authAuthorization): Promise<void> {
     await managers.apiManager.setUser(authorization.user);
     storeAcceptedUserId(String(authorization.user.id));
     stopped = true;
+    reconcileWithJerkgram(String(authorization.user.id));
     await toIm();
   }
 
@@ -236,24 +254,6 @@ export default function SignQRCard(_props: {spec: Spec}) {
     document.removeEventListener('visibilitychange', onVisibilityChange);
   });
 
-  const step = (number: string, text: string) => (
-    <div style={{display: 'flex', gap: '12px', 'align-items': 'flex-start'}}>
-      <div style={{
-        width: '26px',
-        height: '26px',
-        'border-radius': '50%',
-        background: 'var(--primary-color)',
-        color: '#fff',
-        display: 'grid',
-        'place-items': 'center',
-        'font-size': '13px',
-        'font-weight': 700,
-        'flex-shrink': 0
-      }}>{number}</div>
-      <div style={{'padding-top': '3px', 'font-size': '15px', 'line-height': 1.35}}>{text}</div>
-    </div>
-  );
-
   return (
     <AuthCard inputWrapper={false}>
       <div style={{'text-align': 'center', padding: '4px 8px 22px'}}>
@@ -266,21 +266,8 @@ export default function SignQRCard(_props: {spec: Spec}) {
         />
         <h1 style={{margin: '0 0 8px', 'font-size': '27px', 'letter-spacing': '-.35px'}}>Jerkgram Notifications</h1>
         <p class="secondary" style={{margin: 0, 'font-size': '15px', 'line-height': 1.4}}>
-          Get Telegram notifications for Jerkgram even when the main app is closed.
+          Connect this Home Screen app to your Jerkgram account for notifications.
         </p>
-      </div>
-
-      <div style={{
-        display: 'grid',
-        gap: '14px',
-        margin: '0 0 16px',
-        padding: '16px',
-        'border-radius': '16px',
-        background: 'var(--surface-color, rgba(120,120,128,.08))'
-      }}>
-        {step('1', 'Open Jerkgram.')}
-        {step('2', 'Settings → Jerkgram → Jerkgram Notifications.')}
-        {step('3', 'Tap Enable Notifications, then return here.')}
       </div>
 
       <div style={{
@@ -295,16 +282,12 @@ export default function SignQRCard(_props: {spec: Spec}) {
         'font-weight': 500
       }}>{status()}</div>
 
-      <Button primaryFilled large onClick={openJerkgram}>
-        Open Jerkgram
-      </Button>
-
-      <Button large disabled={busy()} onClick={continueSetup}>
-        {busy() ? 'Preparing…' : 'I enabled it — Continue'}
+      <Button primaryFilled large disabled={busy()} onClick={continueSetup}>
+        {busy() ? 'Opening Jerkgram…' : 'Connect with Jerkgram'}
       </Button>
 
       <p class="secondary" style={{'text-align': 'center', margin: '14px 14px 0', 'font-size': '12px', 'line-height': 1.4}}>
-        No phone number, QR code, or Telegram password is entered here.
+        Jerkgram will open and ask you to confirm the account. No phone number, QR code, or Telegram password is entered here.
       </p>
     </AuthCard>
   );
@@ -327,7 +310,7 @@ def patch_tree(root: Path) -> None:
 def main() -> None:
     patch_tree(ROOT)
     print("[jerkgram-login-token-v02] OK")
-    print("  flow: start in native Jerkgram -> Home Screen + permission -> login token -> native confirm -> explicit finish")
+    print("  flow: Home Screen -> Connect with Jerkgram -> native confirm -> automatic one-shot reconcile")
     print("  pairing: origin-local, 120 second TTL, survives standalone process restart")
 
 
