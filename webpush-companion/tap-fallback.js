@@ -42,7 +42,9 @@ export function buildJerkgramTapIdentity(push) {
     return null;
   }
 
-  const receiver = positiveIntegerString(data.user_id) || '0';
+  const receiver = positiveIntegerString(data.user_id);
+  if(!receiver) return null;
+
   const msg = positiveIntegerString(custom.msg_id, 2147483647) || randomIdentity(data.random_id);
   if(!msg) return null;
   const thread = positiveIntegerString(custom.top_msg_id, 2147483647) || '0';
@@ -72,12 +74,12 @@ export function normalizeJerkgramOpenUrl(value) {
   const kind = url.searchParams.get('kind');
   if(!['user', 'chat', 'channel'].includes(kind)) return null;
   if(!positiveIntegerString(url.searchParams.get('peer'))) return null;
+  if(!positiveIntegerString(url.searchParams.get('user'))) return null;
 
   const optionalPositive = (name, max) => {
     const value = url.searchParams.get(name);
     return value === null || !!positiveIntegerString(value, max);
   };
-  if(!optionalPositive('user')) return null;
   if(!optionalPositive('msg', 2147483647)) return null;
   if(!optionalPositive('thread', 2147483647)) return null;
 
