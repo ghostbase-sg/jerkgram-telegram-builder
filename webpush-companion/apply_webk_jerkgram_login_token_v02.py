@@ -30,13 +30,12 @@ type PairingState = {
   nonce: string;
   createdAt: number;
   accountNumber: number;
-  reconcileAttemptedAt?: number;
+  telegramUserId?: string;
 };
 
 const JERKGRAM_PAIRING_KEY = 'jerkgram.notifications.pairing.v1';
 const INSTALLATION_ID_KEY = 'jerkgram.notifications.installation.v1';
 const PAIRING_LIFETIME_MS = 120_000;
-const RECONCILE_RETRY_DELAY_MS = 5_000;
 const FETCH_INTERVAL = 2;
 
 function tokenToBase64Url(token: Uint8Array | number[]): string {
@@ -68,7 +67,7 @@ function readPairingState(): PairingState | undefined {
 
   try {
     const parsed = JSON.parse(raw) as PairingState;
-    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4 || (parsed.reconcileAttemptedAt !== undefined && (typeof parsed.reconcileAttemptedAt !== 'number' || !Number.isFinite(parsed.reconcileAttemptedAt)))) {
+    if(!parsed.nonce || typeof parsed.createdAt !== 'number' || !Number.isInteger(parsed.accountNumber) || parsed.accountNumber < 1 || parsed.accountNumber > 4 || (parsed.telegramUserId !== undefined && !/^[1-9][0-9]{0,19}$/.test(parsed.telegramUserId))) {
       localStorage.removeItem(JERKGRAM_PAIRING_KEY);
       return undefined;
     }
@@ -88,39 +87,19 @@ function storePairingState(nonce: string): void {
   localStorage.setItem(JERKGRAM_PAIRING_KEY, JSON.stringify(value));
 }
 
-function markReconcileAttempt(pairing: PairingState): void {
+function storeAcceptedUserId(userId: string): void {
+  const pairing = readPairingState();
+  if(!pairing || pairing.accountNumber !== getCurrentAccount()) return;
   localStorage.setItem(JERKGRAM_PAIRING_KEY, JSON.stringify({
     ...pairing,
-    reconcileAttemptedAt: Date.now()
+    telegramUserId: userId
   } satisfies PairingState));
-}
-
-function armPairingCleanupAfterNativeHandoff(): void {
-  let timer = 0;
-
-  const disarm = () => {
-    document.removeEventListener('visibilitychange', onVisibilityChange);
-    window.removeEventListener('pagehide', onPageHide);
-    if(timer) window.clearTimeout(timer);
-  };
-  const clearPairing = () => {
-    localStorage.removeItem(JERKGRAM_PAIRING_KEY);
-    disarm();
-  };
-  const onVisibilityChange = () => {
-    if(document.visibilityState === 'hidden') clearPairing();
-  };
-  const onPageHide = () => clearPairing();
-
-  document.addEventListener('visibilitychange', onVisibilityChange);
-  window.addEventListener('pagehide', onPageHide, {once: true});
-  timer = window.setTimeout(disarm, RECONCILE_RETRY_DELAY_MS);
 }
 
 export default function SignQRCard(_props: {spec: Spec}) {
   const {managers, toIm} = useAuthFlow();
   const [busy, setBusy] = createSignal(false);
-  const [status, setStatus] = createSignal('Ready to connect');
+  const [status, setStatus] = createSignal('Start setup in Jerkgram first.');
   let stopped = false;
   let polling = false;
   const options: {dcId?: DcId, ignoreErrors: true} = {ignoreErrors: true};
@@ -146,31 +125,11 @@ export default function SignQRCard(_props: {spec: Spec}) {
     return loginToken as AuthLoginToken;
   }
 
-  function reconcileWithJerkgram(userId: string): void {
-    const pairing = readPairingState();
-    if(!pairing) {
-      setStatus('Setup expired. Restart setup in Jerkgram.');
-      return;
-    }
-
-    if(pairing.accountNumber !== getCurrentAccount()) {
-      setStatus('Setup state changed. Restart setup in Jerkgram.');
-      return;
-    }
-
-    const installationId = getOrCreateInstallationId();
-    const nonce = pairing.nonce;
-    const url = `jerkgram://push/reconcile?v=1&user=${encodeURIComponent(userId)}&installation=${encodeURIComponent(installationId)}&nonce=${encodeURIComponent(nonce)}`;
-    markReconcileAttempt(pairing);
-    armPairingCleanupAfterNativeHandoff();
-    window.location.assign(url);
-  }
-
   async function handleLoginSuccess(authorization: AuthAuthorization.authAuthorization): Promise<void> {
     await managers.apiManager.setUser(authorization.user);
-    reconcileWithJerkgram(String(authorization.user.id));
+    storeAcceptedUserId(String(authorization.user.id));
     stopped = true;
-    toIm();
+    await toIm();
   }
 
   async function continueSetup(): Promise<void> {
@@ -211,7 +170,7 @@ export default function SignQRCard(_props: {spec: Spec}) {
       getOrCreateInstallationId();
       const tokenValue = tokenToBase64Url(loginToken.token);
       const url = `jerkgram://push/authorize?v=1&token=${encodeURIComponent(tokenValue)}&nonce=${encodeURIComponent(nonce)}`;
-      setStatus('Confirm this account in Jerkgram, then return here.');
+      setStatus('Jerkgram is opening. Confirm the selected account there, then return here.');
       window.location.assign(url);
     } catch(error) {
       if((error as ApiError).type === 'SESSION_PASSWORD_NEEDED') {
@@ -286,28 +245,28 @@ export default function SignQRCard(_props: {spec: Spec}) {
         </p>
       </div>
 
+      <div style={{
+        margin: '0 0 14px',
+        padding: '14px 16px',
+        'border-radius': '14px',
+        background: 'var(--surface-color, rgba(120,120,128,.08))',
+        'font-size': '14px',
+        'line-height': '1.45'
+      }}>
+        <div><b>1.</b> Open Jerkgram.</div>
+        <div><b>2.</b> Go to Settings → Jerkgram → Jerkgram Notifications.</div>
+        <div><b>3.</b> Tap Enable Notifications, then return here.</div>
+      </div>
+
       <p class="secondary" style={{'text-align': 'center', margin: '0 8px 14px'}}>{status()}</p>
 
-      <Button primaryFilled large disabled={busy()} onClick={continueSetup}>
-        {busy() ? 'Preparing…' : 'Continue Setup'}
+      <Button primaryFilled large onClick={openJerkgram}>
+        Open Jerkgram
       </Button>
 
-      <button
-        type="button"
-        onClick={openJerkgram}
-        style={{
-          display: 'block',
-          width: '100%',
-          margin: '14px 0 0',
-          border: '0',
-          background: 'transparent',
-          color: 'var(--primary-color)',
-          'font-size': '14px',
-          cursor: 'pointer'
-        }}
-      >
-        Started setup by mistake? Open Jerkgram
-      </button>
+      <Button large disabled={busy()} onClick={continueSetup}>
+        {busy() ? 'Preparing…' : 'I started it in Jerkgram — Continue'}
+      </Button>
     </AuthCard>
   );
 }
@@ -329,7 +288,7 @@ def patch_tree(root: Path) -> None:
 def main() -> None:
     patch_tree(ROOT)
     print("[jerkgram-login-token-v02] OK")
-    print("  flow: Home Screen + permission -> export login token -> Jerkgram accept -> Web K success -> reconcile")
+    print("  flow: start in native Jerkgram -> Home Screen + permission -> login token -> native confirm -> explicit finish")
     print("  pairing: origin-local, 120 second TTL, survives standalone process restart")
 
 
