@@ -130,8 +130,20 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             "String(self.id)",
             "localStorage.removeItem(JERKGRAM_PAIRING_KEY)",
             "pairing.accountNumber !== getCurrentAccount()",
+            "reconcileAttemptedAt?: number",
+            "RECONCILE_RETRY_DELAY_MS = 5_000",
+            "markReconcileAttempt(pairing)",
+            "armPairingCleanupAfterNativeHandoff()",
+            "document.visibilityState === 'hidden'",
+            "window.addEventListener('pagehide', onPageHide, {once: true})",
+            "Date.now() - pairing.reconcileAttemptedAt < RECONCILE_RETRY_DELAY_MS",
         ):
             self.assertIn(token, source)
+
+        self.assertNotIn(
+            "localStorage.removeItem(JERKGRAM_PAIRING_KEY);\n  window.location.assign(url);",
+            source,
+        )
 
     def test_tree_patch_is_idempotent(self):
         shell_module = load_patcher()
