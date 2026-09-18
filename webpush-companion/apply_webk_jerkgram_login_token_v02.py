@@ -236,37 +236,76 @@ export default function SignQRCard(_props: {spec: Spec}) {
     document.removeEventListener('visibilitychange', onVisibilityChange);
   });
 
+  const step = (number: string, text: string) => (
+    <div style={{display: 'flex', gap: '12px', 'align-items': 'flex-start'}}>
+      <div style={{
+        width: '26px',
+        height: '26px',
+        'border-radius': '50%',
+        background: 'var(--primary-color)',
+        color: '#fff',
+        display: 'grid',
+        'place-items': 'center',
+        'font-size': '13px',
+        'font-weight': 700,
+        'flex-shrink': 0
+      }}>{number}</div>
+      <div style={{'padding-top': '3px', 'font-size': '15px', 'line-height': 1.35}}>{text}</div>
+    </div>
+  );
+
   return (
     <AuthCard inputWrapper={false}>
-      <div style={{'text-align': 'center', padding: '10px 8px 20px'}}>
-        <h1 style={{margin: '0 0 10px', 'font-size': '28px'}}>Jerkgram Notifications</h1>
-        <p class="secondary" style={{margin: 0}}>
-          Notifications for Jerkgram without keeping the main app open.
+      <div style={{'text-align': 'center', padding: '4px 8px 22px'}}>
+        <img
+          src="./assets/img/logo_filled_rounded.png"
+          alt="Jerkgram"
+          width="88"
+          height="88"
+          style={{display: 'block', margin: '0 auto 18px', 'border-radius': '24px', 'box-shadow': '0 10px 28px rgba(0,0,0,.16)'}}
+        />
+        <h1 style={{margin: '0 0 8px', 'font-size': '27px', 'letter-spacing': '-.35px'}}>Jerkgram Notifications</h1>
+        <p class="secondary" style={{margin: 0, 'font-size': '15px', 'line-height': 1.4}}>
+          Get Telegram notifications for Jerkgram even when the main app is closed.
         </p>
       </div>
 
       <div style={{
-        margin: '0 0 14px',
-        padding: '14px 16px',
-        'border-radius': '14px',
-        background: 'var(--surface-color, rgba(120,120,128,.08))',
-        'font-size': '14px',
-        'line-height': '1.45'
+        display: 'grid',
+        gap: '14px',
+        margin: '0 0 16px',
+        padding: '16px',
+        'border-radius': '16px',
+        background: 'var(--surface-color, rgba(120,120,128,.08))'
       }}>
-        <div><b>1.</b> Open Jerkgram.</div>
-        <div><b>2.</b> Go to Settings → Jerkgram → Jerkgram Notifications.</div>
-        <div><b>3.</b> Tap Enable Notifications, then return here.</div>
+        {step('1', 'Open Jerkgram.')}
+        {step('2', 'Settings → Jerkgram → Jerkgram Notifications.')}
+        {step('3', 'Tap Enable Notifications, then return here.')}
       </div>
 
-      <p class="secondary" style={{'text-align': 'center', margin: '0 8px 14px'}}>{status()}</p>
+      <div style={{
+        margin: '0 0 16px',
+        padding: '10px 13px',
+        'border-radius': '12px',
+        background: 'rgba(51,144,236,.10)',
+        color: 'var(--primary-color)',
+        'text-align': 'center',
+        'font-size': '13px',
+        'line-height': 1.35,
+        'font-weight': 500
+      }}>{status()}</div>
 
       <Button primaryFilled large onClick={openJerkgram}>
         Open Jerkgram
       </Button>
 
       <Button large disabled={busy()} onClick={continueSetup}>
-        {busy() ? 'Preparing…' : 'I started it in Jerkgram — Continue'}
+        {busy() ? 'Preparing…' : 'I enabled it — Continue'}
       </Button>
+
+      <p class="secondary" style={{'text-align': 'center', margin: '14px 14px 0', 'font-size': '12px', 'line-height': 1.4}}>
+        No phone number, QR code, or Telegram password is entered here.
+      </p>
     </AuthCard>
   );
 }
