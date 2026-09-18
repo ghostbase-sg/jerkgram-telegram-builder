@@ -31,8 +31,9 @@ assert.deepEqual(
 );
 
 assert.equal(buildJerkgramHandoffData({custom: {msg_id: '1'}}), null);
-assert.equal(buildJerkgramHandoffData({custom: {from_id: '-1', msg_id: '1'}}), null);
-assert.equal(buildJerkgramHandoffData({custom: {from_id: '1', msg_id: '2147483648'}}).msg, undefined);
+assert.equal(buildJerkgramHandoffData({custom: {from_id: '100', msg_id: '1'}}), null);
+assert.equal(buildJerkgramHandoffData({user_id: '42', custom: {from_id: '-1', msg_id: '1'}}), null);
+assert.equal(buildJerkgramHandoffData({user_id: '42', custom: {from_id: '1', msg_id: '2147483648'}}).msg, undefined);
 
 const landing = buildJerkgramLandingUrl('https://push.example/app/', {
   user_id: '42',
@@ -44,13 +45,20 @@ const landing = buildJerkgramLandingUrl('https://push.example/app/', {
 assert.equal(landing, 'https://push.example/app/open.html?user=42&kind=user&peer=100&msg=7');
 assert.ok(!landing.includes('Alice'));
 assert.ok(!landing.includes('SECRET'));
+assert.equal(
+  buildJerkgramLandingUrl('https://push.example/app/', {
+    custom: {from_id: '100', msg_id: '7'}
+  }),
+  null
+);
 
 assert.equal(
   buildJerkgramNativeUrl('?user=42&kind=channel&peer=300&msg=9&thread=77'),
   'jerkgram://push/open?kind=channel&peer=300&user=42&msg=9&thread=77'
 );
-assert.equal(buildJerkgramNativeUrl('?kind=evil&peer=1'), null);
-assert.equal(buildJerkgramNativeUrl('?kind=user&peer=-1'), null);
+assert.equal(buildJerkgramNativeUrl('?kind=user&peer=100&msg=7'), null);
+assert.equal(buildJerkgramNativeUrl('?user=42&kind=evil&peer=1'), null);
+assert.equal(buildJerkgramNativeUrl('?user=42&kind=user&peer=-1'), null);
 
 // Telegram documents MESSAGE_TEXT loc_args as [sender, message body].
 assert.deepEqual(
