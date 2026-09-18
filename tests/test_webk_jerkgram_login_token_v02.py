@@ -198,7 +198,9 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
             "Open Jerkgram",
             "Settings → Jerkgram → Jerkgram Notifications.",
             "Tap Enable Notifications, then return here.",
-            "I started it in Jerkgram — Continue",
+            "I enabled it — Continue",
+            "No phone number, QR code, or Telegram password is entered here.",
+            "./assets/img/logo_filled_rounded.png",
             "Additional Telegram verification is required. Restart setup in Jerkgram.",
         ):
             self.assertIn(token, patched)
