@@ -19,7 +19,6 @@ AUTH_STATE_FUNCTION = r'''function authStateToCardSpec(_authState: MountAuthFlow
 
 
 BOOTSTRAP_SOURCE = r'''import rootScope from '@lib/rootScope';
-import {getCurrentAccount} from '@lib/accounts/getCurrentAccount';
 import mountJerkgramNotificationsShell from '@lib/jerkgramNotificationsShell';
 
 import {disposeActiveAuthFlow} from '@/pages/mountAuthFlow';
@@ -51,6 +50,7 @@ export default bootstrapIm;
 
 
 SHELL_SOURCE = r'''import rootScope from '@lib/rootScope';
+import {getCurrentAccount} from '@lib/accounts/getCurrentAccount';
 
 let mounted = false;
 
