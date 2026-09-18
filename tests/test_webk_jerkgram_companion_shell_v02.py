@@ -92,7 +92,7 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
 
         for token in (
             "Jerkgram Notifications",
-            "Active",
+            "Push ready",
             "Permission",
             "Session",
             "Push subscription",
@@ -105,6 +105,9 @@ class WebKJerkgramCompanionShellV02Tests(unittest.TestCase):
             "prefers-color-scheme: dark",
         ):
             self.assertIn(token, source)
+
+        self.assertIn("Native Jerkgram is the authority for binding ACTIVE after user-id reconcile.", source)
+        self.assertNotIn("statePill.textContent = active ? 'Active'", source)
 
         for forbidden in (
             "Disconnect",
