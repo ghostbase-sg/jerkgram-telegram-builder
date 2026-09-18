@@ -10,6 +10,8 @@ on:
       - "tests/test_webk_jerkgram_login_token_v02.py"
       - "tests/test_webk_jerkgram_companion_shell_v02.py"
       - "tests/test_webk_jerkgram_repair_v06.py"
+      - "tests/webpush_handoff_test.mjs"
+      - "tests/webpush_tap_fallback_test.mjs"
       - ".github/workflows/webpush-companion-build139.yml"
 
 permissions:
