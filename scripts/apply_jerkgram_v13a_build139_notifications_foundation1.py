@@ -197,6 +197,72 @@ public final class JerkgramNotificationsStore {
         }
     }
 
+    public func claimDirectPairing(
+        nativeAccountId: Int64,
+        telegramUserId: Int64,
+        nonce: String,
+        now: Date = Date(),
+        pairingLifetime: TimeInterval = 120.0
+    ) -> JerkgramNotificationPendingPairing? {
+        return self.queue.sync {
+            guard Self.isValidNonce(nonce) else {
+                return nil
+            }
+
+            var usedPairingNonces = self.loadUsedNonces()
+            guard !usedPairingNonces.contains(nonce) else {
+                return nil
+            }
+
+            var records = self.loadRecords()
+            let timestamp = now.timeIntervalSince1970
+            self.expirePendingPairings(records: &records, now: timestamp)
+
+            let anotherPending = records.values.contains { record in
+                guard record.nativeAccountId != nativeAccountId,
+                      let pending = record.pendingPairing else {
+                    return false
+                }
+                return pending.expiresAt > timestamp
+            }
+            guard !anotherPending else {
+                self.saveRecords(records)
+                return nil
+            }
+
+            var record = records[String(nativeAccountId)] ?? JerkgramNotificationAccountRecord(
+                nativeAccountId: nativeAccountId,
+                telegramUserId: telegramUserId
+            )
+            guard record.telegramUserId == telegramUserId,
+                  record.telegramAuthorizationHash == nil,
+                  record.pendingPairing == nil else {
+                self.saveRecords(records)
+                return nil
+            }
+
+            let pending = JerkgramNotificationPendingPairing(
+                nativeAccountId: nativeAccountId,
+                telegramUserId: telegramUserId,
+                createdAt: timestamp,
+                expiresAt: timestamp + pairingLifetime,
+                nonce: nonce
+            )
+            record.lifecycleState = .connecting
+            record.bridgeProtocolVersion = Self.bridgeProtocolVersion
+            record.pendingPairing = pending
+            records[String(nativeAccountId)] = record
+
+            usedPairingNonces.append(nonce)
+            if usedPairingNonces.count > self.maximumUsedNonces {
+                usedPairingNonces.removeFirst(usedPairingNonces.count - self.maximumUsedNonces)
+            }
+            self.saveUsedNonces(usedPairingNonces)
+            self.saveRecords(records)
+            return pending
+        }
+    }
+
     @discardableResult
     public func acceptPairingAuthorization(
         nativeAccountId: Int64,
@@ -441,10 +507,11 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
         }
         guard let tokenData = Data(base64Encoded: base64),
               !tokenData.isEmpty,
-              tokenData.count <= 1024,
-              let pending = JerkgramNotificationsStore.shared.claimPendingPairing(nonce: nonce) else {
+              tokenData.count <= 1024 else {
             return true
         }
+
+        let preclaimedPending = JerkgramNotificationsStore.shared.claimPendingPairing(nonce: nonce)
 
         let _ = (self.sharedContextPromise.get()
         |> take(1)
@@ -454,6 +521,42 @@ AUTHORIZE_HELPER = r'''    // MARK: Jerkgram v1.3A BUILD139_NOTIFICATIONS_FOUNDA
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] activeAccounts in
                 guard let self else { return }
+
+                let pending: JerkgramNotificationPendingPairing
+                if let preclaimedPending {
+                    pending = preclaimedPending
+                } else {
+                    let candidates = activeAccounts.accounts
+                    guard candidates.count == 1,
+                          let only = candidates.first else {
+                        let alert = UIAlertController(
+                            title: "Jerkgram Notifications",
+                            message: "Choose the account in Jerkgram Notifications settings, then try Connect with Jerkgram again.",
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.mainWindow?.viewController?.present(alert, animated: true)
+                        return
+                    }
+
+                    let nativeAccountId = only.0.int64
+                    let telegramUserId = only.1.account.peerId.id._internalGetInt64Value()
+                    guard let directPending = JerkgramNotificationsStore.shared.claimDirectPairing(
+                        nativeAccountId: nativeAccountId,
+                        telegramUserId: telegramUserId,
+                        nonce: nonce
+                    ) else {
+                        let alert = UIAlertController(
+                            title: "Jerkgram Notifications",
+                            message: "Could not start notification setup. Try again.",
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.mainWindow?.viewController?.present(alert, animated: true)
+                        return
+                    }
+                    pending = directPending
+                }
 
                 var targetContext: AccountContext?
                 for (recordId, context, _) in activeAccounts.accounts {
@@ -640,6 +743,8 @@ def patch_app_delegate_text(text: str) -> str:
         'values["nonce"]',
         'values["token"]',
         "JerkgramNotificationsStore.shared.claimPendingPairing(nonce: nonce)",
+        "JerkgramNotificationsStore.shared.claimDirectPairing(",
+        "candidates.count == 1",
         "recordId.int64 == pending.nativeAccountId",
         "context.account.peerId.id._internalGetInt64Value() == pending.telegramUserId",
         "approveAuthTransferToken(",
@@ -653,6 +758,7 @@ def patch_app_delegate_text(text: str) -> str:
     ):
         require(token in text, "missing AppDelegate invariant: " + token)
     require("activeAccounts.primary" not in text, "pairing must never guess the primary account")
+    require("candidates.count == 1" in text, "direct authorize must fail closed for multiple accounts")
     return text
 
 
