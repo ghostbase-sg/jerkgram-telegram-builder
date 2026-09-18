@@ -93,10 +93,8 @@ jobs:
           grep -R -q 'jerkgram://push/reconcile?v=1' tweb/dist/*.js
           grep -R -q 'jerkgram.notifications.installation.v1' tweb/dist/*.js
           grep -R -q 'jerkgram.notifications.pairing.v1' tweb/dist/*.js
-          grep -R -q 'Open Jerkgram' tweb/dist/*.js
-          grep -R -q 'Settings → Jerkgram → Jerkgram Notifications' tweb/dist/*.js
-          grep -R -q 'I enabled it' tweb/dist/*.js
-          grep -R -q 'Finish Setup in Jerkgram' tweb/dist/*.js
+          grep -R -q 'Connect with Jerkgram' tweb/dist/*.js
+                              grep -R -q 'Finish Setup in Jerkgram' tweb/dist/*.js
           grep -R -q 'Manage in Jerkgram' tweb/dist/*.js
           grep -R -q 'Repair Notifications' tweb/dist/*.js
           grep -R -q 'Push ready' tweb/dist/*.js
