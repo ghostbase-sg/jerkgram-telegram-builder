@@ -68,10 +68,18 @@ def main() -> None:
         "telegramUserId: telegramUserId",
         "installationId: installationId",
         "nonce: nonce",
+        "func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool",
+        "private func openUrl(url: URL) {",
         "if self.handleJerkgramNotificationsAuthorizeUrl(url)",
         "if self.handleJerkgramNotificationsReconcileUrl(url)",
     ):
         require(token in app, "AppDelegate invariant missing: " + token)
+    central_start = app.find("private func openUrl(url: URL) {")
+    central_end = app.find("func application(_ application: UIApplication, continue userActivity:", central_start)
+    require(central_start >= 0 and central_end > central_start, "central openUrl bounds missing")
+    central_block = app[central_start:central_end]
+    require("handleJerkgramNotificationsAuthorizeUrl(url)" in central_block, "modern URL callbacks bypass authorize bridge")
+    require("handleJerkgramNotificationsReconcileUrl(url)" in central_block, "modern URL callbacks bypass reconcile bridge")
     require("activeAccounts.primary" not in app, "authorize route guesses primary account")
     require("candidates.count == 1" in app, "direct authorize must fail closed for multiple accounts")
 
