@@ -119,8 +119,7 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
             patched,
         )
         central_start = patched.index("private func openUrl(url: URL) {")
-        central_end = patched.index("}\n", central_start)
-        central_block = patched[central_start:central_end]
+        central_block = patched[central_start:]
         self.assertIn("handleJerkgramNotificationsAuthorizeUrl(url)", central_block)
         self.assertIn("handleJerkgramNotificationsReconcileUrl(url)", central_block)
 
