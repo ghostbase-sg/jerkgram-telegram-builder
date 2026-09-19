@@ -49,6 +49,8 @@ class Build139ReleaseContract(unittest.TestCase):
         self.assertEqual(verifier.EXPECTED_BUILD, "139")
         self.assertEqual(verifier.EXPECTED_BUNDLE, "com.jerkgram.ios")
         self.assertEqual(verifier.EXPECTED_TELEGRAM_VERSION, "12.9.2")
+        self.assertEqual(finalizer.JERKGRAM_URL_SCHEME, "jerkgram")
+        self.assertEqual(verifier.EXPECTED_URL_SCHEME, "jerkgram")
 
         hook = load(REPO / "scripts/install_jerkgram_v12w_build133_probe_hook.py", "build139_hook_final")
         self.assertEqual(
