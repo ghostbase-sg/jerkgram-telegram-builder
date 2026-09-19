@@ -11,6 +11,7 @@ EXPECTED_BUNDLE = "com.jerkgram.ios"
 EXPECTED_TELEGRAM_VERSION = "12.9.2"
 EXPECTED_BUILD = "139"
 EXPECTED_DISPLAY = "Jerkgram"
+EXPECTED_URL_SCHEME = "jerkgram"
 EXTENSION_SUFFIXES = {
     "BroadcastUploadExtension.appex": "BroadcastUpload",
     "IntentsExtension.appex": "SiriIntents",
@@ -44,6 +45,15 @@ def verify_build139_identity(ipa: Path) -> None:
         require(str(info.get("CFBundleVersion")) == EXPECTED_BUILD, "CFBundleVersion is not 139")
         require(info.get("CFBundleDisplayName") == EXPECTED_DISPLAY, "CFBundleDisplayName is not Jerkgram")
         require(info.get("CFBundleName") == EXPECTED_DISPLAY, "CFBundleName is not Jerkgram")
+        url_types = info.get("CFBundleURLTypes") or []
+        url_schemes = [
+            scheme
+            for entry in url_types
+            if isinstance(entry, dict)
+            for scheme in (entry.get("CFBundleURLSchemes") or [])
+        ]
+        require(EXPECTED_URL_SCHEME in url_schemes, "jerkgram:// URL scheme missing from final IPA")
+        require(url_schemes.count(EXPECTED_URL_SCHEME) == 1, "jerkgram:// URL scheme is not unique")
         require(not (app / "embedded.mobileprovision").exists(), "main embedded.mobileprovision present")
 
         plugins_root = app / "PlugIns"
