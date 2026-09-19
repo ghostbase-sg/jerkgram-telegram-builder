@@ -17,7 +17,7 @@ def load_patcher():
     return module
 
 
-APP_FIXTURE = '''import Foundation\nimport UIKit\n\nfinal class AppDelegate {\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n}\n'''
+APP_FIXTURE = '''import Foundation\nimport UIKit\n\nfinal class AppDelegate {\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n\n    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n\n    func application(_ application: UIApplication, handleOpen url: URL) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n\n    private func openUrl(url: URL) {\n    }\n}\n'''
 
 
 class Build139NotificationsFoundationContract(unittest.TestCase):
@@ -109,6 +109,20 @@ class Build139NotificationsFoundationContract(unittest.TestCase):
 
         self.assertNotIn("activeAccounts.primary", patched)
         self.assertIn("candidates.count == 1", patched)
+
+    def test_modern_ios_url_callback_reaches_central_notification_dispatch(self):
+        module = load_patcher()
+        patched = module.patch_app_delegate_text(APP_FIXTURE)
+
+        self.assertIn(
+            "func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool",
+            patched,
+        )
+        central_start = patched.index("private func openUrl(url: URL) {")
+        central_end = patched.index("}\n", central_start)
+        central_block = patched[central_start:central_end]
+        self.assertIn("handleJerkgramNotificationsAuthorizeUrl(url)", central_block)
+        self.assertIn("handleJerkgramNotificationsReconcileUrl(url)", central_block)
 
     def test_reconcile_bridge_requires_same_nonce_expected_user_and_valid_installation_id(self):
         module = load_patcher()
