@@ -739,6 +739,12 @@ def patch_app_delegate_text(text: str) -> str:
             require(text.count(open_anchor) == 1, "AppDelegate notification dispatch anchor count")
             text = text.replace(open_anchor, patched_open, 1)
 
+    core_open_anchor = """    private func openUrl(url: URL) {\n"""
+    core_open_patched = """    private func openUrl(url: URL) {\n        if self.handleJerkgramNotificationsAuthorizeUrl(url) {\n            return\n        }\n        if self.handleJerkgramNotificationsReconcileUrl(url) {\n            return\n        }\n"""
+    if core_open_patched not in text:
+        require(text.count(core_open_anchor) == 1, "AppDelegate central openUrl anchor count")
+        text = text.replace(core_open_anchor, core_open_patched, 1)
+
     for token in (
         authorize_marker,
         reconcile_marker,
@@ -756,6 +762,7 @@ def patch_app_delegate_text(text: str) -> str:
         'url.path == "/reconcile"',
         "JerkgramNotificationsStore.shared.completePairing(",
         "installationId: installationId",
+        "private func openUrl(url: URL) {",
         "if self.handleJerkgramNotificationsAuthorizeUrl(url)",
         "if self.handleJerkgramNotificationsReconcileUrl(url)",
     ):
