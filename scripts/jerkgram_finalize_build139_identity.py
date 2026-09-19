@@ -20,6 +20,8 @@ PUBLIC_GROUP = "group.com.jerkgram.ios"
 TELEGRAM_VERSION = "12.9.2"
 JERKGRAM_DISPLAY_VERSION = "1.0.2"
 JERKGRAM_TECHNICAL_VERSION = "1.0.2"
+JERKGRAM_URL_SCHEME = "jerkgram"
+JERKGRAM_URL_NAME = "app.pumpkin6584.lion7414.jerkgram"
 
 base.base.base.BUILD = BUILD
 
@@ -62,6 +64,32 @@ def rewrite_bundle_identifiers(root: Path) -> list[Path]:
     main_info = load_plist(main_info_path)
     require(main_info.get("CFBundleIdentifier") == OLD_PUBLIC_BUNDLE, "unexpected pre-Build139 main bundle")
     main_info["CFBundleIdentifier"] = PUBLIC_BUNDLE
+
+    url_types = list(main_info.get("CFBundleURLTypes") or [])
+    has_jerkgram = any(
+        JERKGRAM_URL_SCHEME in (entry.get("CFBundleURLSchemes") or [])
+        for entry in url_types
+        if isinstance(entry, dict)
+    )
+    if not has_jerkgram:
+        compatibility_index = next(
+            (
+                index
+                for index, entry in enumerate(url_types)
+                if isinstance(entry, dict)
+                and "tg" in (entry.get("CFBundleURLSchemes") or [])
+            ),
+            len(url_types),
+        )
+        url_types.insert(
+            compatibility_index,
+            {
+                "CFBundleTypeRole": "Viewer",
+                "CFBundleURLName": JERKGRAM_URL_NAME,
+                "CFBundleURLSchemes": [JERKGRAM_URL_SCHEME],
+            },
+        )
+    main_info["CFBundleURLTypes"] = url_types
     save_plist(main_info_path, main_info)
 
     plugins = {path.name: path for path in (app / "PlugIns").glob("*.appex") if path.is_dir()}
