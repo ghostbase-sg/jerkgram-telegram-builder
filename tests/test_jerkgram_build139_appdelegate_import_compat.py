@@ -19,7 +19,10 @@ def load(path: Path, name: str):
     return module
 
 
-APP_FIXTURE = '''import UIKit\nimport SwiftSignalKit\n\nfinal class AppDelegate {\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n}\n'''
+APP_FIXTURE = '''import UIKit\nimport SwiftSignalKit\n\nfinal class AppDelegate {\n    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {\n        self.openUrl(url: url)\n        return true\n    }\n    private func openUrl(url: URL) {
+    }
+
+}\n'''
 
 
 class Build139AppDelegateImportCompatContract(unittest.TestCase):
