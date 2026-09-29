@@ -101,6 +101,17 @@ export default function SignQRCard({onCancel, onFirstMount, onError, qrCode}: {
 
 
 class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
+    def test_new_connection_waits_for_previous_login_token_probe(self):
+        module = load_patcher()
+        patched = module.patch_sign_qr_text(SIGN_QR_FIXTURE)
+        setup = patched[patched.index("async function continueSetup()"):patched.index("function openJerkgram()")]
+
+        self.assertIn("await pollingTask;", setup)
+        self.assertIn("if(stopped) return;", setup)
+        self.assertLess(setup.index("setBusy(true);"), setup.index("await pollingTask;"))
+        self.assertLess(setup.index("await pollingTask;"), setup.index("const loginToken = await exportOrImportLoginToken();"))
+        self.assertIn("while(!busy() && !stopped && readPairingState())", setup)
+
     def test_patch_uses_official_login_token_with_random_nonce_and_no_subscription_credentials(self):
         module = load_patcher()
         patched = module.patch_sign_qr_text(SIGN_QR_FIXTURE)
