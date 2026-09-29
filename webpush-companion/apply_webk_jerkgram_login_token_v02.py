@@ -101,7 +101,7 @@ export default function SignQRCard(_props: {spec: Spec}) {
   const [busy, setBusy] = createSignal(false);
   const [status, setStatus] = createSignal('Ready to connect.');
   let stopped = false;
-  let polling = false;
+  let pollingTask: Promise<void> | undefined;
   const options: {dcId?: DcId, ignoreErrors: true} = {ignoreErrors: true};
 
   async function exportOrImportLoginToken(): Promise<AuthLoginToken> {
@@ -164,6 +164,10 @@ export default function SignQRCard(_props: {spec: Spec}) {
 
     setBusy(true);
     try {
+      // An older pairing may still be probing on page resume. Let that RPC
+      // finish before exporting a fresh token for the new native handoff.
+      await pollingTask;
+      if(stopped) return;
       if(Notification.permission === 'default') {
         await Notification.requestPermission();
       }
@@ -202,29 +206,33 @@ export default function SignQRCard(_props: {spec: Spec}) {
     }
   }
 
-  async function pollForAcceptedLogin(): Promise<void> {
-    if(polling || stopped || !readPairingState()) return;
-    polling = true;
-    try {
-      while(!stopped && readPairingState()) {
-        try {
-          const loginToken = await exportOrImportLoginToken();
-          if(loginToken._ === 'auth.loginTokenSuccess') {
-            await handleLoginSuccess(loginToken.authorization as any as AuthAuthorization.authAuthorization);
-            return;
-          }
-        } catch(error) {
-          if((error as ApiError).type === 'SESSION_PASSWORD_NEEDED') {
-            setStatus('Additional Telegram verification is required. Restart setup in Jerkgram.');
-            localStorage.removeItem(JERKGRAM_PAIRING_KEY);
-            return;
+  function pollForAcceptedLogin(): Promise<void> {
+    if(pollingTask) return pollingTask;
+    if(busy() || stopped || !readPairingState()) return Promise.resolve();
+    pollingTask = (async() => {
+      try {
+        while(!busy() && !stopped && readPairingState()) {
+          try {
+            const loginToken = await exportOrImportLoginToken();
+            if(loginToken._ === 'auth.loginTokenSuccess') {
+              await handleLoginSuccess(loginToken.authorization as any as AuthAuthorization.authAuthorization);
+              return;
+            }
+          } catch(error) {
+            if((error as ApiError).type === 'SESSION_PASSWORD_NEEDED') {
+              setStatus('Additional Telegram verification is required. Restart setup in Jerkgram.');
+              localStorage.removeItem(JERKGRAM_PAIRING_KEY);
+              return;
+            }
           }
         }
-        await pause(FETCH_INTERVAL * 1000);
+          await pause(FETCH_INTERVAL * 1000);
+        }
+      } finally {
+        pollingTask = undefined;
       }
-    } finally {
-      polling = false;
-    }
+    })();
+    return pollingTask;
   }
 
   function openJerkgram(): void {
