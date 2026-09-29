@@ -225,7 +225,6 @@ export default function SignQRCard(_props: {spec: Spec}) {
               return;
             }
           }
-        }
           await pause(FETCH_INTERVAL * 1000);
         }
       } finally {
