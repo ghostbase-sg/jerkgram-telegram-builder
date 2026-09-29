@@ -111,6 +111,7 @@ class WebKJerkgramLoginTokenV02Tests(unittest.TestCase):
         self.assertLess(setup.index("setBusy(true);"), setup.index("await pollingTask;"))
         self.assertLess(setup.index("await pollingTask;"), setup.index("const loginToken = await exportOrImportLoginToken();"))
         self.assertIn("while(!busy() && !stopped && readPairingState())", setup)
+        self.assertEqual(patched.count("{"), patched.count("}"), "generated TSX has unbalanced braces")
 
     def test_patch_uses_official_login_token_with_random_nonce_and_no_subscription_credentials(self):
         module = load_patcher()
