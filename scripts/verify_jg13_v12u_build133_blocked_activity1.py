@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import os
+
+
+ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
+
+BLOCKED_CONTEXT = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift"
+BLOCKED_PEERS = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeers.swift"
+STORE_MESSAGE = ROOT / "submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift"
+ACCOUNT_VIEW_TRACKER = ROOT / "submodules/TelegramCore/Sources/State/AccountViewTracker.swift"
+DELETE_MESSAGES = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift"
+CHAT_LIST = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/ChatList.swift"
+NAVIGATION = ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/EarliestUnseenPersonalMentionMessage.swift"
+CHAT_HISTORY_ENTRIES = ROOT / "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift"
+CHAT_HISTORY_LIST = ROOT / "submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
+CHAT_LIST_LOCATION = ROOT / "submodules/ChatListUI/Sources/Node/ChatListNodeLocation.swift"
+
+POLICY_MARKER = 'public static func hideBlockedMessages(' # Actual source owner; public Stable archive omits historical MARK comments.
+STORE_MARKER = 'private func jerkgramBuild133FilteredActivityTags(' # Actual source owner; public Stable archive omits historical MARK comments.
+TRACKER_MARKER = 'JerkgramBlockedReactionPolicy.hasVisibleUnseenReaction(' # Actual source owner; public Stable archive omits historical MARK comments.
+DELETE_MARKER = 'JerkgramBlockedReactionPolicy.hasVisibleUnseenReaction(' # Actual source owner; public Stable archive omits historical MARK comments.
+CHAT_LIST_MARKER = 'private func jerkgramBuild133ActivityVisible(' # Actual source owner; public Stable archive omits historical MARK comments.
+NAV_MARKER = 'private enum JerkgramBuild133UnseenTargetKind {' # Actual source owner; public Stable archive omits historical MARK comments.
+HISTORY_ENTRIES_MARKER = 'JerkgramBlockedReactionPolicy.isMessageHidden(' # Actual source owner; public Stable archive omits historical MARK comments.
+HISTORY_REFRESH_MARKER = 'let historyViewUpdateValue = combineLatest(' # Actual source owner; public Stable archive omits historical MARK comments.
+BLOCKED_MUTATION_MARKER = 'JerkgramBlockedReactionPolicy.updateBlockedPeer(' # Actual source owner; public Stable archive omits historical MARK comments.
+CHAT_LIST_REFRESH_MARKER = 'private func jerkgramBuild134ChatListPresentationUpdates<T>(' # Actual source owner; public Stable archive omits historical MARK comments.
+
+
+def require(value: bool, message: str) -> None:
+    if not value:
+        raise RuntimeError("[Build133 blocked activity verifier] " + message)
+
+
+def function_block(text: str, name: str) -> str:
+    signature = f"func {name}("
+    start = text.find(signature)
+    require(start >= 0, "missing function: " + name)
+    next_func = text.find("\nfunc ", start + len(signature))
+    if next_func < 0:
+        return text[start:]
+    return text[start:next_func]
+
+
+def verify_chat_list_owner(text: str) -> None:
+    require(text.count(CHAT_LIST_MARKER) == 1, "ChatList owner count")
+    require("private func jerkgramBuild133ActivityVisible(" in text, "ChatList evidence helper missing")
+    require("private func jerkgramBuild133ReactionActivityHidden(" in text, "reaction activity helper missing")
+    require("expectedCount: outstandingCount" in text, "bounded evidence count missing")
+    require("taggedMessages.count >= expectedCount" in text, "incomplete summary evidence is not fail-open")
+    require(text.count("messages: messages,\n                    tag:") == 2, "activity checks do not use raw tagged evidence")
+    require("tag: .unseenPersonalMessage" in text, "mention activity tag missing")
+    require("tag: .unseenReaction" in text, "reaction activity tag missing")
+    require(
+        "JerkgramBlockedReactionPolicy.isMessageHidden(" in text,
+        "blocked-message policy is not used by chat-list owner",
+    )
+    require(
+        "JerkgramBlockedReactionPolicy.hasVisibleUnseenReaction(" in text,
+        "blocked-reaction policy is not used by chat-list owner",
+    )
+    require("visibleMessages = messages.filter" in text, "chat-list preview messages are not filtered")
+    require("chatPeer: chatPeer" in text, "chat-list preview does not use rendered chat scope")
+    require("messages: visibleMessages.map(EngineMessage.init)" in text, "filtered preview payload is not rendered")
+    require("messages: messages.map(EngineMessage.init)" not in text, "raw chat-list preview payload survived")
+    require(
+        "hasUnseenMentions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)" not in text,
+        "stock mention assignment survived active owner",
+    )
+    require(
+        "hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0" not in text,
+        "stock reaction assignment survived active owner",
+    )
+
+
+def verify_navigation_owner(text: str) -> None:
+    require(text.count(NAV_MARKER) == 1, "navigation owner count")
+    require("private func jerkgramBuild133FirstNavigableUnseenTarget(" in text, "target filter helper missing")
+    require("private func jerkgramBuild133IsNavigableUnseenTarget(" in text, "target visibility helper missing")
+
+    mention = function_block(text, "_internal_earliestUnseenPersonalMentionMessage")
+    reaction = function_block(text, "_internal_earliestUnseenPersonalReactionMessage")
+    poll = function_block(text, "_internal_earliestUnseenPollVoteMessage")
+
+    for label, block, kind in (
+        ("mention", mention, ".mention"),
+        ("reaction", reaction, ".reaction"),
+    ):
+        require("jerkgramBuild133FirstNavigableUnseenTarget(" in block, label + " does not filter target before result")
+        require(kind in block, label + " target kind missing")
+        require("entries: view.0.entries" in block, label + " entries are not filtered")
+        require("else if !view.0.entries.isEmpty" in block, label + " filtered-empty guard missing")
+        require("count: 64, fixedCombinedReadStates:" in block, label + " bounded target window missing")
+        require("view.0.entries.first?.message" not in block, label + " stock first-target path survived")
+
+    require("jerkgramBuild133FirstNavigableUnseenTarget(" not in poll, "poll-vote navigation was modified")
+    require("count: 4, fixedCombinedReadStates:" in poll, "poll-vote stock history window changed")
+
+
+def verify_policy(text: str) -> None:
+    require(text.count(POLICY_MARKER) == 1, "policy owner count")
+    require("public static func hideBlockedMessages(" in text, "hideBlockedMessages policy missing")
+    require("public static func isMessageHidden(" in text, "message visibility policy missing")
+    require("public static func hasVisibleUnseenReaction(" in text, "unseen reaction policy missing")
+    require("guard self.isGroupMessage(message) else" in text, "activity policy is not group-only")
+    require("return attribute.hasUnseen" in text, "private/channel reaction activity is not stock")
+    require("if !sawUnseen {" in text and "return true" in text, "unknown reaction evidence fallback missing")
+    require("blockedPeerIdsByAccount" in text, "shared v12t blocked cache missing")
+    require("chatPeer: Peer?" in text, "explicit chat peer visibility overload missing")
+    require("public static func updateBlockedPeer(" in text, "incremental blocked-cache mutation missing")
+
+
+def verify_blocked_mutation_owner(text: str) -> None:
+    require(text.count(BLOCKED_MUTATION_MARKER) == 1, "direct block mutation owner count")
+    require("JerkgramBlockedReactionPolicy.updateBlockedPeer(" in text, "direct block API does not update policy")
+    require("accountPeerId: account.peerId" in text, "direct block API account scope missing")
+    require("isBlocked: isBlocked" in text, "direct block API mutation value missing")
+
+
+def verify_chat_list_refresh_owner(text: str) -> None:
+    require(text.count(CHAT_LIST_REFRESH_MARKER) == 1, "chat-list refresh owner count")
+    require("JerkgramBlockedReactionPolicy.presentationUpdates" in text, "chat-list is not subscribed to policy changes")
+    require(text.count("jerkgramBuild134ChatListPresentationUpdates(") == 3, "chat-list initial/navigation/scroll refresh coverage")
+
+
+def verify_store_owner(text: str) -> None:
+    require(text.count(STORE_MARKER) == 1, "StoreMessage owner count")
+    require(text.count("jerkgramBuild133FilteredActivityTags(") == 3, "StoreMessage helper/call count")
+    require("tags.remove(.unseenPersonalMessage)" in text, "mention tag suppression missing")
+    require("tags.remove(.unseenReaction)" in text, "reaction tag suppression missing")
+    require(text.count("let (jerkgramBuild133RawTags, globalTags) = tagsForStoreMessage(") == 2, "StoreMessage call sites not both patched")
+    require(text.count("chatPeerId: peerId") == 2, "StoreMessage chat scope is not bound")
+    require("chatPeerId.namespace == Namespaces.Peer.CloudGroup" in text, "StoreMessage can alter private/channel tags")
+
+
+def verify_refresh_owners(tracker: str, delete_messages: str) -> None:
+    require(tracker.count(TRACKER_MARKER) == 1, "AccountViewTracker owner count")
+    require(
+        "if JerkgramBlockedReactionPolicy.hasVisibleUnseenReaction(" in tracker,
+        "AccountViewTracker still uses raw hasUnseen",
+    )
+    require("if updatedReactions.hasUnseen {" not in tracker, "AccountViewTracker raw unseen owner survived")
+    require("message: currentMessage" in tracker, "AccountViewTracker has no chat scope")
+
+    require(delete_messages.count(DELETE_MARKER) == 2, "DeleteMessages two-owner owner count")
+    require(
+        delete_messages.count("JerkgramBlockedReactionPolicy.hasVisibleUnseenReaction(") == 2,
+        "DeleteMessages two reaction refresh owners not patched",
+    )
+    require(
+        "attributes.contains(where: { ($0 as? ReactionsMessageAttribute)?.hasUnseen == true })" not in delete_messages,
+        "DeleteMessages raw unseen owner survived",
+    )
+    require(delete_messages.count("message: currentMessage") == 2, "DeleteMessages owners have no chat scope")
+
+
+def verify_chat_history_owners(entries: str, history_list: str) -> None:
+    require(entries.count(HISTORY_ENTRIES_MARKER) == 1, "chat history message-filter owner count")
+    require("JerkgramBlockedReactionPolicy.isMessageHidden(" in entries, "chat history does not filter blocked message authors")
+    require("chatPeer: chatPeer" in entries, "chat history does not use resolved chat peer")
+    require("message: message" in entries, "chat history author binding missing")
+    require(entries.index("JerkgramBlockedReactionPolicy.isMessageHidden(") < entries.index("count += 1"), "blocked message is counted before filtering")
+
+    require(history_list.count(HISTORY_REFRESH_MARKER) == 1, "chat history visibility-refresh owner count")
+    require("JerkgramBlockedReactionPolicy.presentationUpdates" in history_list, "chat history is not subscribed to visibility changes")
+    require("let historyViewUpdateValue = combineLatest(" in history_list, "visibility refresh is not joined to history updates")
+
+
+def main() -> None:
+    owners = (BLOCKED_CONTEXT, BLOCKED_PEERS, STORE_MESSAGE, ACCOUNT_VIEW_TRACKER, DELETE_MESSAGES, CHAT_LIST, NAVIGATION, CHAT_HISTORY_ENTRIES, CHAT_HISTORY_LIST, CHAT_LIST_LOCATION)
+    for path in owners:
+        require(path.is_file(), "missing source owner: " + str(path))
+
+    verify_policy(BLOCKED_CONTEXT.read_text(encoding="utf-8"))
+    verify_blocked_mutation_owner(BLOCKED_PEERS.read_text(encoding="utf-8"))
+    verify_store_owner(STORE_MESSAGE.read_text(encoding="utf-8"))
+    verify_refresh_owners(
+        ACCOUNT_VIEW_TRACKER.read_text(encoding="utf-8"),
+        DELETE_MESSAGES.read_text(encoding="utf-8"),
+    )
+    verify_chat_list_owner(CHAT_LIST.read_text(encoding="utf-8"))
+    verify_navigation_owner(NAVIGATION.read_text(encoding="utf-8"))
+    verify_chat_history_owners(
+        CHAT_HISTORY_ENTRIES.read_text(encoding="utf-8"),
+        CHAT_HISTORY_LIST.read_text(encoding="utf-8"),
+    )
+    verify_chat_list_refresh_owner(CHAT_LIST_LOCATION.read_text(encoding="utf-8"))
+    print("[Build133 blocked activity verifier] PREFLIGHT OWNER CHECKS GREEN")
+
+
+if __name__ == "__main__":
+    main()
