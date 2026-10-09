@@ -1,0 +1,719 @@
+diff --git a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
+index c9ecfba..31fc1fd 100644
+--- a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
++++ b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
+@@ -182,6 +182,13 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+     private let renderSynchronizer: AVSampleBufferRenderSynchronizer
+     private var videoRenderer: AVSampleBufferDisplayLayer
+     private var secondaryVideoRenderers: [ObjectIdentifier: AVSampleBufferDisplayLayer] = [:]
++    // P0 diagnostics only; inactive for players that never had profile output.
++    private var ghostBaseHadSecondaryOutput = false
++    private var ghostBasePlayCalls = 0
++    private var ghostBaseTimerTicks = 0
++    private var ghostBaseDetachedPlayingTicks = 0
++    private var ghostBaseDidLogDetached = false
++    private var ghostBaseMaxUpdateMs = 0.0
+     private var audioRenderer: AVSampleBufferAudioRenderer?
+     
+     private var didNotifySentVideoFrames: Bool = false
+@@ -317,6 +324,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+     }
+     
+     deinit {
++        if self.ghostBaseHadSecondaryOutput {
++            JerkgramPerformanceDiagnostics.shared.record("player deinit primary=\(ObjectIdentifier(self.videoRenderer)) play=\(self.ghostBasePlayCalls) ticks=\(self.ghostBaseTimerTicks) maxUpdateMs=\(Int(self.ghostBaseMaxUpdateMs)) outputs=\(self.secondaryVideoRenderers.count)")
++            Logger.shared.log("JerkgramProfilePerf", "player deinit primary=\(ObjectIdentifier(self.videoRenderer)) play=\(self.ghostBasePlayCalls) ticks=\(self.ghostBaseTimerTicks) maxUpdateMs=\(Int(self.ghostBaseMaxUpdateMs)) outputs=\(self.secondaryVideoRenderers.count)")
++        }
+         self.partsStateDisposable?.dispose()
+         self.updateTimer?.invalidate()
+         self.audioSessionDisposable?.dispose()
+@@ -350,11 +361,36 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+                 return
+             }
+             self.updateInternalState()
++            if self.ghostBaseHadSecondaryOutput {
++                self.ghostBaseTimerTicks += 1
++                if self.secondaryVideoRenderers.isEmpty && self.isPlaying {
++                    self.ghostBaseDetachedPlayingTicks += 1
++                    if self.ghostBaseDetachedPlayingTicks == 60 && !self.ghostBaseDidLogDetached {
++                        self.ghostBaseDidLogDetached = true
++                        JerkgramPerformanceDiagnostics.shared.record("detached-playing primary=\(ObjectIdentifier(self.videoRenderer)) play=\(self.ghostBasePlayCalls); correlate profile visibility")
++                        Logger.shared.log("JerkgramProfilePerf", "detached-playing primary=\(ObjectIdentifier(self.videoRenderer)) ticks=60 play=\(self.ghostBasePlayCalls) maxUpdateMs=\(Int(self.ghostBaseMaxUpdateMs)); correlate profile visibility before diagnosing leak")
++                    }
++                } else {
++                    self.ghostBaseDetachedPlayingTicks = 0
++                }
++            }
+         })
+     }
+ 
+     private func updateSecondaryVideoRenderers(_ layers: [AVSampleBufferDisplayLayer]) {
+         assert(Queue.mainQueue().isCurrent())
++        let started = ProcessInfo.processInfo.systemUptime
++        if !layers.isEmpty { self.ghostBaseHadSecondaryOutput = true }
++        self.ghostBaseDetachedPlayingTicks = 0
++        self.ghostBaseDidLogDetached = false
++        defer {
++            if self.ghostBaseHadSecondaryOutput {
++                let elapsed = (ProcessInfo.processInfo.systemUptime - started) * 1000.0
++                let identities = layers.map { String(describing: ObjectIdentifier($0)) }.joined(separator: ",")
++                JerkgramPerformanceDiagnostics.shared.record("secondary-mutation primary=\(ObjectIdentifier(self.videoRenderer)) outputs=[\(identities)] ms=\(Int(elapsed)) playing=\(self.isPlaying)")
++                Logger.shared.log("JerkgramProfilePerf", "secondary-mutation primary=\(ObjectIdentifier(self.videoRenderer)) outputs=[\(identities)] ms=\(Int(elapsed)) playing=\(self.isPlaying)")
++            }
++        }
+ 
+         let updated = Dictionary(uniqueKeysWithValues: layers.map { (ObjectIdentifier($0), $0) })
+         for (key, layer) in self.secondaryVideoRenderers where updated[key] == nil {
+@@ -387,8 +423,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+ 
+     // and let normal seek/reset paths flush renderers only when required.
+     private func updateInternalState() {
++        let started = self.ghostBaseHadSecondaryOutput ? ProcessInfo.processInfo.systemUptime : nil
+         defer {
+             self.updateTimerState()
++            if let started {
++                self.ghostBaseMaxUpdateMs = max(self.ghostBaseMaxUpdateMs, (ProcessInfo.processInfo.systemUptime - started) * 1000.0)
++            }
+         }
+ 
+         if self.isSoundEnabled && self.hasSound {
+@@ -896,6 +936,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+     }
+     
+     public func play() {
++        if self.ghostBaseHadSecondaryOutput { self.ghostBasePlayCalls += 1 }
+         self.isPlaying = true
+         self.resetMediaDataStarvation()
+         self.updateInternalState()
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index a5ab6aa..d76e024 100644
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -2161,7 +2161,14 @@ private func ghostBaseSettingsEntries(
+             .aboutValue(1, 3, strings.telegramBase, JerkgramReleaseIdentity.telegramBase),
+             .header(2, strings.privacy),
+             .telemetryToggle(2, 1, strings.anonymousAnalytics, jerkgramTelemetryEnabled()),
+-            .info(3, strings.anonymousAnalyticsDescription)
++            .info(3, strings.anonymousAnalyticsDescription),
++            .header(4, "P0 · Диагностика производительности"),
++            .researchAction(4, 1, "Начать запись (до 10 минут)", "performanceStart"),
++            .researchAction(4, 2, "Остановить запись", "performanceStop"),
++            .researchAction(4, 3, "Поделиться отчётом", "performanceShare"),
++            .researchAction(4, 4, "Копировать отчёт", "performanceCopy"),
++            .info(4, JerkgramPerformanceDiagnostics.shared.status),
++            .info(5, "Начните запись, повторите фризы Settings и профилей, затем вернитесь сюда, остановите запись и поделитесь отчётом. CPU: 100% = одно ядро; память: пиковая RSS; GPU не измеряется. Новая запись заменяет предыдущую. После перезапуска приложения отчёт не сохраняется.")
+         ]
+     }
+ 
+@@ -3252,6 +3259,7 @@ private func ghostBaseSettingsPageController(
+         username: "JerkgramCommunity"
+     )
+     var openAboutChannelImpl: ((EnginePeer) -> Void)?
++    var sharePerformanceImpl: (() -> Void)?
+ 
+     let arguments = GhostBaseSettingsArguments(
+         context: context,
+@@ -3260,6 +3268,14 @@ private func ghostBaseSettingsPageController(
+         },
+         runResearchAction: { action in
+             switch action {
++            case "performanceStart":
++                JerkgramPerformanceDiagnostics.shared.start()
++            case "performanceStop":
++                JerkgramPerformanceDiagnostics.shared.stop()
++            case "performanceCopy":
++                UIPasteboard.general.string = JerkgramPerformanceDiagnostics.shared.report()
++            case "performanceShare":
++                sharePerformanceImpl?()
+             case "copyExtensionDiagnostics":
+                 UIPasteboard.general.string = BuildConfig.jerkgramExtensionDiagnosticsReport()
+ 
+@@ -3813,14 +3829,21 @@ private func ghostBaseSettingsPageController(
+         openSendTextStyleImpl?()
+     })
+ 
++    let performanceChanges: Signal<Int, NoError> = page == .about ? Signal { subscriber in
++        let observer = NotificationCenter.default.addObserver(forName: JerkgramPerformanceDiagnostics.snapshotChanged, object: nil, queue: .main) { _ in subscriber.putNext(0) }
++        subscriber.putNext(0)
++        return ActionDisposable { NotificationCenter.default.removeObserver(observer) }
++    } : .single(0)
++
+     let signal = combineLatest(
+         context.sharedContext.presentationData,
+         jerkgramImportRefreshStateSignal,
+         aboutChannelSignal,
+-        aboutCommunitySignal
++        aboutCommunitySignal,
++        performanceChanges
+     )
+     |> deliverOnMainQueue
+-    |> map { presentationData, state, aboutChannelState, aboutCommunityState
++    |> map { presentationData, state, aboutChannelState, aboutCommunityState, _
+         -> (ItemListControllerState, (ItemListNodeState, Any)) in
+         let controllerState = ItemListControllerState(
+             presentationData: ItemListPresentationData(presentationData),
+@@ -3852,6 +3875,19 @@ private func ghostBaseSettingsPageController(
+         state: signal
+     )
+ 
++    sharePerformanceImpl = { [weak controller] in
++        guard let root = controller?.view.window?.rootViewController else { return }
++        var presenter = root
++        while let next = presenter.presentedViewController { presenter = next }
++        let activity = UIActivityViewController(activityItems: [JerkgramPerformanceDiagnostics.shared.report()], applicationActivities: nil)
++        if let popover = activity.popoverPresentationController {
++            popover.sourceView = presenter.view
++            popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1.0, height: 1.0)
++            popover.permittedArrowDirections = []
++        }
++        presenter.present(activity, animated: true)
++    }
++
+     openAboutChannelImpl = { [weak controller] peer in
+         guard let navigationController = controller?.navigationController
+             as? NavigationController else {
+diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
+new file mode 100644
+index 0000000..6175e02
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
+@@ -0,0 +1,159 @@
++import Foundation
++import Darwin
++
++/// Temporary, opt-in diagnostic capture. No disk/network writes or frame logging.
++public final class JerkgramPerformanceDiagnostics {
++    public static let shared = JerkgramPerformanceDiagnostics()
++    public static let snapshotChanged = Notification.Name("JerkgramPerformanceSnapshotChanged")
++    private let lock = NSLock()
++    private let queue = DispatchQueue(label: "Jerkgram.performance.capture", qos: .utility)
++    private let capacity = 512
++    private let maxCaptureSeconds = 600.0
++    private var lines: [String] = []
++    private var dropped = 0
++    private var timings: [String: (count: Int, maxMs: Double, slow: Int)] = [:]
++    private var running = false
++    private var started = 0.0
++    private var generation = 0
++    private var pendingPulse = false
++    private var timer: DispatchSourceTimer?
++    private var inactiveObserver: NSObjectProtocol?
++
++    public var isRecording: Bool {
++        self.lock.lock(); defer { self.lock.unlock() }
++        return self.running
++    }
++
++    public var status: String {
++        self.lock.lock(); defer { self.lock.unlock() }
++        return "\(self.running ? "RECORDING" : "STOPPED") · \(self.lines.count)/\(self.capacity) samples/events · dropped=\(self.dropped)"
++    }
++
++    public func start() {
++        precondition(Thread.isMainThread)
++        if self.isRecording { return }
++        if let observer = self.inactiveObserver { NotificationCenter.default.removeObserver(observer) }
++        self.inactiveObserver = nil
++        self.lock.lock()
++        self.lines.removeAll(keepingCapacity: true)
++        self.timings.removeAll(keepingCapacity: true)
++        self.dropped = 0
++        self.started = ProcessInfo.processInfo.systemUptime
++        self.generation += 1
++        let epoch = self.generation
++        self.running = true
++        self.pendingPulse = false
++        self.lock.unlock()
++        self.record("capture start; CPU percent:100=one logical core; RSS=peak bytes; wait=main queue latency, not GPU utilization")
++        self.inactiveObserver = NotificationCenter.default.addObserver(forName: Notification.Name("UIApplicationDidEnterBackgroundNotification"), object: nil, queue: .main) { [weak self] _ in
++            self?.stop(reason: "application background")
++        }
++        let timer = DispatchSource.makeTimerSource(queue: self.queue)
++        timer.schedule(deadline: .now(), repeating: 1.0, leeway: .milliseconds(100))
++        var previousCPU: Double?
++        var previousTime: Double?
++        timer.setEventHandler { [weak self] in
++            guard let self else { return }
++            let now = ProcessInfo.processInfo.systemUptime
++            var usage = rusage()
++            let result = getrusage(RUSAGE_SELF, &usage)
++            let cpu = Double(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) + Double(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1_000_000.0
++            let percent: Double?
++            if result == 0, let previousCPU, let previousTime, now > previousTime {
++                percent = max(0.0, (cpu - previousCPU) / (now - previousTime) * 100.0)
++            } else { percent = nil }
++            if result == 0 { previousCPU = cpu; previousTime = now }
++            self.lock.lock()
++            guard self.running && self.generation == epoch else { self.lock.unlock(); return }
++            let expired = now - self.started >= self.maxCaptureSeconds
++            if expired {
++                self.appendLocked("capture stop: 10 minute limit (utility queue)")
++                self.running = false
++                self.generation += 1
++                self.pendingPulse = false
++                let expiredTimer = self.timer
++                self.timer = nil
++                self.lock.unlock()
++                expiredTimer?.cancel()
++                DispatchQueue.main.async { [weak self] in
++                    guard let self else { return }
++                    self.lock.lock()
++                    let sameSession = self.generation == epoch + 1 && !self.running
++                    self.lock.unlock()
++                    guard sameSession else { return }
++                    if let observer = self.inactiveObserver { NotificationCenter.default.removeObserver(observer) }
++                    self.inactiveObserver = nil
++                    NotificationCenter.default.post(name: Self.snapshotChanged, object: nil)
++                }
++                return
++            }
++            let cpuText = percent.map { String(format: "%.1f", $0) } ?? "unavailable/first"
++            self.appendLocked("t=\(Int(now - self.started))s cpuPct=\(cpuText) peakRSSBytes=\(result == 0 ? usage.ru_maxrss : -1) thermal=\(ProcessInfo.processInfo.thermalState.rawValue)")
++            let submit = !self.pendingPulse
++            if submit { self.pendingPulse = true }
++            self.lock.unlock()
++            if submit {
++                DispatchQueue.main.async { [weak self] in
++                    guard let self else { return }
++                    let wait = (ProcessInfo.processInfo.systemUptime - now) * 1000.0
++                    self.lock.lock()
++                    guard self.running && self.generation == epoch else { self.lock.unlock(); return }
++                    self.pendingPulse = false
++                    self.appendLocked("mainQueueWaitMs=\(Int(wait))")
++                    self.lock.unlock()
++                }
++            }
++        }
++        self.lock.lock()
++        self.timer = timer
++        self.lock.unlock()
++        timer.resume()
++        NotificationCenter.default.post(name: Self.snapshotChanged, object: nil)
++    }
++
++    public func stop(reason: String = "user") {
++        precondition(Thread.isMainThread)
++        self.lock.lock()
++        if self.running { self.appendLocked("capture stop: \(reason)") }
++        self.running = false
++        self.generation += 1
++        self.pendingPulse = false
++        let timer = self.timer
++        self.timer = nil
++        self.lock.unlock()
++        timer?.cancel()
++        if let observer = self.inactiveObserver { NotificationCenter.default.removeObserver(observer) }
++        self.inactiveObserver = nil
++        NotificationCenter.default.post(name: Self.snapshotChanged, object: nil)
++    }
++
++    public func record(_ text: String) {
++        self.lock.lock(); defer { self.lock.unlock() }
++        guard self.running else { return }
++        self.appendLocked("t=\(Int(ProcessInfo.processInfo.systemUptime - self.started))s " + String(text.prefix(2048)))
++    }
++
++    public func measure(_ stage: String, milliseconds: Double) {
++        self.lock.lock(); defer { self.lock.unlock() }
++        guard self.running else { return }
++        guard self.timings[stage] != nil || self.timings.count < 32 else { return }
++        let old = self.timings[stage] ?? (count: 0, maxMs: 0.0, slow: 0)
++        self.timings[stage] = (old.count + 1, max(old.maxMs, milliseconds), old.slow + (milliseconds >= 16.7 ? 1 : 0))
++    }
++
++    private func appendLocked(_ line: String) {
++        if self.lines.count == self.capacity { self.lines.removeFirst(); self.dropped += 1 }
++        self.lines.append(line)
++    }
++
++    public func report() -> String {
++        self.lock.lock(); defer { self.lock.unlock() }
++        let info = Bundle.main.infoDictionary ?? [:]
++        let header = "Jerkgram P0 diagnostics v2\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
++        let measurements = self.timings.keys.sorted().map { key -> String in
++            let value = self.timings[key]!
++            return "\(key): calls=\(value.count) maxMs=\(Int(value.maxMs)) slow>=16.7ms=\(value.slow)"
++        }.joined(separator: "\n")
++        return header + measurements + "\n--- timeline ---\n" + self.lines.joined(separator: "\n")
++    }
++}
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+index f168490..5fc3e66 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+@@ -12,6 +12,66 @@ import PhotoResources
+ import PeerInfoAvatarListNode
+ 
+ 
++// Temporary P0 diagnostics: fixed counters, main-thread timings, lifecycle summaries.
++// No timer, observer, extra renderer, per-frame logging or peer/resource identifiers.
++final class JerkgramProfilePerformanceProbe {
++    enum Stage: String, CaseIterable {
++        case layout, data, background, transition, play, attach, detach
++    }
++    private struct Sample {
++        var count = 0
++        var maxMs = 0.0
++        var slow = 0
++    }
++    private static var created = 0
++    private static var destroyed = 0
++    private static var liveInstances = 0
++    private let instance: Int
++    private var samples: [Stage: Sample] = [:]
++    var context = "pending"
++    var outputIdentity = "pending"
++    var subscriptions = 0
++    var disposals = 0
++    var ready = 0
++    var updateRequests = 0
++    var ramHits = 0
++    var readyMaxWallMs = 0.0
++
++    init() {
++        Self.created += 1
++        Self.liveInstances += 1
++        self.instance = Self.created
++    }
++
++    deinit {
++        Self.destroyed += 1
++        Self.liveInstances -= 1
++    }
++
++    func begin(_ stage: Stage) -> TimeInterval {
++        self.samples[stage, default: Sample()].count += 1
++        return ProcessInfo.processInfo.systemUptime
++    }
++
++    func end(_ stage: Stage, _ started: TimeInterval) {
++        let elapsed = (ProcessInfo.processInfo.systemUptime - started) * 1000.0
++        var sample = self.samples[stage] ?? Sample()
++        sample.maxMs = max(sample.maxMs, elapsed)
++        if elapsed >= 16.7 { sample.slow += 1 }
++        self.samples[stage] = sample
++        JerkgramPerformanceDiagnostics.shared.measure(self.context + "." + stage.rawValue, milliseconds: elapsed)
++    }
++
++    func summary(_ boundary: String, sourceRetained: Bool, outputRetained: Bool) {
++        JerkgramPerformanceDiagnostics.shared.record("profile id=\(self.instance) output=\(self.outputIdentity) context=\(self.context) \(boundary) live=\(Self.liveInstances) created=\(Self.created) destroyed=\(Self.destroyed) sub=\(self.subscriptions) dispose=\(self.disposals) ready=\(self.ready) readyWallMs=\(Int(self.readyMaxWallMs)) ram=\(self.ramHits) requests=\(self.updateRequests) sourceSlot=\(sourceRetained) outputSlot=\(outputRetained)")
++        let timings = Stage.allCases.map { stage -> String in
++            let sample = self.samples[stage] ?? Sample()
++            return "\(stage.rawValue)=\(sample.count)/\(Int(sample.maxMs))/\(sample.slow)"
++        }.joined(separator: " ")
++        Logger.shared.log("JerkgramProfilePerf", "v1 id=\(self.instance) output=\(self.outputIdentity) context=\(self.context) boundary=\(boundary) created=\(Self.created) destroyed=\(Self.destroyed) live=\(Self.liveInstances) sub=\(self.subscriptions) dispose=\(self.disposals) ready=\(self.ready) readyWallMs=\(Int(self.readyMaxWallMs)) requests=\(self.updateRequests) ram=\(self.ramHits) sourceSlot=\(sourceRetained) outputSlot=\(outputRetained) count/maxMs/slow: \(timings)")
++    }
++}
++
+ enum GhostBaseProfileGlassRuntime {
+     static func loadSettings() -> GhostBaseProfileBlurSettings? {
+         return GhostBaseProfileBlurSettings.loadEnabled()
+@@ -188,6 +248,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+     private static func ghostBaseLoadAvatarDiskCache(
+         identity: String
+     ) -> UIImage? {
++        let perfStart = JerkgramPerformanceDiagnostics.shared.isRecording ? ProcessInfo.processInfo.systemUptime : nil
++        defer { if let perfStart { JerkgramPerformanceDiagnostics.shared.measure((Thread.isMainThread ? "main." : "worker.") + "avatarDiskLoad", milliseconds: (ProcessInfo.processInfo.systemUptime - perfStart) * 1000.0) } }
+         self.ghostBaseAvatarDiskCacheLock.lock()
+         defer { self.ghostBaseAvatarDiskCacheLock.unlock() }
+ 
+@@ -207,6 +269,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+         _ image: UIImage,
+         identity: String
+     ) {
++        let perfStart = JerkgramPerformanceDiagnostics.shared.isRecording ? ProcessInfo.processInfo.systemUptime : nil
++        defer { if let perfStart { JerkgramPerformanceDiagnostics.shared.measure((Thread.isMainThread ? "main." : "worker.") + "avatarDiskStore", milliseconds: (ProcessInfo.processInfo.systemUptime - perfStart) * 1000.0) } }
+         guard let url = self.ghostBaseAvatarDiskCacheURL(identity: identity) else {
+             return
+         }
+@@ -438,6 +502,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+ 
+ 
+     private let sourceDisposable = MetaDisposable()
++    let performanceProbe = JerkgramProfilePerformanceProbe()
++    private var sourceSubscriptionRetained = false
++    private var sourceSubscribedAt: TimeInterval?
+     private var isSceneActive = false
+     private var isControllerVisible = false
+     private var isApplicationActive = UIApplication.shared.applicationState == .active
+@@ -472,6 +539,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+         self.addSubview(self.mirrorVideoView)
+         self.addSubview(self.blurView)
+         self.addSubview(self.tintView)
++        self.performanceProbe.outputIdentity = String(describing: ObjectIdentifier(self.mirrorVideoView.videoLayer))
+ 
+         self.visualSettingsObserver =
+             NotificationCenter.default.addObserver(
+@@ -513,11 +581,43 @@ final class GhostBaseProfileBackgroundView: UIView {
+ 
+         self.secondaryVideoDisposable?.dispose()
+         self.secondaryVideoDisposable = nil
++        self.setSourceSubscription(nil)
+         self.sourceDisposable.dispose()
++        self.performanceProbe.summary("deinit", sourceRetained: self.sourceSubscriptionRetained, outputRetained: self.secondaryVideoDisposable != nil)
++    }
++
++    func beginPerformanceSpan(_ stage: JerkgramProfilePerformanceProbe.Stage) -> TimeInterval {
++        return self.performanceProbe.begin(stage)
++    }
++
++    func endPerformanceSpan(_ stage: JerkgramProfilePerformanceProbe.Stage, _ started: TimeInterval) {
++        self.performanceProbe.end(stage, started)
++    }
++
++    private func setSourceSubscription(_ value: Disposable?) {
++        if self.sourceSubscriptionRetained { self.performanceProbe.disposals += 1 }
++        self.sourceDisposable.set(value)
++        self.sourceSubscriptionRetained = value != nil
++        self.sourceSubscribedAt = value == nil ? nil : ProcessInfo.processInfo.systemUptime
++        if value != nil { self.performanceProbe.subscriptions += 1 }
++    }
++
++    private func recordSourceReady() {
++        self.performanceProbe.ready += 1
++        if let started = self.sourceSubscribedAt {
++            JerkgramPerformanceDiagnostics.shared.measure(self.performanceProbe.context + ".sourceReadyWall", milliseconds: (ProcessInfo.processInfo.systemUptime - started) * 1000.0)
++            self.performanceProbe.readyMaxWallMs = max(self.performanceProbe.readyMaxWallMs, (ProcessInfo.processInfo.systemUptime - started) * 1000.0)
++            self.sourceSubscribedAt = nil
++        }
++    }
++
++    private func requestSceneUpdate() {
++        self.performanceProbe.updateRequests += 1
++        self.requestUpdate?()
+     }
+ 
+     private func tearDownForDisabledSettings() {
+-        self.sourceDisposable.set(nil)
++        self.setSourceSubscription(nil)
+ 
+         self.currentLoadKey = nil
+         self.currentStateKey = nil
+@@ -548,13 +648,16 @@ final class GhostBaseProfileBackgroundView: UIView {
+         self.currentStateKey = nil
+         self.currentLoadKey = nil
+         if active {
+-            self.requestUpdate?()
++            self.requestSceneUpdate()
+         } else {
+-            self.sourceDisposable.set(nil)
++            let detach = self.beginPerformanceSpan(.detach)
++            self.setSourceSubscription(nil)
+             self.secondaryVideoDisposable?.dispose()
+             self.secondaryVideoDisposable = nil
+             self.mirrorVideoView.isHidden = true
+             self.mirrorVideoView.videoLayer.flushAndRemoveImage()
++            self.endPerformanceSpan(.detach, detach)
++            self.performanceProbe.summary("inactive", sourceRetained: self.sourceSubscriptionRetained, outputRetained: self.secondaryVideoDisposable != nil)
+         }
+     }
+ 
+@@ -580,7 +683,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+         guard self.isSceneActive else {
+             return
+         }
+-        self.requestUpdate?()
++        self.requestSceneUpdate()
+     }
+ 
+     override func layoutSubviews() {
+@@ -613,6 +716,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+         isSettings: Bool,
+         avatarItem: PeerInfoAvatarListItem?
+     ) {
++        self.performanceProbe.context = isSettings ? "settings" : "peer"
++        let timing = self.beginPerformanceSpan(.background)
++        defer { self.endPerformanceSpan(.background, timing) }
+         guard self.isSceneActive else {
+             return
+         }
+@@ -1025,6 +1131,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+         }
+ 
+         if self.secondaryVideoDisposable == nil {
++            let timing = self.beginPerformanceSpan(.attach)
++            defer { self.endPerformanceSpan(.attach, timing) }
+             self.secondaryVideoDisposable =
+                 videoNode.registerSecondaryVideoLayer(
+                     self.mirrorVideoView.videoLayer
+@@ -1040,7 +1148,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+         stateKey: GhostBaseProfileBackgroundStateKey,
+         presentationData: PresentationData
+     ) {
+-        self.sourceDisposable.set(nil)
++        self.setSourceSubscription(nil)
+         self.currentLoadKey = nil
+ 
+         let isDark = presentationData.theme.overallDarkAppearance
+@@ -1078,7 +1186,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+             self.imageView.image = nil
+             let loadKey = cacheKey as String
+             self.currentLoadKey = loadKey
+-            self.sourceDisposable.set((self.wallpaperEntrySignal(
++            self.setSourceSubscription((self.wallpaperEntrySignal(
+                 wallpaper: wallpaper,
+                 fallback: metadataTint,
+                 identity: loadKey
+@@ -1087,10 +1195,11 @@ final class GhostBaseProfileBackgroundView: UIView {
+                 guard let self, self.currentLoadKey == loadKey, let entry else {
+                     return
+                 }
++                self.recordSourceReady()
+                 Self.imageCache.setObject(entry, forKey: cacheKey)
+                 self.imageView.image = entry.image
+                 self.applyTint(entry.tint, fallback: metadataTint, isDark: isDark, reduced: reduced)
+-                self.requestUpdate?()
++                self.requestSceneUpdate()
+             }))
+ 
+         case let .premium(main, secondary, identity):
+@@ -1109,7 +1218,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+             self.imageView.image = nil
+             let loadKey = cacheKey as String
+             self.currentLoadKey = loadKey
+-            self.sourceDisposable.set((deferred { () -> Signal<GhostBaseProfileBackgroundCacheEntry?, NoError> in
++            self.setSourceSubscription((deferred { () -> Signal<GhostBaseProfileBackgroundCacheEntry?, NoError> in
+                 guard let image = Self.generatedGradientImage(
+                     colors: [main, secondary]
+                 ) else {
+@@ -1127,10 +1236,11 @@ final class GhostBaseProfileBackgroundView: UIView {
+                 guard let self, self.currentLoadKey == loadKey, let entry else {
+                     return
+                 }
++                self.recordSourceReady()
+                 Self.imageCache.setObject(entry, forKey: cacheKey)
+                 self.imageView.image = entry.image
+                 self.applyTint(entry.tint, fallback: main, isDark: isDark, reduced: reduced)
+-                self.requestUpdate?()
++                self.requestSceneUpdate()
+             }))
+ 
+         case let .avatar(
+@@ -1185,6 +1295,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+ 
+             // Final avatar RAM hit: immutable resource identity, no new subscription.
+             if let cached = Self.imageCache.object(forKey: cacheKey) {
++                self.performanceProbe.ramHits += 1
+                 self.imageView.image = cached.image
+                 self.applyTint(
+                     cached.tint,
+@@ -1212,11 +1323,12 @@ final class GhostBaseProfileBackgroundView: UIView {
+                 return
+             }
+ 
+-            self.sourceDisposable.set((signal
++            self.setSourceSubscription((signal
+             |> deliverOnMainQueue).start(next: { [weak self] entry in
+                 guard let self, self.currentLoadKey == loadKey, let entry else {
+                     return
+                 }
++                self.recordSourceReady()
+                 Self.imageCache.setObject(
+                     entry,
+                     forKey: cacheKey
+@@ -1228,7 +1340,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+                     isDark: isDark,
+                     reduced: reduced
+                 )
+-                self.requestUpdate?()
++                self.requestSceneUpdate()
+             }))
+ 
+         case let .placeholder(
+@@ -1238,7 +1350,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+             identity
+         ):
+             self.clearAnimatedMedia()
+-            self.sourceDisposable.set(nil)
++            self.setSourceSubscription(nil)
+             self.currentLoadKey = nil
+ 
+             self.usesCustomBackground =
+@@ -1687,6 +1799,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+     }
+ 
+     private static func generatedWallpaperImage(colors: [UInt32], fallback: UIColor) -> UIImage? {
++        let perfStart = JerkgramPerformanceDiagnostics.shared.isRecording ? ProcessInfo.processInfo.systemUptime : nil
++        defer { if let perfStart { JerkgramPerformanceDiagnostics.shared.measure((Thread.isMainThread ? "main." : "worker.") + "wallpaperImage", milliseconds: (ProcessInfo.processInfo.systemUptime - perfStart) * 1000.0) } }
+         let resolvedColors: [UIColor]
+         if colors.isEmpty {
+             resolvedColors = [fallback, fallback]
+@@ -1729,6 +1843,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+     }
+ 
+     private static func generatedGradientImage(colors: [UIColor]) -> UIImage? {
++        let perfStart = JerkgramPerformanceDiagnostics.shared.isRecording ? ProcessInfo.processInfo.systemUptime : nil
++        defer { if let perfStart { JerkgramPerformanceDiagnostics.shared.measure((Thread.isMainThread ? "main." : "worker.") + "gradientImage", milliseconds: (ProcessInfo.processInfo.systemUptime - perfStart) * 1000.0) } }
+         let resolved = colors.isEmpty ? [UIColor.black, UIColor.black] : colors
+         return generateImage(
+             CGSize(width: 64.0, height: 64.0),
+@@ -1762,6 +1878,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+     }
+ 
+     private static func sampledTint(from image: UIImage, fallback: UIColor) -> UIColor {
++        let perfStart = JerkgramPerformanceDiagnostics.shared.isRecording ? ProcessInfo.processInfo.systemUptime : nil
++        defer { if let perfStart { JerkgramPerformanceDiagnostics.shared.measure((Thread.isMainThread ? "main." : "worker.") + "sampledTint", milliseconds: (ProcessInfo.processInfo.systemUptime - perfStart) * 1000.0) } }
+         guard let cgImage = image.cgImage else {
+             return fallback
+         }
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
+index e8119a5..59c920f 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
+@@ -19,6 +19,7 @@ import GalleryUI
+ import HierarchyTrackingLayer
+ 
+ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
++    weak var performanceProbe: JerkgramProfilePerformanceProbe?
+     let context: AccountContext
+     
+     let containerNode: ContextControllerSourceNode
+@@ -184,6 +185,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
+     }
+         
+     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
++        let timing = self.performanceProbe?.begin(.transition)
++        defer { if let timing { self.performanceProbe?.end(.transition, timing) } }
+         if let videoNode = self.videoNode {
+             if case .immediate = transition, fraction == 1.0 {
+                 return
+@@ -200,7 +203,9 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
+                 == true
+ 
+             if keepVideoAlive {
++                let timing = self.performanceProbe?.begin(.play)
+                 videoNode.play()
++                if let timing { self.performanceProbe?.end(.play, timing) }
+             } else if fraction > 0.0 {
+                 videoNode.pause()
+             } else {
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+index 623ec86..e5a4348 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -439,6 +439,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         
+         super.init()
+         if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
++            self.headerNode.avatarListNode.avatarContainerNode.performanceProbe = ghostBaseProfileBackgroundView.performanceProbe
+             self.view.insertSubview(
+                 ghostBaseProfileBackgroundView,
+                 at: 0
+@@ -2720,6 +2721,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+     }
+     
+     private func updateData(_ data: PeerInfoScreenData) {
++        let timing = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.data)
++        defer { if let timing { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.data, timing) } }
+         let previousData = self.data
+         var previousMemberCount: Int?
+         if let data = self.data {
+@@ -5436,6 +5439,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+     }
+     
+     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool = false) {
++        let timing = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.layout)
++        defer { if let timing { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.layout, timing) } }
+         self.validLayout = (layout, navigationHeight)
+         if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
+             transition.updateFrame(

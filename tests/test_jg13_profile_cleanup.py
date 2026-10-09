@@ -19,6 +19,7 @@ class ProfileCleanupTests(unittest.TestCase):
     def test_full_hash_gate_rejects_marker_preserving_tamper(self):
         import json
         owners = json.loads(cleanup.MANIFEST.read_text())["owners"]
+        final_owners = json.loads((ROOT / "patches/jg13-profile-p0-diagnostics.sha256.json").read_text())["owners"] if os.environ.get("JG13_P0_FINAL") == "1" else None
         self.assertEqual(len(owners), 7)
         with tempfile.TemporaryDirectory() as directory:
             fixture = Path(directory)
@@ -26,11 +27,11 @@ class ProfileCleanupTests(unittest.TestCase):
                 target = fixture / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(SOURCE / name, target)
-            cleanup.check_hashes(fixture, "after")
+            cleanup.check_hashes(fixture, "after", final_owners=final_owners)
             with (fixture / next(iter(owners))).open("a") as output:
                 output.write("\n// Marker-preserving tamper\n")
             with self.assertRaisesRegex(RuntimeError, "after owner hash mismatch"):
-                cleanup.check_hashes(fixture, "after")
+                cleanup.check_hashes(fixture, "after", final_owners=final_owners)
 
     def test_persistent_stack_and_layout_no_processing(self):
         text = source(PROFILE + "GhostBaseProfileFullscreenBackground.swift")
@@ -62,7 +63,13 @@ class ProfileCleanupTests(unittest.TestCase):
         text = source(PROFILE + "GhostBaseProfileFullscreenBackground.swift")
         self.assertTrue("func setSceneActive(" in text, "Missing appearance lifecycle gate")
         lifecycle = text.split("func setSceneActive(", 1)[1].split("private func", 1)[0]
-        for token in ("self.sourceDisposable.set(nil)", "self.secondaryVideoDisposable?.dispose()", "self.currentLoadKey = nil"):
+        disposal = "self.sourceDisposable.set(nil)"
+        if os.environ.get("JG13_P0_FINAL") == "1":
+            disposal = "self.setSourceSubscription(nil)"
+            wrapper = text.split("private func setSourceSubscription(", 1)[1].split("private func", 1)[0]
+            self.assertIn("self.sourceDisposable.set(value)", wrapper)
+            self.assertEqual(text.count("self.sourceDisposable.set("), 1)
+        for token in (disposal, "self.secondaryVideoDisposable?.dispose()", "self.currentLoadKey = nil"):
             self.assertIn(token, lifecycle)
         self.assertIn("guard self.isSceneActive else", text)
         for token in ("UIApplication.willResignActiveNotification", "UIApplication.didBecomeActiveNotification", "active && self.isApplicationActive", "self.lifecycleObservers", "NotificationCenter.default.removeObserver(observer)"):

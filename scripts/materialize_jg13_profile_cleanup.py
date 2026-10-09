@@ -12,19 +12,22 @@ ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "patches/jg13-profile-cleanup.patch"
 MANIFEST = ROOT / "patches/jg13-profile-cleanup.sha256.json"
 
-def check_hashes(source, stage):
+def check_hashes(source, stage, final_owners=None):
     manifest = json.loads(MANIFEST.read_text())
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     if manifest["upstream_sha"] != config["upstream_new_sha"]:
         raise RuntimeError("Cleanup delta belongs to a different pinned upstream")
     for name, hashes in manifest["owners"].items():
         actual = hashlib.sha256((source / name).read_bytes()).hexdigest()
-        if actual != hashes[stage + "_sha256"]:
+        expected = hashes[stage + "_sha256"]
+        if stage == "after" and final_owners and name in final_owners:
+            expected = final_owners[name]["after_sha256"]
+        if actual != expected:
             raise RuntimeError(f"Profile cleanup {stage} owner hash mismatch: {name}")
 
-def verify_cleanup(source):
-    check_hashes(source, "after")
-    env = dict(os.environ, JG13_SOURCE=str(source.resolve()))
+def verify_cleanup(source, final_owners=None):
+    check_hashes(source, "after", final_owners=final_owners)
+    env = dict(os.environ, JG13_SOURCE=str(source.resolve()), JG13_P0_FINAL="1" if final_owners else "0")
     subprocess.run([sys.executable, str(ROOT / "tests/test_jg13_profile_cleanup.py")],
                    cwd=ROOT, env=env, check=True)
 
