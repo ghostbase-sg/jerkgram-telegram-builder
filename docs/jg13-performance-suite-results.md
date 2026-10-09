@@ -96,3 +96,16 @@ Full Python discovery:467tests,19failures,24errors, NOT GREEN. Previous19histori
 - FAIL: test_build_routes_apply_and_test_the_native_status_overlay_after_build126 (test_jerkgram_v12p_build127_onetime_native_status1.Build127OneTimeNativeStatusTests.test_build_routes_apply_and_test_the_native_status_overlay_after_build126)
 - FAIL: test_materialized_verifier_and_build_chain_include_owner (test_jerkgram_v12z_build134_context_localization1.Build134ContextLocalizationTests.test_materialized_verifier_and_build_chain_include_owner)
 - FAIL: test_workflow_stages_build137_scripts_and_runs_regression_contract (test_jerkgram_v12zd_build137_performance1.Build137PerformanceTests.test_workflow_stages_build137_scripts_and_runs_regression_contract)
+
+## Post-Build146 preference snapshot preflight (2026-10-09)
+
+Fresh bounded canonical replay: 26 targeted structural contracts PASS (18 previous +8 preference contracts). Native counted-defaults component is wired before Bazel but NOT locally executed: no xcrun/Swift toolchain. Full source verifier and device tests are also NOT executed here.
+
+Full Python discovery:475 tests in38.225s,19failures,30errors, NOT GREEN. All 19 failures and24 errors listed under Build146 above persist. Six additional errors are absent-default-source fixture errors; all six, plus the two repository-only new contracts, PASS on fresh bounded materialization. No tests removed or weakened. Additional error names:
+
+- ERROR: test_memory_getter_checks_master_and_animation_without_io (test_jg13_profile_preferences.ProfilePreferencesTests.test_memory_getter_checks_master_and_animation_without_io)
+- ERROR: test_playback_branches_remain_identical (test_jg13_profile_preferences.ProfilePreferencesTests.test_playback_branches_remain_identical)
+- ERROR: test_reload_reads_outside_snapshot_lock (test_jg13_profile_preferences.ProfilePreferencesTests.test_reload_reads_outside_snapshot_lock)
+- ERROR: test_runtime_setter_has_no_defaults_or_workers (test_jg13_profile_preferences.ProfilePreferencesTests.test_runtime_setter_has_no_defaults_or_workers)
+- ERROR: test_settings_publish_before_deferred_persistence (test_jg13_profile_preferences.ProfilePreferencesTests.test_settings_publish_before_deferred_persistence)
+- ERROR: test_transition_uses_memory_not_defaults (test_jg13_profile_preferences.ProfilePreferencesTests.test_transition_uses_memory_not_defaults)

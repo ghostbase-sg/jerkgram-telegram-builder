@@ -14,9 +14,16 @@ ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "patches/jg13-profile-p0-diagnostics.patch"
 MANIFEST = ROOT / "patches/jg13-profile-p0-diagnostics.sha256.json"
 
-def check(source, stage):
+def check(source, stage, final_owners=None):
     manifest = json.loads(MANIFEST.read_text())
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
+    if final_owners:
+        if stage != "after":
+            raise RuntimeError("Final owner override is only valid after materialization")
+        # Later reviewed delta owners retain full exact output hashes, never
+        # marker-only exceptions; untouched P0 owners keep their original gates.
+        for name in set(manifest["owners"]) & set(final_owners):
+            manifest["owners"][name]["after_sha256"] = final_owners[name]["after_sha256"]
     if config["upstream_new_sha"] != manifest["upstream_sha"]:
         raise RuntimeError("P0 diagnostics require the reviewed upstream pin")
     for name, hashes in manifest["owners"].items():
@@ -37,9 +44,9 @@ def check(source, stage):
             raise RuntimeError(f"P0 regression lock changed: {name}")
     return manifest
 
-def verify_p0(source):
+def verify_p0(source, final_owners=None):
     source = Path(source).resolve()
-    manifest = check(source, "after")
+    manifest = check(source, "after", final_owners=final_owners)
     # All seven cleanup owners still have exact final hashes. Only the two
     # deliberately instrumented ones use the later reviewed stage's hashes.
     verify_cleanup(source, final_owners=manifest["owners"])

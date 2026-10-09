@@ -9,6 +9,7 @@ python3 -m unittest discover -s tests -p test_jg13_beta_followup.py
 python3 tests/run_jg13_followup.py
 python3 tests/run_jg13_performance_capture.py
 python3 tests/run_jg13_secondary_timebase.py
+python3 tests/run_jg13_profile_preferences.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive
@@ -22,7 +23,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=146 \
+  --define=buildNumber=147 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 cd ../..

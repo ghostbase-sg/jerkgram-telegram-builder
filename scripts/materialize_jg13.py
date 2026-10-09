@@ -6,6 +6,7 @@ import json
 import subprocess
 from materialize_jg13_profile_cleanup import apply_cleanup
 from materialize_jg13_profile_p0 import apply_p0
+from materialize_jg13_profile_preferences import apply_preferences
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -36,7 +37,8 @@ def main():
             raise RuntimeError(f"Follow-up owner hash mismatch: {name}")
     apply_cleanup(SOURCE)
     apply_p0(SOURCE)
-    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 7 profile diagnostic/compatibility owners; NOT COMPILED")
+    apply_preferences(SOURCE)
+    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 7 profile diagnostic/compatibility owners + 3 preference snapshot owners; NOT COMPILED")
 
 
 if __name__ == "__main__":
