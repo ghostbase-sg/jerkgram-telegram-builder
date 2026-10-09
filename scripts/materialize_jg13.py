@@ -4,6 +4,7 @@ from pathlib import Path
 import hashlib
 import json
 import subprocess
+from materialize_jg13_profile_cleanup import apply_cleanup
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -32,7 +33,8 @@ def main():
     for name, expected in followup_manifest.items():
         if hashlib.sha256((SOURCE / name).read_bytes()).hexdigest() != expected:
             raise RuntimeError(f"Follow-up owner hash mismatch: {name}")
-    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners; NOT COMPILED")
+    apply_cleanup(SOURCE)
+    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners; NOT COMPILED")
 
 
 if __name__ == "__main__":

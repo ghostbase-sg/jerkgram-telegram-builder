@@ -1,0 +1,34 @@
+{
+  "base_builder_sha": "4bc1548dc91306e76b97f694d017eb8af7932ed5",
+  "owners": {
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": {
+      "after_sha256": "c6109edf35231b263a4029fe2c3f4a133f78031efe8bd7349797ea443c5394e3",
+      "before_sha256": "5a49325a5be7a80f732603f8113951a7e2a77660571a277ffeaffbb01b559161"
+    },
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": {
+      "after_sha256": "8e2338e8a66e429d9c8ebab6d2543682b4b3a9f761f84eb67e6b4c018907e261",
+      "before_sha256": "3aab7ad1162cf0b970768fce869f984ae1127332a8d178a7853923dee6d6144c"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
+      "after_sha256": "bdc01a66591ce4d19b2dc520e045e35075a128f9084d5f14590f561e4a6aee75",
+      "before_sha256": "39309a45abf2a01ee17d5956eec4a6d44321233a3b250edfac79f0dc9dbf3071"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": {
+      "after_sha256": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
+      "before_sha256": "9fc8839120ab9d76aa94203cf47e9048dc4c77e7449e1271610e8ac22775e54a"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
+      "after_sha256": "6ff0628e2b0f94029f0fd2d9414f13abbcad8fc30808d7014ba1ad17daccc4a4",
+      "before_sha256": "7d5fd2e850e9851542709ed1996bece61d70f80e786f6d425083f59f985ed454"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": {
+      "after_sha256": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
+      "before_sha256": "0700a5ab60aa6b3f324ff6c165fe7ac90dd6f8a0c3d418333d6ef6c9afaa5c7c"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": {
+      "after_sha256": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1",
+      "before_sha256": "6ee6a7d61697390e2c2cfa8a62475601119eaf183928537213a72ea25405ed4d"
+    }
+  },
+  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838"
+}

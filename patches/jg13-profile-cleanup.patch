@@ -1,0 +1,632 @@
+diff --git a/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift b/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift
+index 05451d6..af2a814 100644
+--- a/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift
++++ b/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift
+@@ -148,6 +148,11 @@ public class ItemListInfoItem: InfoListItem, ItemListItem {
+ }
+ 
+ public class InfoItemNode: ListViewItemNode {
++    // Opt-in for an enclosing profile material. Stock callers remain unchanged.
++    public func setBackgroundOwnedByContainer(_ value: Bool) {
++        self.backgroundNode.isHidden = value
++    }
++
+     private let backgroundNode: ASDisplayNode
+     private let topStripeNode: ASDisplayNode
+     private let bottomStripeNode: ASDisplayNode
+diff --git a/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift b/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift
+index 2d745a2..cf1fd7f 100644
+--- a/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift
++++ b/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift
+@@ -31,169 +31,6 @@ import GlassBarButtonComponent
+ 
+ 
+ 
+-private struct GhostBaseSeasonalGiftDescriptor {
+-    let id: Int64
+-    let title: String
+-    let price: Int64
+-    let stickerIndex: Int
+-}
+-
+-private let ghostBaseSeasonalGiftDescriptors: [
+-    GhostBaseSeasonalGiftDescriptor
+-] = [
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5956217000635139069,
+-        title: "New Year Bear",
+-        price: 50,
+-        stickerIndex: 1
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5922558454332916696,
+-        title: "Christmas Tree",
+-        price: 50,
+-        stickerIndex: 2
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5800655655995968830,
+-        title: "Valentine Bear",
+-        price: 50,
+-        stickerIndex: 3
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5866352046986232958,
+-        title: "March 8 Bear",
+-        price: 50,
+-        stickerIndex: 4
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5801108895304779062,
+-        title: "Valentine Card",
+-        price: 50,
+-        stickerIndex: 5
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5893356958802511476,
+-        title: "Leprechaun Bear",
+-        price: 50,
+-        stickerIndex: 6
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5935895822435615975,
+-        title: "April 1 Bear",
+-        price: 50,
+-        stickerIndex: 7
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5969796561943660080,
+-        title: "Easter Bear",
+-        price: 50,
+-        stickerIndex: 8
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 6026193266406327981,
+-        title: "Builder Bear",
+-        price: 50,
+-        stickerIndex: 9
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 5974210632977745012,
+-        title: "Football Bear",
+-        price: 50,
+-        stickerIndex: 10
+-    ),
+-    GhostBaseSeasonalGiftDescriptor(
+-        id: 6046178578163303744,
+-        title: "Мишка",
+-        price: 50,
+-        stickerIndex: 11
+-    )
+-]
+-
+-private let ghostBaseSeasonalGiftIds = Set(
+-    ghostBaseSeasonalGiftDescriptors.map(\.id)
+-)
+-
+-private func ghostBaseIsSeasonalGift(
+-    _ gift: StarGift
+-) -> Bool {
+-    if case let .generic(gift) = gift {
+-        return ghostBaseSeasonalGiftIds.contains(gift.id)
+-    } else {
+-        return false
+-    }
+-}
+-
+-private func ghostBaseMakeSeasonalGifts(
+-    items: [StickerPackItem]
+-) -> [StarGift] {
+-    var result: [StarGift] = []
+-
+-    for descriptor in ghostBaseSeasonalGiftDescriptors {
+-        guard descriptor.stickerIndex >= 0,
+-              descriptor.stickerIndex < items.count else {
+-            continue
+-        }
+-
+-        let file =
+-            items[descriptor.stickerIndex].file._parse()
+-
+-        let gift = StarGift.Gift(
+-            id: descriptor.id,
+-            title: descriptor.title,
+-            file: file,
+-            price: descriptor.price,
+-            convertStars: 0,
+-            availability: nil,
+-            soldOut: nil,
+-            flags: [],
+-            upgradeStars: nil,
+-            releasedBy: nil,
+-            perUserLimit: nil,
+-            lockedUntilDate: nil,
+-            auctionSlug: nil,
+-            auctionGiftsPerRound: nil,
+-            auctionStartDate: nil,
+-            upgradeVariantsCount: nil,
+-            background: nil
+-        )
+-
+-        result.append(.generic(gift))
+-    }
+-
+-    return result
+-}
+-
+-private func ghostBaseMergeSeasonalGifts(
+-    serverGifts: [StarGift],
+-    seasonalGifts: [StarGift]
+-) -> [StarGift] {
+-    let serverIds = Set(serverGifts.map(\.id))
+-
+-    let additions = seasonalGifts.filter {
+-        !serverIds.contains($0.id)
+-    }
+-
+-    guard !additions.isEmpty else {
+-        return serverGifts
+-    }
+-
+-    var insertionIndex = 0
+-
+-    for (index, gift) in serverGifts.enumerated() {
+-        if case let .generic(gift) = gift,
+-           gift.availability == nil {
+-            insertionIndex = index + 1
+-        }
+-    }
+-
+-    var result = serverGifts
+-    result.insert(
+-        contentsOf: additions,
+-        at: min(insertionIndex, result.count)
+-    )
+-
+-    return result
+-}
+ 
+ final class GiftOptionsScreenComponent: Component {
+     typealias EnvironmentType = ViewControllerComponentContainer.Environment
+@@ -251,7 +88,6 @@ final class GiftOptionsScreenComponent: Component {
+         case limited
+         case inStock
+         case resale
+-        case seasonal
+         case stars(Int64)
+         case transfer
+         
+@@ -268,7 +104,7 @@ final class GiftOptionsScreenComponent: Component {
+             case -4:
+                 self = .resale
+             case -5:
+-                self = .seasonal
++                self = .all // Retired category links fall back to the normal catalogue.
+             default:
+                 self = .stars(rawValue)
+             }
+@@ -286,8 +122,6 @@ final class GiftOptionsScreenComponent: Component {
+                 return -3
+             case .resale:
+                 return -4
+-            case .seasonal:
+-                return -5
+             case let .stars(stars):
+                 return stars
+             }
+@@ -384,8 +218,6 @@ final class GiftOptionsScreenComponent: Component {
+                                         return true
+                                     }
+                                 }
+-                            case .seasonal:
+-                                return ghostBaseIsSeasonalGift($0)
+                             case .transfer:
+                                 break
+                             }
+@@ -784,14 +616,6 @@ final class GiftOptionsScreenComponent: Component {
+                         var isLoading = false
+                         switch gift {
+                         case let .generic(gift):
+-                            if ghostBaseSeasonalGiftIds.contains(
+-                                gift.id
+-                            ) {
+-                                ribbon = GiftItemComponent.Ribbon(
+-                                    text: environment.strings.baseLanguageCode == "ru" ? "Сезонный" : "Seasonal",
+-                                    color: .blue
+-                                )
+-                            }
+ 
+                             if let _ = gift.soldOut {
+                                 if let availability = gift.availability, availability.resale > 0 {
+@@ -1811,21 +1635,6 @@ final class GiftOptionsScreenComponent: Component {
+                     title: strings.Gift_Options_Gift_Filter_AllGifts
+                 ))
+                 
+-                let hasSeasonalGifts =
+-                    self.state?.starGifts?.contains(where: {
+-                        ghostBaseIsSeasonalGift($0)
+-                    }) ?? false
+-
+-                if hasSeasonalGifts {
+-                    tabSelectorItems.append(
+-                        TabSelectorComponent.Item(
+-                            id: AnyHashable(
+-                                StarsFilter.seasonal.rawValue
+-                            ),
+-                            title: strings.baseLanguageCode == "ru" ? "Сезонные" : "Seasonal"
+-                        )
+-                    )
+-                }
+                 
+                 if hasTransferGifts {
+                     tabSelectorItems.append(TabSelectorComponent.Item(
+@@ -1993,22 +1802,6 @@ final class GiftOptionsScreenComponent: Component {
+                 ),
+                 availableProducts,
+                 context.engine.payments.cachedStarGifts(),
+-                context.engine.stickers.loadedStickerPack(
+-                    reference: .name("DeletedGiftsStickers"),
+-                    forceActualized: false
+-                )
+-                |> map { result -> [StarGift] in
+-                    switch result {
+-                    case .fetching:
+-                        return []
+-                    case .none:
+-                        return []
+-                    case let .result(_, items, _):
+-                        return ghostBaseMakeSeasonalGifts(
+-                            items: items
+-                        )
+-                    }
+-                },
+                 self.starGiftsContext.state
+             ).start(next: {
+                 [weak self]
+@@ -2016,7 +1809,6 @@ final class GiftOptionsScreenComponent: Component {
+                 disallowedGifts,
+                 availableProducts,
+                 starGifts,
+-                seasonalGifts,
+                 profileGiftsState in
+                 guard let self else {
+                     return
+@@ -2097,11 +1889,7 @@ final class GiftOptionsScreenComponent: Component {
+                 var filteredStarGifts: [StarGift]?
+ 
+                 if let starGifts {
+-                    filteredStarGifts =
+-                        ghostBaseMergeSeasonalGifts(
+-                            serverGifts: starGifts,
+-                            seasonalGifts: seasonalGifts
+-                        )
++                    filteredStarGifts = starGifts
+                 } else {
+                     filteredStarGifts = nil
+                 }
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+index 865cf7e..f168490 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+@@ -438,6 +438,10 @@ final class GhostBaseProfileBackgroundView: UIView {
+ 
+ 
+     private let sourceDisposable = MetaDisposable()
++    private var isSceneActive = false
++    private var isControllerVisible = false
++    private var isApplicationActive = UIApplication.shared.applicationState == .active
++    private var lifecycleObservers: [NSObjectProtocol] = []
+     private var currentStateKey: GhostBaseProfileBackgroundStateKey?
+     private var currentLoadKey: String?
+ 
+@@ -479,6 +483,16 @@ final class GhostBaseProfileBackgroundView: UIView {
+                     self?.refreshLiveSettings()
+                 }
+             )
++        for name in [UIApplication.willResignActiveNotification, UIApplication.didBecomeActiveNotification] {
++            self.lifecycleObservers.append(NotificationCenter.default.addObserver(
++                forName: name, object: nil, queue: .main,
++                using: { [weak self] _ in
++                    guard let self else { return }
++                    self.isApplicationActive = name == UIApplication.didBecomeActiveNotification
++                    self.setSceneActive(self.isControllerVisible)
++                }
++            ))
++        }
+     }
+ 
+     required init?(coder: NSCoder) {
+@@ -486,6 +500,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+     }
+ 
+     deinit {
++        for observer in self.lifecycleObservers {
++            NotificationCenter.default.removeObserver(observer)
++        }
+         if let visualSettingsObserver =
+             self.visualSettingsObserver {
+ 
+@@ -521,6 +538,26 @@ final class GhostBaseProfileBackgroundView: UIView {
+         self.isHidden = true
+     }
+ 
++    func setSceneActive(_ active: Bool) {
++        self.isControllerVisible = active
++        let active = active && self.isApplicationActive
++        guard self.isSceneActive != active else {
++            return
++        }
++        self.isSceneActive = active
++        self.currentStateKey = nil
++        self.currentLoadKey = nil
++        if active {
++            self.requestUpdate?()
++        } else {
++            self.sourceDisposable.set(nil)
++            self.secondaryVideoDisposable?.dispose()
++            self.secondaryVideoDisposable = nil
++            self.mirrorVideoView.isHidden = true
++            self.mirrorVideoView.videoLayer.flushAndRemoveImage()
++        }
++    }
++
+     private func refreshLiveSettings() {
+         guard let settings =
+             GhostBaseProfileBlurSettings
+@@ -540,6 +577,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+         }
+ 
+         self.currentStateKey = nil
++        guard self.isSceneActive else {
++            return
++        }
+         self.requestUpdate?()
+     }
+ 
+@@ -573,6 +613,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+         isSettings: Bool,
+         avatarItem: PeerInfoAvatarListItem?
+     ) {
++        guard self.isSceneActive else {
++            return
++        }
+         guard let liveSettings =
+             GhostBaseProfileBlurSettings
+                 .loadEnabled()
+@@ -973,6 +1016,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+         self.lastAvatarVideoNode = videoNode
+ 
+         guard
++            self.isSceneActive,
+             self.window != nil,
+             self.desiredVideoIdentity != nil,
+             let videoNode
+@@ -1139,8 +1183,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+                 animatedSource
+             )
+ 
+-            // RAM cache first, then the small decoded-avatar disk cache.
+-            // Only if neither exists do we briefly expose the neutral fallback.
++            // Final avatar RAM hit: immutable resource identity, no new subscription.
+             if let cached = Self.imageCache.object(forKey: cacheKey) {
+                 self.imageView.image = cached.image
+                 self.applyTint(
+@@ -1149,25 +1192,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+                     isDark: isDark,
+                     reduced: reduced
+                 )
+-            } else if let diskImage = Self.ghostBaseLoadAvatarDiskCache(
+-                identity: loadKey
+-            ) {
+-                let diskTint = Self.sampledTint(
+-                    from: diskImage,
+-                    fallback: fallback
+-                )
+-                let diskEntry = GhostBaseProfileBackgroundCacheEntry(
+-                    image: diskImage,
+-                    tint: diskTint
+-                )
+-                Self.imageCache.setObject(diskEntry, forKey: cacheKey)
+-                self.imageView.image = diskImage
+-                self.applyTint(
+-                    diskTint,
+-                    fallback: fallback,
+-                    isDark: isDark,
+-                    reduced: reduced
+-                )
++                return
+             } else {
+                 self.imageView.image = nil
+             }
+@@ -1471,47 +1496,58 @@ final class GhostBaseProfileBackgroundView: UIView {
+         identity: String,
+         fallback: UIColor
+     ) -> Signal<GhostBaseProfileBackgroundCacheEntry?, NoError>? {
+-        // produces a 360x360 unclipped presentation. Do not decode the raw
+-        // MediaBox resource as UIImage and do not request the 720px V11S path.
+-        guard let signal = peerAvatarImage(
+-            account: self.context.account,
+-            peerReference: PeerReference(peer),
+-            authorOfMessage: nil,
+-            representation: representation,
+-            displayDimensions: CGSize(width: 360.0, height: 360.0),
+-            clipStyle: .none,
+-            blurred: false,
+-            inset: 0.0,
+-            emptyColor: nil,
+-            synchronousLoad: true,
+-            completeOnly: true
+-        ) else {
+-            return nil
+-        }
+-
+-        return signal
+-        |> deliverOn(Queue.concurrentDefaultQueue())
+-        |> map { versions -> GhostBaseProfileBackgroundCacheEntry? in
+-            // AvatarNode has already rejected every .blurred typed emission.
+-            guard let image = versions?.0 else {
+-                return nil
++        let context = self.context
++        return deferred { () -> Signal<GhostBaseProfileBackgroundCacheEntry?, NoError> in
++            // Disk read/decode/tint and AvatarNode subscription all start off main.
++            if let image = Self.ghostBaseLoadAvatarDiskCache(identity: identity) {
++                return .single(GhostBaseProfileBackgroundCacheEntry(
++                    image: image,
++                    tint: Self.sampledTint(from: image, fallback: fallback)
++                ))
++            }
++            // produces a 360x360 unclipped presentation. Do not decode the raw
++            // MediaBox resource as UIImage and do not request the 720px V11S path.
++            guard let signal = peerAvatarImage(
++                account: context.account,
++                peerReference: PeerReference(peer),
++                authorOfMessage: nil,
++                representation: representation,
++                displayDimensions: CGSize(width: 360.0, height: 360.0),
++                clipStyle: .none,
++                blurred: false,
++                inset: 0.0,
++                emptyColor: nil,
++                synchronousLoad: false,
++                completeOnly: true
++            ) else {
++                return .single(nil)
+             }
+ 
+-            let tint = Self.sampledTint(
+-                from: image,
+-                fallback: fallback
+-            )
++            return signal
++            |> deliverOn(Queue.concurrentDefaultQueue())
++            |> map { versions -> GhostBaseProfileBackgroundCacheEntry? in
++                // AvatarNode has already rejected every .blurred typed emission.
++                guard let image = versions?.0 else {
++                    return nil
++                }
+ 
+-            Self.ghostBaseStoreAvatarDiskCache(
+-                image,
+-                identity: identity
+-            )
++                let tint = Self.sampledTint(
++                    from: image,
++                    fallback: fallback
++                )
+ 
+-            return GhostBaseProfileBackgroundCacheEntry(
+-                image: image,
+-                tint: tint
+-            )
++                Self.ghostBaseStoreAvatarDiskCache(
++                    image,
++                    identity: identity
++                )
++
++                return GhostBaseProfileBackgroundCacheEntry(
++                    image: image,
++                    tint: tint
++                )
++            }
+         }
++        |> runOn(Queue.concurrentDefaultQueue())
+     }
+ 
+     private func resourceEntrySignal(
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift
+index b66b13f..05a5622 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift
+@@ -15,6 +15,8 @@ final class PeerInfoScreenInfoItem: PeerInfoScreenItem {
+     let text: InfoListItemText
+     let isWarning: Bool
+     let style: InfoListItem.InfoStyle
++    let usesContainerBackground: Bool
++    var ghostBaseContainerBackgroundEnabled = false
+     let linkAction: ((InfoListItemLinkAction) -> Void)?
+  
+     init(
+@@ -23,6 +25,7 @@ final class PeerInfoScreenInfoItem: PeerInfoScreenItem {
+         text: InfoListItemText,
+         isWarning: Bool = false,
+         style: InfoListItem.InfoStyle = .default,
++        usesContainerBackground: Bool = false,
+         linkAction: ((InfoListItemLinkAction) -> Void)?
+     ) {
+         self.id = id
+@@ -30,6 +33,7 @@ final class PeerInfoScreenInfoItem: PeerInfoScreenItem {
+         self.text = text
+         self.isWarning = isWarning
+         self.style = style
++        self.usesContainerBackground = usesContainerBackground
+         self.linkAction = linkAction
+     }
+     
+@@ -99,6 +103,9 @@ private final class PeerInfoScreenInfoItemNode: PeerInfoScreenItemNode {
+             self.addSubnode(itemNode)
+         }
+         
++        itemNode.setBackgroundOwnedByContainer(
++            item.usesContainerBackground && item.ghostBaseContainerBackgroundEnabled
++        )
+         let height = itemNode.contentSize.height
+         
+         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+index 709f637..623ec86 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -206,6 +206,9 @@ enum TopicsLimitedReason {
+ }
+ 
+ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
++    func setGhostBaseProfileBackgroundActive(_ active: Bool) {
++        self.ghostBaseProfileBackgroundView?.setSceneActive(active)
++    }
+     weak var controller: PeerInfoScreenImpl?
+     
+     let context: AccountContext
+@@ -7006,6 +7009,16 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+         super.present(controller, in: context, with: arguments, blockInteraction: blockInteraction, completion: completion)
+     }
+     
++    override public func viewWillAppear(_ animated: Bool) {
++        super.viewWillAppear(animated)
++        self.controllerNode.setGhostBaseProfileBackgroundActive(true)
++    }
++
++    override public func viewDidDisappear(_ animated: Bool) {
++        super.viewDidDisappear(animated)
++        self.controllerNode.setGhostBaseProfileBackgroundActive(false)
++    }
++
+     override public func viewWillDisappear(_ animated: Bool) {
+         super.viewWillDisappear(animated)
+ 
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+index 8742d2d..039dd03 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+@@ -101,6 +101,9 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
+             }
+             
+             let itemHeight: CGFloat
++            if let infoItem = item as? PeerInfoScreenInfoItem {
++                infoItem.ghostBaseContainerBackgroundEnabled = self.ghostBaseGlassEnabled
++            }
+             if self.ghostBaseGlassEnabled {
+                 itemHeight = PresentationResourcesItemList.withGhostBaseGlassCornerFillerSuppressed {
+                     itemNode.update(context: context, width: width, safeInsets: safeInsets, presentationData: presentationData, item: item, topItem: topItem, bottomItem: bottomItem, hasCorners: hasCorners, transition: itemTransition)
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
+index ada73eb..5d3da52 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
+@@ -128,7 +128,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
+             }))
+         } else if settings.suggestPhoneNumberConfirmation, case let .user(peer) = data.peer {
+             let phoneNumber = formatPhoneNumber(context: context, number: peer.phone ?? "")
+-            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).string, text: .markdown(presentationData.strings.Settings_CheckPhoneNumberText), linkAction: { link in
++            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).string, text: .markdown(presentationData.strings.Settings_CheckPhoneNumberText), usesContainerBackground: true, linkAction: { link in
+                 if case .tap = link {
+                     interaction.openFaq(presentationData.strings.Settings_CheckPhoneNumberFAQAnchor)
+                 }

@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import subprocess
 import sys
+from materialize_jg13_profile_cleanup import verify_cleanup
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -49,6 +50,7 @@ def main():
         "verify_jg13_build137_performance2.py",
     ]:
         subprocess.run([sys.executable, str(ROOT / "scripts" / name)], cwd=SOURCE, check=True)
+    verify_cleanup(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 
