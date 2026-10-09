@@ -44,7 +44,7 @@ def verify(ipa, config):
         for name in mains + list(infos.values()):
             p = plistlib.loads(z.read(name))
             require(p["CFBundleVersion"] == str(config["build_number"]), "Wrong build: " + name)
-            require(p["CFBundleShortVersionString"] == config["product_version"], "Wrong version: " + name)
+            require(p["CFBundleShortVersionString"] == config["bundle_short_version"], "Wrong version: " + name)
         for name, expected in [("sideloadKeychainFix.dylib", keychain.EXPECTED_SHA256), ("FilePickerFix.dylib", picker.FILE_PICKER_SHA256)]:
             require(hashlib.sha256(z.read(app + "Frameworks/" + name)).hexdigest() == expected, "Stable asset hash mismatch: " + name)
         require(main.get("CFBundleIcons", {}).get("CFBundlePrimaryIcon", {}).get("CFBundleIconName") == "JerkgramGlassReveal", "Primary Jerkgram icon lost")
@@ -54,7 +54,8 @@ def main():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     out = ROOT / "artifacts"
     out.mkdir(exist_ok=True)
-    ipa = out / "Jerkgram-1.1.0-Beta-1-Build142.ipa"
+    artifact_name = f'Jerkgram-1.1.0-Beta-1-Build{config["build_number"]}'
+    ipa = out / (artifact_name + ".ipa")
     shutil.copy2(Path(sys.argv[1]), ipa)
     # Same asset hashes and main-app-only packaging as the proven Build138.
     keychain.package_ipa(ipa)
@@ -71,7 +72,7 @@ def main():
             p = bundle / "Info.plist"
             data = plistlib.loads(p.read_bytes())
             require(data["CFBundleVersion"] == str(config["build_number"]), "Build was not set by source pipeline")
-            data["CFBundleShortVersionString"] = config["product_version"]
+            require(data["CFBundleShortVersionString"] == config["bundle_short_version"], "Bundle version was not set by source pipeline")
             if bundle == app:
                 data["CFBundleName"] = data["CFBundleDisplayName"] = "Jerkgram"
             p.write_bytes(plistlib.dumps(data, fmt=plistlib.FMT_BINARY, sort_keys=False))
@@ -98,7 +99,7 @@ def main():
         replacement.replace(ipa)
     verify(ipa, config)
     report = dict(config, ci_run_id=os.environ.get("GITHUB_RUN_ID"), ci_commit=os.environ.get("GITHUB_SHA"), ipa=ipa.name, ipa_sha256=hashlib.sha256(ipa.read_bytes()).hexdigest(), status="COMPILED, NOT RUNTIME TESTED")
-    (out / "Jerkgram-1.1.0-Beta-1-Build142.json").write_text(json.dumps(report, indent=2) + "\n")
+    (out / (artifact_name + ".json")).write_text(json.dumps(report, indent=2) + "\n")
     print("IPA metadata VERIFIED; COMPILED, NOT RUNTIME TESTED")
 
 

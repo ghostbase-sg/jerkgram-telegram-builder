@@ -24,6 +24,10 @@ def main():
     identity = (SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift").read_text()
     require(f'displayVersion = "{config["product_display_version"]}"' in identity, "Wrong display version")
     require(f'technicalVersion = "{config["product_technical_version"]}"' in identity, "Wrong telemetry version")
+    require(f'build = "{config["build_number"]}"' in identity, "Wrong product build")
+    require(f'telegramBase = "{config["upstream_new_version"]}"' in identity, "Wrong upstream display identity")
+    build_owner = (SOURCE / "Telegram/BUILD").read_text()
+    require(f'<key>CFBundleShortVersionString</key>\n    <string>{config["bundle_short_version"]}</string>' in build_owner, "Wrong generated bundle version owner")
     require('"1.0.2"' not in identity, "Stale product version")
     auth = (SOURCE / "submodules/TelegramApi/Sources/Api43.swift").read_text()
     require('("botAuthToken", ConstructorParameterDescription("[REDACTED]"))' in auth, "Bot token diagnostic not redacted")
@@ -31,6 +35,9 @@ def main():
     app = (SOURCE / "submodules/TelegramUI/Sources/AppDelegate.swift").read_text()
     require("func handleDidBecomeActive()" in app and "JerkgramTelemetry.shared.applicationDidBecomeActive()" in app, "Active telemetry owner lost")
     require("func handleDidEnterBackground()" in app and "JerkgramTelemetry.shared.applicationDidEnterBackground()" in app, "Background telemetry owner lost")
+    scene = (SOURCE / "submodules/TelegramUI/Sources/SceneDelegate.swift").read_text()
+    require("configuration.delegateClass = SceneDelegate.self" in app, "Primary scene delegate routing lost")
+    require("appDelegate?.handleDidBecomeActive()" in scene and "appDelegate?.handleDidEnterBackground()" in scene, "13.0 scene lifecycle routing lost")
     require("setupAccountManager(" in app and "resetWalletLocalSecrets()" in app, "13.0 secure AccountManager owner lost")
     for name in [
         "verify_jg13_v12t_build133_blocked_reactions1.py",

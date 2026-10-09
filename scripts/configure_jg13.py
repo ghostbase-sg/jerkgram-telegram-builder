@@ -42,7 +42,7 @@ def main():
     # Generated VersionInfoPlist is the actual owner for both app and extension versions.
     p = SOURCE / "Telegram/BUILD"
     text = p.read_text()
-    text = replace_once(text, '<string>$$version</string>', f'<string>{config["product_version"]}</string>')
+    text = replace_once(text, '<string>$$version</string>', f'<string>{config["bundle_short_version"]}</string>')
     p.write_text(text)
     print(f'Configured Jerkgram {config["product_display_version"]} / Build{config["build_number"]}')
 

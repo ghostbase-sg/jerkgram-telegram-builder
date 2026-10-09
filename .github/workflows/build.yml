@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build142
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build143
 
 on:
   workflow_dispatch:
@@ -42,13 +42,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          python3 -m py_compile scripts/materialize_jg13.py scripts/configure_jg13.py scripts/verify_jg13_source.py scripts/package_jg13.py tests/run_jg13_ping_policy.py
+          python3 -m py_compile scripts/materialize_jg13.py scripts/configure_jg13.py scripts/verify_jg13_source.py scripts/package_jg13.py tests/run_jg13_ping_policy.py tests/run_jg13_followup.py
           bash scripts/build_jg13.sh 2>&1 | tee artifacts/build.log
       - name: Upload build log and focused owner diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build142-diagnostics
+          name: Jerkgram-Beta1-Build143-diagnostics
           path: |
             artifacts/build.log
             jerkgram-migration.json
@@ -61,9 +61,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build142
+          name: Jerkgram-1.1.0-Beta-1-Build143
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build142.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build142.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build143.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build143.json
           if-no-files-found: error
           retention-days: 90
