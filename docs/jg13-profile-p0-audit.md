@@ -64,3 +64,18 @@ About does not start capture automatically and UI subscribes only to session sta
 Preflight: fresh guarded apply and 6 cleanup +5 P0 +3 capture source tests PASS; py_compile PASS; five lock hashes unchanged. Independent review rechecked cutoff fix and found no important issue. Whole Python suite result and named failures/errors are in `jg13-performance-suite-results.md`; it is NOT GREEN. CI/device results must be recorded separately.
 
 CI 37944805574 / remote499a82d: FAIL before Bazel, extracted avatar-cache test missing actual capture owner dependency after timing instrumentation. Full job113868207714 log read; all materialization/source checks before component fixture passed. Fix: prepend real Foundation/Darwin capture owner to cache fixture, without stubbing/removing diagnostics or weakening cache assertions. Build145 has no IPA from this run; retries retain145.
+
+
+## Build145 device evidence and Build146 ownership compatibility
+
+User crash IPS (2026-10-09 19:56:13 +0300) confirms com.jerkgram.ios / 13.0 / 145, main-thread SIGABRT from an uncaught AVFoundation exception in AVSampleBufferVideoRenderer.setControlTimebase. App addresses are unsymbolicated; exact instruction/exception reason is not in the IPS. Removal from UIView/ASDisplayNode hierarchy appears below the timebase setter. User reports 2/3 self-profile openings crashed before activating capture.
+
+203-second capture: main queue wait max896ms; Settings layout max292ms; transition max169ms versus play max2ms; CPU max221.7% (100%=one core); peak RSS1104871424 bytes (not current RSS). No monotonic custom profile owner accumulation shown: Settings owner reused, six peer owners deinitialized. These measurements do not prove GPU utilization, cache causality or complete absence of leaks.
+
+SOURCE CONFIRMED ownership defect: MediaPlayerNode.removeSecondaryVideoLayer wrote controlTimebase=nil before notifying V2 to remove the renderer; V2 had attached the same output to AVSampleBufferRenderSynchronizer. The update path also queued direct secondary timebase writes. AVFoundation removal is asynchronous (Apple removeRenderer(_:at:completionHandler:) documentation).
+
+Build146 canonical delta explicitly marks V2 outputs as synchronizer-owned before signals/attachment; manual secondary timebase writes are retained only for the legacy backend. Primary Telegram timebase code, play/pause/seek policy, animation and blur quality are unchanged. No new video/render owner. Exact whole-file hash gates now cover seven owners; five regression locks remain unchanged.
+
+Additional bounded preferences/alpha spans split the unaccounted avatar transition cost. They are diagnostic evidence collection, not a speculative performance fix. Original capture ring/timing bounds remain512/32.
+
+Target: Build146, product1.1.0Beta1, bundle13.0/com.jerkgram.ios; upstream f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838 unchanged. PATCHED, NOT COMPILED at local preflight. Device crash/performance outcome UNKNOWN until runtime retest.
