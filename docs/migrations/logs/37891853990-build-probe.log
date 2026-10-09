@@ -1,0 +1,313 @@
+﻿2026-10-09T06:07:00.5333710Z Current runner version: '2.337.0'
+2026-10-09T06:07:00.5348030Z ##[group]Runner Image Provisioner
+2026-10-09T06:07:00.5348570Z Hosted Compute Agent
+2026-10-09T06:07:00.5348970Z Version: 20260828.587
+2026-10-09T06:07:00.5349410Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-10-09T06:07:00.5349890Z Build Date: 2026-08-28T16:44:25Z
+2026-10-09T06:07:00.5350350Z Worker ID: {46783fc0-8f73-42d1-b989-054bebfa24a3}
+2026-10-09T06:07:00.5350840Z Azure Region: westus
+2026-10-09T06:07:00.5351280Z ##[endgroup]
+2026-10-09T06:07:00.5352270Z ##[group]Operating System
+2026-10-09T06:07:00.5352690Z macOS
+2026-10-09T06:07:00.5353050Z 26.6.2
+2026-10-09T06:07:00.5353410Z 25G83
+2026-10-09T06:07:00.5353760Z ##[endgroup]
+2026-10-09T06:07:00.5354140Z ##[group]Runner Image
+2026-10-09T06:07:00.5354540Z Image: macos-26-arm64
+2026-10-09T06:07:00.5354950Z Version: 20260907.0351.1
+2026-10-09T06:07:00.5355830Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20260907.0351/images/macos/macos-26-arm64-Readme.md
+2026-10-09T06:07:00.5356900Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20260907.0351
+2026-10-09T06:07:00.5357670Z ##[endgroup]
+2026-10-09T06:07:00.5358410Z ##[group]GITHUB_TOKEN Permissions
+2026-10-09T06:07:00.5359410Z Contents: read
+2026-10-09T06:07:00.5359810Z Metadata: read
+2026-10-09T06:07:00.5360190Z ##[endgroup]
+2026-10-09T06:07:00.5361660Z Secret source: Actions
+2026-10-09T06:07:00.5362250Z Cache mode: write
+2026-10-09T06:07:00.5362720Z Prepare workflow directory
+2026-10-09T06:07:00.5706950Z Prepare all required actions
+2026-10-09T06:07:00.5751090Z Getting action download info
+2026-10-09T06:07:00.9728860Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-09T06:07:01.1895200Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-10-09T06:07:01.3667520Z Complete job name: build-probe
+2026-10-09T06:07:01.4462860Z ##[group]Run actions/checkout@v4
+2026-10-09T06:07:01.4463480Z with:
+2026-10-09T06:07:01.4463960Z   repository: ghostbase-sg/jerkgram-telegram-builder
+2026-10-09T06:07:01.4466590Z   token: ***
+2026-10-09T06:07:01.4466920Z   ssh-strict: true
+2026-10-09T06:07:01.4467250Z   ssh-user: git
+2026-10-09T06:07:01.4467590Z   persist-credentials: true
+2026-10-09T06:07:01.4468110Z   clean: true
+2026-10-09T06:07:01.4468490Z   sparse-checkout-cone-mode: true
+2026-10-09T06:07:01.4468880Z   fetch-depth: 1
+2026-10-09T06:07:01.4469210Z   fetch-tags: false
+2026-10-09T06:07:01.4469550Z   show-progress: true
+2026-10-09T06:07:01.4469890Z   lfs: false
+2026-10-09T06:07:01.4470210Z   submodules: false
+2026-10-09T06:07:01.4470550Z   set-safe-directory: true
+2026-10-09T06:07:01.4470930Z   allow-unsafe-pr-checkout: false
+2026-10-09T06:07:01.4471420Z env:
+2026-10-09T06:07:01.4471740Z   USE_BAZEL_VERSION: 9.2.0
+2026-10-09T06:07:01.4472100Z   BAZEL_BIN: bazelisk
+2026-10-09T06:07:01.4472570Z   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+2026-10-09T06:07:01.4473100Z   JERKGRAM_TELEGRAM_API_ID: ***
+2026-10-09T06:07:01.4473570Z   JERKGRAM_TELEGRAM_API_HASH: ***
+2026-10-09T06:07:01.4473960Z ##[endgroup]
+2026-10-09T06:07:01.7578410Z Syncing repository: ghostbase-sg/jerkgram-telegram-builder
+2026-10-09T06:07:01.7579720Z ##[group]Getting Git version info
+2026-10-09T06:07:01.7580360Z Working directory is '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder'
+2026-10-09T06:07:01.7581290Z [command]/opt/homebrew/bin/git version
+2026-10-09T06:07:01.8070040Z git version 2.55.0
+2026-10-09T06:07:01.8081430Z ##[endgroup]
+2026-10-09T06:07:01.8088320Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/9be400ec-df99-4670-824d-87e48d754c3c/.gitconfig'
+2026-10-09T06:07:01.8095150Z Temporarily overriding HOME='/Users/runner/work/_temp/9be400ec-df99-4670-824d-87e48d754c3c' before making global git config changes
+2026-10-09T06:07:01.8096350Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-09T06:07:01.8098880Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder
+2026-10-09T06:07:01.8206960Z Deleting the contents of '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder'
+2026-10-09T06:07:01.8209260Z ##[group]Initializing the repository
+2026-10-09T06:07:01.8212890Z [command]/opt/homebrew/bin/git init /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder
+2026-10-09T06:07:01.8425710Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-09T06:07:01.8426670Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-09T06:07:01.8427480Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-09T06:07:01.8428090Z hint: call:
+2026-10-09T06:07:01.8428410Z hint:
+2026-10-09T06:07:01.8428810Z hint: 	git config --global init.defaultBranch <name>
+2026-10-09T06:07:01.8429300Z hint:
+2026-10-09T06:07:01.8429900Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-09T06:07:01.8430660Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-09T06:07:01.8431290Z hint:
+2026-10-09T06:07:01.8431630Z hint: 	git branch -m <name>
+2026-10-09T06:07:01.8432050Z hint:
+2026-10-09T06:07:01.8432560Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-09T06:07:01.8433860Z Initialized empty Git repository in /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/.git/
+2026-10-09T06:07:01.8435640Z [command]/opt/homebrew/bin/git remote add origin https://github.com/ghostbase-sg/jerkgram-telegram-builder
+2026-10-09T06:07:01.8519880Z ##[endgroup]
+2026-10-09T06:07:01.8521890Z ##[group]Disabling automatic garbage collection
+2026-10-09T06:07:01.8523070Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-10-09T06:07:01.8604990Z ##[endgroup]
+2026-10-09T06:07:01.8606050Z ##[group]Setting up auth
+2026-10-09T06:07:01.8609950Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-09T06:07:01.8678430Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-09T06:07:01.9649610Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-09T06:07:01.9712880Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-09T06:07:02.0614870Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-09T06:07:02.0679270Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-09T06:07:02.1418400Z [command]/opt/homebrew/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-09T06:07:02.1486460Z ##[endgroup]
+2026-10-09T06:07:02.1487130Z ##[group]Fetching the repository
+2026-10-09T06:07:02.1491700Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +1fa93f124176c5e971c15e1873ebfd7de4c8c4a1:refs/remotes/origin/dev/jg-1.1.0-beta1-upstream13
+2026-10-09T06:07:03.1633810Z From https://github.com/ghostbase-sg/jerkgram-telegram-builder
+2026-10-09T06:07:03.1634880Z  * [new ref]         1fa93f124176c5e971c15e1873ebfd7de4c8c4a1 -> origin/dev/jg-1.1.0-beta1-upstream13
+2026-10-09T06:07:03.1753350Z ##[endgroup]
+2026-10-09T06:07:03.1754270Z ##[group]Determining the checkout info
+2026-10-09T06:07:03.1755240Z ##[endgroup]
+2026-10-09T06:07:03.1757730Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-10-09T06:07:03.2239480Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-09T06:07:03.2373170Z ##[group]Checking out the ref
+2026-10-09T06:07:03.2376150Z [command]/opt/homebrew/bin/git checkout --progress --force -B dev/jg-1.1.0-beta1-upstream13 refs/remotes/origin/dev/jg-1.1.0-beta1-upstream13
+2026-10-09T06:07:03.5179370Z Switched to a new branch 'dev/jg-1.1.0-beta1-upstream13'
+2026-10-09T06:07:03.5184830Z branch 'dev/jg-1.1.0-beta1-upstream13' set up to track 'origin/dev/jg-1.1.0-beta1-upstream13'.
+2026-10-09T06:07:03.5189280Z ##[endgroup]
+2026-10-09T06:07:03.5281770Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-10-09T06:07:03.5363930Z 1fa93f124176c5e971c15e1873ebfd7de4c8c4a1
+2026-10-09T06:07:03.5582280Z ##[group]Run set -euo pipefail
+2026-10-09T06:07:03.5583310Z [36;1mset -euo pipefail[0m
+2026-10-09T06:07:03.5583570Z [36;1mxcodebuild -version[0m
+2026-10-09T06:07:03.5583920Z [36;1mtest "$(xcodebuild -version | head -1)" = "Xcode 26.6"[0m
+2026-10-09T06:07:03.5585160Z [36;1mif ! command -v bazelisk >/dev/null 2>&1; then[0m
+2026-10-09T06:07:03.5586030Z [36;1m  brew install bazelisk[0m
+2026-10-09T06:07:03.5586820Z [36;1mfi[0m
+2026-10-09T06:07:03.5587450Z [36;1mbazelisk --version[0m
+2026-10-09T06:07:03.5651680Z shell: /bin/bash -e {0}
+2026-10-09T06:07:03.5651990Z env:
+2026-10-09T06:07:03.5652240Z   USE_BAZEL_VERSION: 9.2.0
+2026-10-09T06:07:03.5652490Z   BAZEL_BIN: bazelisk
+2026-10-09T06:07:03.5652780Z   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+2026-10-09T06:07:03.5653490Z   JERKGRAM_TELEGRAM_API_ID: ***
+2026-10-09T06:07:03.5653810Z   JERKGRAM_TELEGRAM_API_HASH: ***
+2026-10-09T06:07:03.5654180Z ##[endgroup]
+2026-10-09T06:07:03.7152990Z Xcode 26.6
+2026-10-09T06:07:03.7153830Z Build version 17F113
+2026-10-09T06:07:03.8909220Z bazel 9.2.0
+2026-10-09T06:07:03.8969880Z ##[group]Run bash scripts/prepare_source_official.sh
+2026-10-09T06:07:03.8970270Z [36;1mbash scripts/prepare_source_official.sh[0m
+2026-10-09T06:07:03.9001740Z shell: /bin/bash -e {0}
+2026-10-09T06:07:03.9001990Z env:
+2026-10-09T06:07:03.9002180Z   USE_BAZEL_VERSION: 9.2.0
+2026-10-09T06:07:03.9002530Z   BAZEL_BIN: bazelisk
+2026-10-09T06:07:03.9002880Z   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+2026-10-09T06:07:03.9003400Z   JERKGRAM_TELEGRAM_API_ID: ***
+2026-10-09T06:07:03.9003750Z   JERKGRAM_TELEGRAM_API_HASH: ***
+2026-10-09T06:07:03.9003990Z ##[endgroup]
+2026-10-09T06:07:03.9298880Z == Clone official Telegram-iOS f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838 ==
+2026-10-09T06:07:03.9399000Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-09T06:07:03.9400280Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-09T06:07:03.9402360Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-09T06:07:03.9402970Z hint: call:
+2026-10-09T06:07:03.9403200Z hint:
+2026-10-09T06:07:03.9403690Z hint: 	git config --global init.defaultBranch <name>
+2026-10-09T06:07:03.9404070Z hint:
+2026-10-09T06:07:03.9404400Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-09T06:07:03.9405730Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-09T06:07:03.9407160Z hint:
+2026-10-09T06:07:03.9408000Z hint: 	git branch -m <name>
+2026-10-09T06:07:03.9408830Z hint:
+2026-10-09T06:07:03.9409830Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-09T06:07:03.9411450Z Initialized empty Git repository in /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/.git/
+2026-10-09T06:07:14.1391420Z From https://github.com/TelegramMessenger/Telegram-iOS
+2026-10-09T06:07:14.1392260Z  * branch              f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838 -> FETCH_HEAD
+2026-10-09T06:07:19.7009080Z HEAD is now at f1dd7a2d Merge branch 'beta'
+2026-10-09T06:07:19.7164630Z Expected commit: f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838
+2026-10-09T06:07:19.7165540Z Actual commit:   f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838
+2026-10-09T06:07:19.7166050Z == Source ref ==
+2026-10-09T06:07:19.7258770Z f1dd7a2d (grafted, HEAD) Merge branch 'beta'
+2026-10-09T06:07:19.7299170Z {
+2026-10-09T06:07:19.7299830Z     "app": "13.0",
+2026-10-09T06:07:19.7300270Z     "xcode": "26.6",
+2026-10-09T06:07:19.7300610Z     "deploy_xcode": "26.2",
+2026-10-09T06:07:19.7301080Z     "bazel": "9.2.0:dd466352a3e4d3581b8898740ee1ff208866ccbe25f8d367c5dcb950219587e6",
+2026-10-09T06:07:19.7301690Z     "macos": "26"
+2026-10-09T06:07:19.7301920Z }
+2026-10-09T06:07:19.8823970Z == Source prepared ==
+2026-10-09T06:07:20.1917870Z ##[group]Run set -euo pipefail
+2026-10-09T06:07:20.1918350Z [36;1mset -euo pipefail[0m
+2026-10-09T06:07:20.1918610Z [36;1mmkdir -p artifacts[0m
+2026-10-09T06:07:20.1919470Z [36;1mpython3 -m py_compile scripts/materialize_jg13.py scripts/configure_jg13.py scripts/verify_jg13_source.py scripts/package_jg13.py tests/run_jg13_ping_policy.py[0m
+2026-10-09T06:07:20.1920250Z [36;1mbash scripts/build_jg13.sh 2>&1 | tee artifacts/build.log[0m
+2026-10-09T06:07:20.2146510Z shell: /bin/bash -e {0}
+2026-10-09T06:07:20.2146940Z env:
+2026-10-09T06:07:20.2147250Z   USE_BAZEL_VERSION: 9.2.0
+2026-10-09T06:07:20.2147500Z   BAZEL_BIN: bazelisk
+2026-10-09T06:07:20.2147870Z   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+2026-10-09T06:07:20.2148900Z   JERKGRAM_TELEGRAM_API_ID: ***
+2026-10-09T06:07:20.2149320Z   JERKGRAM_TELEGRAM_API_HASH: ***
+2026-10-09T06:07:20.2149670Z ##[endgroup]
+2026-10-09T06:07:20.7510090Z /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/patches/jg13-stable.product.patch:488: trailing whitespace.
+2026-10-09T06:07:20.7511690Z             
+2026-10-09T06:07:20.7513360Z /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/patches/jg13-stable.product.patch:502: trailing whitespace.
+2026-10-09T06:07:20.7514210Z             
+2026-10-09T06:07:20.7515090Z /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/patches/jg13-stable.product.patch:1027: trailing whitespace.
+2026-10-09T06:07:20.7516040Z             
+2026-10-09T06:07:20.7517410Z /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/patches/jg13-stable.product.patch:1041: trailing whitespace.
+2026-10-09T06:07:20.7520280Z             
+2026-10-09T06:07:20.7521960Z /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/patches/jg13-stable.product.patch:1260: trailing whitespace.
+2026-10-09T06:07:20.7523750Z         
+2026-10-09T06:07:20.8399310Z warning: squelched 48 whitespace errors
+2026-10-09T06:07:20.8402500Z warning: 53 lines add whitespace errors.
+2026-10-09T06:07:20.8560220Z PATCHED / VERIFIED: 266 exact owners; NOT COMPILED
+2026-10-09T06:07:20.9204290Z Configured Jerkgram 1.1.0 Beta 1 / Build142
+2026-10-09T06:07:21.0154660Z [Build133 blocked reactions verifier] PREFLIGHT GREEN
+2026-10-09T06:07:21.0501810Z [Build133 blocked activity verifier] PREFLIGHT OWNER CHECKS GREEN
+2026-10-09T06:07:21.0813640Z [Build133 Settings verifier] PREFLIGHT GREEN
+2026-10-09T06:07:21.1349230Z [Build133 music verifier] PREFLIGHT GREEN
+2026-10-09T06:07:21.1726060Z [Build136 visible order/cache verify] PREFLIGHT GREEN
+2026-10-09T06:07:21.1726990Z [Build136 visible order/cache verify] stable source navigation + visible ordering + cache-hit fast path + bounded account projection
+2026-10-09T06:07:21.2132150Z [Build137 performance verify] GREEN
+2026-10-09T06:07:21.9466240Z [Build137 performance2 verify] GREEN
+2026-10-09T06:07:21.9521730Z Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED
+2026-10-09T06:07:28.9758470Z PASS: ordinary ping remains
+2026-10-09T06:07:28.9759480Z PASS: hard-filtered ping is hidden
+2026-10-09T06:07:28.9759970Z PASS: mixed history keeps ordinary ping
+2026-10-09T06:07:28.9760350Z PASS: incomplete evidence preserves summary
+2026-10-09T06:07:28.9760700Z PASS: unrelated tags do not erase ping
+2026-10-09T06:07:28.9761020Z PASS: missing account preserves summary
+2026-10-09T06:07:28.9761440Z PASS: no stock ping creates none
+2026-10-09T06:07:29.2861000Z Submodule 'build-system/bazel-rules/apple_support' (https://github.com/bazelbuild/apple_support.git) registered for path 'build-system/bazel-rules/apple_support'
+2026-10-09T06:07:29.2884850Z Submodule 'build-system/bazel-rules/rules_apple' (https://github.com/ali-fareed/rules_apple.git) registered for path 'build-system/bazel-rules/rules_apple'
+2026-10-09T06:07:29.2902900Z Submodule 'build-system/bazel-rules/rules_swift' (https://github.com/bazelbuild/rules_swift.git) registered for path 'build-system/bazel-rules/rules_swift'
+2026-10-09T06:07:29.2920180Z Submodule 'build-system/bazel-rules/rules_xcodeproj' (https://github.com/MobileNativeFoundation/rules_xcodeproj.git) registered for path 'build-system/bazel-rules/rules_xcodeproj'
+2026-10-09T06:07:29.2979100Z Submodule 'submodules/TgVoipWebrtc/tgcalls' (https://github.com/TelegramMessenger/tgcalls.git) registered for path 'submodules/TgVoipWebrtc/tgcalls'
+2026-10-09T06:07:29.3029960Z Submodule 'submodules/rlottie/rlottie' (https://github.com/TelegramMessenger/rlottie.git) registered for path 'submodules/rlottie/rlottie'
+2026-10-09T06:07:29.3031760Z Submodule 'submodules/tlottie/tlottie' (https://github.com/dkaraush/tlottie.git) registered for path 'submodules/tlottie/tlottie'
+2026-10-09T06:07:29.3032960Z Submodule 'third-party/dav1d/dav1d' (https://github.com/ali-fareed/dav1d.git) registered for path 'third-party/dav1d/dav1d'
+2026-10-09T06:07:29.3035330Z Submodule 'third-party/libvpx/libvpx' (https://github.com/webmproject/libvpx.git) registered for path 'third-party/libvpx/libvpx'
+2026-10-09T06:07:29.3037960Z Submodule 'third-party/mtproto-engine' (https://github.com/macosswift/mtproto-engine.git) registered for path 'third-party/mtproto-engine'
+2026-10-09T06:07:29.3040110Z Submodule 'third-party/td/td' (https://github.com/tdlib/td) registered for path 'third-party/td/td'
+2026-10-09T06:07:29.3044120Z Submodule 'third-party/wallet-engine' (https://github.com/i582/wallet-engine.git) registered for path 'third-party/wallet-engine/wallet-engine'
+2026-10-09T06:07:29.3046470Z Submodule 'third-party/webrtc/webrtc' (https://github.com/ali-fareed/webrtc.git) registered for path 'third-party/webrtc/webrtc'
+2026-10-09T06:07:29.3177670Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/build-system/bazel-rules/apple_support'...
+2026-10-09T06:07:30.0441930Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/build-system/bazel-rules/rules_apple'...
+2026-10-09T06:07:30.9013610Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/build-system/bazel-rules/rules_swift'...
+2026-10-09T06:07:31.5160500Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/build-system/bazel-rules/rules_xcodeproj'...
+2026-10-09T06:07:32.2232510Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/submodules/TgVoipWebrtc/tgcalls'...
+2026-10-09T06:07:32.8270570Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/submodules/rlottie/rlottie'...
+2026-10-09T06:07:33.6256490Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/submodules/tlottie/tlottie'...
+2026-10-09T06:07:34.2351150Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/third-party/dav1d/dav1d'...
+2026-10-09T06:07:34.8469110Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/third-party/libvpx/libvpx'...
+2026-10-09T06:07:36.2441240Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/third-party/mtproto-engine'...
+2026-10-09T06:07:37.0314970Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/third-party/td/td'...
+2026-10-09T06:07:38.7415130Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/third-party/wallet-engine/wallet-engine'...
+2026-10-09T06:07:39.4482850Z Cloning into '/Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder/work/swiftgram-src/third-party/webrtc/webrtc'...
+2026-10-09T06:07:43.4453080Z From https://github.com/bazelbuild/apple_support
+2026-10-09T06:07:43.4453740Z  * branch            872de7149cfbcaaf854c7867e98b6d4798ba0d27 -> FETCH_HEAD
+2026-10-09T06:07:43.5201820Z Submodule path 'build-system/bazel-rules/apple_support': checked out '872de7149cfbcaaf854c7867e98b6d4798ba0d27'
+2026-10-09T06:07:44.5309160Z From https://github.com/ali-fareed/rules_apple
+2026-10-09T06:07:44.5310130Z  * branch            485016eb5b0948cc17307064e7977a6d68e94046 -> FETCH_HEAD
+2026-10-09T06:07:44.7931020Z Submodule path 'build-system/bazel-rules/rules_apple': checked out '485016eb5b0948cc17307064e7977a6d68e94046'
+2026-10-09T06:07:45.8481580Z From https://github.com/bazelbuild/rules_swift
+2026-10-09T06:07:45.8482390Z  * branch            dd10a2497a691237eb9716586acee1a9c4fe3e59 -> FETCH_HEAD
+2026-10-09T06:07:46.0123460Z Submodule path 'build-system/bazel-rules/rules_swift': checked out 'dd10a2497a691237eb9716586acee1a9c4fe3e59'
+2026-10-09T06:07:46.9578290Z From https://github.com/MobileNativeFoundation/rules_xcodeproj
+2026-10-09T06:07:46.9578810Z  * branch            f6a54168d19f917d0630e7d4efa8f2f9fa0ddc36 -> FETCH_HEAD
+2026-10-09T06:07:47.2324080Z Submodule path 'build-system/bazel-rules/rules_xcodeproj': checked out 'f6a54168d19f917d0630e7d4efa8f2f9fa0ddc36'
+2026-10-09T06:07:48.2057680Z From https://github.com/TelegramMessenger/tgcalls
+2026-10-09T06:07:48.2058200Z  * branch            a024eaabf13c189d9577a14fb244bd242825ac96 -> FETCH_HEAD
+2026-10-09T06:07:48.3235890Z Submodule path 'submodules/TgVoipWebrtc/tgcalls': checked out 'a024eaabf13c189d9577a14fb244bd242825ac96'
+2026-10-09T06:07:49.0724330Z fatal: remote error: upload-pack: not our ref 53c9679069eb6b6513ccc3c892ef4f4a760658da
+2026-10-09T06:07:49.0731690Z fatal: Fetched in submodule path 'submodules/rlottie/rlottie', but it did not contain 53c9679069eb6b6513ccc3c892ef4f4a760658da. Direct fetching of that commit failed.
+2026-10-09T06:07:49.0801800Z ##[error]Process completed with exit code 128.
+2026-10-09T06:07:49.1206090Z ##[group]Run actions/upload-artifact@v4
+2026-10-09T06:07:49.1206820Z with:
+2026-10-09T06:07:49.1207480Z   name: Jerkgram-Beta1-Build142-diagnostics
+2026-10-09T06:07:49.1210930Z   path: artifacts/build.log
+jerkgram-migration.json
+work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift
+work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
+
+2026-10-09T06:07:49.1214600Z   if-no-files-found: warn
+2026-10-09T06:07:49.1215390Z   compression-level: 6
+2026-10-09T06:07:49.1216060Z   overwrite: false
+2026-10-09T06:07:49.1216850Z   include-hidden-files: false
+2026-10-09T06:07:49.1217670Z env:
+2026-10-09T06:07:49.1218320Z   USE_BAZEL_VERSION: 9.2.0
+2026-10-09T06:07:49.1219080Z   BAZEL_BIN: bazelisk
+2026-10-09T06:07:49.1220280Z   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+2026-10-09T06:07:49.1221430Z   JERKGRAM_TELEGRAM_API_ID: ***
+2026-10-09T06:07:49.1222470Z   JERKGRAM_TELEGRAM_API_HASH: ***
+2026-10-09T06:07:49.1223320Z ##[endgroup]
+2026-10-09T06:07:49.5135840Z (node:1883) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-09T06:07:49.5136610Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-09T06:07:49.5202980Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-10-09T06:07:49.5206730Z The least common ancestor is /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder. This will be the root directory of the artifact
+2026-10-09T06:07:49.5207490Z With the provided path, there will be 6 files uploaded
+2026-10-09T06:07:49.5208230Z Artifact name is valid!
+2026-10-09T06:07:49.5208510Z Root directory input is valid!
+2026-10-09T06:07:49.8904170Z Beginning upload of artifact content to blob storage
+2026-10-09T06:07:49.9376550Z (node:1883) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-09T06:07:50.4017240Z Uploaded bytes 187034
+2026-10-09T06:07:50.4688790Z Finished uploading artifact content to blob storage!
+2026-10-09T06:07:50.4690020Z SHA256 digest of uploaded artifact zip is d2db3f6a01e18fe4bd403b05292fd598397c5ac92b4e7bad43284402ade0d85b
+2026-10-09T06:07:50.4691720Z Finalizing artifact upload
+2026-10-09T06:07:50.7449560Z Artifact Jerkgram-Beta1-Build142-diagnostics.zip successfully finalized. Artifact ID 11598695558
+2026-10-09T06:07:50.7451760Z Artifact Jerkgram-Beta1-Build142-diagnostics has been successfully uploaded! Final size is 187034 bytes. Artifact ID is 11598695558
+2026-10-09T06:07:50.7469070Z Artifact download URL: https://github.com/ghostbase-sg/jerkgram-telegram-builder/actions/runs/37891853990/artifacts/11598695558
+2026-10-09T06:07:50.7672250Z Post job cleanup.
+2026-10-09T06:07:50.8574120Z [command]/opt/homebrew/bin/git version
+2026-10-09T06:07:50.8638410Z git version 2.55.0
+2026-10-09T06:07:50.8656190Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/ec5f365c-b9b1-41dc-b271-ccd30d2cca33/.gitconfig'
+2026-10-09T06:07:50.8662940Z Temporarily overriding HOME='/Users/runner/work/_temp/ec5f365c-b9b1-41dc-b271-ccd30d2cca33' before making global git config changes
+2026-10-09T06:07:50.8663790Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-09T06:07:50.8666710Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/jerkgram-telegram-builder/jerkgram-telegram-builder
+2026-10-09T06:07:50.8737200Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-09T06:07:50.8803430Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-09T06:07:50.9656670Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-09T06:07:50.9716000Z http.https://github.com/.extraheader
+2026-10-09T06:07:50.9723390Z [command]/opt/homebrew/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-09T06:07:50.9785520Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-09T06:07:51.0682320Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-09T06:07:51.0763790Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-09T06:07:51.1835140Z Cleaning up orphan processes
+2026-10-09T06:07:51.3001520Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+
