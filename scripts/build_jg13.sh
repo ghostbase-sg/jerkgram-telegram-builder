@@ -10,6 +10,7 @@ cd work/swiftgram-src
 git submodule sync --recursive
 git submodule update --init --recursive --depth 1
 python3 ../../scripts/pin_jg13_dependencies.py --verify
+python3 ../../scripts/prepare_jg13_build_rules.py
 "${BAZEL_BIN:-bazelisk}" build \
   -c opt \
   --ios_multi_cpus=arm64 \
