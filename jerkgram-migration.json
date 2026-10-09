@@ -15,5 +15,14 @@
   "product_technical_version": "1.1.0-beta.1",
   "build_number": 142,
   "bundle_id": "com.jerkgram.ios",
-  "source_snapshot_sha256": "5f0eb1e6dbfcd7d955eba10e6aa6caddfa755f2960e86aedb824a84e1b060731"
+  "source_snapshot_sha256": "5f0eb1e6dbfcd7d955eba10e6aa6caddfa755f2960e86aedb824a84e1b060731",
+  "dependency_overrides": {
+    "submodules/rlottie/rlottie": {
+      "repository": "TelegramMessenger/rlottie",
+      "original_sha": "53c9679069eb6b6513ccc3c892ef4f4a760658da",
+      "source_sha": "67f103bc8b625f2a4a9e94f1d8c7bd84c5a08d1d",
+      "reason": "Exact upstream gitlink unavailable; explicit user-approved source fallback on 2026-10-09",
+      "runtime_status": "NOT RUNTIME TESTED"
+    }
+  }
 }
