@@ -24,7 +24,15 @@ def main():
         actual = hashlib.sha256((SOURCE / name).read_bytes()).hexdigest()
         if actual != expected:
             raise RuntimeError(f"Materialized owner hash mismatch: {name}")
-    print(f"PATCHED / VERIFIED: {len(manifest)} exact owners; NOT COMPILED")
+    # Keep the reviewed Stable port immutable; the bounded follow-up is separately auditable.
+    followup = ROOT / "patches/jg13-beta1-followup.patch"
+    subprocess.run(["git", "apply", "--check", str(followup)], cwd=SOURCE, check=True)
+    subprocess.run(["git", "apply", str(followup)], cwd=SOURCE, check=True)
+    followup_manifest = json.loads((ROOT / "patches/jg13-beta1-followup.sha256.json").read_text())
+    for name, expected in followup_manifest.items():
+        if hashlib.sha256((SOURCE / name).read_bytes()).hexdigest() != expected:
+            raise RuntimeError(f"Follow-up owner hash mismatch: {name}")
+    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners; NOT COMPILED")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,191 @@
+diff --git a/submodules/JerkgramCore/Sources/JerkgramStore.swift b/submodules/JerkgramCore/Sources/JerkgramStore.swift
+index 0fb4efbbf07e53c1cbd6e9187dd687273f817e8f..5c5657ca91af37130c3e7f0fc90bd3ad26b89524 100644
+--- a/submodules/JerkgramCore/Sources/JerkgramStore.swift
++++ b/submodules/JerkgramCore/Sources/JerkgramStore.swift
+@@ -75,7 +75,7 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
+         defer { Self.sharedLock.unlock() }
+         let state = try self.ensureIndexLocked(accountPeerId)
+         return self.filteredRecords(
+-            state.records,
++            state.recordsByChat[chatPeerId] ?? [],
+             chatPeerId: chatPeerId,
+             afterSequence: afterSequence,
+             throughSequence: throughSequence
+@@ -94,7 +94,7 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
+             throw JerkgramCoreError.indexNotReady(accountPeerId)
+         }
+         return self.filteredRecords(
+-            state.records,
++            state.recordsByChat[chatPeerId] ?? [],
+             chatPeerId: chatPeerId,
+             afterSequence: afterSequence,
+             throughSequence: throughSequence
+diff --git a/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift b/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
+index ccd5f72198d758fae258d45e96f5407df286be63..3eb9d5bf5390da3cd180124551ecced1559cd621 100644
+--- a/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
+@@ -59,7 +59,22 @@ private enum JerkgramTimeMachineUIEntry: ItemListNodeEntry {
+         case .loadMore: return Int32.max
+         }
+     }
+-    static func == (lhs: Self, rhs: Self) -> Bool { return lhs.stableId == rhs.stableId && String(describing: lhs) == String(describing: rhs) }
++    static func == (lhs: Self, rhs: Self) -> Bool {
++        switch (lhs, rhs) {
++        case let (.header(ls, lt), .header(rs, rt)),
++             let (.info(ls, lt), .info(rs, rt)),
++             let (.loadMore(ls, lt), .loadMore(rs, rt)):
++            return ls == rs && lt == rt
++        case let (.summary(ls, li, lt, lv), .summary(rs, ri, rt, rv)):
++            return ls == rs && li == ri && lt == rt && lv == rv
++        case let (.filter(ls, li, lt, lv, lk), .filter(rs, ri, rt, rv, rk)):
++            return ls == rs && li == ri && lt == rt && lv == rv && lk == rk
++        case let (.result(ls, li, lt, lv, le), .result(rs, ri, rt, rv, re)):
++            return ls == rs && li == ri && lt == rt && lv == rv && le == re
++        default:
++            return false
++        }
++    }
+     static func < (lhs: Self, rhs: Self) -> Bool { return lhs.stableId < rhs.stableId }
+ 
+     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
+@@ -111,14 +126,9 @@ case let .filter(_, _, title, value, kind):
+     }
+ }
+ 
+-private func jerkgramTimeMachineDateText(_ timestampMs: Int64, dateTimeFormat: PresentationDateTimeFormat) -> String {
+-    let _ = dateTimeFormat
++private func jerkgramTimeMachineDateText(_ timestampMs: Int64, formatter: DateFormatter) -> String {
+     let timestamp = TimeInterval(timestampMs) / 1000.0
+     guard timestamp > 0.0 else { return "" }
+-    let formatter = DateFormatter()
+-    formatter.locale = Locale.current
+-    formatter.dateStyle = .medium
+-    formatter.timeStyle = .short
+     return formatter.string(from: Date(timeIntervalSince1970: timestamp))
+ }
+ 
+@@ -280,9 +290,13 @@ public func jerkgramTimeMachineController(
+             .filter(1, 4, strings.timeMachineAuthor, state.senderPeerId.map(String.init) ?? strings.timeMachineAllAuthors, nil),
+             .header(2, strings.timeMachineResults),
+         ]
++        let dateFormatter = DateFormatter()
++        dateFormatter.locale = Locale.current
++        dateFormatter.dateStyle = .medium
++        dateFormatter.timeStyle = .short
+         for (index, event) in results.enumerated() {
+             let text = event.payload.text ?? event.payload.previousText ?? event.eventId.rawValue
+-            let date = jerkgramTimeMachineDateText(event.observedAtMs, dateTimeFormat: presentationData.dateTimeFormat)
++            let date = jerkgramTimeMachineDateText(event.observedAtMs, formatter: dateFormatter)
+             let kind = jerkgramEventKindTitle(event.kind, strings: strings)
+             let detail = date.isEmpty ? kind : "\(kind) · \(date)"
+             entries.append(.result(2, Int32(index + 1), String(text.prefix(120)), detail, event))
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+index 18c36c0582c8c254096959d6e121fdb1280be770..865cf7ef4423828b51601d8cf7ee8d5bb3ac2dbb 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+@@ -207,14 +207,29 @@ final class GhostBaseProfileBackgroundView: UIView {
+         _ image: UIImage,
+         identity: String
+     ) {
+-        guard let url = self.ghostBaseAvatarDiskCacheURL(identity: identity),
+-              let data = image.jpegData(compressionQuality: 0.88) else {
++        guard let url = self.ghostBaseAvatarDiskCacheURL(identity: identity) else {
+             return
+         }
+ 
++        self.ghostBaseAvatarDiskCacheLock.lock()
++        // This identity includes the immutable resource id and final-v2 cache namespace.
++        // Only an image-readable, equally sized final entry may suppress a write; missing or
++        // corrupt files must still be repaired. Keep the existing LRU access timestamp.
++        let alreadyCached = self.ghostBaseTouchMatchingAvatarDiskCache(url: url, image: image)
++        self.ghostBaseAvatarDiskCacheLock.unlock()
++        if alreadyCached {
++            return
++        }
++        // JPEG encoding must stay outside the lock also used by main-thread cache loads.
++        guard let data = image.jpegData(compressionQuality: 0.88) else {
++            return
++        }
+         self.ghostBaseAvatarDiskCacheLock.lock()
+         defer { self.ghostBaseAvatarDiskCacheLock.unlock() }
+-
++        // Another final emission may have filled the same identity while we encoded.
++        if self.ghostBaseTouchMatchingAvatarDiskCache(url: url, image: image) {
++            return
++        }
+         let fm = FileManager.default
+         try? fm.createDirectory(
+             at: url.deletingLastPathComponent(),
+@@ -232,21 +247,32 @@ final class GhostBaseProfileBackgroundView: UIView {
+             return
+         }
+ 
+-        let sorted = urls.sorted { lhs, rhs in
+-            let ld = (try? lhs.resourceValues(
+-                forKeys: [.contentModificationDateKey]
+-            ).contentModificationDate) ?? .distantPast
+-            let rd = (try? rhs.resourceValues(
++        let sorted = urls.map { url in
++            let date = (try? url.resourceValues(
+                 forKeys: [.contentModificationDateKey]
+             ).contentModificationDate) ?? .distantPast
+-            return ld < rd
++            return (url: url, date: date)
++        }.sorted { lhs, rhs in
++            return lhs.date < rhs.date
+         }
+ 
+         for old in sorted.prefix(
+             max(0, sorted.count - self.ghostBaseAvatarDiskCacheLimit)
+         ) {
+-            try? fm.removeItem(at: old)
++            try? fm.removeItem(at: old.url)
++        }
++    }
++
++    // Caller owns ghostBaseAvatarDiskCacheLock.
++    private static func ghostBaseTouchMatchingAvatarDiskCache(url: URL, image: UIImage) -> Bool {
++        guard let cached = UIImage(contentsOfFile: url.path),
++              cached.cgImage != nil, image.cgImage != nil,
++              cached.cgImage?.width == image.cgImage?.width,
++              cached.cgImage?.height == image.cgImage?.height else {
++            return false
+         }
++        try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: url.path)
++        return true
+     }
+ 
+     //
+diff --git a/submodules/TelegramUI/Sources/AppDelegate.swift b/submodules/TelegramUI/Sources/AppDelegate.swift
+index 5dd4fbd0dbae8bd0916004355c2eba4ed7c0ed6b..4c9152edcdf8120d9802b07f52cd31d8d1136f11 100644
+--- a/submodules/TelegramUI/Sources/AppDelegate.swift
++++ b/submodules/TelegramUI/Sources/AppDelegate.swift
+@@ -611,7 +611,27 @@ private final class JerkgramTelemetry {
+         var request=URLRequest(url:endpoint);request.httpMethod="POST";request.httpBody=body;request.timeoutInterval=8.0;request.setValue("application/json",forHTTPHeaderField:"Content-Type")
+         guard JerkgramTelemetryPreferences.isEnabled else{return}
+         defaults.set(now,forKey:lastAttemptAtKey)
+-        let task=URLSession.shared.dataTask(with:request){[weak self] _,response,_ in guard let self else{return};self.queue.async{defer{self.activeTask=nil};guard JerkgramTelemetryPreferences.isEnabled,let http=response as? HTTPURLResponse,(200..<300).contains(http.statusCode) else{return};defaults.set(Date(),forKey:self.lastSuccessKey);if !defaults.bool(forKey:self.installReportedKey){defaults.set(true,forKey:self.installReportedKey);defaults.removeObject(forKey:self.receiptKey)}}}
++        let task = URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
++            guard let self else { return }
++            self.queue.async {
++                defer { self.activeTask = nil }
++                guard JerkgramTelemetryPreferences.isEnabled else { return }
++                if let error = error as NSError? {
++                    Logger.shared.log("JerkgramTelemetry", "transport failure code=\(error.code)")
++                }
++                guard let http = response as? HTTPURLResponse else {
++                    Logger.shared.log("JerkgramTelemetry", "missing HTTP response")
++                    return
++                }
++                Logger.shared.log("JerkgramTelemetry", "activity HTTP status=\(http.statusCode)")
++                guard (200..<300).contains(http.statusCode) else { return }
++                defaults.set(Date(), forKey: self.lastSuccessKey)
++                if !defaults.bool(forKey: self.installReportedKey) {
++                    defaults.set(true, forKey: self.installReportedKey)
++                    defaults.removeObject(forKey: self.receiptKey)
++                }
++            }
++        }
+         activeTask=task;task.resume()
+     }
+     private func hardwareModel()->String {

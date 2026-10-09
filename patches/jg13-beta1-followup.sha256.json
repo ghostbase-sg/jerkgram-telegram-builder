@@ -1,0 +1,6 @@
+{
+  "submodules/JerkgramCore/Sources/JerkgramStore.swift": "d500ce51139466e96ead9846d8239ca29ab70ff236f28121550f9295989b067e",
+  "submodules/TelegramUI/Sources/AppDelegate.swift": "3e8d5b231f001280f05f699245e9b5f6e6ef3f6781901f2f076f1910dcf38244",
+  "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift": "074d1991e7358149c0412096cb028390fafe30f2613b4c0d5d6f950b40ad2146",
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": "39309a45abf2a01ee17d5956eec4a6d44321233a3b250edfac79f0dc9dbf3071"
+}
