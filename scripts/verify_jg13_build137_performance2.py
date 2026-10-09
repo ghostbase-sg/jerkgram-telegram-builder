@@ -8,6 +8,20 @@ def require(value, message):
         raise RuntimeError("[Build137 performance2 verify] " + message)
 
 
+def verify_glass_reload(glass):
+    reload_block = patch.base.function_block(glass, "public static func reloadFromDefaults()")
+    require("enabledLock.lock()" in reload_block, "Glass reload is not locked")
+    for required in (
+        "let defaults = UserDefaults.standard",
+        "let enabled = defaults.object(forKey: self.enabledKey) as? Bool ?? true",
+        'let animated = defaults.object(forKey: "jerkgram.ProfileBlur.Animated") as? Bool ?? true',
+        "guard self.preferenceGeneration == generation else { return }",
+        "self.enabledValue = enabled",
+        "self.profileAnimatedValue = animated",
+    ):
+        require(required in reload_block, "Glass reload refresh contract missing: " + required)
+
+
 def main():
     account = patch.base.ACCOUNT.read_text()
     require(account.count('public enum JerkgramHotSettings {') == 1, "hot settings owner count")
@@ -28,9 +42,7 @@ def main():
     require("!mustRefreshFallback" in chat_list, "fallback cache ignores history mutations")
 
     glass = patch.base.GLASS.read_text()
-    reload_block = patch.base.function_block(glass, "public static func reloadFromDefaults()")
-    require("enabledLock.lock()" in reload_block, "Glass reload is not locked")
-    require("UserDefaults.standard.object" in reload_block, "Glass reload does not refresh value")
+    verify_glass_reload(glass)
 
     root = patch.base.RAM_ROOT.read_text()
     theme = patch.base.function_block(root, "override public func containerLayoutUpdated(")
