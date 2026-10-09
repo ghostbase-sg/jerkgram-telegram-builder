@@ -27,7 +27,8 @@ class ProfileP0Tests(unittest.TestCase):
             P + "PeerInfoAvatarTransformContainerNode.swift",
             "submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift",
             "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
-            "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift"})
+            "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift",
+            "submodules/MediaPlayer/Sources/MediaPlayerNode.swift"})
         self.assertEqual(len(manifest["regression_locks"]), 5)
         self.assertFalse(set(manifest["owners"]) & set(manifest["regression_locks"]))
 
@@ -51,6 +52,8 @@ class ProfileP0Tests(unittest.TestCase):
         self.assertIn("performanceProbe?.begin(.transition)", avatar)
         self.assertIn("performanceProbe?.begin(.play)", avatar)
         self.assertIn("performanceProbe?.end(.play", avatar)
+        self.assertTrue("performanceProbe?.begin(.preferences)" in avatar, "Preferences cost is not separated from transition")
+        self.assertTrue("performanceProbe?.begin(.alpha)" in avatar, "Layer transition cost is not separated from play")
         text = read(P + "GhostBaseProfileFullscreenBackground.swift")
         for stage in (".background", ".attach", ".detach"):
             self.assertIn("beginPerformanceSpan(" + stage, text)

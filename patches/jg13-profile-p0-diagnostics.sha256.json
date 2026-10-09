@@ -3,7 +3,7 @@
   "owners": {
     "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift": {
       "before_sha256": "e440007aeff76c03dd9ef641c0d9a7e45365e809c4e69221d26220dd4dc86c9e",
-      "after_sha256": "e5e22bc1fbcf252051a4cb900dea1b2050c5470405ea9df5610827e2ea98b748",
+      "after_sha256": "b8fd6341b6323b6253e0562fc14ce01eff141d1497051bd4c6ccf51bc529405b",
       "survival_functions": [
         "continuePlayingWithoutSound",
         "continueWithOverridingAmbientMode",
@@ -37,7 +37,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
       "before_sha256": "bdc01a66591ce4d19b2dc520e045e35075a128f9084d5f14590f561e4a6aee75",
-      "after_sha256": "21e4ef943858ff3982155c9da672ebb8ddd50f605a9a295ab50494f049346c7a",
+      "after_sha256": "0d651c90f37e047f91f58a3eedbe118a0066a2f46a9529e2cb8c277534172023",
       "survival_functions": [
         "animatedAvatarSource",
         "apply",
@@ -77,7 +77,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift": {
       "before_sha256": "7cea8fe43845fac2cb23582bfa8dabb9147039b7ae5c4c7910036e1be5b22796",
-      "after_sha256": "c91a7244e0ae7389aaec7d428fa1ff49e2f0ad0a201064d95f69cd6325fbc77b",
+      "after_sha256": "2b55cf351e60dfd0c58d20591aaee34ac92fc700af6f3ac55300129f0a00c0fd",
       "survival_functions": [
         "emojiTapGesture",
         "tapGesture",
@@ -281,6 +281,26 @@
       "after_sha256": "063a8679e510221353ee71f6789693f3585c567535a4047f1385a7b2a362e672",
       "survival_functions": [],
       "absent_before": true
+    },
+    "submodules/MediaPlayer/Sources/MediaPlayerNode.swift": {
+      "before_sha256": "8629c5105efddcf880d9bc1a14b0c6b8f08adc678813d980bb26268e289406d2",
+      "after_sha256": "1965ea6c872835afef3e9b8099234895bd3a64b234c3a619b254ea86002db4bd",
+      "survival_functions": [
+        "action",
+        "addSecondaryVideoLayer",
+        "didExitHierarchy",
+        "enqueueSecondaryCopies",
+        "poll",
+        "pollInner",
+        "removeSecondaryVideoLayer",
+        "reset",
+        "run",
+        "setCanPlaybackWithoutHierarchy",
+        "startPolling",
+        "updateLayout",
+        "updateState",
+        "willEnterHierarchy"
+      ]
     }
   },
   "regression_locks": {

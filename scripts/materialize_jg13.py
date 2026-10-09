@@ -36,7 +36,7 @@ def main():
             raise RuntimeError(f"Follow-up owner hash mismatch: {name}")
     apply_cleanup(SOURCE)
     apply_p0(SOURCE)
-    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 6 P0 diagnostic owners; NOT COMPILED")
+    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 7 profile diagnostic/compatibility owners; NOT COMPILED")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Six-owner opt-in capture delta; no playback/render policy change."""
+"""Guarded profile diagnostics and secondary-timebase ownership compatibility."""
 import argparse
 import hashlib
 import json
@@ -46,6 +46,7 @@ def verify_p0(source):
     env = dict(os.environ, JG13_SOURCE=str(source))
     subprocess.run([sys.executable, str(ROOT / "tests/test_jg13_profile_p0.py")], cwd=ROOT, env=env, check=True)
     subprocess.run([sys.executable, str(ROOT / "tests/test_jg13_performance_capture.py")], cwd=ROOT, env=env, check=True)
+    subprocess.run([sys.executable, str(ROOT / "tests/test_jg13_secondary_timebase.py")], cwd=ROOT, env=env, check=True)
 
 def apply_p0(source):
     source = Path(source).resolve()
