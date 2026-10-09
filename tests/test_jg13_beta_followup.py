@@ -1,6 +1,5 @@
 """Bounded source contracts and real IPA metadata verifier (no app runtime claim)."""
-import hashlib
-import importlib.util
+import ast
 import json
 from pathlib import Path
 import plistlib
@@ -19,6 +18,16 @@ AVATAR = "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Ghost
 
 
 class FollowupTests(unittest.TestCase):
+    def test_extracted_swift_blocks_have_declaration_separator(self):
+        tree = ast.parse((ROOT / "tests/run_jg13_followup.py").read_text())
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "block")
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), "fixture-helper", "exec"), namespace)
+        text = "private func first() { return 1 }\nprivate func second() { return 2 }"
+        first = namespace["block"](text, "private func first()")
+        second = namespace["block"](text, "private func second()")
+        self.assertIn("}\nprivate func second", first + second)
+
     def test_ipa_upstream_version_is_separate_from_product_version(self):
         config = dict(bundle_id="com.jerkgram.ios", build_number=143,
                       product_version="1.1.0", bundle_short_version="13.0")

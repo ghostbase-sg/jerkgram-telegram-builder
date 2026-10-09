@@ -26,7 +26,7 @@ def block(text, needle):
         elif text[end] == "}":
             depth -= 1
         end += 1
-    return text[start:end]
+    return text[start:end] + "\n"
 
 
 def run(name, text, args=()):
