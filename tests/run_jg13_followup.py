@@ -101,7 +101,7 @@ cache_store = block(avatar, "    private static func ghostBaseStoreAvatarDiskCac
 cache_match = block(avatar, "    private static func ghostBaseTouchMatchingAvatarDiskCache(")
 # UIKit is unavailable to the macOS command-line fixture. This explicit image facade
 # tests the ACTUAL cache filesystem/locking code, not UIKit's JPEG decoder/rendering.
-run("avatar-cache", r'''import Foundation
+run("avatar-cache", owner("submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift") + "\n" + r'''import Foundation
 struct FixtureCGImage { let width: Int; let height: Int }
 final class UIImage {
     let cgImage: FixtureCGImage?

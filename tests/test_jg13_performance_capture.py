@@ -10,6 +10,9 @@ def read(path):
     file = SOURCE / path
     return file.read_text() if file.exists() else ""
 class CaptureTests(unittest.TestCase):
+    def test_extracted_cache_fixture_includes_real_capture_owner(self):
+        text = (ROOT / "tests/run_jg13_followup.py").read_text()
+        self.assertTrue('run("avatar-cache", owner("submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift")' in text)
     def test_visible_about_controls_and_export(self):
         text = read(SETTINGS)
         about = text.split("if page == .about {", 1)[1].split("if page == .debugResearch", 1)[0]
