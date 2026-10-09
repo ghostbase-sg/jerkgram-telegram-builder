@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Apply the reviewed Stable delta to the one pinned clean Telegram 13.0 tree."""
+from pathlib import Path
+import hashlib
+import json
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / "work/swiftgram-src"
+
+
+def main():
+    config = json.loads((ROOT / "jerkgram-migration.json").read_text())
+    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=SOURCE, text=True).strip()
+    if sha != config["upstream_new_sha"]:
+        raise RuntimeError("Wrong upstream SHA; refusing to patch")
+    if subprocess.check_output(["git", "status", "--porcelain"], cwd=SOURCE):
+        raise RuntimeError("Expected clean upstream before materialization")
+    patch = ROOT / "patches/jg13-stable.product.patch"
+    subprocess.run(["git", "apply", "--check", str(patch)], cwd=SOURCE, check=True)
+    subprocess.run(["git", "apply", str(patch)], cwd=SOURCE, check=True)
+    manifest = json.loads((ROOT / "patches/jg13-stable.product.sha256.json").read_text())
+    for name, expected in manifest.items():
+        actual = hashlib.sha256((SOURCE / name).read_bytes()).hexdigest()
+        if actual != expected:
+            raise RuntimeError(f"Materialized owner hash mismatch: {name}")
+    print(f"PATCHED / VERIFIED: {len(manifest)} exact owners; NOT COMPILED")
+
+
+if __name__ == "__main__":
+    main()
