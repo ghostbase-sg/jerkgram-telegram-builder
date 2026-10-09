@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build143
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build144
 
 on:
   workflow_dispatch:
@@ -48,7 +48,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build143-diagnostics
+          name: Jerkgram-Beta1-Build144-diagnostics
           path: |
             artifacts/build.log
             jerkgram-migration.json
@@ -61,9 +61,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build143
+          name: Jerkgram-1.1.0-Beta-1-Build144
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build143.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build143.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build144.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build144.json
           if-no-files-found: error
           retention-days: 90

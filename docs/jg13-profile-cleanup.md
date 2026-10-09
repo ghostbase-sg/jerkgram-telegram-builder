@@ -52,3 +52,10 @@ Source costs are proven; actual causes of observed freezes/heating are not.
 Device checks still needed: Settings tab slider, animated avatar, cold/warm profiles,
 rapid open/close and interrupted transitions, background/foreground, glass off/on,
 phone-card contrast/actions, normal gifting/transfer/resale and absent Seasonal UI.
+
+## Authorized build follow-up
+
+User authorized CI on 2026-10-09 after the source-only cleanup. Build143 run
+`37910647947` completed successfully; next build is Build144. Product remains
+1.1.0 Beta 1, upstream/bundle version remains 13.0. Configuration, Bazel buildNumber
+and workflow artifact names are aligned. Cleanup source commit: `98e2ac1`.
