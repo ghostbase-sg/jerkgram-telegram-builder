@@ -10,7 +10,7 @@
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
       "before_sha256": "94381480c2b696fe70164092bbcf1e7105351e07b7b70801b1c2c5564c08e963",
-      "after_sha256": "a184628394bddccb5d74f08d31ed2de64ef81914ea5f895646bb358f4d149b87",
+      "after_sha256": "3d34e6c42cc6f90434157331617713e46707d64bd034c3d16cfbb3cc78f21c39",
       "survival_functions": [
         "activeTintColor",
         "borderColor",
@@ -36,7 +36,7 @@
     },
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
       "before_sha256": "d422feff3024b8b057e1aa7efea9ffe20b2cbb5e3bc2547dd2ac26ba1210fb14",
-      "after_sha256": "15ea8665e4cb26d636b282140ee7c99ab0e8c286a63c4344f86238a9582fa058",
+      "after_sha256": "4de06ef64c6897a9631dc5a1c7f401ff284817a90143f893d711d8d67a48d9e7",
       "survival_functions": [
         "JerkgramSettingsSectionHeaderItem",
         "JerkgramSettingsStatusItem",

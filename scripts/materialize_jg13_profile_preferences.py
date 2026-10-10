@@ -26,6 +26,10 @@ def transform(name, text):
         return UserDefaults.standard.object(forKey: "jerkgram.ProfileBlur.Animated") as? Bool ?? true
     }()
 
+    private static var profileAvatarValue = UserDefaults.standard.object(forKey: "jerkgram.ProfileBlur.Avatar") as? Bool ?? true
+    private static var profileTintValue = UserDefaults.standard.object(forKey: "jerkgram.ProfileBlur.Tint") as? Bool ?? true
+    private static var profileReducedValue = UserDefaults.standard.object(forKey: "jerkgram.ProfileBlur.Reduced") as? Bool ?? false
+
     private static var preferenceGeneration: UInt64 = 0
 
     public static func reloadFromDefaults() {
@@ -38,11 +42,29 @@ def transform(name, text):
         let defaults = UserDefaults.standard
         let enabled = defaults.object(forKey: self.enabledKey) as? Bool ?? true
         let animated = defaults.object(forKey: "jerkgram.ProfileBlur.Animated") as? Bool ?? true
+        let avatar = defaults.object(forKey: "jerkgram.ProfileBlur.Avatar") as? Bool ?? true
+        let tint = defaults.object(forKey: "jerkgram.ProfileBlur.Tint") as? Bool ?? true
+        let reduced = defaults.object(forKey: "jerkgram.ProfileBlur.Reduced") as? Bool ?? false
         self.enabledLock.lock()
         defer { self.enabledLock.unlock() }
         guard self.preferenceGeneration == generation else { return }
         self.enabledValue = enabled
         self.profileAnimatedValue = animated
+        self.profileAvatarValue = avatar
+        self.profileTintValue = tint
+        self.profileReducedValue = reduced
+    }
+
+    public static var profileBlurSettings: GhostBaseProfileBlurSettings? {
+        self.enabledLock.lock()
+        defer { self.enabledLock.unlock() }
+        guard self.enabledValue else { return nil }
+        return GhostBaseProfileBlurSettings(
+            avatarBlurInProfile: self.profileAvatarValue,
+            animatedBackgroundEnabled: self.profileAnimatedValue,
+            tintEnabled: self.profileTintValue,
+            reducedBlur: self.profileReducedValue
+        )
     }
 
     public static var profileAnimatedBackgroundEnabled: Bool {
@@ -51,11 +73,14 @@ def transform(name, text):
         return self.enabledValue && self.profileAnimatedValue
     }
 
-    public static func setProfilePlaybackSettings(glassEnabled: Bool, animatedBackgroundEnabled: Bool) {
-        // Controller projects these two keys before publishing; other keys defer.
+    public static func setProfilePlaybackSettings(glassEnabled: Bool, animatedBackgroundEnabled: Bool, avatarBlurInProfile: Bool? = nil, tintEnabled: Bool? = nil, reducedBlur: Bool? = nil) {
+        // Controller projects all five profile keys before atomic publication.
         self.enabledLock.lock()
         self.enabledValue = glassEnabled
         self.profileAnimatedValue = animatedBackgroundEnabled
+        if let avatarBlurInProfile { self.profileAvatarValue = avatarBlurInProfile }
+        if let tintEnabled { self.profileTintValue = tintEnabled }
+        if let reducedBlur { self.profileReducedValue = reducedBlur }
         self.preferenceGeneration &+= 1
         self.enabledLock.unlock()
     }''')
@@ -71,6 +96,24 @@ def transform(name, text):
         self.preferenceGeneration &+= 1
         self.enabledLock.unlock()
     }''')
+        text = replace_once(text, '''    // Reads the master key first. Child settings are not read and no profile
+    // object is created when the effect is disabled.
+    public static func loadEnabled() -> GhostBaseProfileBlurSettings? {
+        guard GhostBaseGlassStyle.isEnabled else {
+            return nil
+        }
+        let defaults = UserDefaults.standard
+        return GhostBaseProfileBlurSettings(
+            avatarBlurInProfile: defaults.object(forKey: self.avatarBlurKey) as? Bool ?? true,
+            animatedBackgroundEnabled: defaults.object(forKey: self.animatedKey) as? Bool ?? true,
+            tintEnabled: defaults.object(forKey: self.tintKey) as? Bool ?? true,
+            reducedBlur: defaults.object(forKey: self.reducedKey) as? Bool ?? false
+        )
+    }''', '''    // Master gate and all child values are read atomically from the snapshot.
+    // Defaults bootstrap is once; explicit account/import refresh stays supported.
+    public static func loadEnabled() -> GhostBaseProfileBlurSettings? {
+        return GhostBaseGlassStyle.profileBlurSettings
+    }''')
     elif name == AVATAR:
         text = replace_once(text, '''            let keepVideoAlive =
                 GhostBaseProfileBlurSettings
@@ -81,7 +124,10 @@ def transform(name, text):
     elif name == SETTINGS:
         publication = '''    GhostBaseGlassStyle.setProfilePlaybackSettings(
         glassEnabled: current.glassEnabled,
-        animatedBackgroundEnabled: current.profileAnimatedBackground
+        animatedBackgroundEnabled: current.profileAnimatedBackground,
+        avatarBlurInProfile: current.profileAvatarBlur,
+        tintEnabled: current.profileBlurTint,
+        reducedBlur: current.profileBlurReduced
     )'''
         text = replace_once(text, "    guard !changes.isEmpty else { return }", '''    guard !changes.isEmpty else {
 ''' + publication + '''
@@ -92,6 +138,9 @@ def transform(name, text):
         // Only preference changes project here, never avatar transition ticks.
         GhostBaseKey.glassEnabled,
         GhostBaseKey.profileAnimatedBackground,
+        GhostBaseKey.profileAvatarBlur,
+        GhostBaseKey.profileBlurTint,
+        GhostBaseKey.profileBlurReduced,
         GhostBaseKey.scheduledSend,''')
         text = replace_once(text, '''    }
     JerkgramActivityGhostRuntime.invalidate()''', '''    }

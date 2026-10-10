@@ -28,6 +28,7 @@ def fixture():
     owner += block(text, "    public static func setEnabled(")
     owner = "enum GhostBaseGlassStyle {" + owner + "}\n"
     # UserDefaults is the counted dependency boundary; snapshot code is unchanged.
+    owner += "public struct GhostBaseProfileBlurSettings" + text.split("public struct GhostBaseProfileBlurSettings", 1)[1]
     owner = owner.replace("UserDefaults.standard", "CountedDefaults.standard")
     return r'''
 import Foundation
@@ -57,8 +58,13 @@ final class CountedDefaults {
 let defaults = CountedDefaults.standard
 // Missing keys retain the existing true defaults.
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
+let initialBackground = GhostBaseProfileBlurSettings.loadEnabled()!
+precondition(initialBackground.avatarBlurInProfile && initialBackground.animatedBackgroundEnabled && initialBackground.tintEnabled && !initialBackground.reducedBlur)
 let warmReads = defaults.reads
-for _ in 0..<10000 { precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled) }
+for _ in 0..<10000 {
+    precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
+    precondition(GhostBaseProfileBlurSettings.loadEnabled() == initialBackground)
+}
 precondition(defaults.reads == warmReads, "transition reread defaults")
 // Controller state must apply immediately, before its deferred disk projection.
 GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: true, animatedBackgroundEnabled: false)
@@ -68,11 +74,25 @@ GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: false, animatedBack
 precondition(!GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
 GhostBaseGlassStyle.setEnabled(true)
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
-// Existing account/import hooks reload both projected defaults.
+// Full controller state publishes in one locked generation, before persistence.
+GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: true, animatedBackgroundEnabled: false, avatarBlurInProfile: false, tintEnabled: false, reducedBlur: true)
+let toggled = GhostBaseProfileBlurSettings.loadEnabled()!
+precondition(!toggled.avatarBlurInProfile && !toggled.animatedBackgroundEnabled && !toggled.tintEnabled && toggled.reducedBlur)
+precondition(defaults.reads == warmReads)
+GhostBaseGlassStyle.setEnabled(false)
+precondition(GhostBaseProfileBlurSettings.loadEnabled() == nil)
+GhostBaseGlassStyle.setEnabled(true)
+precondition(GhostBaseProfileBlurSettings.loadEnabled() == toggled)
+// Existing account/import hooks reload all projected defaults.
+defaults.values["jerkgram.ProfileBlur.Avatar"] = true
+defaults.values["jerkgram.ProfileBlur.Tint"] = true
+defaults.values["jerkgram.ProfileBlur.Reduced"] = false
 defaults.values["jerkgram.Glass.Enabled"] = true
 defaults.values["jerkgram.ProfileBlur.Animated"] = false
 GhostBaseGlassStyle.reloadFromDefaults()
 precondition(!GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
+let imported = GhostBaseProfileBlurSettings.loadEnabled()!
+precondition(imported.avatarBlurInProfile && imported.tintEnabled && !imported.reducedBlur && !imported.animatedBackgroundEnabled)
 defaults.values["jerkgram.Glass.Enabled"] = false
 defaults.values["jerkgram.ProfileBlur.Animated"] = true
 GhostBaseGlassStyle.reloadFromDefaults()
@@ -81,15 +101,20 @@ defaults.values.removeAll()
 GhostBaseGlassStyle.reloadFromDefaults()
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
 let reloadedReads = defaults.reads
-for _ in 0..<10000 { precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled) }
+for _ in 0..<10000 {
+    precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
+    precondition(GhostBaseProfileBlurSettings.loadEnabled() == initialBackground)
+}
 precondition(defaults.reads == reloadedReads)
 // A concurrent import refresh must not overwrite a newer live publication.
 defaults.values["jerkgram.ProfileBlur.Animated"] = false
 defaults.afterRead = {
-    GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: true, animatedBackgroundEnabled: true)
+    GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: true, animatedBackgroundEnabled: true, avatarBlurInProfile: false, tintEnabled: false, reducedBlur: true)
 }
 GhostBaseGlassStyle.reloadFromDefaults()
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled, "stale import refresh overwrote live setting")
+let fresh = GhostBaseProfileBlurSettings.loadEnabled()!
+precondition(!fresh.avatarBlurInProfile && !fresh.tintEnabled && fresh.reducedBlur, "stale refresh overwrote child snapshot")
 // Older import captures OFF, newer account refresh captures ON; deliberately
 // allow the older refresh to finish first. Only the newest refresh may publish.
 let oldCaptured = DispatchSemaphore(value: 0)
@@ -117,7 +142,8 @@ awaitSignal(oldDone)
 releaseNew.signal()
 awaitSignal(newDone)
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled, "older refresh rejected newer account snapshot")
-print("profile-preferences component PASS: memory-only repeated reads, immediate toggles, master gate, account/import reload, missing keys")
+precondition(GhostBaseProfileBlurSettings.loadEnabled() == initialBackground, "newer account child settings were not restored")
+print("profile-preferences component PASS: background and transition memory-only repeated reads, immediate toggles, master gate, account/import reload, missing keys")
 '''
 
 if __name__ == "__main__":

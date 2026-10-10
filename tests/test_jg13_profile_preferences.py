@@ -26,6 +26,21 @@ class ProfilePreferencesTests(unittest.TestCase):
         self.assertIn("GhostBaseGlassStyle.profileAnimatedBackgroundEnabled", text)
         self.assertIn("performanceProbe?.begin(.preferences)", text)
 
+    def test_background_settings_are_memory_only_and_publish_all_children(self):
+        text = (SOURCE / GLASS).read_text()
+        loader = block(text, "public static func loadEnabled()")
+        self.assertNotIn("UserDefaults", loader)
+        self.assertIn("GhostBaseGlassStyle.profileBlurSettings", loader)
+        getter = block(text, "public static var profileBlurSettings:")
+        self.assertNotIn("UserDefaults", getter)
+        self.assertIn("guard self.enabledValue else", getter)
+        for field in ("profileAvatarValue", "profileAnimatedValue", "profileTintValue", "profileReducedValue"):
+            self.assertIn("self." + field, getter)
+        settings = block((SOURCE / SETTINGS).read_text(), "private func jerkgramPersistChangedSettings(")
+        for field in ("profileAvatarBlur", "profileBlurTint", "profileBlurReduced"):
+            self.assertIn("current." + field, settings)
+            self.assertIn("GhostBaseKey." + field + ",", settings)
+
     def test_playback_branches_remain_identical(self):
         text = block((SOURCE / AVATAR).read_text(), "func updateTransitionFraction(")
         policy = text.split("if keepVideoAlive {", 1)[1].split("let alphaTiming", 1)[0]
