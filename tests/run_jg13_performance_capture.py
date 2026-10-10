@@ -75,8 +75,20 @@ for stage in JerkgramProfilePerformanceProbe.Stage.allCases where stage.settings
     precondition(capture.report().contains("settings." + stage.rawValue + ": calls=1"))
     precondition(!capture.report().contains("peer." + stage.rawValue + ":"))
 }
-precondition(capture.report().contains("slowEvents=6"))
+precondition(capture.report().contains("slowEvents=9"))
+// Cover all profile context keys plus existing worker keys within the 32-key limit.
+for probe in [settingsProbe, peerProbe] {
+    for stage in JerkgramProfilePerformanceProbe.Stage.allCases where !stage.settingsDetail {
+        let started = probe.begin(stage)
+        probe.end(stage, started)
+    }
+}
+capture.measure("worker.first", milliseconds: 0)
+capture.measure("worker.second", milliseconds: 0)
+precondition(capture.report().contains("worker.second: calls=1"))
+precondition(capture.report().components(separatedBy: "\n").filter { $0.contains(": calls=") }.count == 29)
 capture.stop()
+print("PASS: actual capture Settings navigation keys, peer filtering and 29-key budget")
 print("PASS: actual capture correlated slow spans, per-stage throttling, 96-event budget and reset")
 print("PASS: actual capture CPU/memory/main queue, bounded ring, duplicate start, stop, restart and background shutdown")
 '''

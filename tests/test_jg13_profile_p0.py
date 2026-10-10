@@ -74,6 +74,21 @@ class ProfileP0Tests(unittest.TestCase):
         for token in ("slowEventLimit = 96", "timings.count < 32", "capacity = 512", "startedAt >= self.started", "now - $0 >= 1.0", "submittedAtMs=", "finishedAtMs=", "startMs=", "endMs=", "suppressedSlowEvents"):
             self.assertIn(token, core)
 
+    def test_scroll_navigation_boundaries_are_measured(self):
+        screen = read(P + "PeerInfoScreen.swift")
+        navigation = screen.split("fileprivate func updateNavigation(", 1)[1].split("func scrollViewWillBeginDragging", 1)[0]
+        self.assertIn("beginPerformanceSpan(.navigation)", navigation)
+        self.assertIn("endPerformanceSpan(.navigation,", navigation)
+        for stage, call in (("scrollHeader", "self.headerNode.update("), ("scrollPanes", "self.paneContainerNode.update(")):
+            begin = navigation.index("beginPerformanceSpan(." + stage + ")")
+            end = navigation.index("endPerformanceSpan(." + stage + ",")
+            self.assertLess(begin, navigation.index(call))
+            self.assertLess(navigation.index(call), end)
+        background = read(P + "GhostBaseProfileFullscreenBackground.swift")
+        detail = background.split("var settingsDetail: Bool", 1)[1].split("private struct Sample", 1)[0]
+        for stage in ("navigation", "scrollHeader", "scrollPanes"):
+            self.assertIn("." + stage, detail)
+
     def test_source_slot_accounting_and_cleanup(self):
         text = read(P + "GhostBaseProfileFullscreenBackground.swift")
         self.assertEqual(text.count("self.sourceDisposable.set("), 1)

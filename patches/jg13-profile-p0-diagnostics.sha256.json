@@ -37,7 +37,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
       "before_sha256": "bdc01a66591ce4d19b2dc520e045e35075a128f9084d5f14590f561e4a6aee75",
-      "after_sha256": "ca9a8d88222a6670e18e365b7d162ec1770ca017fec705525c7138335079e92a",
+      "after_sha256": "78e14b386c488e0a5929f81b3ccc90bc58428bc017c31953677c53c24eff9a35",
       "survival_functions": [
         "animatedAvatarSource",
         "apply",
@@ -89,7 +89,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
       "before_sha256": "6ff0628e2b0f94029f0fd2d9414f13abbcad8fc30808d7014ba1ad17daccc4a4",
-      "after_sha256": "b71f549f5c220df8ffa991a3ce4d2f448cfdee84698d16acb17818ef363580cc",
+      "after_sha256": "a70eb6b53216516eab8620edf0f559dd1c86b282b41df86b05138399b1265288",
       "survival_functions": [
         "activateEdit",
         "activateSearch",

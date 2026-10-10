@@ -410,7 +410,7 @@ index 0000000..5ecb2f9
 +    }
 +}
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
-index f168490..bc28d54 100644
+index f168490..a1d12e4 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
 @@ -12,6 +12,77 @@ import PhotoResources
@@ -422,11 +422,11 @@ index f168490..bc28d54 100644
 +final class JerkgramProfilePerformanceProbe {
 +    enum Stage: String, CaseIterable {
 +        case layout, data, background, transition, play, attach, detach, preferences, alpha
-+        case bgPreferences, bgResolve, bgApply, header, sections, panesAndTail
++        case bgPreferences, bgResolve, bgApply, header, sections, panesAndTail, navigation, scrollHeader, scrollPanes
 +
 +        var settingsDetail: Bool {
 +            switch self {
-+            case .bgPreferences, .bgResolve, .bgApply, .header, .sections, .panesAndTail: return true
++            case .bgPreferences, .bgResolve, .bgApply, .header, .sections, .panesAndTail, .navigation, .scrollHeader, .scrollPanes: return true
 +            default: return false
 +            }
 +        }
@@ -825,7 +825,7 @@ index e8119a5..b4bb1ac 100644
          if let markupNode = self.markupNode {
              if case .immediate = transition, fraction == 1.0 {
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index 623ec86..3971ab8 100644
+index 623ec86..76b3832 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 @@ -439,6 +439,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
@@ -882,3 +882,32 @@ index 623ec86..3971ab8 100644
          let paneContainerSize = CGSize(width: layout.size.width, height: layout.size.height - navigationHeight)
          var restoreContentOffset: CGPoint?
          if additive {
+@@ -5897,6 +5908,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         
+     private var hasQrButton = false
+     fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) {
++        let navigationTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.navigation)
++        defer { if let navigationTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.navigation, navigationTiming) } }
+         let offsetY = self.scrollNode.view.contentOffset.y
+         
+         if self.isSettings, !(self.controller?.movingInHierarchy == true) {
+@@ -5936,7 +5949,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+                 }
+                 let headerInset = sectionInset
+ 
++                let scrollHeaderTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.scrollHeader)
+                 let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: animateHeader && self.headerNode.navigationTransition == nil)
++                if let scrollHeaderTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.scrollHeader, scrollHeaderTiming) }
+             }
+             
+             let paneAreaExpansionDistance: CGFloat = 32.0
+@@ -5969,7 +5984,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+                         
+             let navigationBarHeight: CGFloat = !self.isSettings && layout.presentedInFormSheet ? 68.0 : 60.0
+             let paneContainerTopInset = navigationBarHeight + (layout.statusBarHeight ?? 0.0)
++            let scrollPanesTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.scrollPanes)
+             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, topInset: paneContainerTopInset, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: self.initialExpandPanes ? 1.0 : effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, disableTabSwitching: disableTabSwitching, navigationHeight: navigationHeight, transition: transition)
++            if let scrollPanesTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.scrollPanes, scrollPanesTiming) }
+           
+             transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
+             var searchBarContainerY: CGFloat = layout.statusBarHeight ?? 0.0

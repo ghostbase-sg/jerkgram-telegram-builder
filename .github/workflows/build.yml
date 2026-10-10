@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build149 background preference snapshot fix
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build150 scroll navigation diagnostics
 
 on:
   workflow_dispatch:
@@ -48,7 +48,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build149-diagnostics
+          name: Jerkgram-Beta1-Build150-diagnostics
           path: |
             artifacts/build.log
             jerkgram-migration.json
@@ -64,9 +64,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build149
+          name: Jerkgram-1.1.0-Beta-1-Build150
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build149.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build149.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build150.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build150.json
           if-no-files-found: error
           retention-days: 90
