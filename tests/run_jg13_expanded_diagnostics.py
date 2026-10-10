@@ -42,7 +42,7 @@ final class CADisplayLink: NSObject {
 '''
 FIXTURE = r'''
 let capture = JerkgramPerformanceDiagnostics.shared
-let probe = JerkgramRefreshIntervalProbe.shared
+private let probe = JerkgramRefreshIntervalProbe.shared
 probe.start()
 precondition(CADisplayLink.created == 0, "refresh owner exists while capture is off")
 capture.setVisibleRoute("settings")
