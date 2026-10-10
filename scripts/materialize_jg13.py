@@ -38,7 +38,7 @@ def main():
     apply_cleanup(SOURCE)
     apply_p0(SOURCE)
     apply_preferences(SOURCE)
-    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 7 profile diagnostic/compatibility owners + 3 preference snapshot owners; NOT COMPILED")
+    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 8 profile diagnostic/compatibility owners + 3 preference snapshot owners; NOT COMPILED")
 
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ class ProfileP0Tests(unittest.TestCase):
         self.assertEqual(set(manifest["owners"]), {
             P + "GhostBaseProfileFullscreenBackground.swift", P + "PeerInfoScreen.swift",
             P + "PeerInfoAvatarTransformContainerNode.swift",
+            P + "PeerInfoHeaderNode.swift",
             "submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift",
             "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
             "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift",
@@ -87,6 +88,20 @@ class ProfileP0Tests(unittest.TestCase):
         background = read(P + "GhostBaseProfileFullscreenBackground.swift")
         detail = background.split("var settingsDetail: Bool", 1)[1].split("private struct Sample", 1)[0]
         for stage in ("navigation", "scrollHeader", "scrollPanes"):
+            self.assertIn("." + stage, detail)
+
+    def test_header_inner_boundaries_and_weak_probe_binding(self):
+        header = read(P + "PeerInfoHeaderNode.swift")
+        self.assertIn("weak var ghostBasePerformanceProbe: JerkgramProfilePerformanceProbe?", header)
+        screen = read(P + "PeerInfoScreen.swift")
+        self.assertEqual(screen.count("self.headerNode.ghostBasePerformanceProbe = ghostBaseProfileBackgroundView.performanceProbe"), 1)
+        for stage, operation in (("headerPhonePreference", "let hideOwnPhone ="), ("headerAvatar", "self.avatarListNode.update(size: CGSize()"), ("headerCover", "let backgroundCoverSize = self.backgroundCover.update(")):
+            begin = header.index("ghostBasePerformanceProbe?.begin(." + stage + ")")
+            end = header.index("ghostBasePerformanceProbe?.end(." + stage + ",")
+            self.assertLess(begin, header.index(operation))
+            self.assertLess(header.index(operation), end)
+        detail = read(P + "GhostBaseProfileFullscreenBackground.swift").split("var settingsDetail: Bool", 1)[1].split("private struct Sample", 1)[0]
+        for stage in ("headerPhonePreference", "headerAvatar", "headerCover"):
             self.assertIn("." + stage, detail)
 
     def test_source_slot_accounting_and_cleanup(self):

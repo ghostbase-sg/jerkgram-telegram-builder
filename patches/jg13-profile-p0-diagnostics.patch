@@ -410,10 +410,10 @@ index 0000000..5ecb2f9
 +    }
 +}
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
-index f168490..a1d12e4 100644
+index f168490..bd7ef44 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
-@@ -12,6 +12,77 @@ import PhotoResources
+@@ -12,6 +12,79 @@ import PhotoResources
  import PeerInfoAvatarListNode
  
  
@@ -423,10 +423,12 @@ index f168490..a1d12e4 100644
 +    enum Stage: String, CaseIterable {
 +        case layout, data, background, transition, play, attach, detach, preferences, alpha
 +        case bgPreferences, bgResolve, bgApply, header, sections, panesAndTail, navigation, scrollHeader, scrollPanes
++        case headerPhonePreference, headerAvatar, headerCover
 +
 +        var settingsDetail: Bool {
 +            switch self {
 +            case .bgPreferences, .bgResolve, .bgApply, .header, .sections, .panesAndTail, .navigation, .scrollHeader, .scrollPanes: return true
++            case .headerPhonePreference, .headerAvatar, .headerCover: return true
 +            default: return false
 +            }
 +        }
@@ -491,7 +493,7 @@ index f168490..a1d12e4 100644
  enum GhostBaseProfileGlassRuntime {
      static func loadSettings() -> GhostBaseProfileBlurSettings? {
          return GhostBaseProfileBlurSettings.loadEnabled()
-@@ -188,6 +259,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -188,6 +261,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      private static func ghostBaseLoadAvatarDiskCache(
          identity: String
      ) -> UIImage? {
@@ -500,7 +502,7 @@ index f168490..a1d12e4 100644
          self.ghostBaseAvatarDiskCacheLock.lock()
          defer { self.ghostBaseAvatarDiskCacheLock.unlock() }
  
-@@ -207,6 +280,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -207,6 +282,8 @@ final class GhostBaseProfileBackgroundView: UIView {
          _ image: UIImage,
          identity: String
      ) {
@@ -509,7 +511,7 @@ index f168490..a1d12e4 100644
          guard let url = self.ghostBaseAvatarDiskCacheURL(identity: identity) else {
              return
          }
-@@ -438,6 +513,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -438,6 +515,9 @@ final class GhostBaseProfileBackgroundView: UIView {
  
  
      private let sourceDisposable = MetaDisposable()
@@ -519,7 +521,7 @@ index f168490..a1d12e4 100644
      private var isSceneActive = false
      private var isControllerVisible = false
      private var isApplicationActive = UIApplication.shared.applicationState == .active
-@@ -472,6 +550,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -472,6 +552,7 @@ final class GhostBaseProfileBackgroundView: UIView {
          self.addSubview(self.mirrorVideoView)
          self.addSubview(self.blurView)
          self.addSubview(self.tintView)
@@ -527,7 +529,7 @@ index f168490..a1d12e4 100644
  
          self.visualSettingsObserver =
              NotificationCenter.default.addObserver(
-@@ -513,11 +592,43 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -513,11 +594,43 @@ final class GhostBaseProfileBackgroundView: UIView {
  
          self.secondaryVideoDisposable?.dispose()
          self.secondaryVideoDisposable = nil
@@ -572,7 +574,7 @@ index f168490..a1d12e4 100644
  
          self.currentLoadKey = nil
          self.currentStateKey = nil
-@@ -548,13 +659,16 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -548,13 +661,16 @@ final class GhostBaseProfileBackgroundView: UIView {
          self.currentStateKey = nil
          self.currentLoadKey = nil
          if active {
@@ -591,7 +593,7 @@ index f168490..a1d12e4 100644
          }
      }
  
-@@ -580,7 +694,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -580,7 +696,7 @@ final class GhostBaseProfileBackgroundView: UIView {
          guard self.isSceneActive else {
              return
          }
@@ -600,7 +602,7 @@ index f168490..a1d12e4 100644
      }
  
      override func layoutSubviews() {
-@@ -613,13 +727,16 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -613,13 +729,16 @@ final class GhostBaseProfileBackgroundView: UIView {
          isSettings: Bool,
          avatarItem: PeerInfoAvatarListItem?
      ) {
@@ -621,7 +623,7 @@ index f168490..a1d12e4 100644
              self.tearDownForDisabledSettings()
              return
          }
-@@ -627,6 +744,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -627,6 +746,7 @@ final class GhostBaseProfileBackgroundView: UIView {
          self.settings = liveSettings
          self.isHidden = false
  
@@ -629,7 +631,7 @@ index f168490..a1d12e4 100644
          let source = self.resolveSource(
              peer: peer,
              cachedData: cachedData,
-@@ -639,10 +757,13 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -639,10 +759,13 @@ final class GhostBaseProfileBackgroundView: UIView {
              peer: peer,
              presentationData: presentationData
          )
@@ -643,7 +645,7 @@ index f168490..a1d12e4 100644
          self.apply(
              source: source,
              stateKey: stateKey,
-@@ -1025,6 +1146,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1025,6 +1148,8 @@ final class GhostBaseProfileBackgroundView: UIView {
          }
  
          if self.secondaryVideoDisposable == nil {
@@ -652,7 +654,7 @@ index f168490..a1d12e4 100644
              self.secondaryVideoDisposable =
                  videoNode.registerSecondaryVideoLayer(
                      self.mirrorVideoView.videoLayer
-@@ -1040,7 +1163,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1040,7 +1165,7 @@ final class GhostBaseProfileBackgroundView: UIView {
          stateKey: GhostBaseProfileBackgroundStateKey,
          presentationData: PresentationData
      ) {
@@ -661,7 +663,7 @@ index f168490..a1d12e4 100644
          self.currentLoadKey = nil
  
          let isDark = presentationData.theme.overallDarkAppearance
-@@ -1078,7 +1201,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1078,7 +1203,7 @@ final class GhostBaseProfileBackgroundView: UIView {
              self.imageView.image = nil
              let loadKey = cacheKey as String
              self.currentLoadKey = loadKey
@@ -670,7 +672,7 @@ index f168490..a1d12e4 100644
                  wallpaper: wallpaper,
                  fallback: metadataTint,
                  identity: loadKey
-@@ -1087,10 +1210,11 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1087,10 +1212,11 @@ final class GhostBaseProfileBackgroundView: UIView {
                  guard let self, self.currentLoadKey == loadKey, let entry else {
                      return
                  }
@@ -683,7 +685,7 @@ index f168490..a1d12e4 100644
              }))
  
          case let .premium(main, secondary, identity):
-@@ -1109,7 +1233,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1109,7 +1235,7 @@ final class GhostBaseProfileBackgroundView: UIView {
              self.imageView.image = nil
              let loadKey = cacheKey as String
              self.currentLoadKey = loadKey
@@ -692,7 +694,7 @@ index f168490..a1d12e4 100644
                  guard let image = Self.generatedGradientImage(
                      colors: [main, secondary]
                  ) else {
-@@ -1127,10 +1251,11 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1127,10 +1253,11 @@ final class GhostBaseProfileBackgroundView: UIView {
                  guard let self, self.currentLoadKey == loadKey, let entry else {
                      return
                  }
@@ -705,7 +707,7 @@ index f168490..a1d12e4 100644
              }))
  
          case let .avatar(
-@@ -1185,6 +1310,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1185,6 +1312,7 @@ final class GhostBaseProfileBackgroundView: UIView {
  
              // Final avatar RAM hit: immutable resource identity, no new subscription.
              if let cached = Self.imageCache.object(forKey: cacheKey) {
@@ -713,7 +715,7 @@ index f168490..a1d12e4 100644
                  self.imageView.image = cached.image
                  self.applyTint(
                      cached.tint,
-@@ -1212,11 +1338,12 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1212,11 +1340,12 @@ final class GhostBaseProfileBackgroundView: UIView {
                  return
              }
  
@@ -727,7 +729,7 @@ index f168490..a1d12e4 100644
                  Self.imageCache.setObject(
                      entry,
                      forKey: cacheKey
-@@ -1228,7 +1355,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1228,7 +1357,7 @@ final class GhostBaseProfileBackgroundView: UIView {
                      isDark: isDark,
                      reduced: reduced
                  )
@@ -736,7 +738,7 @@ index f168490..a1d12e4 100644
              }))
  
          case let .placeholder(
-@@ -1238,7 +1365,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1238,7 +1367,7 @@ final class GhostBaseProfileBackgroundView: UIView {
              identity
          ):
              self.clearAnimatedMedia()
@@ -745,7 +747,7 @@ index f168490..a1d12e4 100644
              self.currentLoadKey = nil
  
              self.usesCustomBackground =
-@@ -1687,6 +1814,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1687,6 +1816,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      }
  
      private static func generatedWallpaperImage(colors: [UInt32], fallback: UIColor) -> UIImage? {
@@ -754,7 +756,7 @@ index f168490..a1d12e4 100644
          let resolvedColors: [UIColor]
          if colors.isEmpty {
              resolvedColors = [fallback, fallback]
-@@ -1729,6 +1858,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1729,6 +1860,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      }
  
      private static func generatedGradientImage(colors: [UIColor]) -> UIImage? {
@@ -763,7 +765,7 @@ index f168490..a1d12e4 100644
          let resolved = colors.isEmpty ? [UIColor.black, UIColor.black] : colors
          return generateImage(
              CGSize(width: 64.0, height: 64.0),
-@@ -1762,6 +1893,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1762,6 +1895,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      }
  
      private static func sampledTint(from image: UIImage, fallback: UIColor) -> UIColor {
@@ -825,18 +827,19 @@ index e8119a5..b4bb1ac 100644
          if let markupNode = self.markupNode {
              if case .immediate = transition, fraction == 1.0 {
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index 623ec86..76b3832 100644
+index 623ec86..2b813cf 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -439,6 +439,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -439,6 +439,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          
          super.init()
          if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
 +            self.headerNode.avatarListNode.avatarContainerNode.performanceProbe = ghostBaseProfileBackgroundView.performanceProbe
++            self.headerNode.ghostBasePerformanceProbe = ghostBaseProfileBackgroundView.performanceProbe
              self.view.insertSubview(
                  ghostBaseProfileBackgroundView,
                  at: 0
-@@ -2720,6 +2721,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -2720,6 +2722,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
      }
      
      private func updateData(_ data: PeerInfoScreenData) {
@@ -845,7 +848,7 @@ index 623ec86..76b3832 100644
          let previousData = self.data
          var previousMemberCount: Int?
          if let data = self.data {
-@@ -5436,6 +5439,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5436,6 +5440,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
      }
      
      func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool = false) {
@@ -854,7 +857,7 @@ index 623ec86..76b3832 100644
          self.validLayout = (layout, navigationHeight)
          if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
              transition.updateFrame(
-@@ -5515,7 +5520,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5515,7 +5521,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          }
          let headerInset = sectionInset
          
@@ -864,7 +867,7 @@ index 623ec86..76b3832 100644
          self.ghostBaseProfileBackgroundView?.refreshAnimatedVideoOwner(
              self.headerNode.avatarListNode.avatarContainerNode.videoNode
          )
-@@ -5532,6 +5539,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5532,6 +5540,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          
          var validRegularSections: [AnyHashable] = []
          if !self.isMediaOnly {
@@ -873,7 +876,7 @@ index 623ec86..76b3832 100644
              var insets = UIEdgeInsets()
              insets.left += sectionInset
              insets.right += sectionInset
-@@ -5664,6 +5673,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5664,6 +5674,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
              }
          }
          
@@ -882,7 +885,7 @@ index 623ec86..76b3832 100644
          let paneContainerSize = CGSize(width: layout.size.width, height: layout.size.height - navigationHeight)
          var restoreContentOffset: CGPoint?
          if additive {
-@@ -5897,6 +5908,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5897,6 +5909,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          
      private var hasQrButton = false
      fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) {
@@ -891,7 +894,7 @@ index 623ec86..76b3832 100644
          let offsetY = self.scrollNode.view.contentOffset.y
          
          if self.isSettings, !(self.controller?.movingInHierarchy == true) {
-@@ -5936,7 +5949,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5936,7 +5950,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                  }
                  let headerInset = sectionInset
  
@@ -901,7 +904,7 @@ index 623ec86..76b3832 100644
              }
              
              let paneAreaExpansionDistance: CGFloat = 32.0
-@@ -5969,7 +5984,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5969,7 +5985,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                          
              let navigationBarHeight: CGFloat = !self.isSettings && layout.presentedInFormSheet ? 68.0 : 60.0
              let paneContainerTopInset = navigationBarHeight + (layout.statusBarHeight ?? 0.0)
@@ -911,3 +914,60 @@ index 623ec86..76b3832 100644
            
              transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
              var searchBarContainerY: CGFloat = layout.statusBarHeight ?? 0.0
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+index 6febff9..8a5a844 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+@@ -83,6 +83,7 @@ private let TitleNodeStateRegular = 0
+ private let TitleNodeStateExpanded = 1
+ 
+ final class PeerInfoHeaderNode: ASDisplayNode {
++    weak var ghostBasePerformanceProbe: JerkgramProfilePerformanceProbe?
+     private var context: AccountContext
+     private let ghostBaseProfileGlassSettings: GhostBaseProfileBlurSettings?
+     private let isPremiumDisabled: Bool
+@@ -1284,6 +1285,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
+             
+             if self.isSettings, case let .user(user) = peer {
++                let phonePreferenceTiming = self.ghostBasePerformanceProbe?.begin(.headerPhonePreference)
+                 let hideOwnPhone =
+                     (
+                         UserDefaults.standard
+@@ -1295,6 +1297,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+                     )
+                     ?? false
+ 
++                if let phonePreferenceTiming { self.ghostBasePerformanceProbe?.end(.headerPhonePreference, phonePreferenceTiming) }
++
+                 var subtitle =
+                     hideOwnPhone
+                     ? ""
+@@ -1997,9 +2001,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+             })
+         }
+         
++        let headerAvatarTiming = self.ghostBasePerformanceProbe?.begin(.headerAvatar)
+         self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, isForum: isForum, threadId: self.forumTopicThreadId, threadInfo: threadData?.info, theme: presentationData.theme, transition: transition)
+         self.editingContentNode.avatarNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
+         self.avatarOverlayNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
++        if let headerAvatarTiming { self.ghostBasePerformanceProbe?.end(.headerAvatar, headerAvatarTiming) }
+         if additive {
+             transition.updateSublayerTransformScaleAdditive(node: self.avatarListNode.avatarContainerNode, scale: avatarScale)
+             transition.updateSublayerTransformScaleAdditive(node: self.avatarOverlayNode, scale: avatarScale)
+@@ -2569,6 +2575,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+             transition.updateFrame(view: self.backgroundBannerView, frame: bannerFrame)
+         }
+                         
++        let headerCoverTiming = self.ghostBasePerformanceProbe?.begin(.headerCover)
+         let backgroundCoverSize = self.backgroundCover.update(
+             transition: ComponentTransition(transition),
+             component: AnyComponent(PeerInfoCoverComponent(
+@@ -2587,6 +2594,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+             environment: {},
+             containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
+         )
++        if let headerCoverTiming { self.ghostBasePerformanceProbe?.end(.headerCover, headerCoverTiming) }
+         if let backgroundCoverView = self.backgroundCover.view as? PeerInfoCoverComponent.View {
+             // Keep PeerInfoCoverComponent alive so Premium emoji/status, patterns,
+             // gifts decorations and badges remain above the fullscreen background.

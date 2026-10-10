@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build150 scroll navigation diagnostics
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build151 header inner diagnostics
 
 on:
   workflow_dispatch:
@@ -48,13 +48,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build150-diagnostics
+          name: Jerkgram-Beta1-Build151-diagnostics
           path: |
             artifacts/build.log
             jerkgram-migration.json
             work/swiftgram-src/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
             work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
             work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
@@ -64,9 +65,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build150
+          name: Jerkgram-1.1.0-Beta-1-Build151
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build150.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build150.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build151.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build151.json
           if-no-files-found: error
           retention-days: 90

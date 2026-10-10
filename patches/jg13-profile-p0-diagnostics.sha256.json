@@ -37,7 +37,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
       "before_sha256": "bdc01a66591ce4d19b2dc520e045e35075a128f9084d5f14590f561e4a6aee75",
-      "after_sha256": "78e14b386c488e0a5929f81b3ccc90bc58428bc017c31953677c53c24eff9a35",
+      "after_sha256": "edb079507cb49747116db246c8deb7a2684ad677ef98ff8c43b04cc8a9195380",
       "survival_functions": [
         "animatedAvatarSource",
         "apply",
@@ -89,7 +89,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
       "before_sha256": "6ff0628e2b0f94029f0fd2d9414f13abbcad8fc30808d7014ba1ad17daccc4a4",
-      "after_sha256": "a70eb6b53216516eab8620edf0f559dd1c86b282b41df86b05138399b1265288",
+      "after_sha256": "ba2375e940fe73b64500753e561613fe3f06ed66dff8c0d74d73bcbc19c6bf44",
       "survival_functions": [
         "activateEdit",
         "activateSearch",
@@ -300,6 +300,29 @@
         "updateLayout",
         "updateState",
         "willEnterHierarchy"
+      ]
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift": {
+      "before_sha256": "ee68f50ae6bd9032c74cae4d1a61d8eab9b5d16bbd306cf02c2e3c73de857ddd",
+      "after_sha256": "f8c45f2b8f34cc8861ef99bb312d84894b07f556ca25ca7769c21a4c86ef8bdb",
+      "survival_functions": [
+        "actionButtonPressed",
+        "addToAvatarTransitionSurface",
+        "avatarTransitionArguments",
+        "buttonPressed",
+        "didLoad",
+        "handlePhoneLongPress",
+        "handleUsernameLongPress",
+        "hitTest",
+        "initiateAvatarExpansion",
+        "invokeDisplayGiftInfo",
+        "invokeDisplayPremiumIntro",
+        "point",
+        "subtitleBackgroundPressed",
+        "update",
+        "updateAvatarIsHidden",
+        "updateAvatarMask",
+        "updateIsAvatarExpanded"
       ]
     }
   },

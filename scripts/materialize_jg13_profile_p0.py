@@ -47,8 +47,8 @@ def check(source, stage, final_owners=None):
 def verify_p0(source, final_owners=None):
     source = Path(source).resolve()
     manifest = check(source, "after", final_owners=final_owners)
-    # All seven cleanup owners still have exact final hashes. Only the two
-    # deliberately instrumented ones use the later reviewed stage's hashes.
+    # All seven cleanup owners still have exact final hashes. Deliberately
+    # instrumented cleanup owners use this reviewed stage's exact hashes.
     verify_cleanup(source, final_owners=manifest["owners"])
     env = dict(os.environ, JG13_SOURCE=str(source))
     subprocess.run([sys.executable, str(ROOT / "tests/test_jg13_profile_p0.py")], cwd=ROOT, env=env, check=True)
