@@ -71,8 +71,11 @@ link.fire(4, 4 + 1.0/60.0)
 precondition(!capture.report().contains("unrecognized/private label"))
 precondition(capture.report().contains("refresh route=chatList samples=2 maxGapMs=8.33"))
 precondition(capture.report().contains("refresh route=chat samples=1 maxGapMs=0.00"))
-precondition(capture.report().contains("refresh route=other samples=1"))
-for index in 0..<24 { capture.measure("bounded" + String(index), milliseconds: 0) }
+precondition(capture.report().contains("refresh route=unclassified samples=1"))
+// Refresh owner reserves client.work before UI/profile keys can fill the table.
+precondition(capture.report().contains("client.work: calls=0"))
+for index in 0..<23 { capture.measure("bounded" + String(index), milliseconds: 0) }
+precondition(capture.report().components(separatedBy: "\n").filter { $0.contains(": calls=") }.count == 32)
 capture.measure("rejected-extra", milliseconds: 100)
 precondition(capture.report().contains("timingKeysRejected=1"))
 precondition(!capture.report().contains("rejected-extra:"))
@@ -89,12 +92,62 @@ NotificationCenter.default.post(name: Notification.Name("UIApplicationDidEnterBa
 precondition(!capture.isRecording && CADisplayLink.invalidated == 2)
 print("expanded-diagnostics component PASS: actual refresh owner lifetime, common-mode boundary, adaptive interval aggregates, fixed private route labels, section keys, strict 32 timing cap, stop/restart/background invalidation")
 '''
+OWNERSHIP_FIXTURE = r'''
+let capture = JerkgramPerformanceDiagnostics.shared
+precondition(capture.beginOperation(.inputText) == nil)
+capture.start()
+let outgoing = NSObject()
+let incoming = NSObject()
+capture.setVisibleRoute("settings", owner: outgoing)
+capture.setVisibleRoute("chat", owner: incoming)
+capture.clearVisibleRoute(owner: outgoing)
+precondition(capture.report().contains("route=chat timingKeysRejected=0 routeReleasesIgnored=1"))
+capture.setVisibleRoute("chat", owner: outgoing)
+capture.clearVisibleRoute(owner: incoming)
+precondition(capture.report().contains("route=chat timingKeysRejected=0 routeReleasesIgnored=2"))
+capture.clearVisibleRoute(owner: outgoing)
+precondition(capture.report().contains("route=transition timingKeysRejected=0"))
+capture.setVisibleRoute("private customer text", owner: incoming)
+precondition(!capture.report().contains("private customer text"))
+precondition(capture.report().contains("route=unclassified timingKeysRejected=0"))
+capture.setVisibleRoute("chat", owner: incoming)
+let real = capture.beginOperation(.inputText)
+RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.025))
+capture.endOperation(real)
+let realReport = capture.report()
+precondition(realReport.contains("client.work: calls=1"))
+precondition(realReport.contains("operation=inputText route=chat"))
+// All fixed details share one timing key, one slow-event pool, bounded labels.
+capture.stop(); capture.start()
+RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.025))
+for operation in JerkgramPerformanceDiagnostics.Operation.allCases {
+    capture.measure("client.work", milliseconds: 20, startedAt: ProcessInfo.processInfo.systemUptime - 0.02, owner: 0, detail: operation)
+    precondition(capture.report().contains("operation=" + operation.rawValue + " route=chat"))
+}
+precondition(capture.report().contains("client.work: calls=11"))
+for index in 0..<31 { capture.measure("bounded" + String(index), milliseconds: 0) }
+capture.measure("overflow", milliseconds: 20)
+precondition(capture.report().contains("timingKeysRejected=1"))
+precondition(!capture.report().contains("overflow:"))
+let stale = capture.beginOperation(.mediaFill)
+capture.stop()
+let stopped = capture.report()
+capture.endOperation(stale)
+precondition(capture.report() == stopped)
+capture.start(); capture.endOperation(stale)
+precondition(!capture.report().contains("client.work:"))
+precondition(capture.report().contains("routeReleasesIgnored=0"))
+capture.stop()
+print("client-operations component PASS: actual owner-checked release, same-route owner transfer, safe labels, real begin/end, eleven fixed details sharing one timing slot and slow budget, strict32 cap, stale-token/stop/restart guards")
+'''
 if __name__ == '__main__':
     core=(SOURCE / 'submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift').read_text()
     settings=(SOURCE / 'submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift').read_text()
     owner='private final class JerkgramRefreshIntervalProbe' + settings.split('private final class JerkgramRefreshIntervalProbe',1)[1].split('private enum GhostBaseKey',1)[0]
     with tempfile.TemporaryDirectory(prefix='jg13-expanded-') as directory:
         target=Path(directory)/'main.swift';target.write_text(core+'\n'+FACADE+'\n'+owner+'\n'+FIXTURE)
+        subprocess.run(['xcrun','swift',str(target)],check=True)
+        target.write_text(core+'\n'+OWNERSHIP_FIXTURE)
         subprocess.run(['xcrun','swift',str(target)],check=True)
         # Only the session-duration configuration is shortened. Real utility
         # expiry, generation guard, snapshot notification and owner cleanup run.

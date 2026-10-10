@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build153 expanded route and section diagnostics
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build154 client operations and route ownership
 
 on:
   workflow_dispatch:
@@ -48,13 +48,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build153-diagnostics
+          name: Jerkgram-Beta1-Build154-diagnostics
           path: |
             patches/jg13-expanded-diagnostics.patch
             patches/jg13-expanded-diagnostics.sha256.json
             tests/run_jg13_expanded_diagnostics.py
             work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatController.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/ChatControllerNode.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+            work/swiftgram-src/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
             work/swiftgram-src/submodules/ChatListUI/Sources/ChatListController.swift
             artifacts/build.log
             jerkgram-migration.json
@@ -71,9 +74,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build153
+          name: Jerkgram-1.1.0-Beta-1-Build154
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build153.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build153.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build154.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build154.json
           if-no-files-found: error
           retention-days: 90

@@ -1,22 +1,30 @@
+diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules/ChatListUI/Sources/ChatListController.swift
 --- a/submodules/ChatListUI/Sources/ChatListController.swift
 +++ b/submodules/ChatListUI/Sources/ChatListController.swift
-@@ -2376,6 +2376,7 @@
+@@ -2374,8 +2374,14 @@
      
+     public static var sharedPreviousPowerSavingEnabled: Bool?
+     
++    override public func viewWillAppear(_ animated: Bool) {
++        super.viewWillAppear(animated)
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("chatList", owner: self)
++    }
++
      override public func viewDidAppear(_ animated: Bool) {
          super.viewDidAppear(animated)
-+        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("chatList")
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("chatList", owner: self)
                  
          if self.powerSavingMonitoringDisposable == nil {
              self.powerSavingMonitoringDisposable = (self.context.sharedContext.automaticMediaDownloadSettings
-@@ -2858,6 +2859,7 @@
+@@ -2858,6 +2864,7 @@
      
      override public func viewWillDisappear(_ animated: Bool) {
          super.viewWillDisappear(animated)
-+        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("other")
++        JerkgramPerformanceDiagnostics.shared.clearVisibleRoute(owner: self)
          
          self.chatListDisplayNode.mainContainerNode.updateEnableAdjacentFilterLoading(false)
          
-@@ -3168,6 +3170,13 @@
+@@ -3168,6 +3175,13 @@
      }
      
      override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -30,14 +38,52 @@
          super.containerLayoutUpdated(layout, transition: transition)
          
          let wasInVoiceOver = self.validLayout?.inVoiceOver ?? false
+diff --git a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
+--- a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
++++ b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
+@@ -424,6 +424,8 @@
+ 
+     // and let normal seek/reset paths flush renderers only when required.
+     private func updateInternalState() {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.mediaState)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         let started = self.ghostBaseHadSecondaryOutput ? ProcessInfo.processInfo.systemUptime : nil
+         defer {
+             self.updateTimerState()
+@@ -1276,6 +1278,8 @@
+     }
+ 
+     private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, secondaryVideoTargets: [AVQueuedSampleBufferRendering], loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.mediaFill)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         var bufferIsReadyForMoreData = true
+         var didEnqueue = false
+         outer: while true {
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
 --- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
 +++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
-@@ -12,6 +12,37 @@
+@@ -12,6 +12,54 @@
  import AccountContext
  import ItemListPeerItem
  import BuildConfig
 +
 +// Opt-in refresh callback owner. The existing capture owns the session lifetime.
++private final class JerkgramDiagnosticSettingsController: ItemListController {
++    var diagnosticRoute = "settingsSubpage"
++    override func viewWillAppear(_ animated: Bool) {
++        super.viewWillAppear(animated)
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.diagnosticRoute, owner: self)
++    }
++    override func viewDidAppear(_ animated: Bool) {
++        super.viewDidAppear(animated)
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.diagnosticRoute, owner: self)
++    }
++    override func viewWillDisappear(_ animated: Bool) {
++        super.viewWillDisappear(animated)
++        JerkgramPerformanceDiagnostics.shared.clearVisibleRoute(owner: self)
++    }
++}
++
 +private final class JerkgramRefreshIntervalProbe: NSObject {
 +    static let shared = JerkgramRefreshIntervalProbe()
 +    private var link: CADisplayLink?
@@ -46,6 +92,7 @@
 +    func start() {
 +        precondition(Thread.isMainThread)
 +        guard self.link == nil, JerkgramPerformanceDiagnostics.shared.isRecording else { return }
++        JerkgramPerformanceDiagnostics.shared.reserveClientWork()
 +        let link = CADisplayLink(target: self, selector: #selector(self.refresh(_:)))
 +        self.link = link
 +        link.add(to: .main, forMode: .common)
@@ -70,24 +117,63 @@
  
  private enum GhostBaseKey {
      static let profileEnabled = "jerkgram.Profile.Enabled"
-@@ -3294,7 +3325,9 @@
-         runResearchAction: { action in
+@@ -3295,6 +3343,7 @@
              switch action {
              case "performanceStart":
-+                JerkgramPerformanceDiagnostics.shared.setVisibleRoute("other")
                  JerkgramPerformanceDiagnostics.shared.start()
 +                JerkgramRefreshIntervalProbe.shared.start()
              case "performanceStop":
                  JerkgramPerformanceDiagnostics.shared.stop()
              case "performanceCopy":
+@@ -3895,11 +3944,11 @@
+         return (controllerState, (listState, arguments))
+     }
+ 
+-    let controller = ItemListController(
++    let controller = JerkgramDiagnosticSettingsController(
+         context: context,
+         state: signal
+     )
+-
++    controller.diagnosticRoute = page == .about ? "about" : "settingsSubpage"
+     sharePerformanceImpl = { [weak controller] in
+         guard let root = controller?.view.window?.rootViewController else { return }
+         var presenter = root
+diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 --- a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 +++ b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
-@@ -16,6 +16,21 @@
+@@ -16,6 +16,47 @@
      private var slowEvents = 0
      private var suppressedSlowEvents = 0
      private let slowEventLimit = 96
 +    private var timingKeysRejected = 0
-+    private var visibleRoute = "other"
++    private var visibleRoute = "unclassified"
++    private weak var visibleRouteOwner: AnyObject?
++    private var routeReleasesIgnored = 0
++    public enum Operation: String, CaseIterable {
++        case inputText, inputLayout, inputDecorate, keyboardLayout
++        case historyUpdate, historyVisible, historyLayout, historyScroll
++        case chatOpen, mediaState, mediaFill
++    }
++    public struct OperationToken {
++        fileprivate let operation: Operation
++        fileprivate let startedAt: Double
++        fileprivate let generation: Int
++    }
++    public func reserveClientWork() {
++        self.lock.lock(); defer { self.lock.unlock() }
++        guard self.running, self.timings["client.work"] == nil, self.timings.count < 32 else { return }
++        self.timings["client.work"] = (count: 0, maxMs: 0, slow: 0)
++    }
++    public func beginOperation(_ operation: Operation) -> OperationToken? {
++        self.lock.lock(); defer { self.lock.unlock() }
++        guard self.running else { return nil }
++        return OperationToken(operation: operation, startedAt: ProcessInfo.processInfo.systemUptime, generation: self.generation)
++    }
++    public func endOperation(_ token: OperationToken?) {
++        guard let token else { return }
++        self.measure("client.work", milliseconds: (ProcessInfo.processInfo.systemUptime - token.startedAt) * 1000, startedAt: token.startedAt, owner: 0, detail: token.operation, sessionGeneration: token.generation)
++    }
 +    private struct RefreshStats {
 +        var samples = 0
 +        var maxGapMs = 0.0
@@ -98,24 +184,25 @@
 +        var minExpectedMs = Double.greatestFiniteMagnitude
 +        var maxExpectedMs = 0.0
 +    }
-+    private var frameIntervals: [String: RefreshStats] = [:] // Four fixed route labels.
++    private var frameIntervals: [String: RefreshStats] = [:] // Eight fixed route labels.
 +    private var lastRefreshTimestamp: Double?
 +    private var lastRefreshTarget: Double?
      private var running = false
      private var started = 0.0
      private var generation = 0
-@@ -42,6 +57,10 @@
+@@ -42,6 +83,11 @@
          self.lines.removeAll(keepingCapacity: true)
          self.timings.removeAll(keepingCapacity: true)
          self.lastSlowAt.removeAll(keepingCapacity: true)
 +        self.timingKeysRejected = 0
++        self.routeReleasesIgnored = 0
 +        self.frameIntervals.removeAll(keepingCapacity: true)
 +        self.lastRefreshTimestamp = nil
 +        self.lastRefreshTarget = nil
          self.slowEvents = 0
          self.suppressedSlowEvents = 0
          self.dropped = 0
-@@ -94,8 +113,9 @@
+@@ -94,8 +140,9 @@
                  }
                  return
              }
@@ -126,7 +213,7 @@
              let submit = !self.pendingPulse
              if submit { self.pendingPulse = true }
              self.lock.unlock()
-@@ -106,7 +126,7 @@
+@@ -106,7 +153,7 @@
                      self.lock.lock()
                      guard self.running && self.generation == epoch else { self.lock.unlock(); return }
                      self.pendingPulse = false
@@ -135,11 +222,16 @@
                      self.lock.unlock()
                  }
              }
-@@ -143,7 +163,10 @@
-     public func measure(_ stage: String, milliseconds: Double, startedAt: Double? = nil, owner: Int? = nil) {
+@@ -140,26 +187,93 @@
+         self.appendLocked("t=\(Int(ProcessInfo.processInfo.systemUptime - self.started))s " + String(text.prefix(2048)))
+     }
+ 
+-    public func measure(_ stage: String, milliseconds: Double, startedAt: Double? = nil, owner: Int? = nil) {
++    public func measure(_ stage: String, milliseconds: Double, startedAt: Double? = nil, owner: Int? = nil, detail: Operation? = nil, sessionGeneration: Int? = nil) {
          self.lock.lock(); defer { self.lock.unlock() }
          guard self.running else { return }
 -        guard self.timings[stage] != nil || self.timings.count < 32 else { return }
++        if let sessionGeneration, sessionGeneration != self.generation { return }
 +        guard self.timings[stage] != nil || self.timings.count < 32 else {
 +            self.timingKeysRejected += 1
 +            return
@@ -147,21 +239,53 @@
          let old = self.timings[stage] ?? (count: 0, maxMs: 0.0, slow: 0)
          self.timings[stage] = (old.count + 1, max(old.maxMs, milliseconds), old.slow + (milliseconds >= 16.7 ? 1 : 0))
          // Only completed measured spans; no stack suspension, frame callbacks,
-@@ -162,6 +185,51 @@
-         self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds))")
-     }
- 
+         // extra timer, disk I/O or peer identifiers. All bounds share this lock.
+         guard milliseconds >= 16.7, let startedAt, startedAt >= self.started, let owner else { return }
+         let now = ProcessInfo.processInfo.systemUptime
++        let slowKey = detail?.rawValue ?? stage
+         guard self.slowEvents < self.slowEventLimit,
+-              self.lastSlowAt[stage].map({ now - $0 >= 1.0 }) ?? true else {
++              self.lastSlowAt[slowKey].map({ now - $0 >= 1.0 }) ?? true else {
+             self.suppressedSlowEvents += 1
+             return
+         }
+-        self.lastSlowAt[stage] = now
++        self.lastSlowAt[slowKey] = now
+         self.slowEvents += 1
+         let beginMs = Int((startedAt - self.started) * 1000.0)
+         let endMs = Int((startedAt - self.started) * 1000.0 + milliseconds)
+-        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds))")
++        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds)) operation=\(detail?.rawValue ?? "none") route=\(self.visibleRoute)")
++    }
++
 +    // Route labels are fixed categories, never controller/peer/message identifiers.
-+    public func setVisibleRoute(_ route: String) {
++    public func setVisibleRoute(_ route: String, owner: AnyObject? = nil) {
 +        precondition(Thread.isMainThread)
-+        let safe = ["settings", "chatList", "chat"].contains(route) ? route : "other"
++        let safe = ["settings", "profile", "chatList", "chat", "about", "settingsSubpage", "transition", "unclassified"].contains(route) ? route : "unclassified"
 +        self.lock.lock(); defer { self.lock.unlock() }
++        self.visibleRouteOwner = owner
 +        guard self.visibleRoute != safe else { return }
 +        self.visibleRoute = safe
 +        self.lastRefreshTimestamp = nil
 +        self.lastRefreshTarget = nil
 +        if self.running {
 +            self.appendLocked("route=\(safe) atMs=\(Int((ProcessInfo.processInfo.systemUptime - self.started) * 1000))")
++        }
++    }
++
++    public func clearVisibleRoute(owner: AnyObject) {
++        precondition(Thread.isMainThread)
++        self.lock.lock(); defer { self.lock.unlock() }
++        guard self.visibleRouteOwner === owner else {
++            if self.running { self.routeReleasesIgnored += 1 }
++            return
++        }
++        self.visibleRouteOwner = nil
++        self.visibleRoute = "transition"
++        self.lastRefreshTimestamp = nil
++        self.lastRefreshTarget = nil
++        if self.running {
++            self.appendLocked("route=transition atMs=\(Int((ProcessInfo.processInfo.systemUptime - self.started) * 1000))")
 +        }
 +    }
 +
@@ -194,17 +318,15 @@
 +        self.lastRefreshTimestamp = timestamp
 +        self.lastRefreshTarget = targetTimestamp
 +        self.frameIntervals[self.visibleRoute] = stats
-+    }
-+
+     }
+ 
      private func appendLocked(_ line: String) {
-         if self.lines.count == self.capacity { self.lines.removeFirst(); self.dropped += 1 }
-         self.lines.append(line)
-@@ -170,11 +238,15 @@
+@@ -170,11 +284,15 @@
      public func report() -> String {
          self.lock.lock(); defer { self.lock.unlock() }
          let info = Bundle.main.infoDictionary ?? [:]
 -        let header = "Jerkgram P0 diagnostics v3\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
-+        let header = "Jerkgram P0 diagnostics v4\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
++        let header = "Jerkgram P0 diagnostics v5\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
          let measurements = self.timings.keys.sorted().map { key -> String in
              let value = self.timings[key]!
              return "\(key): calls=\(value.count) maxMs=\(Int(value.maxMs)) slow>=16.7ms=\(value.slow)"
@@ -214,9 +336,43 @@
 +            let value = self.frameIntervals[route]!
 +            return "refresh route=\(route) samples=\(value.samples) maxGapMs=\(String(format: "%.2f", value.maxGapMs)) expectedMs=\(String(format: "%.2f", value.minExpectedMs))...\(String(format: "%.2f", value.maxExpectedMs)) gaps>=16.7/33.4/50=\(value.over16)/\(value.over33)/\(value.over50) missedOpportunitiesEstimated=\(value.missedOpportunities)"
 +        }.joined(separator: "\n")
-+        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected)\n" + refresh + "\n" + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
++        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
      }
  }
+diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+@@ -1601,6 +1601,8 @@
+         deviceMetrics: DeviceMetrics,
+         isMediaInputExpanded: Bool
+     ) -> CGFloat {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.inputLayout)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         self.isUpdating = true
+         defer {
+             self.isUpdating = false
+@@ -1968,7 +1970,11 @@
+                 // Text Size changed under live content: re-decorate now so the typed text and the typing
+                 // attributes take the new size immediately rather than on the next keystroke.
+                 let fullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
++            do {
++                let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.inputDecorate)
++                defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+                 richTextInputNode.decorateAfterTextChange(context: context, baseFontSize: chatTextInputBaseFontSize(for: interfaceState.fontSize), textColor: interfaceState.theme.chat.inputPanel.inputTextColor, primaryTextColor: interfaceState.theme.chat.inputPanel.primaryTextColor, accentTextColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor, spoilersRevealed: richTextInputNode.spoilersRevealed, fullTranslucency: fullTranslucency, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
++            }
+             }
+             if self.theme !== interfaceState.theme {
+                 updateSendButtonIcon = true
+@@ -3981,6 +3987,8 @@
+     }
+     
+     public func chatInputTextNodeDidUpdateText() {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.inputText)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if self.ignoreChatInputTextNodeDidUpdateText {
+             return
+         }
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 @@ -5546,7 +5546,7 @@
@@ -259,7 +415,7 @@
 +            }
              var validEditingSections: [AnyHashable] = []
 -            let editItems = (self.isSettings || self.isMyProfile) ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isMyProfile: self.isMyProfile) : editingItems(data: self.data, boostStatus: self.boostStatus, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction)
-+            let editItems = self.jgMeasureSection("settings.sectionsEditingBuild") { (self.isSettings || self.isMyProfile) ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isMyProfile: self.isMyProfile) : editingItems(data: self.data, boostStatus: self.boostStatus, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction) }
++            let editItems = self.jgMeasureSection("settings.sectionsEditingBuild") { (self.isSettings || self.isMyProfile) ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isMyProfile: self.isMyProfile, hideOwnPhone: GhostBaseGlassStyle.profileHideOwnPhone) : editingItems(data: self.data, boostStatus: self.boostStatus, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction) }
  
              for (sectionId, sectionItems) in editItems {
                  var insets = UIEdgeInsets()
@@ -311,41 +467,281 @@
      private var hasQrButton = false
      fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) {
          let navigationTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.navigation)
-@@ -7039,6 +7056,7 @@
+@@ -7029,6 +7046,7 @@
+     
+     override public func viewWillAppear(_ animated: Bool) {
+         super.viewWillAppear(animated)
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.isSettings ? "settings" : "profile", owner: self)
+         self.controllerNode.setGhostBaseProfileBackgroundActive(true)
+     }
+ 
+@@ -7039,6 +7057,7 @@
  
      override public func viewWillDisappear(_ animated: Bool) {
          super.viewWillDisappear(animated)
-+        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("other")
++        JerkgramPerformanceDiagnostics.shared.clearVisibleRoute(owner: self)
  
          self.controllerNode.logoutConfirmationDisposable.set(nil)
          
-@@ -7202,6 +7220,7 @@
+@@ -7202,6 +7221,7 @@
      
      override public func viewDidAppear(_ animated: Bool) {
          super.viewDidAppear(animated)
-+        JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.isSettings ? "settings" : "other")
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.isSettings ? "settings" : "profile", owner: self)
          
          DispatchQueue.main.async { [weak self] in
              self?.didAppear = true
+@@ -7488,6 +7508,213 @@
+             return .single(peer)
+         }
+     }
++}
++
++// Exact settingsEditingItems overload: injected preference only; locked owner unchanged.
++private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoState, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isMyProfile: Bool, hideOwnPhone: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
++    guard let data = data else {
++        return []
++    }
++
++    enum Section: Int, CaseIterable {
++        case help
++        case bio
++        case birthday
++        case info
++        case account
++        case logout
++    }
++
++    var items: [Section: [PeerInfoScreenItem]] = [:]
++    for section in Section.allCases {
++        items[section] = []
++    }
++
++    let ItemNameHelp = 0
++    let ItemBio: AnyHashable = AnyHashable("bio_edit")
++    let ItemBioHelp = 2
++    let ItemPhoneNumber = 3
++    let ItemUsername = 4
++    let ItemAddAccount = 5
++    let ItemAddAccountHelp = 6
++    let ItemLogout = 7
++    let ItemPeerColor = 8
++    let ItemBirthday = 9
++    let ItemBirthdayPicker = 10
++    let ItemBirthdayRemove = 11
++    let ItemBirthdayHelp = 12
++    let ItemPeerPersonalChannel = 13
++    let ItemPeerChatAutomation = 14
++    let ItemPeerChatAutomationHelp = 15
++
++    items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
++
++    if let cachedData = data.cachedData as? CachedUserData {
++        let currentBio = state.updatingBio ?? (cachedData.about ?? "")
++        items[.bio]!.append(PeerInfoScreenMultilineInputItem(id: ItemBio, text: currentBio, placeholder: presentationData.strings.UserInfo_About_Placeholder, textUpdated: { updatedText in
++            interaction.updateBio(updatedText)
++        }, action: {
++            interaction.dismissInput()
++        }, maxLength: Int(data.globalSettings?.userLimits.maxAboutLength ?? 70)))
++
++
++        var bioPrivacyInfo = presentationData.strings.Settings_About_PrivacyHelpEmpty
++        if let bioPrivacy = data.globalSettings?.privacySettings?.bio, !currentBio.isEmpty {
++            switch bioPrivacy {
++            case .enableEveryone:
++                bioPrivacyInfo = presentationData.strings.Settings_About_PrivacyHelpEveryone
++            case .enableContacts:
++                bioPrivacyInfo = presentationData.strings.Settings_About_PrivacyHelpContacts
++            case .disableEveryone:
++                bioPrivacyInfo = presentationData.strings.Settings_About_PrivacyHelpNobody
++            }
++        }
++        items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: bioPrivacyInfo, linkAction: { _ in
++            interaction.openBioPrivacy()
++        }))
++    }
++
++    var birthday: TelegramBirthday?
++    if let updatingBirthDate = state.updatingBirthDate {
++        birthday = updatingBirthDate
++    } else {
++        birthday = (data.cachedData as? CachedUserData)?.birthday
++    }
++
++    var birthDateString: String
++    if let birthday {
++        birthDateString = stringForCompactBirthday(birthday, strings: presentationData.strings)
++    } else {
++        birthDateString = presentationData.strings.Settings_Birthday_Add
++    }
++
++    let isEditingBirthDate = state.isEditingBirthDate
++    items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: presentationData.strings.Settings_Birthday, icon: PresentationResourcesSettings.birthday, hasArrow: false, action: {
++        interaction.updateIsEditingBirthdate(!isEditingBirthDate)
++    }))
++    if isEditingBirthDate, let birthday {
++        items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthday, valueUpdated: { value in
++            interaction.updateBirthdate(value)
++        }))
++        items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: presentationData.strings.Settings_Birthday_Remove, alignment: .natural, action: {
++            interaction.updateBirthdate(.some(nil))
++            interaction.updateIsEditingBirthdate(false)
++        }))
++    }
++
++    var birthdayPrivacyInfo = ""
++    if let birthdayPrivacy = data.globalSettings?.privacySettings?.birthday {
++        switch birthdayPrivacy {
++        case .enableEveryone:
++            birthdayPrivacyInfo = presentationData.strings.Settings_Birthday_PrivacyHelpEveryone
++        case .enableContacts:
++            birthdayPrivacyInfo = presentationData.strings.Settings_Birthday_PrivacyHelpContacts
++        case .disableEveryone:
++            birthdayPrivacyInfo = presentationData.strings.Settings_Birthday_PrivacyHelpNobody
++        }
++    }
++    if !birthdayPrivacyInfo.isEmpty {
++        items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: birthdayPrivacyInfo, linkAction: { _ in
++            interaction.openBirthdatePrivacy()
++        }))
++    }
++
++    if case let .user(user) = data.peer {
++        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPhoneNumber, label: .text(hideOwnPhone ? "" : (user.phone.flatMap({ formatPhoneNumber(context: context, number: $0) }) ?? "")), text: presentationData.strings.Settings_PhoneNumber, icon: PresentationResourcesSettings.recentCalls, action: {
++            interaction.openSettings(.phoneNumber)
++        }))
++    }
++    var username = ""
++    if let addressName = data.peer?.addressName, !addressName.isEmpty {
++        username = "@\(addressName)"
++    }
++    items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(username), text: presentationData.strings.Settings_Username, icon: PresentationResourcesSettings.email, action: {
++          interaction.openSettings(.username)
++    }))
++
++    if case let .user(peer) = data.peer {
++        var colors: [PeerNameColors.Colors] = []
++        if let nameColor = peer.nameColor {
++            let nameColors: PeerNameColors.Colors
++            switch nameColor {
++            case let .preset(nameColor):
++                nameColors = context.peerNameColors.get(nameColor, dark: presentationData.theme.overallDarkAppearance)
++            case let .collectible(collectibleColor):
++                nameColors = collectibleColor.peerNameColors(dark: presentationData.theme.overallDarkAppearance)
++            }
++            colors.append(nameColors)
++        }
++        if let profileColor = peer.effectiveProfileColor.flatMap({ context.peerNameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }) {
++            colors.append(profileColor)
++        }
++        let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
++
++        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), text: presentationData.strings.Settings_YourColor, icon: PresentationResourcesSettings.yourColor, action: {
++            interaction.editingOpenNameColorSetup()
++        }))
++
++        var displayPersonalChannel = false
++        if data.personalChannel != nil {
++            displayPersonalChannel = true
++        } else if let personalChannels = state.personalChannels, !personalChannels.isEmpty {
++            displayPersonalChannel = true
++        }
++        if displayPersonalChannel {
++            var personalChannelTitle: String?
++            if let personalChannel = data.personalChannel, let peer = personalChannel.peer.chatOrMonoforumMainPeer {
++                personalChannelTitle = peer.compactDisplayTitle
++            }
++
++            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? presentationData.strings.Settings_PersonalChannelEmptyValue), text: presentationData.strings.Settings_PersonalChannelItem, icon: PresentationResourcesSettings.channels, action: {
++                interaction.editingOpenPersonalChannel()
++            }))
++        }
++    }
++
++    let automationBotTitle: String
++    if let botPeer = data.businessConnectedBot {
++        let _ = botPeer
++        automationBotTitle = "@\(botPeer.compactDisplayTitle)"
++    } else {
++        automationBotTitle = presentationData.strings.Settings_ChatAutomationOff
++    }
++    items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerChatAutomation, label: .text(automationBotTitle), additionalBadgeLabel: nil, text: presentationData.strings.Settings_ChatAutomation, icon: PresentationResourcesSettings.aiTools, action: {
++        interaction.editingOpenBusinessChatBots()
++    }))
++    items[.info]!.append(PeerInfoScreenCommentItem(id: ItemPeerChatAutomationHelp, text: presentationData.strings.Settings_ChatAutomationInfo))
++
++    items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
++        interaction.openSettings(.addAccount)
++    }))
++
++    var hasPremiumAccounts = false
++    if data.peer?.isPremium == true && !context.account.testingEnvironment {
++        hasPremiumAccounts = true
++    }
++    if let settings = data.globalSettings {
++        for (accountContext, peer, _) in settings.accountsAndPeers {
++            if !accountContext.account.testingEnvironment {
++                if peer.isPremium {
++                    hasPremiumAccounts = true
++                    break
++                }
++            }
++        }
++    }
++
++    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: hasPremiumAccounts ? presentationData.strings.Settings_AddAnotherAccount_PremiumHelp : presentationData.strings.Settings_AddAnotherAccount_Help))
++
++    items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
++        interaction.openSettings(.logout)
++    }))
++
++    var result: [(AnyHashable, [PeerInfoScreenItem])] = []
++    for section in Section.allCases {
++        if let sectionItems = items[section], !sectionItems.isEmpty {
++            result.append((section, sectionItems))
++        }
++    }
++    return result
+ }
+ 
+ final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/TelegramUI/Sources/ChatController.swift
 --- a/submodules/TelegramUI/Sources/ChatController.swift
 +++ b/submodules/TelegramUI/Sources/ChatController.swift
-@@ -7846,6 +7846,7 @@
+@@ -7666,6 +7666,8 @@
+     }
+     
+     override public func loadDisplayNode() {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.chatOpen)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         self.loadDisplayNodeImpl()
+         self.galleryPresentationContext.view = self.view
+         self.galleryPresentationContext.controllersUpdated = { [weak self] _ in
+@@ -7678,6 +7680,7 @@
+     
+     override public func viewWillAppear(_ animated: Bool) {
+         super.viewWillAppear(animated)
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("chat", owner: self)
+                 
+         if self.willAppear {
+             self.chatDisplayNode.historyNode.refreshPollActionsForVisibleMessages()
+@@ -7846,6 +7849,7 @@
  
      override public func viewDidAppear(_ animated: Bool) {
          super.viewDidAppear(animated)
-+        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("chat")
++        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("chat", owner: self)
          
          self.didAppear = true
          
-@@ -8335,6 +8336,7 @@
+@@ -8335,6 +8339,7 @@
      
      override public func viewWillDisappear(_ animated: Bool) {
          super.viewWillDisappear(animated)
-+        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("other")
++        JerkgramPerformanceDiagnostics.shared.clearVisibleRoute(owner: self)
          
          if #available(iOS 18.0, *) {
          } else {
-@@ -8473,6 +8475,13 @@
+@@ -8473,6 +8478,13 @@
      }
      
      override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -359,3 +755,63 @@
          self.suspendNavigationBarLayout = true
          super.containerLayoutUpdated(layout, transition: transition)
          
+diff --git a/submodules/TelegramUI/Sources/ChatControllerNode.swift b/submodules/TelegramUI/Sources/ChatControllerNode.swift
+--- a/submodules/TelegramUI/Sources/ChatControllerNode.swift
++++ b/submodules/TelegramUI/Sources/ChatControllerNode.swift
+@@ -1188,6 +1188,8 @@
+     }
+     
+     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat, CGFloat, CGSize?, ContainedViewLayoutTransition) -> Void) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.keyboardLayout)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         let transition: ContainedViewLayoutTransition
+         if let _ = self.scheduledAnimateInAsOverlayFromNode {
+             transition = .immediate
+@@ -4376,6 +4378,8 @@
+     }
+     
+     func scrollViewDidScroll(_ scrollView: UIScrollView) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyScroll)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
+             let dismissStatus = abs(scrollView.contentOffset.y) > 50.0
+             if dismissStatus != self.scrollViewDismissStatus {
+diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+--- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+@@ -1201,6 +1201,8 @@
+         self.beginPresentationDataManagement(updated: updatedPresentationData.signal)
+         
+         self.listView.visibleContentOffsetChanged = { [weak self] offset, _ in
++            let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyScroll)
++            defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+             if let strongSelf = self {
+                 strongSelf.contentPositionChanged(offset)
+                 
+@@ -3099,6 +3101,8 @@
+     }
+     
+     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyVisible)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         let historyView = transactionState.historyView
+         var isTopReplyThreadMessageShownValue = false
+         var topVisibleMessageRange: ChatTopVisibleMessageRange?
+@@ -4111,6 +4115,8 @@
+     }
+     
+     private func dequeueHistoryViewTransitions() {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyUpdate)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if self.enqueuedHistoryViewTransitions.isEmpty || self.hasActiveTransition {
+             return
+         }
+@@ -4892,6 +4898,8 @@
+     }
+         
+     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, additionalScrollDistance: CGFloat, scrollToTop: Bool, completion: @escaping () -> Void) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyLayout)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         /*if updateSizeAndInsets.insets.top == 83.0 {
+             if !transition.isAnimated {
+                 assert(true)

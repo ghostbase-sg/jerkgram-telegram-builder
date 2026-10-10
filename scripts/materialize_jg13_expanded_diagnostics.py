@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exact bounded Build153 diagnostic delta after the preference snapshot."""
+"""Exact bounded Build154 diagnostic delta after the preference snapshot."""
 import argparse
 import hashlib
 import json
@@ -18,6 +18,10 @@ OWNERS = {
     'submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift',
     'submodules/TelegramUI/Sources/ChatController.swift',
     'submodules/ChatListUI/Sources/ChatListController.swift',
+    'submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift',
+    'submodules/TelegramUI/Sources/ChatControllerNode.swift',
+    'submodules/TelegramUI/Sources/ChatHistoryListNode.swift',
+    'submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift',
 }
 def check(source, stage):
     manifest = json.loads(MANIFEST.read_text())
