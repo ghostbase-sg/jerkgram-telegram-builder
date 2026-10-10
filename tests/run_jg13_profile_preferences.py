@@ -60,9 +60,11 @@ let defaults = CountedDefaults.standard
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
 let initialBackground = GhostBaseProfileBlurSettings.loadEnabled()!
 precondition(initialBackground.avatarBlurInProfile && initialBackground.animatedBackgroundEnabled && initialBackground.tintEnabled && !initialBackground.reducedBlur)
+precondition(!GhostBaseGlassStyle.profileHideOwnPhone)
 let warmReads = defaults.reads
 for _ in 0..<10000 {
     precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
+    precondition(!GhostBaseGlassStyle.profileHideOwnPhone)
     precondition(GhostBaseProfileBlurSettings.loadEnabled() == initialBackground)
 }
 precondition(defaults.reads == warmReads, "transition reread defaults")
@@ -83,13 +85,26 @@ GhostBaseGlassStyle.setEnabled(false)
 precondition(GhostBaseProfileBlurSettings.loadEnabled() == nil)
 GhostBaseGlassStyle.setEnabled(true)
 precondition(GhostBaseProfileBlurSettings.loadEnabled() == toggled)
+// Phone privacy is independent of glass; legacy publishers preserve its value.
+GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: false, animatedBackgroundEnabled: true, hideOwnPhone: true)
+precondition(GhostBaseGlassStyle.profileHideOwnPhone)
+GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: true, animatedBackgroundEnabled: false)
+precondition(GhostBaseGlassStyle.profileHideOwnPhone)
+GhostBaseGlassStyle.setEnabled(false)
+precondition(GhostBaseGlassStyle.profileHideOwnPhone)
+GhostBaseGlassStyle.setEnabled(true)
+GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: true, animatedBackgroundEnabled: false, hideOwnPhone: false)
+precondition(!GhostBaseGlassStyle.profileHideOwnPhone)
+precondition(defaults.reads == warmReads)
 // Existing account/import hooks reload all projected defaults.
 defaults.values["jerkgram.ProfileBlur.Avatar"] = true
 defaults.values["jerkgram.ProfileBlur.Tint"] = true
 defaults.values["jerkgram.ProfileBlur.Reduced"] = false
 defaults.values["jerkgram.Glass.Enabled"] = true
 defaults.values["jerkgram.ProfileBlur.Animated"] = false
+defaults.values["jerkgram.Appearance.HideOwnPhone"] = true
 GhostBaseGlassStyle.reloadFromDefaults()
+precondition(GhostBaseGlassStyle.profileHideOwnPhone)
 precondition(!GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
 let imported = GhostBaseProfileBlurSettings.loadEnabled()!
 precondition(imported.avatarBlurInProfile && imported.tintEnabled && !imported.reducedBlur && !imported.animatedBackgroundEnabled)
@@ -99,10 +114,12 @@ GhostBaseGlassStyle.reloadFromDefaults()
 precondition(!GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
 defaults.values.removeAll()
 GhostBaseGlassStyle.reloadFromDefaults()
+precondition(!GhostBaseGlassStyle.profileHideOwnPhone)
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
 let reloadedReads = defaults.reads
 for _ in 0..<10000 {
     precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled)
+    precondition(!GhostBaseGlassStyle.profileHideOwnPhone)
     precondition(GhostBaseProfileBlurSettings.loadEnabled() == initialBackground)
 }
 precondition(defaults.reads == reloadedReads)
@@ -115,6 +132,14 @@ GhostBaseGlassStyle.reloadFromDefaults()
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled, "stale import refresh overwrote live setting")
 let fresh = GhostBaseProfileBlurSettings.loadEnabled()!
 precondition(!fresh.avatarBlurInProfile && !fresh.tintEnabled && fresh.reducedBlur, "stale refresh overwrote child snapshot")
+// Capture an old phone value, then publish a new one before refresh completes.
+defaults.afterReadKey = "jerkgram.Appearance.HideOwnPhone"
+defaults.afterRead = {
+    GhostBaseGlassStyle.setProfilePlaybackSettings(glassEnabled: true, animatedBackgroundEnabled: true, hideOwnPhone: true)
+}
+GhostBaseGlassStyle.reloadFromDefaults()
+precondition(GhostBaseGlassStyle.profileHideOwnPhone, "stale import overwrote live phone privacy")
+defaults.afterReadKey = nil
 // Older import captures OFF, newer account refresh captures ON; deliberately
 // allow the older refresh to finish first. Only the newest refresh may publish.
 let oldCaptured = DispatchSemaphore(value: 0)
@@ -143,6 +168,8 @@ releaseNew.signal()
 awaitSignal(newDone)
 precondition(GhostBaseGlassStyle.profileAnimatedBackgroundEnabled, "older refresh rejected newer account snapshot")
 precondition(GhostBaseProfileBlurSettings.loadEnabled() == initialBackground, "newer account child settings were not restored")
+precondition(!GhostBaseGlassStyle.profileHideOwnPhone, "account refresh did not restore missing phone key")
+print("profile-phone-preference component PASS: memory-only repeated reads, immediate toggles, independent master, legacy publisher preservation, account/import freshness, stale refresh rejection")
 print("profile-preferences component PASS: background and transition memory-only repeated reads, immediate toggles, master gate, account/import reload, missing keys")
 '''
 

@@ -19,6 +19,23 @@ def block(text, needle):
     return text[start:end]
 
 class ProfilePreferencesTests(unittest.TestCase):
+    def test_header_phone_preference_is_memory_only_and_fresh(self):
+        header = (SOURCE / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift").read_text()
+        update = block(header, "func update(width: CGFloat, containerHeight:")
+        self.assertIn("let hideOwnPhone = GhostBaseGlassStyle.profileHideOwnPhone", update)
+        self.assertNotIn("UserDefaults", update)
+        glass = (SOURCE / GLASS).read_text()
+        getter = block(glass, "public static var profileHideOwnPhone: Bool")
+        self.assertIn("return self.profileHideOwnPhoneValue", getter)
+        self.assertNotIn("UserDefaults", getter)
+        self.assertNotIn("enabledValue", getter)
+        reload = block(glass, "public static func reloadFromDefaults()")
+        self.assertIn('defaults.object(forKey: "jerkgram.Appearance.HideOwnPhone") as? Bool ?? false', reload)
+        self.assertIn("self.profileHideOwnPhoneValue = hideOwnPhone", reload)
+        settings = block((SOURCE / SETTINGS).read_text(), "private func jerkgramPersistChangedSettings(")
+        self.assertIn("GhostBaseKey.hideOwnPhone,", settings)
+        self.assertEqual(settings.count("hideOwnPhone: current.hideOwnPhone"), 2)
+
     def test_transition_uses_memory_not_defaults(self):
         text = block((SOURCE / AVATAR).read_text(), "func updateTransitionFraction(")
         self.assertNotIn("loadEnabled()", text)

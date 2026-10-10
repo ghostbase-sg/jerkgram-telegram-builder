@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hash-gated three-owner delta: memory-only profile playback preference."""
+"""Hash-gated four-owner delta: memory-only profile and header preferences."""
 import argparse
 import hashlib
 import json
@@ -14,6 +14,7 @@ MANIFEST = ROOT / "patches/jg13-profile-preferences.sha256.json"
 GLASS = "submodules/Display/Source/GhostBaseGlass.swift"
 AVATAR = "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift"
 SETTINGS = "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
+HEADER = "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift"
 
 def replace_once(text, old, new):
     if text.count(old) != 1:
@@ -29,6 +30,7 @@ def transform(name, text):
     private static var profileAvatarValue = UserDefaults.standard.object(forKey: "jerkgram.ProfileBlur.Avatar") as? Bool ?? true
     private static var profileTintValue = UserDefaults.standard.object(forKey: "jerkgram.ProfileBlur.Tint") as? Bool ?? true
     private static var profileReducedValue = UserDefaults.standard.object(forKey: "jerkgram.ProfileBlur.Reduced") as? Bool ?? false
+    private static var profileHideOwnPhoneValue = UserDefaults.standard.object(forKey: "jerkgram.Appearance.HideOwnPhone") as? Bool ?? false
 
     private static var preferenceGeneration: UInt64 = 0
 
@@ -45,6 +47,7 @@ def transform(name, text):
         let avatar = defaults.object(forKey: "jerkgram.ProfileBlur.Avatar") as? Bool ?? true
         let tint = defaults.object(forKey: "jerkgram.ProfileBlur.Tint") as? Bool ?? true
         let reduced = defaults.object(forKey: "jerkgram.ProfileBlur.Reduced") as? Bool ?? false
+        let hideOwnPhone = defaults.object(forKey: "jerkgram.Appearance.HideOwnPhone") as? Bool ?? false
         self.enabledLock.lock()
         defer { self.enabledLock.unlock() }
         guard self.preferenceGeneration == generation else { return }
@@ -53,6 +56,7 @@ def transform(name, text):
         self.profileAvatarValue = avatar
         self.profileTintValue = tint
         self.profileReducedValue = reduced
+        self.profileHideOwnPhoneValue = hideOwnPhone
     }
 
     public static var profileBlurSettings: GhostBaseProfileBlurSettings? {
@@ -73,14 +77,21 @@ def transform(name, text):
         return self.enabledValue && self.profileAnimatedValue
     }
 
-    public static func setProfilePlaybackSettings(glassEnabled: Bool, animatedBackgroundEnabled: Bool, avatarBlurInProfile: Bool? = nil, tintEnabled: Bool? = nil, reducedBlur: Bool? = nil) {
-        // Controller projects all five profile keys before atomic publication.
+    public static var profileHideOwnPhone: Bool {
+        self.enabledLock.lock()
+        defer { self.enabledLock.unlock() }
+        return self.profileHideOwnPhoneValue
+    }
+
+    public static func setProfilePlaybackSettings(glassEnabled: Bool, animatedBackgroundEnabled: Bool, avatarBlurInProfile: Bool? = nil, tintEnabled: Bool? = nil, reducedBlur: Bool? = nil, hideOwnPhone: Bool? = nil) {
+        // Controller projects profile and phone keys before atomic publication.
         self.enabledLock.lock()
         self.enabledValue = glassEnabled
         self.profileAnimatedValue = animatedBackgroundEnabled
         if let avatarBlurInProfile { self.profileAvatarValue = avatarBlurInProfile }
         if let tintEnabled { self.profileTintValue = tintEnabled }
         if let reducedBlur { self.profileReducedValue = reducedBlur }
+        if let hideOwnPhone { self.profileHideOwnPhoneValue = hideOwnPhone }
         self.preferenceGeneration &+= 1
         self.enabledLock.unlock()
     }''')
@@ -127,7 +138,8 @@ def transform(name, text):
         animatedBackgroundEnabled: current.profileAnimatedBackground,
         avatarBlurInProfile: current.profileAvatarBlur,
         tintEnabled: current.profileBlurTint,
-        reducedBlur: current.profileBlurReduced
+        reducedBlur: current.profileBlurReduced,
+        hideOwnPhone: current.hideOwnPhone
     )'''
         text = replace_once(text, "    guard !changes.isEmpty else { return }", '''    guard !changes.isEmpty else {
 ''' + publication + '''
@@ -141,11 +153,23 @@ def transform(name, text):
         GhostBaseKey.profileAvatarBlur,
         GhostBaseKey.profileBlurTint,
         GhostBaseKey.profileBlurReduced,
+        GhostBaseKey.hideOwnPhone,
         GhostBaseKey.scheduledSend,''')
         text = replace_once(text, '''    }
     JerkgramActivityGhostRuntime.invalidate()''', '''    }
 ''' + publication + '''
     JerkgramActivityGhostRuntime.invalidate()''')
+    elif name == HEADER:
+        text = replace_once(text, '''                let hideOwnPhone =
+                    (
+                        UserDefaults.standard
+                            .object(
+                                forKey:
+                                    "jerkgram.Appearance.HideOwnPhone"
+                            )
+                        as? Bool
+                    )
+                    ?? false''', '''                let hideOwnPhone = GhostBaseGlassStyle.profileHideOwnPhone''')
     else:
         raise RuntimeError("Unreviewed profile preferences owner")
     return text
@@ -155,7 +179,7 @@ def check(source, stage):
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     if config["upstream_new_sha"] != manifest["upstream_sha"]:
         raise RuntimeError("Profile preferences upstream pin changed")
-    if set(manifest["owners"]) != {GLASS, AVATAR, SETTINGS}:
+    if set(manifest["owners"]) != {GLASS, AVATAR, SETTINGS, HEADER}:
         raise RuntimeError("Profile preferences owner scope changed")
     for name, hashes in manifest["owners"].items():
         data = (source / name).read_bytes()
@@ -184,7 +208,7 @@ def apply_preferences(source):
         raise RuntimeError("Profile preferences source must be its own Git root")
     check(source, "before")
     # Validate every exact replacement before writing any owner.
-    outputs = {name: transform(name, (source / name).read_text()) for name in (GLASS, AVATAR, SETTINGS)}
+    outputs = {name: transform(name, (source / name).read_text()) for name in (GLASS, AVATAR, SETTINGS, HEADER)}
     manifest = json.loads(MANIFEST.read_text())
     for name, value in outputs.items():
         if hashlib.sha256(value.encode()).hexdigest() != manifest["owners"][name]["after_sha256"]:

@@ -10,7 +10,7 @@
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
       "before_sha256": "94381480c2b696fe70164092bbcf1e7105351e07b7b70801b1c2c5564c08e963",
-      "after_sha256": "3d34e6c42cc6f90434157331617713e46707d64bd034c3d16cfbb3cc78f21c39",
+      "after_sha256": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
       "survival_functions": [
         "activeTintColor",
         "borderColor",
@@ -36,7 +36,7 @@
     },
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
       "before_sha256": "d422feff3024b8b057e1aa7efea9ffe20b2cbb5e3bc2547dd2ac26ba1210fb14",
-      "after_sha256": "4de06ef64c6897a9631dc5a1c7f401ff284817a90143f893d711d8d67a48d9e7",
+      "after_sha256": "c017c6af6079439203f85c894e4feb6e52a2325fa17dcca386e72145381d4ee5",
       "survival_functions": [
         "JerkgramSettingsSectionHeaderItem",
         "JerkgramSettingsStatusItem",
@@ -88,6 +88,29 @@
         "save",
         "transitionInfo",
         "write"
+      ]
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift": {
+      "before_sha256": "f8c45f2b8f34cc8861ef99bb312d84894b07f556ca25ca7769c21a4c86ef8bdb",
+      "after_sha256": "65f6734452e32d5249ca636e93e0fe846f29fbfcafed581660abe6baabd16e82",
+      "survival_functions": [
+        "actionButtonPressed",
+        "addToAvatarTransitionSurface",
+        "avatarTransitionArguments",
+        "buttonPressed",
+        "didLoad",
+        "handlePhoneLongPress",
+        "handleUsernameLongPress",
+        "hitTest",
+        "initiateAvatarExpansion",
+        "invokeDisplayGiftInfo",
+        "invokeDisplayPremiumIntro",
+        "point",
+        "subtitleBackgroundPressed",
+        "update",
+        "updateAvatarIsHidden",
+        "updateAvatarMask",
+        "updateIsAvatarExpanded"
       ]
     }
   }
