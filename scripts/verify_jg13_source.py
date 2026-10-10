@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import subprocess
 import sys
-from materialize_jg13_profile_preferences import verify_preferences
+from materialize_jg13_expanded_diagnostics import verify_expanded
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -50,7 +50,7 @@ def main():
         "verify_jg13_build137_performance2.py",
     ]:
         subprocess.run([sys.executable, str(ROOT / "scripts" / name)], cwd=SOURCE, check=True)
-    verify_preferences(SOURCE)
+    verify_expanded(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 

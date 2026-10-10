@@ -174,8 +174,12 @@ def transform(name, text):
         raise RuntimeError("Unreviewed profile preferences owner")
     return text
 
-def check(source, stage):
+def check(source, stage, final_owners=None):
     manifest = json.loads(MANIFEST.read_text())
+    if final_owners:
+        if stage != "after": raise RuntimeError("Final owner override is only valid after materialization")
+        for name in set(manifest["owners"]) & set(final_owners):
+            manifest["owners"][name]["after_sha256"] = final_owners[name]["after_sha256"]
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     if config["upstream_new_sha"] != manifest["upstream_sha"]:
         raise RuntimeError("Profile preferences upstream pin changed")
@@ -193,11 +197,11 @@ def check(source, stage):
             raise RuntimeError(f"Profile preferences regression lock changed: {name}")
     return manifest
 
-def verify_preferences(source):
+def verify_preferences(source, final_owners=None):
     source = Path(source).resolve()
-    manifest = check(source, "after")
+    manifest = check(source, "after", final_owners=final_owners)
     from materialize_jg13_profile_p0 import verify_p0
-    verify_p0(source, final_owners=manifest["owners"])
+    verify_p0(source, final_owners={**manifest["owners"], **(final_owners or {})})
     env = dict(os.environ, JG13_SOURCE=str(source))
     subprocess.run([sys.executable, str(ROOT / "tests/test_jg13_profile_preferences.py")], cwd=ROOT, env=env, check=True)
 

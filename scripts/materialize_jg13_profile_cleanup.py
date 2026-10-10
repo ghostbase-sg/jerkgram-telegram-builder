@@ -27,7 +27,7 @@ def check_hashes(source, stage, final_owners=None):
 
 def verify_cleanup(source, final_owners=None):
     check_hashes(source, "after", final_owners=final_owners)
-    env = dict(os.environ, JG13_SOURCE=str(source.resolve()), JG13_P0_FINAL="1" if final_owners else "0")
+    env = dict(os.environ, JG13_SOURCE=str(source.resolve()), JG13_P0_FINAL="1" if final_owners else "0", JG13_FINAL_OWNERS=json.dumps(final_owners or {}))
     subprocess.run([sys.executable, str(ROOT / "tests/test_jg13_profile_cleanup.py")],
                    cwd=ROOT, env=env, check=True)
 

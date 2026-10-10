@@ -20,6 +20,8 @@ class ProfileCleanupTests(unittest.TestCase):
         import json
         owners = json.loads(cleanup.MANIFEST.read_text())["owners"]
         final_owners = json.loads((ROOT / "patches/jg13-profile-p0-diagnostics.sha256.json").read_text())["owners"] if os.environ.get("JG13_P0_FINAL") == "1" else None
+        if os.environ.get("JG13_FINAL_OWNERS"):
+            final_owners = json.loads(os.environ["JG13_FINAL_OWNERS"]) or None
         self.assertEqual(len(owners), 7)
         with tempfile.TemporaryDirectory() as directory:
             fixture = Path(directory)
