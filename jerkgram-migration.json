@@ -14,7 +14,7 @@
   "product_display_version": "1.1.0 Beta 1",
   "product_technical_version": "1.1.0-beta.1",
   "bundle_short_version": "13.0",
-  "build_number": 147,
+  "build_number": 148,
   "bundle_id": "com.jerkgram.ios",
   "source_snapshot_sha256": "5f0eb1e6dbfcd7d955eba10e6aa6caddfa755f2960e86aedb824a84e1b060731",
   "dependency_overrides": {

@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build147 preference hot-path fix
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build148 correlated freeze diagnostics
 
 on:
   workflow_dispatch:
@@ -48,10 +48,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build147-diagnostics
+          name: Jerkgram-Beta1-Build148-diagnostics
           path: |
             artifacts/build.log
             jerkgram-migration.json
+            work/swiftgram-src/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
@@ -61,9 +64,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build147
+          name: Jerkgram-1.1.0-Beta-1-Build148
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build147.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build147.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build148.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build148.json
           if-no-files-found: error
           retention-days: 90

@@ -37,7 +37,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
       "before_sha256": "bdc01a66591ce4d19b2dc520e045e35075a128f9084d5f14590f561e4a6aee75",
-      "after_sha256": "0d651c90f37e047f91f58a3eedbe118a0066a2f46a9529e2cb8c277534172023",
+      "after_sha256": "ca9a8d88222a6670e18e365b7d162ec1770ca017fec705525c7138335079e92a",
       "survival_functions": [
         "animatedAvatarSource",
         "apply",
@@ -89,7 +89,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
       "before_sha256": "6ff0628e2b0f94029f0fd2d9414f13abbcad8fc30808d7014ba1ad17daccc4a4",
-      "after_sha256": "ada8965364073a9d1e898700eb6a7f7dd10672ee986b1fa971a6266a1796476e",
+      "after_sha256": "b71f549f5c220df8ffa991a3ce4d2f448cfdee84698d16acb17818ef363580cc",
       "survival_functions": [
         "activateEdit",
         "activateSearch",
@@ -278,7 +278,7 @@
     },
     "submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift": {
       "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "after_sha256": "063a8679e510221353ee71f6789693f3585c567535a4047f1385a7b2a362e672",
+      "after_sha256": "82f4d565914792dc233216d7c20c7aa92e0518d88f646a27d2f2e401c72288c5",
       "survival_functions": [],
       "absent_before": true
     },

@@ -58,6 +58,22 @@ class ProfileP0Tests(unittest.TestCase):
         for stage in (".background", ".attach", ".detach"):
             self.assertIn("beginPerformanceSpan(" + stage, text)
 
+    def test_settings_sub_boundaries_and_correlated_slow_spans(self):
+        screen = read(P + "PeerInfoScreen.swift")
+        background = read(P + "GhostBaseProfileFullscreenBackground.swift")
+        for stage in ("header", "sections", "panesAndTail"):
+            self.assertIn("beginPerformanceSpan(." + stage + ")", screen)
+            self.assertIn("endPerformanceSpan(." + stage + ",", screen)
+        for stage in ("bgPreferences", "bgResolve", "bgApply"):
+            self.assertIn("beginPerformanceSpan(." + stage + ")", background)
+            self.assertIn("endPerformanceSpan(." + stage + ",", background)
+        self.assertLess(background.index("endPerformanceSpan(.bgPreferences"), background.index("guard let liveSettings = loadedSettings"))
+        self.assertLess(background.index("endPerformanceSpan(.bgResolve"), background.index("guard self.currentStateKey != stateKey"))
+        self.assertIn('if !stage.settingsDetail || self.context == "settings"', background)
+        core = read("submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift")
+        for token in ("slowEventLimit = 96", "timings.count < 32", "capacity = 512", "startedAt >= self.started", "now - $0 >= 1.0", "submittedAtMs=", "finishedAtMs=", "startMs=", "endMs=", "suppressedSlowEvents"):
+            self.assertIn(token, core)
+
     def test_source_slot_accounting_and_cleanup(self):
         text = read(P + "GhostBaseProfileFullscreenBackground.swift")
         self.assertEqual(text.count("self.sourceDisposable.set("), 1)

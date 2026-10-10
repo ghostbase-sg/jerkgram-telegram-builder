@@ -225,10 +225,10 @@ index a5ab6aa..d76e024 100644
              as? NavigationController else {
 diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 new file mode 100644
-index 0000000..6175e02
+index 0000000..5ecb2f9
 --- /dev/null
 +++ b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,180 @@
 +import Foundation
 +import Darwin
 +
@@ -243,6 +243,10 @@ index 0000000..6175e02
 +    private var lines: [String] = []
 +    private var dropped = 0
 +    private var timings: [String: (count: Int, maxMs: Double, slow: Int)] = [:]
++    private var lastSlowAt: [String: Double] = [:]
++    private var slowEvents = 0
++    private var suppressedSlowEvents = 0
++    private let slowEventLimit = 96
 +    private var running = false
 +    private var started = 0.0
 +    private var generation = 0
@@ -268,6 +272,9 @@ index 0000000..6175e02
 +        self.lock.lock()
 +        self.lines.removeAll(keepingCapacity: true)
 +        self.timings.removeAll(keepingCapacity: true)
++        self.lastSlowAt.removeAll(keepingCapacity: true)
++        self.slowEvents = 0
++        self.suppressedSlowEvents = 0
 +        self.dropped = 0
 +        self.started = ProcessInfo.processInfo.systemUptime
 +        self.generation += 1
@@ -330,7 +337,7 @@ index 0000000..6175e02
 +                    self.lock.lock()
 +                    guard self.running && self.generation == epoch else { self.lock.unlock(); return }
 +                    self.pendingPulse = false
-+                    self.appendLocked("mainQueueWaitMs=\(Int(wait))")
++                    self.appendLocked("mainQueueWaitMs=\(Int(wait)) submittedAtMs=\(Int((now - self.started) * 1000)) finishedAtMs=\(Int((ProcessInfo.processInfo.systemUptime - self.started) * 1000))")
 +                    self.lock.unlock()
 +                }
 +            }
@@ -364,12 +371,26 @@ index 0000000..6175e02
 +        self.appendLocked("t=\(Int(ProcessInfo.processInfo.systemUptime - self.started))s " + String(text.prefix(2048)))
 +    }
 +
-+    public func measure(_ stage: String, milliseconds: Double) {
++    public func measure(_ stage: String, milliseconds: Double, startedAt: Double? = nil, owner: Int? = nil) {
 +        self.lock.lock(); defer { self.lock.unlock() }
 +        guard self.running else { return }
 +        guard self.timings[stage] != nil || self.timings.count < 32 else { return }
 +        let old = self.timings[stage] ?? (count: 0, maxMs: 0.0, slow: 0)
 +        self.timings[stage] = (old.count + 1, max(old.maxMs, milliseconds), old.slow + (milliseconds >= 16.7 ? 1 : 0))
++        // Only completed measured spans; no stack suspension, frame callbacks,
++        // extra timer, disk I/O or peer identifiers. All bounds share this lock.
++        guard milliseconds >= 16.7, let startedAt, startedAt >= self.started, let owner else { return }
++        let now = ProcessInfo.processInfo.systemUptime
++        guard self.slowEvents < self.slowEventLimit,
++              self.lastSlowAt[stage].map({ now - $0 >= 1.0 }) ?? true else {
++            self.suppressedSlowEvents += 1
++            return
++        }
++        self.lastSlowAt[stage] = now
++        self.slowEvents += 1
++        let beginMs = Int((startedAt - self.started) * 1000.0)
++        let endMs = Int((startedAt - self.started) * 1000.0 + milliseconds)
++        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds))")
 +    }
 +
 +    private func appendLocked(_ line: String) {
@@ -380,19 +401,19 @@ index 0000000..6175e02
 +    public func report() -> String {
 +        self.lock.lock(); defer { self.lock.unlock() }
 +        let info = Bundle.main.infoDictionary ?? [:]
-+        let header = "Jerkgram P0 diagnostics v2\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
++        let header = "Jerkgram P0 diagnostics v3\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
 +        let measurements = self.timings.keys.sorted().map { key -> String in
 +            let value = self.timings[key]!
 +            return "\(key): calls=\(value.count) maxMs=\(Int(value.maxMs)) slow>=16.7ms=\(value.slow)"
 +        }.joined(separator: "\n")
-+        return header + measurements + "\n--- timeline ---\n" + self.lines.joined(separator: "\n")
++        return header + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
 +    }
 +}
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
-index f168490..8fdc87e 100644
+index f168490..bc28d54 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
-@@ -12,6 +12,66 @@ import PhotoResources
+@@ -12,6 +12,77 @@ import PhotoResources
  import PeerInfoAvatarListNode
  
  
@@ -401,6 +422,14 @@ index f168490..8fdc87e 100644
 +final class JerkgramProfilePerformanceProbe {
 +    enum Stage: String, CaseIterable {
 +        case layout, data, background, transition, play, attach, detach, preferences, alpha
++        case bgPreferences, bgResolve, bgApply, header, sections, panesAndTail
++
++        var settingsDetail: Bool {
++            switch self {
++            case .bgPreferences, .bgResolve, .bgApply, .header, .sections, .panesAndTail: return true
++            default: return false
++            }
++        }
 +    }
 +    private struct Sample {
 +        var count = 0
@@ -443,7 +472,10 @@ index f168490..8fdc87e 100644
 +        sample.maxMs = max(sample.maxMs, elapsed)
 +        if elapsed >= 16.7 { sample.slow += 1 }
 +        self.samples[stage] = sample
-+        JerkgramPerformanceDiagnostics.shared.measure(self.context + "." + stage.rawValue, milliseconds: elapsed)
++        // Settings-only detail keys keep both contexts plus workers under32.
++        if !stage.settingsDetail || self.context == "settings" {
++            JerkgramPerformanceDiagnostics.shared.measure(self.context + "." + stage.rawValue, milliseconds: elapsed, startedAt: started, owner: self.instance)
++        }
 +    }
 +
 +    func summary(_ boundary: String, sourceRetained: Bool, outputRetained: Bool) {
@@ -459,7 +491,7 @@ index f168490..8fdc87e 100644
  enum GhostBaseProfileGlassRuntime {
      static func loadSettings() -> GhostBaseProfileBlurSettings? {
          return GhostBaseProfileBlurSettings.loadEnabled()
-@@ -188,6 +248,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -188,6 +259,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      private static func ghostBaseLoadAvatarDiskCache(
          identity: String
      ) -> UIImage? {
@@ -468,7 +500,7 @@ index f168490..8fdc87e 100644
          self.ghostBaseAvatarDiskCacheLock.lock()
          defer { self.ghostBaseAvatarDiskCacheLock.unlock() }
  
-@@ -207,6 +269,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -207,6 +280,8 @@ final class GhostBaseProfileBackgroundView: UIView {
          _ image: UIImage,
          identity: String
      ) {
@@ -477,7 +509,7 @@ index f168490..8fdc87e 100644
          guard let url = self.ghostBaseAvatarDiskCacheURL(identity: identity) else {
              return
          }
-@@ -438,6 +502,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -438,6 +513,9 @@ final class GhostBaseProfileBackgroundView: UIView {
  
  
      private let sourceDisposable = MetaDisposable()
@@ -487,7 +519,7 @@ index f168490..8fdc87e 100644
      private var isSceneActive = false
      private var isControllerVisible = false
      private var isApplicationActive = UIApplication.shared.applicationState == .active
-@@ -472,6 +539,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -472,6 +550,7 @@ final class GhostBaseProfileBackgroundView: UIView {
          self.addSubview(self.mirrorVideoView)
          self.addSubview(self.blurView)
          self.addSubview(self.tintView)
@@ -495,7 +527,7 @@ index f168490..8fdc87e 100644
  
          self.visualSettingsObserver =
              NotificationCenter.default.addObserver(
-@@ -513,11 +581,43 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -513,11 +592,43 @@ final class GhostBaseProfileBackgroundView: UIView {
  
          self.secondaryVideoDisposable?.dispose()
          self.secondaryVideoDisposable = nil
@@ -540,7 +572,7 @@ index f168490..8fdc87e 100644
  
          self.currentLoadKey = nil
          self.currentStateKey = nil
-@@ -548,13 +648,16 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -548,13 +659,16 @@ final class GhostBaseProfileBackgroundView: UIView {
          self.currentStateKey = nil
          self.currentLoadKey = nil
          if active {
@@ -559,7 +591,7 @@ index f168490..8fdc87e 100644
          }
      }
  
-@@ -580,7 +683,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -580,7 +694,7 @@ final class GhostBaseProfileBackgroundView: UIView {
          guard self.isSceneActive else {
              return
          }
@@ -568,7 +600,7 @@ index f168490..8fdc87e 100644
      }
  
      override func layoutSubviews() {
-@@ -613,6 +716,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -613,13 +727,16 @@ final class GhostBaseProfileBackgroundView: UIView {
          isSettings: Bool,
          avatarItem: PeerInfoAvatarListItem?
      ) {
@@ -578,7 +610,40 @@ index f168490..8fdc87e 100644
          guard self.isSceneActive else {
              return
          }
-@@ -1025,6 +1131,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+-        guard let liveSettings =
+-            GhostBaseProfileBlurSettings
+-                .loadEnabled()
+-        else {
++        let preferencesTiming = self.beginPerformanceSpan(.bgPreferences)
++        let loadedSettings = GhostBaseProfileBlurSettings.loadEnabled()
++        self.endPerformanceSpan(.bgPreferences, preferencesTiming)
++        guard let liveSettings = loadedSettings else {
+             self.tearDownForDisabledSettings()
+             return
+         }
+@@ -627,6 +744,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+         self.settings = liveSettings
+         self.isHidden = false
+ 
++        let resolveTiming = self.beginPerformanceSpan(.bgResolve)
+         let source = self.resolveSource(
+             peer: peer,
+             cachedData: cachedData,
+@@ -639,10 +757,13 @@ final class GhostBaseProfileBackgroundView: UIView {
+             peer: peer,
+             presentationData: presentationData
+         )
++        self.endPerformanceSpan(.bgResolve, resolveTiming)
+         guard self.currentStateKey != stateKey else {
+             return
+         }
+         self.currentStateKey = stateKey
++        let applyTiming = self.beginPerformanceSpan(.bgApply)
++        defer { self.endPerformanceSpan(.bgApply, applyTiming) }
+         self.apply(
+             source: source,
+             stateKey: stateKey,
+@@ -1025,6 +1146,8 @@ final class GhostBaseProfileBackgroundView: UIView {
          }
  
          if self.secondaryVideoDisposable == nil {
@@ -587,7 +652,7 @@ index f168490..8fdc87e 100644
              self.secondaryVideoDisposable =
                  videoNode.registerSecondaryVideoLayer(
                      self.mirrorVideoView.videoLayer
-@@ -1040,7 +1148,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1040,7 +1163,7 @@ final class GhostBaseProfileBackgroundView: UIView {
          stateKey: GhostBaseProfileBackgroundStateKey,
          presentationData: PresentationData
      ) {
@@ -596,7 +661,7 @@ index f168490..8fdc87e 100644
          self.currentLoadKey = nil
  
          let isDark = presentationData.theme.overallDarkAppearance
-@@ -1078,7 +1186,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1078,7 +1201,7 @@ final class GhostBaseProfileBackgroundView: UIView {
              self.imageView.image = nil
              let loadKey = cacheKey as String
              self.currentLoadKey = loadKey
@@ -605,7 +670,7 @@ index f168490..8fdc87e 100644
                  wallpaper: wallpaper,
                  fallback: metadataTint,
                  identity: loadKey
-@@ -1087,10 +1195,11 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1087,10 +1210,11 @@ final class GhostBaseProfileBackgroundView: UIView {
                  guard let self, self.currentLoadKey == loadKey, let entry else {
                      return
                  }
@@ -618,7 +683,7 @@ index f168490..8fdc87e 100644
              }))
  
          case let .premium(main, secondary, identity):
-@@ -1109,7 +1218,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1109,7 +1233,7 @@ final class GhostBaseProfileBackgroundView: UIView {
              self.imageView.image = nil
              let loadKey = cacheKey as String
              self.currentLoadKey = loadKey
@@ -627,7 +692,7 @@ index f168490..8fdc87e 100644
                  guard let image = Self.generatedGradientImage(
                      colors: [main, secondary]
                  ) else {
-@@ -1127,10 +1236,11 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1127,10 +1251,11 @@ final class GhostBaseProfileBackgroundView: UIView {
                  guard let self, self.currentLoadKey == loadKey, let entry else {
                      return
                  }
@@ -640,7 +705,7 @@ index f168490..8fdc87e 100644
              }))
  
          case let .avatar(
-@@ -1185,6 +1295,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1185,6 +1310,7 @@ final class GhostBaseProfileBackgroundView: UIView {
  
              // Final avatar RAM hit: immutable resource identity, no new subscription.
              if let cached = Self.imageCache.object(forKey: cacheKey) {
@@ -648,7 +713,7 @@ index f168490..8fdc87e 100644
                  self.imageView.image = cached.image
                  self.applyTint(
                      cached.tint,
-@@ -1212,11 +1323,12 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1212,11 +1338,12 @@ final class GhostBaseProfileBackgroundView: UIView {
                  return
              }
  
@@ -662,7 +727,7 @@ index f168490..8fdc87e 100644
                  Self.imageCache.setObject(
                      entry,
                      forKey: cacheKey
-@@ -1228,7 +1340,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1228,7 +1355,7 @@ final class GhostBaseProfileBackgroundView: UIView {
                      isDark: isDark,
                      reduced: reduced
                  )
@@ -671,7 +736,7 @@ index f168490..8fdc87e 100644
              }))
  
          case let .placeholder(
-@@ -1238,7 +1350,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1238,7 +1365,7 @@ final class GhostBaseProfileBackgroundView: UIView {
              identity
          ):
              self.clearAnimatedMedia()
@@ -680,7 +745,7 @@ index f168490..8fdc87e 100644
              self.currentLoadKey = nil
  
              self.usesCustomBackground =
-@@ -1687,6 +1799,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1687,6 +1814,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      }
  
      private static func generatedWallpaperImage(colors: [UInt32], fallback: UIColor) -> UIImage? {
@@ -689,7 +754,7 @@ index f168490..8fdc87e 100644
          let resolvedColors: [UIColor]
          if colors.isEmpty {
              resolvedColors = [fallback, fallback]
-@@ -1729,6 +1843,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1729,6 +1858,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      }
  
      private static func generatedGradientImage(colors: [UIColor]) -> UIImage? {
@@ -698,7 +763,7 @@ index f168490..8fdc87e 100644
          let resolved = colors.isEmpty ? [UIColor.black, UIColor.black] : colors
          return generateImage(
              CGSize(width: 64.0, height: 64.0),
-@@ -1762,6 +1878,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+@@ -1762,6 +1893,8 @@ final class GhostBaseProfileBackgroundView: UIView {
      }
  
      private static func sampledTint(from image: UIImage, fallback: UIColor) -> UIColor {
@@ -760,7 +825,7 @@ index e8119a5..b4bb1ac 100644
          if let markupNode = self.markupNode {
              if case .immediate = transition, fraction == 1.0 {
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index 623ec86..e5a4348 100644
+index 623ec86..3971ab8 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 @@ -439,6 +439,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
@@ -789,3 +854,31 @@ index 623ec86..e5a4348 100644
          self.validLayout = (layout, navigationHeight)
          if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
              transition.updateFrame(
+@@ -5515,7 +5520,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         }
+         let headerInset = sectionInset
+         
++        let headerTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.header)
+         let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: transition.isAnimated && self.headerNode.navigationTransition == nil)
++        if let headerTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.header, headerTiming) }
+         self.ghostBaseProfileBackgroundView?.refreshAnimatedVideoOwner(
+             self.headerNode.avatarListNode.avatarContainerNode.videoNode
+         )
+@@ -5532,6 +5539,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         
+         var validRegularSections: [AnyHashable] = []
+         if !self.isMediaOnly {
++            let sectionsTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.sections)
++            defer { if let sectionsTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.sections, sectionsTiming) } }
+             var insets = UIEdgeInsets()
+             insets.left += sectionInset
+             insets.right += sectionInset
+@@ -5664,6 +5673,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+             }
+         }
+         
++        let panesTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.panesAndTail)
++        defer { if let panesTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.panesAndTail, panesTiming) } }
+         let paneContainerSize = CGSize(width: layout.size.width, height: layout.size.height - navigationHeight)
+         var restoreContentOffset: CGPoint?
+         if additive {
