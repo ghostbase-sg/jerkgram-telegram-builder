@@ -1,0 +1,5 @@
+# Build155 CI recovery
+
+Run38093498601, remote4d5c606c14c1d25fdcc5fdd432f492ec08dacab7, failed2026-10-10T23:01:47Z in tests/run_jg13_expanded_diagnostics.py. Full job log maps generated main.swift:407 to the worker-thread report precondition. Source materialization/hash contracts and actual capture, secondary-timebase, preference and refresh-owner component executions passed first. Application compilation and history-bounds execution had not been reached.
+
+Root cause: the newly added fixture called DispatchQueue.global().sync from main, which does not guarantee execution on a different thread. Its report therefore did not satisfy the required worker tag. The test now uses async plus a bounded semaphore completion and explicitly asserts !Thread.isMainThread inside the worker callback; the original report worker assertion remains. No production code, timing limits, verifier gates or test requirements are changed. Native execution of this correction is pending the replacement macOS CI run.

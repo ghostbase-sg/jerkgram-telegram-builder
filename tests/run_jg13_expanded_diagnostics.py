@@ -158,9 +158,15 @@ for operation in all { precondition(enteredReport.contains(operation.rawValue)) 
 capture.stop()
 capture.start()
 RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.025))
-DispatchQueue.global().sync {
+// sync may execute inline on the calling main thread. This fixture must
+// actually cross the thread boundary while retaining the worker assertion.
+let workerDone = DispatchSemaphore(value: 0)
+DispatchQueue.global().async {
+    precondition(!Thread.isMainThread)
     capture.measure("client.work", milliseconds: 20, startedAt: ProcessInfo.processInfo.systemUptime - 0.02, owner: 0, detail: .mediaFill)
+    workerDone.signal()
 }
+precondition(workerDone.wait(timeout: .now() + 5) == .success)
 precondition(capture.report().contains("operation=mediaFill route=chat thread=worker"))
 capture.stop()
 print("client-operations component PASS: actual owner-checked release, safe labels, real begin/end, all24 fixed details sharing one timing slot/slow budget, entered-operation bitmap including fast calls, strict32 cap, stale-token/stop/restart guards")
