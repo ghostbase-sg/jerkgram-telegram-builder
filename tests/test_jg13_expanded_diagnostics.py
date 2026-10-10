@@ -8,8 +8,23 @@ class ExpandedDiagnosticsTests(unittest.TestCase):
     def test_client_hooks_preserve_every_original_source_byte(self):
         import hashlib,json,re
         manifest=json.loads((ROOT/'patches/jg13-expanded-diagnostics.sha256.json').read_text())
-        for path in ('submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift','submodules/TelegramUI/Sources/ChatControllerNode.swift','submodules/TelegramUI/Sources/ChatHistoryListNode.swift','submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift'):
+        for path in ('submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift','submodules/TelegramUI/Sources/ChatControllerNode.swift','submodules/TelegramUI/Sources/ChatHistoryListNode.swift','submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift','submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift'):
             text=(SOURCE/path).read_text()
+            if path.endswith('CoreListChatHistoryBackend.swift'):
+                text=text.replace('import TelegramCore\n','',1)
+            if path.endswith('ChatHistoryListNode.swift'):
+                # Exactly one behavior change: single-pass equivalent ID/max
+                # bounds, covered by actual native fragment/reference cases.
+                text=re.sub(r'            // JG155 bounds begin[^\n]*\n.*?            // JG155 bounds end', '            let previousIds = Set(previous.originalView.entries.map { $0.message.id })\n            let previousLastIndex = previous.originalView.entries.map { $0.message.index }.max()', text, flags=re.S)
+                start=text.index('    private func jgHistoryTransaction(')
+                brace=text.index(') {',start)+2
+                end,depth=brace+1,1
+                while depth:
+                    depth+=(text[end]=='{')-(text[end]=='}');end+=1
+                self.assertEqual(text[end:end+2],'\n\n')
+                text=text[:start]+text[end+2:]
+                text=text.replace('self.jgHistoryTransaction(', 'self.listView.chatHistoryTransaction(')
+                text=re.sub(r'\n        let jgBackend = JerkgramPerformanceDiagnostics.shared.beginOperation\(self.usesCoreListBackend \? .historyBackendCore : .historyBackendLegacy\)\n        defer \{ JerkgramPerformanceDiagnostics.shared.endOperation\(jgBackend\) \}', '',text)
             text=re.sub(r'            do \{\n                let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation\(.inputDecorate\)\n                defer \{ JerkgramPerformanceDiagnostics.shared.endOperation\(jgOperation\) \}\n([^\n]+decorateAfterTextChange[^\n]+)\n            \}',r'\1',text)
             text=re.sub(r'\n[ ]{8,12}let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation\(\.\w+\)\n[ ]{8,12}defer \{ JerkgramPerformanceDiagnostics.shared.endOperation\(jgOperation\) \}', '',text)
             self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), manifest['owners'][path]['before_sha256'],path)

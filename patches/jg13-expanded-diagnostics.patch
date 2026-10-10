@@ -142,7 +142,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
 diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 --- a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 +++ b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
-@@ -16,6 +16,47 @@
+@@ -16,6 +16,81 @@
      private var slowEvents = 0
      private var suppressedSlowEvents = 0
      private let slowEventLimit = 96
@@ -150,10 +150,43 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +    private var visibleRoute = "unclassified"
 +    private weak var visibleRouteOwner: AnyObject?
 +    private var routeReleasesIgnored = 0
++    private var operationsObserved: UInt64 = 0
 +    public enum Operation: String, CaseIterable {
 +        case inputText, inputLayout, inputDecorate, keyboardLayout
 +        case historyUpdate, historyVisible, historyLayout, historyScroll
 +        case chatOpen, mediaState, mediaFill
++        case historyPrepare, historyComplete, historyApply, historyMap
++        case historyCoreTransaction, historyRowLayout, historyRowBuild
++        case inputSend, inputState, sendEnqueue, sendDispatch
++        case historyBackendCore, historyBackendLegacy
++        fileprivate var bit: UInt64 {
++            switch self {
++            case .inputText: return 1 << 0
++            case .inputLayout: return 1 << 1
++            case .inputDecorate: return 1 << 2
++            case .keyboardLayout: return 1 << 3
++            case .historyUpdate: return 1 << 4
++            case .historyVisible: return 1 << 5
++            case .historyLayout: return 1 << 6
++            case .historyScroll: return 1 << 7
++            case .chatOpen: return 1 << 8
++            case .mediaState: return 1 << 9
++            case .mediaFill: return 1 << 10
++            case .historyPrepare: return 1 << 11
++            case .historyComplete: return 1 << 12
++            case .historyApply: return 1 << 13
++            case .historyMap: return 1 << 14
++            case .historyCoreTransaction: return 1 << 15
++            case .historyRowLayout: return 1 << 16
++            case .historyRowBuild: return 1 << 17
++            case .inputSend: return 1 << 18
++            case .inputState: return 1 << 19
++            case .sendEnqueue: return 1 << 20
++            case .sendDispatch: return 1 << 21
++            case .historyBackendCore: return 1 << 22
++            case .historyBackendLegacy: return 1 << 23
++            }
++        }
 +    }
 +    public struct OperationToken {
 +        fileprivate let operation: Operation
@@ -168,6 +201,7 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +    public func beginOperation(_ operation: Operation) -> OperationToken? {
 +        self.lock.lock(); defer { self.lock.unlock() }
 +        guard self.running else { return nil }
++        self.operationsObserved |= operation.bit
 +        return OperationToken(operation: operation, startedAt: ProcessInfo.processInfo.systemUptime, generation: self.generation)
 +    }
 +    public func endOperation(_ token: OperationToken?) {
@@ -190,30 +224,41 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
      private var running = false
      private var started = 0.0
      private var generation = 0
-@@ -42,6 +83,11 @@
+@@ -42,6 +117,12 @@
          self.lines.removeAll(keepingCapacity: true)
          self.timings.removeAll(keepingCapacity: true)
          self.lastSlowAt.removeAll(keepingCapacity: true)
 +        self.timingKeysRejected = 0
 +        self.routeReleasesIgnored = 0
++        self.operationsObserved = 0
 +        self.frameIntervals.removeAll(keepingCapacity: true)
 +        self.lastRefreshTimestamp = nil
 +        self.lastRefreshTarget = nil
          self.slowEvents = 0
          self.suppressedSlowEvents = 0
          self.dropped = 0
-@@ -94,8 +140,9 @@
+@@ -70,6 +151,9 @@
+                 percent = max(0.0, (cpu - previousCPU) / (now - previousTime) * 100.0)
+             } else { percent = nil }
+             if result == 0 { previousCPU = cpu; previousTime = now }
++            // External OS state access stays outside the lock shared by UI spans.
++            let thermal = ProcessInfo.processInfo.thermalState.rawValue
++            let cpuText = percent.map { String(format: "%.1f", $0) } ?? "unavailable/first"
+             self.lock.lock()
+             guard self.running && self.generation == epoch else { self.lock.unlock(); return }
+             let expired = now - self.started >= self.maxCaptureSeconds
+@@ -94,8 +178,8 @@
                  }
                  return
              }
-+            let refresh = self.frameIntervals[self.visibleRoute] ?? RefreshStats()
-             let cpuText = percent.map { String(format: "%.1f", $0) } ?? "unavailable/first"
+-            let cpuText = percent.map { String(format: "%.1f", $0) } ?? "unavailable/first"
 -            self.appendLocked("t=\(Int(now - self.started))s cpuPct=\(cpuText) peakRSSBytes=\(result == 0 ? usage.ru_maxrss : -1) thermal=\(ProcessInfo.processInfo.thermalState.rawValue)")
-+            self.appendLocked("t=\(Int(now - self.started))s cpuPct=\(cpuText) peakRSSBytes=\(result == 0 ? usage.ru_maxrss : -1) thermal=\(ProcessInfo.processInfo.thermalState.rawValue) route=\(self.visibleRoute) refreshCumulative=\(refresh.samples)/\(String(format: "%.2f", refresh.maxGapMs))/\(refresh.missedOpportunities)")
++            let refresh = self.frameIntervals[self.visibleRoute] ?? RefreshStats()
++            self.appendLocked("t=\(Int(now - self.started))s cpuPct=\(cpuText) peakRSSBytes=\(result == 0 ? usage.ru_maxrss : -1) thermal=\(thermal) route=\(self.visibleRoute) refreshCumulative=\(refresh.samples)/\(String(format: "%.2f", refresh.maxGapMs))/\(refresh.missedOpportunities)")
              let submit = !self.pendingPulse
              if submit { self.pendingPulse = true }
              self.lock.unlock()
-@@ -106,7 +153,7 @@
+@@ -106,7 +190,7 @@
                      self.lock.lock()
                      guard self.running && self.generation == epoch else { self.lock.unlock(); return }
                      self.pendingPulse = false
@@ -222,7 +267,7 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
                      self.lock.unlock()
                  }
              }
-@@ -140,26 +187,93 @@
+@@ -140,26 +224,93 @@
          self.appendLocked("t=\(Int(ProcessInfo.processInfo.systemUptime - self.started))s " + String(text.prefix(2048)))
      }
  
@@ -255,7 +300,7 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
          let beginMs = Int((startedAt - self.started) * 1000.0)
          let endMs = Int((startedAt - self.started) * 1000.0 + milliseconds)
 -        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds))")
-+        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds)) operation=\(detail?.rawValue ?? "none") route=\(self.visibleRoute)")
++        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds)) operation=\(detail?.rawValue ?? "none") route=\(self.visibleRoute) thread=\(Thread.isMainThread ? "main" : "worker")")
 +    }
 +
 +    // Route labels are fixed categories, never controller/peer/message identifiers.
@@ -321,12 +366,12 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
      }
  
      private func appendLocked(_ line: String) {
-@@ -170,11 +284,15 @@
+@@ -170,11 +321,16 @@
      public func report() -> String {
          self.lock.lock(); defer { self.lock.unlock() }
          let info = Bundle.main.infoDictionary ?? [:]
 -        let header = "Jerkgram P0 diagnostics v3\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
-+        let header = "Jerkgram P0 diagnostics v5\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
++        let header = "Jerkgram P0 diagnostics v6\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
          let measurements = self.timings.keys.sorted().map { key -> String in
              let value = self.timings[key]!
              return "\(key): calls=\(value.count) maxMs=\(Int(value.maxMs)) slow>=16.7ms=\(value.slow)"
@@ -336,7 +381,8 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +            let value = self.frameIntervals[route]!
 +            return "refresh route=\(route) samples=\(value.samples) maxGapMs=\(String(format: "%.2f", value.maxGapMs)) expectedMs=\(String(format: "%.2f", value.minExpectedMs))...\(String(format: "%.2f", value.maxExpectedMs)) gaps>=16.7/33.4/50=\(value.over16)/\(value.over33)/\(value.over50) missedOpportunitiesEstimated=\(value.missedOpportunities)"
 +        }.joined(separator: "\n")
-+        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
++        let entered = Operation.allCases.filter { self.operationsObserved & $0.bit != 0 }.map { $0.rawValue }.joined(separator: ",")
++        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\noperationsEntered=\(entered) (entry coverage only; inclusive spans overlap)\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
      }
  }
 diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
@@ -372,6 +418,15 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
          if self.ignoreChatInputTextNodeDidUpdateText {
              return
          }
+@@ -5626,6 +5634,8 @@
+     }
+     
+     @objc func sendButtonPressed() {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.inputSend)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if let richTextInputNode = self.richTextInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+             let textCount = Int32(self.richTextInputNode?.text.count ?? 0)
+             let remainingCount = inputTextMaxLength - textCount
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
@@ -755,6 +810,33 @@ diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/Tel
          self.suspendNavigationBarLayout = true
          super.containerLayoutUpdated(layout, transition: transition)
          
+@@ -8540,6 +8552,8 @@
+     }
+     
+     func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, force: Bool = false, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.inputState)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         updateChatPresentationInterfaceStateImpl(
+             selfController: self,
+             transition: transition,
+@@ -9297,6 +9311,8 @@
+     }
+     
+     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.sendEnqueue)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if case let .customChatContents(customChatContents) = self.subject {
+             customChatContents.enqueueMessages(messages: messages)
+             return
+@@ -9308,6 +9324,8 @@
+ 
+         let _ = (self.shouldDivertMessagesToScheduled(messages: messages)
+         |> deliverOnMainQueue).startStandalone(next: { [weak self] shouldDivert in
++            let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.sendDispatch)
++            defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+             guard let self else {
+                 return
+             }
 diff --git a/submodules/TelegramUI/Sources/ChatControllerNode.swift b/submodules/TelegramUI/Sources/ChatControllerNode.swift
 --- a/submodules/TelegramUI/Sources/ChatControllerNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatControllerNode.swift
@@ -779,7 +861,16 @@ diff --git a/submodules/TelegramUI/Sources/ChatControllerNode.swift b/submodules
 diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
 --- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
-@@ -1201,6 +1201,8 @@
+@@ -371,6 +371,8 @@
+ }
+ 
+ private func mappedChatHistoryViewListTransition(context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, lastHeaderId: Int64, isSavedMusic: Bool, canReorder: Bool, richMessageQueueId: EngineMessage.Id?, animateFromPreviousFilter: Bool, transition: ChatHistoryViewTransition, systemStyle: ItemListSystemStyle) -> ChatHistoryListViewTransition {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyMap)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+     return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, isSavedMusic: isSavedMusic, canReorder: canReorder, richMessageQueueId: richMessageQueueId, entries: transition.insertEntries, systemStyle: systemStyle), updateItems: mappedUpdateEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, isSavedMusic: isSavedMusic, canReorder: canReorder, richMessageQueueId: richMessageQueueId, entries: transition.updateEntries, systemStyle: systemStyle), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, animateIn: transition.animateIn, reason: transition.reason, flashIndicators: transition.flashIndicators, animateFromPreviousFilter: animateFromPreviousFilter)
+ }
+ 
+@@ -1201,6 +1203,8 @@
          self.beginPresentationDataManagement(updated: updatedPresentationData.signal)
          
          self.listView.visibleContentOffsetChanged = { [weak self] offset, _ in
@@ -788,7 +879,16 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
              if let strongSelf = self {
                  strongSelf.contentPositionChanged(offset)
                  
-@@ -3099,6 +3101,8 @@
+@@ -2088,6 +2092,8 @@
+             deviceContactsNumbers |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_deviceContactsNumbers"),
+             contentSettings |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_contentSettings")
+         ) |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_firstChatHistoryTransition")).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, preferredStoryHighQuality, animatedEmojiAndGiftStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, availableMessageEffects, savedMessageTags, defaultReaction, accountPeer, accountCountry, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers, contentSettings in
++            let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyPrepare)
++            defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+             let (animatedEmojiStickers, premiumGiftStickers, tonGiftStickers) = animatedEmojiAndGiftStickers
+             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages) = promises
+             
+@@ -3099,6 +3105,8 @@
      }
      
      private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
@@ -797,16 +897,76 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
          let historyView = transactionState.historyView
          var isTopReplyThreadMessageShownValue = false
          var topVisibleMessageRange: ChatTopVisibleMessageRange?
-@@ -4111,6 +4115,8 @@
+@@ -4110,10 +4118,20 @@
+         }
      }
      
++    private func jgHistoryTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ChatHistoryListViewInsertItem], updateIndicesAndItems: [ChatHistoryListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, additionalScrollDistance: CGFloat = 0.0, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, customAnimationTransition: ControlledTransition? = nil, maintainsUnreadItemAlignment: Bool = false, updateOpaqueState: Any?, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyApply)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
++        self.listView.chatHistoryTransaction(deleteIndices: deleteIndices, insertIndicesAndItems: insertIndicesAndItems, updateIndicesAndItems: updateIndicesAndItems, options: options, scrollToItem: scrollToItem, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: stationaryItemRange, customAnimationTransition: customAnimationTransition, maintainsUnreadItemAlignment: maintainsUnreadItemAlignment, updateOpaqueState: updateOpaqueState, completion: completion)
++    }
++
      private func dequeueHistoryViewTransitions() {
 +        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyUpdate)
 +        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
          if self.enqueuedHistoryViewTransitions.isEmpty || self.hasActiveTransition {
              return
          }
-@@ -4892,6 +4898,8 @@
++        let jgBackend = JerkgramPerformanceDiagnostics.shared.beginOperation(self.usesCoreListBackend ? .historyBackendCore : .historyBackendLegacy)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgBackend) }
+         self.hasActiveTransition = true
+         let transition = self.enqueuedHistoryViewTransitions.removeFirst()
+ 
+@@ -4126,8 +4144,16 @@
+            previous.id == transition.historyView.id,
+            !previous.originalView.isLoading, previous.originalView.laterId == nil,
+            transition.historyView.originalView.laterId == nil {
+-            let previousIds = Set(previous.originalView.entries.map { $0.message.id })
+-            let previousLastIndex = previous.originalView.entries.map { $0.message.index }.max()
++            // JG155 bounds begin: same ID set/max index, one source traversal, no mapped arrays.
++            var previousIds = Set<MessageId>()
++            previousIds.reserveCapacity(previous.originalView.entries.count)
++            var previousLastIndex: MessageIndex?
++            for previousEntry in previous.originalView.entries {
++                previousIds.insert(previousEntry.message.id)
++                let index = previousEntry.message.index
++                if previousLastIndex.map({ $0 < index }) ?? true { previousLastIndex = index }
++            }
++            // JG155 bounds end
+             for entry in transition.historyView.originalView.entries {
+                 let message = entry.message
+                 guard message.flags.contains(.Incoming), !previousIds.contains(message.id),
+@@ -4361,6 +4387,8 @@
+         }
+ 
+         let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
++            let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyComplete)
++            defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+             if let strongSelf = self {
+                 strongSelf.currentAppliedDeleteAnimationCorrelationIds.removeAll()
+                 
+@@ -4748,16 +4776,16 @@
+             if foundCorrelationMessage {
+                 self.layoutActionOnViewTransition = nil
+                 let (mappedTransition, updateSizeAndInsets) = layoutActionOnViewTransition(transition)
+-                self.listView.chatHistoryTransaction(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options.union(.Synchronous), scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
++                self.jgHistoryTransaction(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options.union(.Synchronous), scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
+                     completion(true, result)
+                 })
+             } else {
+-                self.listView.chatHistoryTransaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options.union(.Synchronous), scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
++                self.jgHistoryTransaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options.union(.Synchronous), scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
+                     completion(false, result)
+                 })
+             }
+         } else {
+-            self.listView.chatHistoryTransaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options.union(.Synchronous), scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
++            self.jgHistoryTransaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options.union(.Synchronous), scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
+                 completion(false, result)
+             })
+         }
+@@ -4892,6 +4920,8 @@
      }
          
      public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, additionalScrollDistance: CGFloat, scrollToTop: Bool, completion: @escaping () -> Void) {
@@ -815,3 +975,75 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
          /*if updateSizeAndInsets.insets.top == 83.0 {
              if !transition.isAnimated {
                  assert(true)
+@@ -4910,7 +4940,7 @@
+             maintainsUnreadItemAlignment = true
+         }
+         transition.updateFrame(node: self.listView, frame: CGRect(origin: CGPoint(), size: updateSizeAndInsets.size))
+-        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, additionalScrollDistance: scrollToTop ? 0.0 : additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, maintainsUnreadItemAlignment: maintainsUnreadItemAlignment, updateOpaqueState: nil, completion: { _ in
++        self.jgHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, additionalScrollDistance: scrollToTop ? 0.0 : additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, maintainsUnreadItemAlignment: maintainsUnreadItemAlignment, updateOpaqueState: nil, completion: { _ in
+             completion()
+         })
+         
+@@ -5128,7 +5158,7 @@
+                                 scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true)
+                             }
+                             
+-                            self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: scrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, customAnimationTransition: customTransition, updateOpaqueState: nil, completion: { _ in })
++                            self.jgHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: scrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, customAnimationTransition: customTransition, updateOpaqueState: nil, completion: { _ in })
+                             break loop
+                         }
+                     case let .MessageGroupEntry(_, messages, presentationData):
+@@ -5149,7 +5179,7 @@
+                                 scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true)
+                             }
+                             
+-                            self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: scrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, customAnimationTransition: customTransition, updateOpaqueState: nil, completion: { _ in })
++                            self.jgHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: scrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, customAnimationTransition: customTransition, updateOpaqueState: nil, completion: { _ in })
+                             break loop
+                         }
+                     default:
+@@ -5200,7 +5230,7 @@
+                                         item = ListMessageItem(presentationData: presentationData, systemStyle: self.systemStyle, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, translateToLanguage: associatedData.translateToLanguage, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                                 }
+                                 let updateItem = ChatHistoryListViewUpdateItem(index: index, previousIndex: index, stableId: historyView.filteredEntries[i].stableId, item: item, directionHint: nil)
+-                                self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
++                                self.jgHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                                 break loop
+                             }
+                         default:
+diff --git a/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift b/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift
+--- a/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift
++++ b/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift
+@@ -1,4 +1,5 @@
+ import UIKit
++import TelegramCore
+ import AsyncDisplayKit
+ import SwiftSignalKit
+ import Display
+@@ -835,6 +836,8 @@
+         updateOpaqueState: Any?,
+         completion: @escaping (ListViewDisplayedItemRange) -> Void
+     ) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyCoreTransaction)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if let updateOpaqueState = updateOpaqueState {
+             self.opaqueTransactionState = updateOpaqueState
+         }
+@@ -1884,6 +1887,8 @@
+     }
+ 
+     func update(width: CGFloat, transition: CoreListTransition) -> CGFloat {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyRowLayout)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         self.pendingTransition = transition
+         if self.itemNode == nil || self.contentDirty || abs(width - self.lastWidth) > 0.5 {
+             self.rebuild(width: width)
+@@ -1915,6 +1920,8 @@
+     }
+ 
+     private func rebuild(width: CGFloat) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyRowBuild)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         // Full row width plus separate side insets, exactly as ListViewImpl builds these params
+         // (Display/Source/ListView.swift:2384). The alternative — folding the inset into `width` — was
+         // what this did before, and it cannot animate: shrinking the node re-lays its content out at

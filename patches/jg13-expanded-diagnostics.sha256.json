@@ -160,7 +160,7 @@
     },
     "submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift": {
       "before_sha256": "82f4d565914792dc233216d7c20c7aa92e0518d88f646a27d2f2e401c72288c5",
-      "after_sha256": "5c44335e2444b829b205682d8608c2c667de580444df2ed6aad8c0748c0e2ebf",
+      "after_sha256": "2c4ea23f5bc759bb7bc07b926046d09caafefe135cd639698ee7a396c9ea07e9",
       "survival_functions": [
         "appendLocked",
         "measure",
@@ -305,7 +305,7 @@
     },
     "submodules/TelegramUI/Sources/ChatController.swift": {
       "before_sha256": "bf2528c18358ceeb289e17b31070943182a51a25b101c9b54720178fabf18672",
-      "after_sha256": "ea36818645bf77a96db17a3978e61dd53dda19e2a63aac8018da14c6f77ecaa2",
+      "after_sha256": "42350a34753fd10a1837edbca85a1a04701a8cc69b789659a71420021ae63efa",
       "survival_functions": [
         "acceptPossibleControllerDropContent",
         "activateInput",
@@ -459,7 +459,7 @@
     },
     "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift": {
       "before_sha256": "87512514ad430d822d18362d6546d62eb00125a4f36992cc56752c32f606d064",
-      "after_sha256": "30970afd22b3d6afa46c2a4db579c2675ff4d49c42a61b4ca4c9499f9b58baf1",
+      "after_sha256": "e585e07b68e3b8b2a2529c0e8f55b59a61bd774b7461a980179d63fd4eeefa31",
       "survival_functions": [
         "_accessibilitySpeak",
         "_showTextStyleOptions",
@@ -650,7 +650,7 @@
     },
     "submodules/TelegramUI/Sources/ChatHistoryListNode.swift": {
       "before_sha256": "0b7e96ab8d76a3929e644001fcce380f220b5cf0ab65bc2389693af1d28a44b2",
-      "after_sha256": "c369c8516270d8119de0698088e491434389c47659433b626248617d86c09be4",
+      "after_sha256": "bb46a0d5c089ddc18f6f9f35956e180e73fe613ac3ced09469bdb7cb9d03554d",
       "survival_functions": [
         "addAfterTransactionsCompleted",
         "addContentGestureRecognizer",
@@ -729,6 +729,60 @@
         "visibleContentOffset",
         "voicePlaylistItemChanged",
         "with"
+      ]
+    },
+    "submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift": {
+      "before_sha256": "fb1825fe0df922e1d713fd04f6a973a3156d0bc07788d76a519bbbb0765828b3",
+      "after_sha256": "2ee6ed97d8188f7a32c822a22a0802b303b39d12807885f7ed895b2f80bdff12",
+      "survival_functions": [
+        "addAfterTransactionsCompleted",
+        "apply",
+        "applyAttachedItems",
+        "applyVisibility",
+        "arrivingBlockStableIds",
+        "attachedItemsUpdated",
+        "cancelContextGestures",
+        "chatHistoryTransaction",
+        "ensureItemNodeVisible",
+        "enumerateItemNodes",
+        "forEachItemHeaderNode",
+        "forEachItemNode",
+        "forEachVisibleItemNode",
+        "holdOverscrollAction",
+        "immediateDisplayedItemRange",
+        "isEqual",
+        "isLowestPinToEdgeIndex",
+        "isStrictlyScrolledToPinToEdgeItem",
+        "itemHeaderNodeFrame",
+        "itemNodeAtIndex",
+        "itemNodeFrame",
+        "itemNodeRelativeOffset",
+        "itemNodeVisibleInsideInsets",
+        "layout",
+        "listFrame",
+        "loadedFrame",
+        "loadedIndex",
+        "pointOffset",
+        "rebuild",
+        "report",
+        "reset",
+        "resetOscillation",
+        "resetScrolledToItem",
+        "scroll",
+        "scrollWithDirection",
+        "setListItem",
+        "settledContentOffsets",
+        "tilt",
+        "transferVelocity",
+        "update",
+        "updateTrailingItemSpace",
+        "updateVisibleContentOffset",
+        "updateVisibleItemRange",
+        "view",
+        "visibleBottomContentOffset",
+        "visibleContentOffset",
+        "visibleRectUpdated",
+        "withSideInsets"
       ]
     }
   }

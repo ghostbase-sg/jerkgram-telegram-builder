@@ -117,6 +117,7 @@ capture.endOperation(real)
 let realReport = capture.report()
 precondition(realReport.contains("client.work: calls=1"))
 precondition(realReport.contains("operation=inputText route=chat"))
+precondition(realReport.contains("operation=inputText route=chat thread=main"))
 // All fixed details share one timing key, one slow-event pool, bounded labels.
 capture.stop(); capture.start()
 RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.025))
@@ -124,7 +125,7 @@ for operation in JerkgramPerformanceDiagnostics.Operation.allCases {
     capture.measure("client.work", milliseconds: 20, startedAt: ProcessInfo.processInfo.systemUptime - 0.02, owner: 0, detail: operation)
     precondition(capture.report().contains("operation=" + operation.rawValue + " route=chat"))
 }
-precondition(capture.report().contains("client.work: calls=11"))
+precondition(capture.report().contains("client.work: calls=" + String(JerkgramPerformanceDiagnostics.Operation.allCases.count)))
 for index in 0..<31 { capture.measure("bounded" + String(index), milliseconds: 0) }
 capture.measure("overflow", milliseconds: 20)
 precondition(capture.report().contains("timingKeysRejected=1"))
@@ -138,7 +139,31 @@ capture.start(); capture.endOperation(stale)
 precondition(!capture.report().contains("client.work:"))
 precondition(capture.report().contains("routeReleasesIgnored=0"))
 capture.stop()
-print("client-operations component PASS: actual owner-checked release, same-route owner transfer, safe labels, real begin/end, eleven fixed details sharing one timing slot and slow budget, strict32 cap, stale-token/stop/restart guards")
+// Entered-operation bitmap proves even fast hooks ran; it is not another table.
+capture.start()
+let fast = capture.beginOperation(.inputText)
+capture.endOperation(fast)
+precondition(capture.report().contains("operationsEntered=inputText (entry coverage only; inclusive spans overlap)"))
+capture.stop()
+let frozen = capture.report()
+capture.endOperation(capture.beginOperation(.inputSend))
+precondition(capture.report() == frozen)
+capture.start()
+precondition(capture.report().contains("operationsEntered= (entry coverage only; inclusive spans overlap)"))
+let all = JerkgramPerformanceDiagnostics.Operation.allCases
+precondition(all.count == 24 && all.count <= 64)
+for operation in all { capture.endOperation(capture.beginOperation(operation)) }
+let enteredReport = capture.report()
+for operation in all { precondition(enteredReport.contains(operation.rawValue)) }
+capture.stop()
+capture.start()
+RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.025))
+DispatchQueue.global().sync {
+    capture.measure("client.work", milliseconds: 20, startedAt: ProcessInfo.processInfo.systemUptime - 0.02, owner: 0, detail: .mediaFill)
+}
+precondition(capture.report().contains("operation=mediaFill route=chat thread=worker"))
+capture.stop()
+print("client-operations component PASS: actual owner-checked release, safe labels, real begin/end, all24 fixed details sharing one timing slot/slow budget, entered-operation bitmap including fast calls, strict32 cap, stale-token/stop/restart guards")
 '''
 if __name__ == '__main__':
     core=(SOURCE / 'submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift').read_text()
