@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build156 actual row stages and plain-text send
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build157 bounded full-session capture
 
 on:
   workflow_dispatch:
@@ -42,19 +42,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
+          python3 -m py_compile tests/test_jg13_capture_retention.py tests/run_jg13_capture_retention.py
           python3 -m py_compile tests/test_jg13_row_detail.py tests/test_jg13_history_detail.py tests/run_jg13_history_bounds.py scripts/materialize_jg13_expanded_diagnostics.py tests/test_jg13_expanded_diagnostics.py tests/run_jg13_expanded_diagnostics.py scripts/materialize_jg13.py scripts/materialize_jg13_profile_p0.py scripts/materialize_jg13_profile_cleanup.py scripts/materialize_jg13_profile_preferences.py scripts/configure_jg13.py scripts/verify_jg13_source.py scripts/package_jg13.py tests/test_jg13_profile_p0.py tests/test_jg13_profile_cleanup.py tests/test_jg13_profile_preferences.py tests/test_jg13_performance_capture.py tests/run_jg13_ping_policy.py tests/run_jg13_followup.py tests/run_jg13_profile_preferences.py
           bash scripts/build_jg13.sh 2>&1 | tee artifacts/build.log
       - name: Upload build log and focused owner diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build156-diagnostics
+          name: Jerkgram-Beta1-Build157-diagnostics
           path: |
             patches/jg13-expanded-diagnostics.patch
             patches/jg13-expanded-diagnostics.sha256.json
             tests/run_jg13_expanded_diagnostics.py
             tests/run_jg13_history_bounds.py
             tests/test_jg13_row_detail.py
+            tests/test_jg13_capture_retention.py
+            tests/run_jg13_capture_retention.py
             work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift
             work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
@@ -78,9 +81,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build156
+          name: Jerkgram-1.1.0-Beta-1-Build157
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build156.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build156.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build157.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build157.json
           if-no-files-found: error
           retention-days: 90

@@ -142,7 +142,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
 diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 --- a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 +++ b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
-@@ -16,6 +16,102 @@
+@@ -16,6 +16,154 @@
      private var slowEvents = 0
      private var suppressedSlowEvents = 0
      private let slowEventLimit = 96
@@ -153,6 +153,52 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +    private var operationsObserved: UInt64 = 0
 +    private var lastDetailedMainSpan: (start: Double, end: Double)?
 +    private var nestedSlowEventsSuppressed = 0
++    // Fixed aggregates do not compete for the legacy 32-key timing dictionary.
++    // All retained timeline rows together, including telemetry/details, stay512.
++    private let telemetryBlockSeconds = 5.0
++    private let detailWindowSeconds = 20.0
++    private var captureBoundaries: [String] = []
++    private var stoppedDuration = 0.0
++    private struct OperationSummary {
++        var count = 0
++        var mainCount = 0
++        var workerCount = 0
++        var mainMax = 0.0
++        var workerMax = 0.0
++        var slow = 0
++        var worstAt = 0
++        var worstRoute = "unclassified"
++        var maxMs = 0.0
++    }
++    private var operationSummaries: [Operation: OperationSummary] = [:]
++    private var fixedOverflow: [String: OperationSummary] = [:]
++    private var unsupportedTimingSamplesDropped = 0
++    private struct TelemetryBlock {
++        var samples = 0
++        var cpuMax: Double?
++        var peakRSS: Int64 = -1
++        var thermalMax = 0
++        var waitSamples = 0
++        var waitMax = 0.0
++        var waitAt = 0
++        var waitFinishedAt = 0
++        var waitRoute = "unclassified"
++        var routes: Set<String> = [] // Only the eight already-sanitized routes.
++    }
++    private var telemetryBlocks: [Int: TelemetryBlock] = [:] // At most120.
++    private struct DetailSample {
++        let id: Int
++        let duration: Double
++        let main: Bool
++        let line: String
++    }
++    private var detailSequence = 0
++    private var operationWorst: [Operation: DetailSample] = [:] // At most29.
++    private var windowWorst: [Int: DetailSample] = [:] // 30 windows x2 groups.
++    private var retainedSamples: [Int: DetailSample] = [:] // De-duplicated <=89.
++    private var sampleReferences: [Int: Int] = [:] // At most two references/id.
++    private var legacySlowLines: [String] = []
++    private var legacyDetailsEvicted = 0
 +    public enum Operation: String, CaseIterable {
 +        case inputText, inputLayout, inputDecorate, keyboardLayout
 +        case historyUpdate, historyVisible, historyLayout, historyScroll
@@ -162,6 +208,12 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +        case inputSend, inputState, sendEnqueue, sendDispatch
 +        case historyBackendCore, historyBackendLegacy
 +        case historyNodeCreate, historyNodeSetup, historyNodeCompute, historyNodeApply, sendCurrent
++        fileprivate var isInputOrSend: Bool {
++            switch self {
++            case .inputText, .inputLayout, .inputDecorate, .keyboardLayout, .inputSend, .inputState, .sendEnqueue, .sendDispatch, .sendCurrent: return true
++            default: return false
++            }
++        }
 +        fileprivate var isHistoryContainer: Bool {
 +            switch self {
 +            case .historyRowBuild, .historyRowLayout, .historyCoreTransaction, .historyApply, .historyBackendCore, .historyUpdate, .historyPrepare:
@@ -245,7 +297,18 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
      private var running = false
      private var started = 0.0
      private var generation = 0
-@@ -42,6 +138,14 @@
+@@ -30,7 +178,9 @@
+ 
+     public var status: String {
+         self.lock.lock(); defer { self.lock.unlock() }
+-        return "\(self.running ? "RECORDING" : "STOPPED") · \(self.lines.count)/\(self.capacity) samples/events · dropped=\(self.dropped)"
++        let duration = self.running ? ProcessInfo.processInfo.systemUptime - self.started : self.stoppedDuration
++        let stored = self.lines.count + self.telemetryBlocks.count + self.retainedDetailCountLocked + self.captureBoundaries.count
++        return "\(self.running ? "RECORDING" : "STOPPED") · \(Int(duration))s / 600s · \(stored)/\(self.capacity) stored blocks/events · auxiliaryDropped=\(self.dropped)"
+     }
+ 
+     public func start() {
+@@ -42,6 +192,27 @@
          self.lines.removeAll(keepingCapacity: true)
          self.timings.removeAll(keepingCapacity: true)
          self.lastSlowAt.removeAll(keepingCapacity: true)
@@ -254,43 +317,88 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +        self.operationsObserved = 0
 +        self.lastDetailedMainSpan = nil
 +        self.nestedSlowEventsSuppressed = 0
++        self.operationSummaries.removeAll(keepingCapacity: true)
++        self.fixedOverflow.removeAll(keepingCapacity: true)
++        self.unsupportedTimingSamplesDropped = 0
++        self.telemetryBlocks.removeAll(keepingCapacity: true)
++        self.operationWorst.removeAll(keepingCapacity: true)
++        self.windowWorst.removeAll(keepingCapacity: true)
++        self.retainedSamples.removeAll(keepingCapacity: true)
++        self.sampleReferences.removeAll(keepingCapacity: true)
++        self.legacySlowLines.removeAll(keepingCapacity: true)
++        self.legacyDetailsEvicted = 0
++        self.detailSequence = 0
++        self.stoppedDuration = 0
++        self.captureBoundaries = ["capture start; CPU percent:100=one logical core; RSS=peak bytes; wait=main queue latency, not GPU utilization"]
 +        self.frameIntervals.removeAll(keepingCapacity: true)
 +        self.lastRefreshTimestamp = nil
 +        self.lastRefreshTarget = nil
          self.slowEvents = 0
          self.suppressedSlowEvents = 0
          self.dropped = 0
-@@ -70,6 +174,9 @@
+@@ -51,7 +222,6 @@
+         self.running = true
+         self.pendingPulse = false
+         self.lock.unlock()
+-        self.record("capture start; CPU percent:100=one logical core; RSS=peak bytes; wait=main queue latency, not GPU utilization")
+         self.inactiveObserver = NotificationCenter.default.addObserver(forName: Notification.Name("UIApplicationDidEnterBackgroundNotification"), object: nil, queue: .main) { [weak self] _ in
+             self?.stop(reason: "application background")
+         }
+@@ -70,11 +240,15 @@
                  percent = max(0.0, (cpu - previousCPU) / (now - previousTime) * 100.0)
              } else { percent = nil }
              if result == 0 { previousCPU = cpu; previousTime = now }
 +            // External OS state access stays outside the lock shared by UI spans.
 +            let thermal = ProcessInfo.processInfo.thermalState.rawValue
-+            let cpuText = percent.map { String(format: "%.1f", $0) } ?? "unavailable/first"
              self.lock.lock()
              guard self.running && self.generation == epoch else { self.lock.unlock(); return }
              let expired = now - self.started >= self.maxCaptureSeconds
-@@ -94,8 +201,8 @@
+             if expired {
+-                self.appendLocked("capture stop: 10 minute limit (utility queue)")
++                self.stoppedDuration = min(self.maxCaptureSeconds, now - self.started)
++                self.captureBoundaries.append("capture stop: 10 minute limit (utility queue)")
++                self.trimAuxiliaryLinesLocked()
+                 self.running = false
+                 self.generation += 1
+                 self.pendingPulse = false
+@@ -94,19 +268,19 @@
                  }
                  return
              }
 -            let cpuText = percent.map { String(format: "%.1f", $0) } ?? "unavailable/first"
 -            self.appendLocked("t=\(Int(now - self.started))s cpuPct=\(cpuText) peakRSSBytes=\(result == 0 ? usage.ru_maxrss : -1) thermal=\(ProcessInfo.processInfo.thermalState.rawValue)")
-+            let refresh = self.frameIntervals[self.visibleRoute] ?? RefreshStats()
-+            self.appendLocked("t=\(Int(now - self.started))s cpuPct=\(cpuText) peakRSSBytes=\(result == 0 ? usage.ru_maxrss : -1) thermal=\(thermal) route=\(self.visibleRoute) refreshCumulative=\(refresh.samples)/\(String(format: "%.2f", refresh.maxGapMs))/\(refresh.missedOpportunities)")
++            self.recordUtilitySampleLocked(now: now, cpuPercent: percent, peakRSS: result == 0 ? Int64(usage.ru_maxrss) : -1, thermal: thermal)
              let submit = !self.pendingPulse
++            let submittedRoute = self.visibleRoute
              if submit { self.pendingPulse = true }
              self.lock.unlock()
-@@ -106,7 +213,7 @@
+             if submit {
+                 DispatchQueue.main.async { [weak self] in
+                     guard let self else { return }
+-                    let wait = (ProcessInfo.processInfo.systemUptime - now) * 1000.0
++                    let finished = ProcessInfo.processInfo.systemUptime
                      self.lock.lock()
                      guard self.running && self.generation == epoch else { self.lock.unlock(); return }
                      self.pendingPulse = false
 -                    self.appendLocked("mainQueueWaitMs=\(Int(wait)) submittedAtMs=\(Int((now - self.started) * 1000)) finishedAtMs=\(Int((ProcessInfo.processInfo.systemUptime - self.started) * 1000))")
-+                    self.appendLocked("mainQueueWaitMs=\(Int(wait)) route=\(self.visibleRoute) submittedAtMs=\(Int((now - self.started) * 1000)) finishedAtMs=\(Int((ProcessInfo.processInfo.systemUptime - self.started) * 1000))")
++                    self.recordMainWaitLocked(submittedAt: now, finishedAt: finished, route: submittedRoute)
                      self.lock.unlock()
                  }
              }
-@@ -140,26 +247,106 @@
+@@ -121,7 +295,11 @@
+     public func stop(reason: String = "user") {
+         precondition(Thread.isMainThread)
+         self.lock.lock()
+-        if self.running { self.appendLocked("capture stop: \(reason)") }
++        if self.running {
++            self.stoppedDuration = min(self.maxCaptureSeconds, ProcessInfo.processInfo.systemUptime - self.started)
++            self.captureBoundaries.append("capture stop: \(reason)")
++            self.trimAuxiliaryLinesLocked()
++        }
+         self.running = false
+         self.generation += 1
+         self.pendingPulse = false
+@@ -140,41 +318,299 @@
          self.appendLocked("t=\(Int(ProcessInfo.processInfo.systemUptime - self.started))s " + String(text.prefix(2048)))
      }
  
@@ -300,12 +408,25 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
          guard self.running else { return }
 -        guard self.timings[stage] != nil || self.timings.count < 32 else { return }
 +        if let sessionGeneration, sessionGeneration != self.generation { return }
++        guard milliseconds.isFinite, milliseconds >= 0 else { return }
++        if let detail { self.recordOperationLocked(detail, milliseconds: milliseconds, startedAt: startedAt) }
 +        guard self.timings[stage] != nil || self.timings.count < 32 else {
 +            self.timingKeysRejected += 1
++            // Known production stages remain fully aggregated even when the
++            // legacy dynamic table is full. Unknown/unbounded labels stay rejected.
++            guard self.recordFixedOverflowLocked(stage, milliseconds: milliseconds, startedAt: startedAt) else {
++                self.unsupportedTimingSamplesDropped += 1
++                return
++            }
++            self.retainSlowLocked(stage, milliseconds: milliseconds, startedAt: startedAt, owner: owner, detail: detail, sessionGeneration: sessionGeneration)
 +            return
 +        }
          let old = self.timings[stage] ?? (count: 0, maxMs: 0.0, slow: 0)
          self.timings[stage] = (old.count + 1, max(old.maxMs, milliseconds), old.slow + (milliseconds >= 16.7 ? 1 : 0))
++        self.retainSlowLocked(stage, milliseconds: milliseconds, startedAt: startedAt, owner: owner, detail: detail, sessionGeneration: sessionGeneration)
++    }
++
++    private func retainSlowLocked(_ stage: String, milliseconds: Double, startedAt: Double?, owner: Int?, detail: Operation?, sessionGeneration: Int?) {
          // Only completed measured spans; no stack suspension, frame callbacks,
          // extra timer, disk I/O or peer identifiers. All bounds share this lock.
          guard milliseconds >= 16.7, let startedAt, startedAt >= self.started, let owner else { return }
@@ -323,6 +444,11 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +            }
 +        }
 +        let slowKey = detail?.rawValue ?? stage
++        if let detail {
++            let retained = self.retainDetailLocked(detail, milliseconds: milliseconds, startedAt: startedAt, stage: stage, owner: owner)
++            if retained && Thread.isMainThread { self.lastDetailedMainSpan = (start: startedAt, end: startedAt + milliseconds / 1000.0) }
++            return
++        }
          guard self.slowEvents < self.slowEventLimit,
 -              self.lastSlowAt[stage].map({ now - $0 >= 1.0 }) ?? true else {
 +              self.lastSlowAt[slowKey].map({ now - $0 >= 1.0 }) ?? true else {
@@ -333,10 +459,9 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +        self.lastSlowAt[slowKey] = now
          self.slowEvents += 1
 +        if Thread.isMainThread { self.lastDetailedMainSpan = (start: startedAt, end: startedAt + milliseconds / 1000.0) }
-         let beginMs = Int((startedAt - self.started) * 1000.0)
-         let endMs = Int((startedAt - self.started) * 1000.0 + milliseconds)
--        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds))")
-+        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds)) operation=\(detail?.rawValue ?? "none") route=\(self.visibleRoute) thread=\(Thread.isMainThread ? "main" : "worker")")
++        let line = self.slowLineLocked(stage: stage, owner: owner, startedAt: startedAt, milliseconds: milliseconds, operation: "none")
++        self.legacySlowLines.append(line)
++        self.trimAuxiliaryLinesLocked()
 +    }
 +
 +    // Route labels are fixed categories, never controller/peer/message identifiers.
@@ -399,15 +524,161 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +        self.lastRefreshTimestamp = timestamp
 +        self.lastRefreshTarget = targetTimestamp
 +        self.frameIntervals[self.visibleRoute] = stats
++    }
++
++    private func updatedSummary(_ old: OperationSummary, milliseconds: Double, startedAt: Double?) -> OperationSummary {
++        var value = old
++        value.count += 1
++        if Thread.isMainThread {
++            value.mainCount += 1; value.mainMax = max(value.mainMax, milliseconds)
++        } else {
++            value.workerCount += 1; value.workerMax = max(value.workerMax, milliseconds)
++        }
++        value.slow += milliseconds >= 16.7 ? 1 : 0
++        if milliseconds >= value.maxMs {
++            value.maxMs = milliseconds
++            value.worstAt = Int(max(0, (startedAt ?? ProcessInfo.processInfo.systemUptime) - self.started) * 1000)
++            value.worstRoute = self.visibleRoute
++        }
++        return value
++    }
++
++    private func recordOperationLocked(_ operation: Operation, milliseconds: Double, startedAt: Double?) {
++        self.operationSummaries[operation] = self.updatedSummary(self.operationSummaries[operation] ?? OperationSummary(), milliseconds: milliseconds, startedAt: startedAt)
++    }
++
++    private static let fixedProductionStages: Set<String> = {
++        let common = ["layout", "data", "background", "transition", "play", "attach", "detach", "preferences", "alpha", "sourceReadyWall"]
++        let settings = ["bgPreferences", "bgResolve", "bgApply", "header", "sections", "panesAndTail", "navigation", "scrollHeader", "scrollPanes", "headerPhonePreference", "headerAvatar", "headerCover", "sectionsBuild", "sectionsRegularUpdate", "sectionsRegularPlacement", "sectionsRegularRemoval", "sectionsEditingBuild", "sectionsEditingUpdate", "sectionsEditingPlacement", "sectionsEditingRemoval"]
++        let image = ["avatarDiskLoad", "avatarDiskStore", "wallpaperImage", "gradientImage", "sampledTint"]
++        var result: Set<String> = ["client.work", "chat.layout", "chatList.layout"]
++        for context in ["settings", "peer", "pending"] { for stage in common { result.insert(context + "." + stage) } }
++        for stage in settings { result.insert("settings." + stage) }
++        for thread in ["main", "worker"] { for stage in image { result.insert(thread + "." + stage) } }
++        return result // Exactly63 fixed source labels, no customer-provided keys.
++    }()
++
++    private func recordFixedOverflowLocked(_ stage: String, milliseconds: Double, startedAt: Double?) -> Bool {
++        guard Self.fixedProductionStages.contains(stage) else { return false }
++        self.fixedOverflow[stage] = self.updatedSummary(self.fixedOverflow[stage] ?? OperationSummary(), milliseconds: milliseconds, startedAt: startedAt)
++        return true
++    }
++
++    private func recordUtilitySampleLocked(now: Double, cpuPercent: Double?, peakRSS: Int64, thermal: Int) {
++        let elapsed = now - self.started
++        guard elapsed.isFinite, elapsed >= 0, elapsed < self.maxCaptureSeconds else { return }
++        let index = Int(elapsed / self.telemetryBlockSeconds)
++        var block = self.telemetryBlocks[index] ?? TelemetryBlock()
++        block.samples += 1
++        if let cpuPercent, cpuPercent.isFinite { block.cpuMax = max(block.cpuMax ?? 0, cpuPercent) }
++        block.peakRSS = max(block.peakRSS, peakRSS)
++        block.thermalMax = max(block.thermalMax, thermal)
++        block.routes.insert(self.visibleRoute)
++        self.telemetryBlocks[index] = block
++        self.trimAuxiliaryLinesLocked()
++    }
++
++    private func recordMainWaitLocked(submittedAt: Double, finishedAt: Double, route: String) {
++        let elapsed = submittedAt - self.started
++        guard elapsed.isFinite, elapsed >= 0, elapsed < self.maxCaptureSeconds, finishedAt.isFinite else { return }
++        let index = Int(elapsed / self.telemetryBlockSeconds)
++        var block = self.telemetryBlocks[index] ?? TelemetryBlock()
++        let wait = max(0, (finishedAt - submittedAt) * 1000)
++        block.waitSamples += 1
++        if wait >= block.waitMax {
++            block.waitMax = wait; block.waitAt = Int(elapsed * 1000); block.waitRoute = route
++            block.waitFinishedAt = Int((finishedAt - self.started) * 1000)
++        }
++        block.routes.insert(route)
++        self.telemetryBlocks[index] = block
++        self.trimAuxiliaryLinesLocked()
++    }
++
++    private func retainedDetailLinesLocked() -> [String] {
++        return self.legacySlowLines + self.retainedSamples.keys.sorted().map { self.retainedSamples[$0]!.line }
++    }
++
++    private var retainedDetailCountLocked: Int { self.legacySlowLines.count + self.retainedSamples.count }
++
++    private func slowLineLocked(stage: String, owner: Int, startedAt: Double, milliseconds: Double, operation: String) -> String {
+         let beginMs = Int((startedAt - self.started) * 1000.0)
+         let endMs = Int((startedAt - self.started) * 1000.0 + milliseconds)
+-        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds))")
++        return "slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds)) operation=\(operation) route=\(self.visibleRoute) thread=\(Thread.isMainThread ? "main" : "worker")"
++    }
++
++    private func addReferenceLocked(_ sample: DetailSample) {
++        self.sampleReferences[sample.id, default: 0] += 1
++        self.retainedSamples[sample.id] = sample
++    }
++
++    private func removeReferenceLocked(_ sample: DetailSample) {
++        let count = self.sampleReferences[sample.id]! - 1
++        if count == 0 {
++            self.sampleReferences.removeValue(forKey: sample.id)
++            self.retainedSamples.removeValue(forKey: sample.id)
++        } else { self.sampleReferences[sample.id] = count }
++    }
++
++    private func retainDetailLocked(_ operation: Operation, milliseconds: Double, startedAt: Double, stage: String, owner: Int) -> Bool {
++        let main = Thread.isMainThread
++        let replaceOperation = self.operationWorst[operation].map({ milliseconds > $0.duration }) ?? true
++        let elapsed = startedAt - self.started
++        var selectedWindow: Int?
++        if elapsed >= 0, elapsed < self.maxCaptureSeconds {
++            let window = Int(elapsed / self.detailWindowSeconds) * 2 + (operation.isInputOrSend ? 1 : 0)
++            let old = self.windowWorst[window]
++            // A worker's expensive synchronous span must not displace a main
++            // span from the scheduling window; per-operation maxima retain both
++            // thread aggregates independently above.
++            if old == nil || (main && !old!.main) || (main == old!.main && milliseconds > old!.duration) {
++                selectedWindow = window
++            }
++        }
++        guard replaceOperation || selectedWindow != nil else { self.suppressedSlowEvents += 1; return false }
++        // Reject unselected repeated spans before allocating a line. Counting
++        // during capture is O(1); sorting is performed only during export.
++        self.detailSequence += 1
++        let line = self.slowLineLocked(stage: stage, owner: owner, startedAt: startedAt, milliseconds: milliseconds, operation: operation.rawValue)
++        let sample = DetailSample(id: self.detailSequence, duration: milliseconds, main: main, line: line)
++        if replaceOperation {
++            if let old = self.operationWorst[operation] { self.removeReferenceLocked(old) }
++            self.operationWorst[operation] = sample; self.addReferenceLocked(sample)
++        }
++        if let window = selectedWindow {
++            if let old = self.windowWorst[window] { self.removeReferenceLocked(old) }
++            self.windowWorst[window] = sample; self.addReferenceLocked(sample)
++        }
++        while self.retainedDetailCountLocked > self.slowEventLimit {
++            // Real operation evidence has reserved29+60 slots; legacy generic
++            // span examples use only the remaining budget, without starving input.
++            self.legacySlowLines.removeFirst(); self.legacyDetailsEvicted += 1
++        }
++        self.slowEvents = self.retainedDetailCountLocked
++        self.trimAuxiliaryLinesLocked()
++        return true
++    }
++
++    private func trimAuxiliaryLinesLocked() {
++        let limit = self.capacity - self.telemetryBlocks.count - self.retainedDetailCountLocked - self.captureBoundaries.count
++        if self.lines.count > limit {
++            let removed = self.lines.count - limit
++            self.lines.removeFirst(removed); self.dropped += removed
++        }
      }
  
      private func appendLocked(_ line: String) {
-@@ -170,11 +357,16 @@
+-        if self.lines.count == self.capacity { self.lines.removeFirst(); self.dropped += 1 }
+         self.lines.append(line)
++        self.trimAuxiliaryLinesLocked()
+     }
+ 
      public func report() -> String {
          self.lock.lock(); defer { self.lock.unlock() }
          let info = Bundle.main.infoDictionary ?? [:]
 -        let header = "Jerkgram P0 diagnostics v3\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
-+        let header = "Jerkgram P0 diagnostics v7\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
++        let duration = self.running ? ProcessInfo.processInfo.systemUptime - self.started : self.stoppedDuration
++        let header = "Jerkgram P0 diagnostics v8\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped) durationSeconds=\(Int(duration)) auxiliaryDropped=\(self.dropped) telemetryBlocks=\(self.telemetryBlocks.count) unsupportedTimingSamplesDropped=\(self.unsupportedTimingSamplesDropped) legacyDetailsEvicted=\(self.legacyDetailsEvicted)\nNo message/account/phone content. GPU utilization NOT measured.\n"
          let measurements = self.timings.keys.sorted().map { key -> String in
              let value = self.timings[key]!
              return "\(key): calls=\(value.count) maxMs=\(Int(value.maxMs)) slow>=16.7ms=\(value.slow)"
@@ -418,7 +689,21 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +            return "refresh route=\(route) samples=\(value.samples) maxGapMs=\(String(format: "%.2f", value.maxGapMs)) expectedMs=\(String(format: "%.2f", value.minExpectedMs))...\(String(format: "%.2f", value.maxExpectedMs)) gaps>=16.7/33.4/50=\(value.over16)/\(value.over33)/\(value.over50) missedOpportunitiesEstimated=\(value.missedOpportunities)"
 +        }.joined(separator: "\n")
 +        let entered = Operation.allCases.filter { self.operationsObserved & $0.bit != 0 }.map { $0.rawValue }.joined(separator: ",")
-+        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\noperationsEntered=\(entered) (entry coverage only; inclusive spans overlap)\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit) nestedSlowEventsSuppressed=\(self.nestedSlowEventsSuppressed)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
++        func summary(_ prefix: String, _ value: OperationSummary) -> String {
++            return "\(prefix) samples=\(value.count) mainSamples=\(value.mainCount) workerSamples=\(value.workerCount) mainMaxMs=\(Int(value.mainMax)) workerMaxMs=\(Int(value.workerMax)) slow>=16.7ms=\(value.slow) worstAtMs=\(value.worstAt) worstRoute=\(value.worstRoute)"
++        }
++        let operations = Operation.allCases.compactMap { operation -> String? in
++            guard let value = self.operationSummaries[operation] else { return nil }
++            return summary("operationSummary operation=\(operation.rawValue)", value)
++        }.joined(separator: "\n")
++        let overflow = self.fixedOverflow.keys.sorted().map { summary("fixedStageOverflow stage=\($0)", self.fixedOverflow[$0]!) }.joined(separator: "\n")
++        let telemetry = self.telemetryBlocks.keys.sorted().map { index -> String in
++            let value = self.telemetryBlocks[index]!
++            let cpu = value.cpuMax.map { String(format: "%.1f", $0) } ?? "unavailable/first"
++            return "telemetry window=\(index * 5)...\((index + 1) * 5)s samples=\(value.samples) cpuPct=\(cpu) cpuMaxPct=\(cpu) peakRSSBytes=\(value.peakRSS) thermalMax=\(value.thermalMax) mainQueueWaitMs=\(Int(value.waitMax.rounded())) waitSamples=\(value.waitSamples) submittedAtMs=\(value.waitAt) finishedAtMs=\(value.waitFinishedAt) route=\(value.waitRoute) routes=\(value.routes.sorted().joined(separator: ","))"
++        }
++        let timeline = self.captureBoundaries + telemetry + self.retainedDetailLinesLocked() + self.lines
++        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\noperationsEntered=\(entered) (entry coverage only; inclusive spans overlap)\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\n" + operations + "\n" + overflow + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit) nestedSlowEventsSuppressed=\(self.nestedSlowEventsSuppressed)\nRetention: 1Hz sampling; 5s maxima blocks (not averages); details=worst per operation plus separate20s input/other windows, NOT every slow call. Known overflow stages retain samples; unsupported labels are counted as dropped. Inclusive operation spans overlap; do not sum. Timeline sections are grouped, use timestamps.\n--- timeline ---\n" + timeline.joined(separator: "\n")
      }
  }
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift b/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exact bounded Build156 diagnostic delta after the preference snapshot."""
+"""Exact bounded Build157 diagnostic delta after the preference snapshot."""
 import argparse
 import hashlib
 import json
@@ -49,6 +49,7 @@ def verify_expanded(source):
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_expanded_diagnostics.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_history_detail.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_row_detail.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
+    subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_capture_retention.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
 
 def apply_expanded(source):
     source = Path(source).resolve()

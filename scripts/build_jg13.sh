@@ -11,6 +11,7 @@ python3 tests/run_jg13_performance_capture.py
 python3 tests/run_jg13_secondary_timebase.py
 python3 tests/run_jg13_profile_preferences.py
 python3 tests/run_jg13_expanded_diagnostics.py
+python3 tests/run_jg13_capture_retention.py
 python3 tests/run_jg13_history_bounds.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
@@ -25,7 +26,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=156 \
+  --define=buildNumber=157 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 cd ../..
