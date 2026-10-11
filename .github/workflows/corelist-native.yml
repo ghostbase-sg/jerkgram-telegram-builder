@@ -1,0 +1,77 @@
+name: CoreList dedicated K2 native gate
+
+on:
+  push:
+    branches:
+      - dev/corelist-async-preflight-158
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corelist-k2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  corelist-native:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare pinned CoreList and provision dedicated K2
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          test "$(xcodebuild -version | head -1)" = "Xcode 26.6"
+          git init work/corelist-native
+          git -C work/corelist-native remote add origin https://github.com/TelegramMessenger/Telegram-iOS.git
+          git -C work/corelist-native sparse-checkout init --cone
+          git -C work/corelist-native sparse-checkout set submodules/TelegramUI/Components/CoreList
+          git -C work/corelist-native fetch --filter=blob:none --depth 1 origin f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838
+          git -C work/corelist-native checkout --detach FETCH_HEAD
+          test "$(git -C work/corelist-native rev-parse HEAD)" = f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838
+          xcrun simctl list --json > work/simulators.json
+          python3 - <<'PY'
+          import json, subprocess
+          state = json.load(open('work/simulators.json'))
+          runtimes = [r for r in state['runtimes'] if r.get('isAvailable') and r['identifier'].startswith('com.apple.CoreSimulator.SimRuntime.iOS-') and tuple(map(int, r['version'].split('.'))) >= (26, 2)]
+          if not runtimes:
+              raise SystemExit('BLOCKED: no available iOS >= 26.2 runtime for dedicated K2; no fallback permitted')
+          runtime = max(runtimes, key=lambda r: tuple(map(int, r['version'].split('.'))))
+          kind = next((t['identifier'] for t in state['devicetypes'] if t['name'] == 'iPhone 17 Pro'), None)
+          if kind is None:
+              raise SystemExit('BLOCKED: no iPhone 17 Pro device type; no fallback permitted')
+          devices = state['devices'].get(runtime['identifier'], [])
+          matching = [d for d in devices if d.get('isAvailable') and d['name'] == 'iPhone 17 Pro K2' and d.get('deviceTypeIdentifier') == kind]
+          if len(matching) > 1:
+              raise SystemExit('BLOCKED: ambiguous dedicated K2 devices')
+          udid = matching[0]['udid'] if matching else subprocess.check_output(['xcrun', 'simctl', 'create', 'iPhone 17 Pro K2', kind, runtime['identifier']], text=True).strip()
+          print('Dedicated iPhone 17 Pro K2:', udid, runtime['version'])
+          if not matching or matching[0]['state'] != 'Booted':
+              subprocess.run(['xcrun', 'simctl', 'boot', udid], check=True)
+          subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True)
+          PY
+      - name: Run unchanged pinned CoreList UIKit suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cd work/corelist-native/submodules/TelegramUI/Components/CoreList
+          xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro K2' \
+            -parallel-testing-enabled NO -collect-test-diagnostics never \
+            -resultBundlePath "$GITHUB_WORKSPACE/artifacts/CoreListBaseline.xcresult" \
+            test 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/corelist-native.log"
+      - name: Preserve exact native evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CoreList-K2-baseline-native-evidence
+          path: |
+            artifacts/
+            work/simulators.json
+          if-no-files-found: error
