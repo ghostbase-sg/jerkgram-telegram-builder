@@ -1,4 +1,5 @@
 diff --git a/submodules/Display/Source/ListViewPreparedScrollTarget.swift b/submodules/Display/Source/ListViewPreparedScrollTarget.swift
+new file mode 100644
 --- /dev/null
 +++ b/submodules/Display/Source/ListViewPreparedScrollTarget.swift
 @@ -0,0 +1,51 @@
