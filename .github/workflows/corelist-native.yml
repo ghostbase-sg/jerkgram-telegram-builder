@@ -1,4 +1,4 @@
-name: CoreList dedicated K2 native gate
+name: CoreList asynchronous preparation K2 gate
 
 on:
   push:
@@ -55,7 +55,21 @@ jobs:
               subprocess.run(['xcrun', 'simctl', 'boot', udid], check=True)
           subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True)
           PY
-      - name: Run unchanged pinned CoreList UIKit suite
+      - name: Install actual production preparation seams and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f patches/jg13-corelist-async.patch; then
+            git -C work/corelist-native apply --include='submodules/TelegramUI/Components/CoreList/*' --include='submodules/Display/Source/ListViewPreparedScrollTarget.swift' "$GITHUB_WORKSPACE/patches/jg13-corelist-async.patch"
+          elif test -f patches/jg13-prepared-target.native.patch; then
+            git -C work/corelist-native apply "$GITHUB_WORKSPACE/patches/jg13-prepared-target.native.patch"
+          fi
+          helper=work/corelist-native/submodules/Display/Source/ListViewPreparedScrollTarget.swift
+          if test -f "$helper"; then
+            cp "$helper" work/corelist-native/submodules/TelegramUI/Components/CoreList/CoreListDemo/ListViewPreparedScrollTarget.swift
+          fi
+          cp tests/native/ListViewPreparedScrollTargetTests.swift work/corelist-native/submodules/TelegramUI/Components/CoreList/CoreListDemoTests/
+      - name: Run changed preparation contracts and pinned CoreList UIKit suite
         shell: bash
         run: |
           set -euo pipefail
@@ -64,13 +78,13 @@ jobs:
           xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro K2' \
             -parallel-testing-enabled NO -collect-test-diagnostics never \
-            -resultBundlePath "$GITHUB_WORKSPACE/artifacts/CoreListBaseline.xcresult" \
+            -resultBundlePath "$GITHUB_WORKSPACE/artifacts/CoreListPreparation.xcresult" \
             test 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/corelist-native.log"
       - name: Preserve exact native evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: CoreList-K2-baseline-native-evidence
+          name: CoreList-K2-preparation-native-evidence
           path: |
             artifacts/
             work/simulators.json
