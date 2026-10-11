@@ -4,6 +4,9 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('JG13_SOURCE',ROOT/'work/swiftgram-src'))
 class RowDetailTests(unittest.TestCase):
+    def test_existing_slow_summary_prefix_remains_compatible(self):
+        s=(SOURCE/'submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift').read_text()
+        self.assertTrue('suppressedSlowEvents=\\(self.suppressedSlowEvents) limit=\\(self.slowEventLimit) nestedSlowEventsSuppressed=' in s, 'existing native capture summary contract must retain its exact prefix')
     def test_actual_row_stages(self):
         s=(SOURCE/'submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift').read_text()
         for op in ('historyNodeCreate','historyNodeSetup','historyNodeCompute','historyNodeApply'):

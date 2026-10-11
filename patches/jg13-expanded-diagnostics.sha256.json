@@ -160,7 +160,7 @@
     },
     "submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift": {
       "before_sha256": "82f4d565914792dc233216d7c20c7aa92e0518d88f646a27d2f2e401c72288c5",
-      "after_sha256": "5b714b178de9ab66fb2bb39782ccdee004013798b21a626895e428591a810bfb",
+      "after_sha256": "2f62695b23dbff46e94c4c3e379469b411d021de7070cc02fb4b63145ad95232",
       "survival_functions": [
         "appendLocked",
         "measure",
