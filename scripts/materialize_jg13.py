@@ -40,7 +40,7 @@ def main():
     apply_p0(SOURCE)
     apply_preferences(SOURCE)
     apply_expanded(SOURCE)
-    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 8 profile diagnostic/compatibility owners + 4 preference snapshot owners + 10 expanded diagnostic owners; NOT COMPILED")
+    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 8 profile diagnostic/compatibility owners + 4 preference snapshot owners + 11 expanded diagnostic owners; NOT COMPILED")
 
 
 if __name__ == "__main__":

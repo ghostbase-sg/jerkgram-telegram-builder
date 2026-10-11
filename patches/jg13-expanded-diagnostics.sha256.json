@@ -160,7 +160,7 @@
     },
     "submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift": {
       "before_sha256": "82f4d565914792dc233216d7c20c7aa92e0518d88f646a27d2f2e401c72288c5",
-      "after_sha256": "2c4ea23f5bc759bb7bc07b926046d09caafefe135cd639698ee7a396c9ea07e9",
+      "after_sha256": "5b714b178de9ab66fb2bb39782ccdee004013798b21a626895e428591a810bfb",
       "survival_functions": [
         "appendLocked",
         "measure",
@@ -569,7 +569,7 @@
     },
     "submodules/TelegramUI/Sources/ChatControllerNode.swift": {
       "before_sha256": "fbda7a8a143625ee69362d2dff635d6c56429266c5c4b751a21da55806fbcb29",
-      "after_sha256": "a5b8849b2341824bf453d20cacb55eee1ddb746d1973b6434c18a26854590a1f",
+      "after_sha256": "4d49c73e39892f4d1ce909aa523d18e870721152c58da56898aae189fb258bf2",
       "survival_functions": [
         "animateDismissAsOverlay",
         "animateFromSnapshot",
@@ -783,6 +783,15 @@
         "visibleContentOffset",
         "visibleRectUpdated",
         "withSideInsets"
+      ]
+    },
+    "submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift": {
+      "before_sha256": "db0088deac4f4de738565ac97d22e014256723ae0f59c775f11f5202b2164c75",
+      "after_sha256": "dbb15ffd668311c15179d4dea8a44578dbcd11cdba6b80f9cd3e5504bb25d20a",
+      "survival_functions": [
+        "merged",
+        "nodeConfiguredForParams",
+        "updateNode"
       ]
     }
   }

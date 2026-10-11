@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exact bounded Build155 diagnostic delta after the preference snapshot."""
+"""Exact bounded Build156 diagnostic delta after the preference snapshot."""
 import argparse
 import hashlib
 import json
@@ -22,6 +22,7 @@ OWNERS = {
     'submodules/TelegramUI/Sources/ChatControllerNode.swift',
     'submodules/TelegramUI/Sources/ChatHistoryListNode.swift',
     'submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift',
+    'submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift',
     'submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift',
 }
 def check(source, stage):
@@ -47,6 +48,7 @@ def verify_expanded(source):
     verify_preferences(source, final_owners=manifest['owners'])
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_expanded_diagnostics.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_history_detail.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
+    subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_row_detail.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
 
 def apply_expanded(source):
     source = Path(source).resolve()

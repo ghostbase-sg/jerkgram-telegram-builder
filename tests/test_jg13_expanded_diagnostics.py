@@ -8,8 +8,9 @@ class ExpandedDiagnosticsTests(unittest.TestCase):
     def test_client_hooks_preserve_every_original_source_byte(self):
         import hashlib,json,re
         manifest=json.loads((ROOT/'patches/jg13-expanded-diagnostics.sha256.json').read_text())
-        for path in ('submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift','submodules/TelegramUI/Sources/ChatControllerNode.swift','submodules/TelegramUI/Sources/ChatHistoryListNode.swift','submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift','submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift'):
+        for path in ('submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift','submodules/TelegramUI/Sources/ChatControllerNode.swift','submodules/TelegramUI/Sources/ChatHistoryListNode.swift','submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift','submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift','submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift'):
             text=(SOURCE/path).read_text()
+            text=re.sub(r'JerkgramPerformanceDiagnostics.shared.measureOperation\(\.\w+\) \{ ([^\n]+) \}',r'\1',text)
             if path.endswith('CoreListChatHistoryBackend.swift'):
                 text=text.replace('import TelegramCore\n','',1)
             if path.endswith('ChatHistoryListNode.swift'):

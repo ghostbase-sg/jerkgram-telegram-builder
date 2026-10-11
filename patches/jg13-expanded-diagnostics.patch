@@ -142,7 +142,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
 diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 --- a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
 +++ b/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
-@@ -16,6 +16,81 @@
+@@ -16,6 +16,102 @@
      private var slowEvents = 0
      private var suppressedSlowEvents = 0
      private let slowEventLimit = 96
@@ -151,6 +151,8 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +    private weak var visibleRouteOwner: AnyObject?
 +    private var routeReleasesIgnored = 0
 +    private var operationsObserved: UInt64 = 0
++    private var lastDetailedMainSpan: (start: Double, end: Double)?
++    private var nestedSlowEventsSuppressed = 0
 +    public enum Operation: String, CaseIterable {
 +        case inputText, inputLayout, inputDecorate, keyboardLayout
 +        case historyUpdate, historyVisible, historyLayout, historyScroll
@@ -159,6 +161,15 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +        case historyCoreTransaction, historyRowLayout, historyRowBuild
 +        case inputSend, inputState, sendEnqueue, sendDispatch
 +        case historyBackendCore, historyBackendLegacy
++        case historyNodeCreate, historyNodeSetup, historyNodeCompute, historyNodeApply, sendCurrent
++        fileprivate var isHistoryContainer: Bool {
++            switch self {
++            case .historyRowBuild, .historyRowLayout, .historyCoreTransaction, .historyApply, .historyBackendCore, .historyUpdate, .historyPrepare:
++                return true
++            default:
++                return false
++            }
++        }
 +        fileprivate var bit: UInt64 {
 +            switch self {
 +            case .inputText: return 1 << 0
@@ -185,6 +196,11 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +            case .sendDispatch: return 1 << 21
 +            case .historyBackendCore: return 1 << 22
 +            case .historyBackendLegacy: return 1 << 23
++            case .historyNodeCreate: return 1 << 24
++            case .historyNodeSetup: return 1 << 25
++            case .historyNodeCompute: return 1 << 26
++            case .historyNodeApply: return 1 << 27
++            case .sendCurrent: return 1 << 28
 +            }
 +        }
 +    }
@@ -208,6 +224,11 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +        guard let token else { return }
 +        self.measure("client.work", milliseconds: (ProcessInfo.processInfo.systemUptime - token.startedAt) * 1000, startedAt: token.startedAt, owner: 0, detail: token.operation, sessionGeneration: token.generation)
 +    }
++    public func measureOperation<T>(_ operation: Operation, _ work: () -> T) -> T {
++        let token = self.beginOperation(operation)
++        defer { self.endOperation(token) }
++        return work()
++    }
 +    private struct RefreshStats {
 +        var samples = 0
 +        var maxGapMs = 0.0
@@ -224,20 +245,22 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
      private var running = false
      private var started = 0.0
      private var generation = 0
-@@ -42,6 +117,12 @@
+@@ -42,6 +138,14 @@
          self.lines.removeAll(keepingCapacity: true)
          self.timings.removeAll(keepingCapacity: true)
          self.lastSlowAt.removeAll(keepingCapacity: true)
 +        self.timingKeysRejected = 0
 +        self.routeReleasesIgnored = 0
 +        self.operationsObserved = 0
++        self.lastDetailedMainSpan = nil
++        self.nestedSlowEventsSuppressed = 0
 +        self.frameIntervals.removeAll(keepingCapacity: true)
 +        self.lastRefreshTimestamp = nil
 +        self.lastRefreshTarget = nil
          self.slowEvents = 0
          self.suppressedSlowEvents = 0
          self.dropped = 0
-@@ -70,6 +151,9 @@
+@@ -70,6 +174,9 @@
                  percent = max(0.0, (cpu - previousCPU) / (now - previousTime) * 100.0)
              } else { percent = nil }
              if result == 0 { previousCPU = cpu; previousTime = now }
@@ -247,7 +270,7 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
              self.lock.lock()
              guard self.running && self.generation == epoch else { self.lock.unlock(); return }
              let expired = now - self.started >= self.maxCaptureSeconds
-@@ -94,8 +178,8 @@
+@@ -94,8 +201,8 @@
                  }
                  return
              }
@@ -258,7 +281,7 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
              let submit = !self.pendingPulse
              if submit { self.pendingPulse = true }
              self.lock.unlock()
-@@ -106,7 +190,7 @@
+@@ -106,7 +213,7 @@
                      self.lock.lock()
                      guard self.running && self.generation == epoch else { self.lock.unlock(); return }
                      self.pendingPulse = false
@@ -267,7 +290,7 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
                      self.lock.unlock()
                  }
              }
-@@ -140,26 +224,93 @@
+@@ -140,26 +247,106 @@
          self.appendLocked("t=\(Int(ProcessInfo.processInfo.systemUptime - self.started))s " + String(text.prefix(2048)))
      }
  
@@ -287,6 +310,18 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
          // extra timer, disk I/O or peer identifiers. All bounds share this lock.
          guard milliseconds >= 16.7, let startedAt, startedAt >= self.started, let owner else { return }
          let now = ProcessInfo.processInfo.systemUptime
++        // JG156 nested detail: aggregates above always count every span. Only
++        // a real main-thread history wrapper dominated by an already-emitted
++        // child loses its duplicate event; unrelated/worker/manual spans remain.
++        if sessionGeneration != nil, Thread.isMainThread, let detail, detail.isHistoryContainer,
++           let child = self.lastDetailedMainSpan, child.start >= startedAt,
++           child.end <= now, now - child.end <= 0.002 {
++            let childDuration = (child.end - child.start) * 1000.0
++            if childDuration >= milliseconds * 0.90 {
++                self.nestedSlowEventsSuppressed += 1
++                return
++            }
++        }
 +        let slowKey = detail?.rawValue ?? stage
          guard self.slowEvents < self.slowEventLimit,
 -              self.lastSlowAt[stage].map({ now - $0 >= 1.0 }) ?? true else {
@@ -297,6 +332,7 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 -        self.lastSlowAt[stage] = now
 +        self.lastSlowAt[slowKey] = now
          self.slowEvents += 1
++        if Thread.isMainThread { self.lastDetailedMainSpan = (start: startedAt, end: startedAt + milliseconds / 1000.0) }
          let beginMs = Int((startedAt - self.started) * 1000.0)
          let endMs = Int((startedAt - self.started) * 1000.0 + milliseconds)
 -        self.appendLocked("slow stage=\(stage) owner=\(owner) startMs=\(beginMs) endMs=\(endMs) durationMs=\(Int(milliseconds))")
@@ -366,12 +402,12 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
      }
  
      private func appendLocked(_ line: String) {
-@@ -170,11 +321,16 @@
+@@ -170,11 +357,16 @@
      public func report() -> String {
          self.lock.lock(); defer { self.lock.unlock() }
          let info = Bundle.main.infoDictionary ?? [:]
 -        let header = "Jerkgram P0 diagnostics v3\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
-+        let header = "Jerkgram P0 diagnostics v6\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
++        let header = "Jerkgram P0 diagnostics v7\napp=\(info["CFBundleIdentifier"] ?? "unknown") version=\(info["CFBundleShortVersionString"] ?? "unknown") build=\(info["CFBundleVersion"] ?? "unknown")\nOS=\(ProcessInfo.processInfo.operatingSystemVersionString) cores=\(ProcessInfo.processInfo.activeProcessorCount)\nrecording=\(self.running) dropped=\(self.dropped)\nNo message/account/phone content. GPU utilization NOT measured.\n"
          let measurements = self.timings.keys.sorted().map { key -> String in
              let value = self.timings[key]!
              return "\(key): calls=\(value.count) maxMs=\(Int(value.maxMs)) slow>=16.7ms=\(value.slow)"
@@ -382,9 +418,63 @@ diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostic
 +            return "refresh route=\(route) samples=\(value.samples) maxGapMs=\(String(format: "%.2f", value.maxGapMs)) expectedMs=\(String(format: "%.2f", value.minExpectedMs))...\(String(format: "%.2f", value.maxExpectedMs)) gaps>=16.7/33.4/50=\(value.over16)/\(value.over33)/\(value.over50) missedOpportunitiesEstimated=\(value.missedOpportunities)"
 +        }.joined(separator: "\n")
 +        let entered = Operation.allCases.filter { self.operationsObserved & $0.bit != 0 }.map { $0.rawValue }.joined(separator: ",")
-+        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\noperationsEntered=\(entered) (entry coverage only; inclusive spans overlap)\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
++        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\noperationsEntered=\(entered) (entry coverage only; inclusive spans overlap)\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) nestedSlowEventsSuppressed=\(self.nestedSlowEventsSuppressed) limit=\(self.slowEventLimit)\n--- timeline ---\n" + self.lines.joined(separator: "\n")
      }
  }
+diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift b/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
+@@ -368,8 +368,8 @@
+         }
+         
+         let configure = {
+-            let node = (viewClassName as! ChatMessageItemView.Type).init(rotated: self.controllerInteraction.chatIsRotated)
+-            node.setupItem(self, synchronousLoad: synchronousLoads)
++            let node = JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeCreate) { (viewClassName as! ChatMessageItemView.Type).init(rotated: self.controllerInteraction.chatIsRotated) }
++            JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeSetup) { node.setupItem(self, synchronousLoad: synchronousLoads) }
+             
+             let nodeLayout = node.asyncLayout()
+             let (top, bottom, dateAtBottom) = self.merged(with: ChatHistoryItemNeighbors(neighbors), isRotated: self.controllerInteraction.chatIsRotated)
+@@ -384,7 +384,7 @@
+                 }
+             }
+             
+-            let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
++            let (layout, apply) = JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeCompute) { nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom) }
+             
+             node.contentSize = layout.contentSize
+             node.insets = layout.insets
+@@ -396,7 +396,7 @@
+             Queue.mainQueue().async {
+                 completion(node, {
+                     return (nil, { info in
+-                        apply(.None, info, synchronousLoads)
++                        JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeApply) { apply(.None, info, synchronousLoads) }
+                     })
+                 })
+             }
+@@ -469,7 +469,7 @@
+     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+         Queue.mainQueue().async {
+             if let nodeValue = node() as? ChatMessageItemView {
+-                nodeValue.setupItem(self, synchronousLoad: false)
++                JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeSetup) { nodeValue.setupItem(self, synchronousLoad: false) }
+                 
+                 let nodeLayout = nodeValue.asyncLayout()
+                 
+@@ -488,10 +488,10 @@
+                         }
+                     }
+                     
+-                    let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
++                    let (layout, apply) = JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeCompute) { nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom) }
+                     Queue.mainQueue().async {
+                         completion(layout, { info in
+-                            apply(animation, info, false)
++                            JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeApply) { apply(animation, info, false) }
+                             if let nodeValue = node() as? ChatMessageItemView {
+                                 nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
+                                 nodeValue.updateSelectionState(animated: false)
 diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
 --- a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
@@ -858,6 +948,24 @@ diff --git a/submodules/TelegramUI/Sources/ChatControllerNode.swift b/submodules
          if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
              let dismissStatus = abs(scrollView.contentOffset.y) > 50.0
              if dismissStatus != self.scrollViewDismissStatus {
+@@ -5023,6 +5027,8 @@
+     }
+ 
+     func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, sendWithoutFormatting: Bool = false, completion: @escaping () -> Void = {}) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.sendCurrent)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         guard let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode else {
+             return
+         }
+@@ -5443,7 +5449,7 @@
+                     }, usedCorrelationId)
+                     completion()
+                     
+-                    self.sendMessages(messages, silentPosting, scheduleTime, repeatPeriod, messages.count > 1, postpone)
++                    JerkgramPerformanceDiagnostics.shared.measureOperation(.sendEnqueue) { self.sendMessages(messages, silentPosting, scheduleTime, repeatPeriod, messages.count > 1, postpone) }
+ 
+                     let ghostBaseScheduledSendEnabled = (JerkgramHotSettings.object(forKey: "jerkgram.GhostMode.ScheduledSend") as? Bool) ?? false
+ 
 diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
 --- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift

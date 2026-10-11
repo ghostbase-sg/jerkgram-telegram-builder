@@ -151,7 +151,7 @@ precondition(capture.report() == frozen)
 capture.start()
 precondition(capture.report().contains("operationsEntered= (entry coverage only; inclusive spans overlap)"))
 let all = JerkgramPerformanceDiagnostics.Operation.allCases
-precondition(all.count == 24 && all.count <= 64)
+precondition(all.count == 29 && all.count <= 64)
 for operation in all { capture.endOperation(capture.beginOperation(operation)) }
 let enteredReport = capture.report()
 for operation in all { precondition(enteredReport.contains(operation.rawValue)) }
@@ -169,7 +169,38 @@ DispatchQueue.global().async {
 precondition(workerDone.wait(timeout: .now() + 5) == .success)
 precondition(capture.report().contains("operation=mediaFill route=chat thread=worker"))
 capture.stop()
-print("client-operations component PASS: actual owner-checked release, safe labels, real begin/end, all24 fixed details sharing one timing slot/slow budget, entered-operation bitmap including fast calls, strict32 cap, stale-token/stop/restart guards")
+// Generic wrapper executes once, preserves values and remains functional off.
+capture.stop()
+var executions = 0
+let value = capture.measureOperation(.historyNodeCompute) { executions += 1; return (42, "preserved") }
+precondition(executions == 1 && value.0 == 42 && value.1 == "preserved")
+capture.start()
+let outer = capture.beginOperation(.historyCoreTransaction)
+let layout = capture.beginOperation(.historyRowLayout)
+capture.measureOperation(.historyNodeCompute) {
+    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.025))
+}
+capture.endOperation(layout)
+capture.endOperation(outer)
+let nested = capture.report()
+precondition(nested.contains("client.work: calls=3"))
+precondition(nested.contains("operation=historyNodeCompute route=chat thread=main"))
+precondition(nested.contains("nestedSlowEventsSuppressed=2"))
+precondition(nested.contains("slowEvents=1 "))
+// A wide parent doing substantial independent work must NOT be suppressed.
+capture.stop(); capture.start()
+let wide = capture.beginOperation(.historyCoreTransaction)
+capture.measureOperation(.historyNodeCompute) {
+    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.025))
+}
+RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.035))
+capture.endOperation(wide)
+precondition(capture.report().contains("operation=historyCoreTransaction route=chat thread=main"))
+precondition(capture.report().contains("nestedSlowEventsSuppressed=0"))
+capture.stop(); capture.start()
+precondition(capture.report().contains("nestedSlowEventsSuppressed=0"))
+capture.stop()
+print("client-operations component PASS: actual owner-checked release, safe labels, real begin/end, all29 fixed details sharing one timing slot/slow budget, entered-operation bitmap including fast calls, strict32 cap, stale-token/stop/restart guards, generic return/once/off semantics, dominant nested detail dedup with aggregates retained and independent parent preserved")
 '''
 if __name__ == '__main__':
     core=(SOURCE / 'submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift').read_text()
