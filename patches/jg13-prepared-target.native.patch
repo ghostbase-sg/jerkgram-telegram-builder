@@ -1,0 +1,55 @@
+diff --git a/submodules/Display/Source/ListViewPreparedScrollTarget.swift b/submodules/Display/Source/ListViewPreparedScrollTarget.swift
+--- /dev/null
++++ b/submodules/Display/Source/ListViewPreparedScrollTarget.swift
+@@ -0,0 +1,51 @@
++import Foundation
++import CoreGraphics
++
++public enum ListViewPreparedScrollTarget: Hashable {
++    case quote(String, offset: Int?)
++    case todo(Int32?)
++    case poll(Data?)
++}
++
++/// A single layout generation's query. Producers capture final layout values,
++/// never a node or a mutable result cell. Transforms are frozen by value.
++public struct ListViewPreparedScrollTargetGeometry {
++    private let resolver: (ListViewPreparedScrollTarget) -> CGRect?
++
++    public init(_ resolver: @escaping (ListViewPreparedScrollTarget) -> CGRect?) {
++        self.resolver = resolver
++    }
++
++    public init(children: [ListViewPreparedScrollTargetGeometry]) {
++        self.resolver = { target in
++            for child in children {
++                if let rect = child.rect(for: target) {
++                    return rect
++                }
++            }
++            return nil
++        }
++    }
++
++    public func rect(for target: ListViewPreparedScrollTarget) -> CGRect? {
++        return self.resolver(target)
++    }
++
++    public func translatedBy(_ offset: CGPoint) -> ListViewPreparedScrollTargetGeometry {
++        return ListViewPreparedScrollTargetGeometry { target in
++            return self.rect(for: target)?.offsetBy(dx: offset.x, dy: offset.y)
++        }
++    }
++
++    /// Matches the unchanged chat highlight getters, including empty rects.
++    public static func union(_ rects: [CGRect], offset: CGPoint = .zero) -> CGRect? {
++        guard !rects.isEmpty else {
++            return nil
++        }
++        var result = CGRect()
++        for rect in rects {
++            result = result.isEmpty ? rect : result.union(rect)
++        }
++        return result.offsetBy(dx: offset.x, dy: offset.y)
++    }
++}
