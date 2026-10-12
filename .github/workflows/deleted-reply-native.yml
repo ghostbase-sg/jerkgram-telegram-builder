@@ -22,6 +22,9 @@ jobs:
           if test -f patches/jg13-deleted-reply.patch; then
             git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift' ../../patches/jg13-deleted-reply.patch
           fi
+          if test -f patches/jg13-portable-copy.patch; then
+            git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift' ../../patches/jg13-portable-copy.patch
+          fi
           if test -f work/reply-native/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift; then
             xcrun swiftc -parse-as-library work/reply-native/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift tests/native/DeletedReplyTextTests.swift -o artifacts/deleted-reply-test
           else
@@ -36,6 +39,9 @@ jobs:
           git -C work/reply-upstream archive f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838 submodules/TelegramCore/Sources/Account/Account.swift submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift | tar -x -C work/reply-native
           git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' ../../patches/jg13-stable.product.patch
           git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' ../../patches/jg13-deleted-reply.patch
+          if test -f patches/jg13-portable-copy.patch; then
+            git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' --include='submodules/TelegramCore/Sources/Account/Account.swift' ../../patches/jg13-portable-copy.patch
+          fi
           JG13_SOURCE="$PWD/work/reply-native" python3 -m unittest discover -s tests -p test_jg13_deleted_reply.py
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_deleted_reply.py | tee artifacts/deleted-reply-body.log
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_recovery_media.py | tee artifacts/recovery-media.log

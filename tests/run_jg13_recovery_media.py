@@ -37,6 +37,11 @@ precondition((named.text as NSString).substring(with: NSRange(location: named.en
 var oldPoll = TelegramMediaPoll(text: "Выбор", textEntities: [], options: [.init(text: "Да", entities: [], opaqueIdentifier: Data([50])), .init(text: "Нет", entities: [], opaqueIdentifier: Data([60]))])
 oldPoll.pollId = .init(namespace: 99, id: 777); oldPoll.isClosed = true
 oldPoll.results.totalVoters = 20
+oldPoll.results.voters = [.init(opaqueIdentifier: Data([50]), count: 15, selected: true)]
+let pollSnapshot = ghostBaseQuoteBody(source: .init(text: "подпись", media: [oldPoll]), recoveredMedia: true, languageCode: "ru")
+precondition(pollSnapshot.text.contains("Снимок исходного опроса") && pollSnapshot.text.contains("Закрыт"))
+precondition(pollSnapshot.text.contains("Голоса: 20") && pollSnapshot.text.contains("Голоса: 15") && pollSnapshot.text.contains("Выбран"))
+precondition(pollSnapshot.text.hasSuffix("подпись"))
 let fresh = ghostBaseFreshDeletedInteractiveMedia(media: oldPoll, randomId: 123, canSendPolls: true, canSendTodos: false)!.media as! TelegramMediaPoll
 precondition(fresh.pollId.namespace == Namespaces.Media.LocalPoll && fresh.pollId.id == 123 && !fresh.isClosed)
 precondition(fresh.results.totalVoters == nil && fresh.results.voters == nil && fresh.results.recentVoters.isEmpty)
@@ -47,11 +52,11 @@ oldPoll.kind = .quiz(multipleAnswers: false)
 precondition(ghostBaseFreshDeletedInteractiveMedia(media: oldPoll, randomId: 123, canSendPolls: true, canSendTodos: true) == nil)
 precondition(ghostBaseFreshDeletedInteractiveMedia(media: todo, randomId: 123, canSendPolls: true, canSendTodos: false) == nil)
 let freshTodo = ghostBaseFreshDeletedInteractiveMedia(media: todo, randomId: 123, canSendPolls: false, canSendTodos: true)!.media as! TelegramMediaTodo
-precondition(freshTodo.items[0].id == 1 && freshTodo.completions.isEmpty)
+precondition(freshTodo.items[0].id == 124 && freshTodo.completions.isEmpty)
 precondition(freshTodo.items[0].text == todo.items[0].text && freshTodo.items[0].entities == todo.items[0].entities)
 let snapshot = ghostBaseQuoteBody(source: .init(text: "подпись", media: [todo]), recoveredMedia: true, languageCode: "ru")
 precondition(snapshot.text.contains("Покупки") && snapshot.text.contains("😀 хлеб") && snapshot.text.hasSuffix("подпись"))
-print("Actual recovery media PASS: static geo/contact, four localized actions, named completion/count fallback, UTF-16 entities")
+print("Actual recovery media PASS: static geo/contact, fresh clean poll/todo with gates, preserved snapshots, four localized actions, named completion/count fallback, UTF-16 entities")
 '''
 def main():
     enqueue = (SOURCE / 'submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift').read_text()

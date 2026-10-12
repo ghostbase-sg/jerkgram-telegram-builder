@@ -1,0 +1,251 @@
+diff --git a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
+index 7577ac4..5db2e3e 100644
+--- a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
++++ b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
+@@ -1068,6 +1068,8 @@ private struct GhostBaseDeletedReplyPlan {
+     let authorUsername: String?
+     let mentionPeerId: PeerId?
+     let limits: UserLimitsConfiguration
++    var canSendPolls = false
++    var canSendTodos = false
+ }
+ 
+ private struct GhostBaseDeletedQuoteBody {
+@@ -1131,7 +1133,8 @@ private func ghostBaseQuoteBody(
+     languageCode: String
+ ) -> GhostBaseDeletedQuoteBody {
+     let sourceText = source.text
+-    if recoveredMedia && !sourceText.isEmpty || source.media.isEmpty {
++    let interactiveSnapshot = source.media.first is TelegramMediaPoll || source.media.first is TelegramMediaTodo
++    if recoveredMedia && !sourceText.isEmpty && !interactiveSnapshot || source.media.isEmpty {
+         return GhostBaseDeletedQuoteBody(text: sourceText, originalTextOffset: sourceText.isEmpty ? nil : 0, entities: [])
+     }
+ 
+@@ -1151,21 +1154,66 @@ private func ghostBaseQuoteBody(
+     }
+ 
+     if let poll = source.media.first as? TelegramMediaPoll {
+-        label(.poll)
++        label(recoveredMedia ? .freshPollSnapshot : .poll)
+         append(poll.text, poll.textEntities)
++        if recoveredMedia {
++            label(poll.isClosed ? .pollClosed : .pollOpen)
++            if let total = poll.results.totalVoters {
++                append("\(JerkgramDeletedReplyLabel.votes.text(languageCode: languageCode)): \(total)")
++            }
++        }
+         for option in poll.options {
+             append(option.text, option.entities, prefix: "• ")
++            if recoveredMedia, let voter = poll.results.voters?.first(where: { $0.opaqueIdentifier == option.opaqueIdentifier }) {
++                if let count = voter.count {
++                    append("\(JerkgramDeletedReplyLabel.votes.text(languageCode: languageCode)): \(count)")
++                }
++                if voter.selected { label(.selected) }
++            }
+         }
+         if let solution = poll.results.solution {
+             append(solution.text, solution.entities)
+         }
+     } else if let todo = source.media.first as? TelegramMediaTodo {
+-        label(.todo)
++        label(recoveredMedia ? .freshTodoSnapshot : .todo)
+         append(todo.text, todo.textEntities)
+         let completed = Set(todo.completions.map { $0.id })
+         for item in todo.items {
+             append(item.text, item.entities, prefix: completed.contains(item.id) ? "☑ " : "☐ ")
+         }
++    } else if let action = source.media.first as? TelegramMediaAction {
++        switch action.action {
++        case let .todoAppendTasks(items):
++            label(.tasksAdded)
++            for item in items { append(item.text, item.entities, prefix: "☐ ") }
++        case let .pollOptionAppended(option):
++            label(.pollOptionAdded)
++            append(option.text, option.entities, prefix: "• ")
++        case let .pollOptionDeleted(option):
++            label(.pollOptionDeleted)
++            append(option.text, option.entities, prefix: "• ")
++        case let .todoCompletions(completed, incompleted):
++            let reply = source.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute
++            let originalTodo = reply.flatMap { source.associatedMessages[$0.messageId]?.media.first as? TelegramMediaTodo }
++            for (ids, key, prefix) in [(completed, JerkgramDeletedReplyLabel.tasksCompleted, "☑ "), (incompleted, .tasksIncomplete, "☐ ")] where !ids.isEmpty {
++                if let originalTodo {
++                    label(key)
++                    for id in ids {
++                        if let item = originalTodo.items.first(where: { $0.id == id }) {
++                            append(item.text, item.entities, prefix: prefix)
++                        } else {
++                            append("\(JerkgramDeletedReplyLabel.task.text(languageCode: languageCode)) #\(id)", prefix: prefix)
++                        }
++                    }
++                } else {
++                    // The service action stores IDs only. Never invent missing task names.
++                    append("\(key.text(languageCode: languageCode)): \(ids.count)")
++                }
++            }
++            if completed.isEmpty && incompleted.isEmpty { label(.todo) }
++        default:
++            append(ghostBaseDeletedMediaLabel(source, languageCode: languageCode) ?? JerkgramDeletedReplyLabel.deletedMessage.text(languageCode: languageCode))
++        }
+     } else if let contact = source.media.first as? TelegramMediaContact {
+         label(.contact)
+         append([contact.firstName, contact.lastName].filter { !$0.isEmpty }.joined(separator: " "))
+@@ -1434,11 +1482,69 @@ private func ghostBaseBuildRecoveredAlbumTail(
+ }
+ 
+ 
++// Structured media carries its own payload: no deleted binary cache is needed.
++private func ghostBaseStaticDeletedMedia(media: Media) -> AnyMediaReference? {
++    if let contact = media as? TelegramMediaContact {
++        return .standalone(media: TelegramMediaContact(firstName: contact.firstName, lastName: contact.lastName,
++            phoneNumber: contact.phoneNumber, peerId: contact.peerId, vCardData: contact.vCardData))
++    }
++    if let map = media as? TelegramMediaMap {
++        return .standalone(media: TelegramMediaMap(latitude: map.latitude, longitude: map.longitude,
++            heading: map.heading, accuracyRadius: map.accuracyRadius, venue: map.venue, address: map.address,
++            liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
++    }
++    return nil
++}
++
++// These are new interactive objects. Historical votes/completions remain in the
++// quote snapshot only. Complex polls use the localized text fallback.
++private func ghostBaseFreshDeletedInteractiveMedia(
++    media: Media,
++    randomId: Int64,
++    canSendPolls: Bool,
++    canSendTodos: Bool
++) -> AnyMediaReference? {
++    if let poll = media as? TelegramMediaPoll {
++        guard canSendPolls, !poll.text.isEmpty, (poll.text as NSString).length <= 255,
++              (2 ... 10).contains(poll.options.count),
++              poll.attachedMedia == nil, poll.results.solution?.media == nil,
++              !poll.openAnswers, !poll.restrictToSubscribers, poll.countries.isEmpty,
++              poll.options.allSatisfy({ !$0.text.isEmpty && ($0.text as NSString).length <= 100 && $0.media == nil }) else { return nil }
++        // Unknown correct answers cannot produce a valid quiz. Keep quiz snapshots
++        // textual until the full creation constraints are explicitly supported.
++        if case .quiz = poll.kind { return nil }
++        let options = poll.options.enumerated().map { index, option in
++            return TelegramMediaPollOption(text: option.text, entities: option.entities,
++                opaqueIdentifier: Data("\(randomId):\(index)".utf8), media: nil, date: nil, addedBy: nil)
++        }
++        let freshPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: randomId),
++            publicity: poll.publicity, kind: poll.kind, text: poll.text, textEntities: poll.textEntities,
++            options: options, correctAnswers: nil,
++            results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil, hasUnseenVotes: nil, canViewStats: false),
++            isClosed: false, deadlineTimeout: nil, deadlineDate: nil, pollHash: 0)
++        return .standalone(media: freshPoll)
++    }
++    if let todo = media as? TelegramMediaTodo {
++        guard canSendTodos, !todo.text.isEmpty, (todo.text as NSString).length <= 255,
++              (1 ... 30).contains(todo.items.count),
++              todo.items.allSatisfy({ !$0.text.isEmpty && ($0.text as NSString).length <= 255 }) else { return nil }
++        let firstId = Int32(truncatingIfNeeded: randomId & 0x3fffffff) + 1
++        let items = todo.items.enumerated().map { index, item in
++            return TelegramMediaTodo.Item(text: item.text, entities: item.entities, id: firstId + Int32(index))
++        }
++        return .standalone(media: TelegramMediaTodo(flags: todo.flags, text: todo.text,
++            textEntities: todo.textEntities, items: items, completions: []))
++    }
++    return nil
++}
++
+ private func ghostBaseReconstructedMedia(
+     account: Account,
+     peerId: PeerId,
+     source: Message,
+-    outgoing: EnqueueMessage
++    outgoing: EnqueueMessage,
++    canSendPolls: Bool,
++    canSendTodos: Bool
+ ) -> AnyMediaReference? {
+     guard ghostBaseDeletedBool(
+         ghostBasePreserveDeletedMediaKey,
+@@ -1471,6 +1577,12 @@ private func ghostBaseReconstructedMedia(
+     }
+ 
+     let media = source.media[0]
++    if let structured = ghostBaseStaticDeletedMedia(media: media) { return structured }
++    if media is TelegramMediaPoll || media is TelegramMediaTodo {
++        return ghostBaseFreshDeletedInteractiveMedia(media: media,
++            randomId: Int64.random(in: Int64.min ... Int64.max), canSendPolls: canSendPolls, canSendTodos: canSendTodos)
++    }
++    guard media is TelegramMediaFile || media is TelegramMediaImage else { return nil }
+     // Preserve the original TelegramMediaFile mimeType + attributes and
+     // let the existing deleted-media reconstruction path rebuild it.
+     // The textual Sticker label remains only as the missing-media fallback.
+@@ -1675,6 +1787,23 @@ private func ghostBaseResolveDeletedReplies(
+                 let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.flags.contains(.isPremium) ?? false
+                 retainedLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
+             }
++            // Mirror conservative creation gates from the pinned attachment menu.
++            // Resolve only for deleted plans; ordinary sends keep the fast path.
++            let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.flags.contains(.isPremium) ?? false
++            var canSendPolls = false
++            var canSendTodos = false
++            if let peer = transaction.getPeer(peerId) as? TelegramUser {
++                canSendPolls = peer.botInfo != nil || peerId == account.peerId
++                canSendTodos = isPremium
++            } else if let group = transaction.getPeer(peerId) as? TelegramGroup {
++                canSendPolls = !group.hasBannedPermission(.banSendPolls) && !group.hasBannedPermission(.banSendText)
++                canSendTodos = isPremium && !group.hasBannedPermission(.banSendText)
++            } else if let channel = transaction.getPeer(peerId) as? TelegramChannel {
++                canSendPolls = channel.hasBannedPermission(.banSendPolls) == nil && channel.hasBannedPermission(.banSendText) == nil && !channel.isMonoForum
++                if case .group = channel.info {
++                    canSendTodos = isPremium && channel.hasBannedPermission(.banSendText) == nil && !channel.isMonoForum
++                }
++            }
+             return GhostBaseDeletedReplyPlan(
+                 outgoing: outgoing,
+                 source: source,
+@@ -1682,7 +1811,9 @@ private func ghostBaseResolveDeletedReplies(
+                 authorName: authorName,
+                 authorUsername: authorUsername,
+                 mentionPeerId: mentionPeerId,
+-                limits: retainedLimits!
++                limits: retainedLimits!,
++                canSendPolls: canSendPolls,
++                canSendTodos: canSendTodos
+             )
+         }
+     }
+@@ -1720,7 +1851,9 @@ private func ghostBaseResolveDeletedReplies(
+                                 account: account,
+                                 peerId: peerId,
+                                 source: groupSource,
+-                                outgoing: plan.outgoing
++                                outgoing: plan.outgoing,
++                                canSendPolls: plan.canSendPolls,
++                                canSendTodos: plan.canSendTodos
+                             ) {
+                             recoveredGroup.append(recovered)
+                         }
+diff --git a/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift b/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift
+index edf58b6..ec1a3a0 100644
+--- a/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift
++++ b/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift
+@@ -5,10 +5,24 @@ import Foundation
+ enum JerkgramDeletedReplyLabel {
+     case poll, todo, contact, location, dice, album, photo, sticker, voice
+     case videoMessage, gif, video, audio, file, attachment, invoice, deletedMessage
++    case tasksCompleted, tasksIncomplete, tasksAdded, pollOptionAdded, pollOptionDeleted, task
++    case freshPollSnapshot, freshTodoSnapshot, pollOpen, pollClosed, votes, selected
+ 
+     func text(languageCode: String) -> String {
+         let russian = languageCode.lowercased().split(whereSeparator: { $0 == "-" || $0 == "_" }).first == "ru"
+         switch self {
++        case .tasksCompleted: return russian ? "Завершены задачи" : "Tasks completed"
++        case .tasksIncomplete: return russian ? "Задачи отмечены незавершёнными" : "Tasks marked incomplete"
++        case .tasksAdded: return russian ? "Добавлены задачи" : "Tasks added"
++        case .pollOptionAdded: return russian ? "Добавлен вариант опроса" : "Poll option added"
++        case .pollOptionDeleted: return russian ? "Удалён вариант опроса" : "Poll option deleted"
++        case .task: return russian ? "Задача" : "Task"
++        case .freshPollSnapshot: return russian ? "Снимок исходного опроса (вложен новый опрос)" : "Original poll snapshot (new poll attached)"
++        case .freshTodoSnapshot: return russian ? "Снимок исходных задач (вложен новый список)" : "Original task snapshot (new list attached)"
++        case .pollOpen: return russian ? "Открыт" : "Open"
++        case .pollClosed: return russian ? "Закрыт" : "Closed"
++        case .votes: return russian ? "Голоса" : "Votes"
++        case .selected: return russian ? "Выбран" : "Selected"
+         case .poll: return russian ? "Опрос" : "Poll"
+         case .todo: return russian ? "Список задач" : "Task List"
+         case .contact: return russian ? "👤 Контакт" : "👤 Contact"
