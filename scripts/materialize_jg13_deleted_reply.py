@@ -25,14 +25,18 @@ def read_manifest():
     return manifest
 
 
-def check(source, stage):
+def check(source, stage, final_owners=None):
     if stage not in ("before", "after"):
         raise ValueError(stage)
+    if final_owners and stage != "after":
+        raise RuntimeError("Final owner hashes are valid only after materialization")
     source = Path(source)
     manifest = read_manifest()
     for name, values in manifest["owners"].items():
         path = source / name
         expected = values[stage + "_sha256"]
+        if final_owners and name in final_owners:
+            expected = final_owners[name]["after_sha256"]
         if expected is None:
             if path.exists():
                 raise RuntimeError("Deleted reply new owner already exists: " + name)

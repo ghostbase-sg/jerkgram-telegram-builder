@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import unittest
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/recovery159'))
+SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 class RecoveryMediaTests(unittest.TestCase):
     def assertIn(self, member, container, msg=None):
         self.assertTrue(member in container, msg or f"Missing source contract: {member}")

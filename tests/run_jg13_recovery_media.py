@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from run_jg13_deleted_reply import FACADE, block
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/recovery159'))
+SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 FIXTURE = r'''
 let contact = TelegramMediaContact(firstName: "Иван", lastName: "Петров", phoneNumber: "+123", peerId: 44, vCardData: "BEGIN:VCARD\nEND:VCARD")
 let reconstructedContact = ghostBaseStaticDeletedMedia(media: contact)!.media as! TelegramMediaContact

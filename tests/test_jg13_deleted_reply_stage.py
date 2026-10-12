@@ -1,3 +1,4 @@
+import hashlib
 import importlib
 import os
 from pathlib import Path
@@ -31,6 +32,10 @@ class DeletedReplyStageTests(unittest.TestCase):
             shutil.copyfile((ROOT / "work/final157" if use_baseline else final_source) / name, target)
         subprocess.run(["git", "init", "-q", str(self.source)], check=True)
         if not use_baseline:
+            portable = importlib.import_module("materialize_jg13_portable_copy")
+            manifest = portable.read_manifest()
+            if hashlib.sha256((self.source / self.stage.ENQUEUE).read_bytes()).hexdigest() == manifest["owners"][self.stage.ENQUEUE]["after_sha256"]:
+                subprocess.run(["git", "apply", "--reverse", "--include=" + self.stage.ENQUEUE, "--include=" + self.stage.HELPER, str(portable.PATCH)], cwd=self.source, check=True)
             self.stage.check(self.source, "after")
             subprocess.run(["git", "apply", "--reverse", str(self.stage.PATCH)], cwd=self.source, check=True)
 
