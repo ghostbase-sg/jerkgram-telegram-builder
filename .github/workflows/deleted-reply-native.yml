@@ -1,0 +1,35 @@
+name: Deleted reply production text gate
+on:
+  push:
+    branches: [dev/portable-reply-158]
+  workflow_dispatch:
+concurrency:
+  group: deleted-reply-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  text-contract:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test actual production text helper
+        run: |
+          set -euo pipefail
+          mkdir -p work/reply-native artifacts
+          git -C work/reply-native init -q
+          if test -f patches/jg13-deleted-reply.patch; then
+            git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift' ../../patches/jg13-deleted-reply.patch
+          fi
+          helper=()
+          if test -f work/reply-native/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift; then
+            helper=(work/reply-native/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift)
+          fi
+          xcrun swiftc -parse-as-library "${helper[@]}" tests/native/DeletedReplyTextTests.swift -o artifacts/deleted-reply-test
+          artifacts/deleted-reply-test | tee artifacts/deleted-reply-test.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DeletedReply-text-evidence
+          path: artifacts/deleted-reply-test.log
