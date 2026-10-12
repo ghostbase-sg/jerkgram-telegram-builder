@@ -29,6 +29,15 @@ def require(value, message):
         raise RuntimeError(message)
 
 
+def sha256_file(path):
+    """Hash large IPA files without retaining their full contents in memory."""
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as source:
+        while chunk := source.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def verify(ipa, config):
     with zipfile.ZipFile(ipa) as z:
         mains = [n for n in z.namelist() if n.startswith("Payload/") and n.endswith(".app/Info.plist") and n.count("/") == 2]
@@ -98,7 +107,7 @@ def main():
                     z.write(p, p.relative_to(root).as_posix())
         replacement.replace(ipa)
     verify(ipa, config)
-    report = dict(config, ci_run_id=os.environ.get("GITHUB_RUN_ID"), ci_commit=os.environ.get("GITHUB_SHA"), ipa=ipa.name, ipa_sha256=hashlib.sha256(ipa.read_bytes()).hexdigest(), status="COMPILED, NOT RUNTIME TESTED")
+    report = dict(config, ci_run_id=os.environ.get("GITHUB_RUN_ID"), ci_commit=os.environ.get("GITHUB_SHA"), ipa=ipa.name, ipa_sha256=sha256_file(ipa), status="COMPILED, NOT RUNTIME TESTED")
     (out / (artifact_name + ".json")).write_text(json.dumps(report, indent=2) + "\n")
     print("IPA metadata VERIFIED; COMPILED, NOT RUNTIME TESTED")
 

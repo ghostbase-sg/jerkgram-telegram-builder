@@ -22,11 +22,11 @@ jobs:
           if test -f patches/jg13-deleted-reply.patch; then
             git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift' ../../patches/jg13-deleted-reply.patch
           fi
-          helper=()
           if test -f work/reply-native/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift; then
-            helper=(work/reply-native/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift)
+            xcrun swiftc -parse-as-library work/reply-native/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift tests/native/DeletedReplyTextTests.swift -o artifacts/deleted-reply-test
+          else
+            xcrun swiftc -parse-as-library tests/native/DeletedReplyTextTests.swift -o artifacts/deleted-reply-test
           fi
-          xcrun swiftc -parse-as-library "${helper[@]}" tests/native/DeletedReplyTextTests.swift -o artifacts/deleted-reply-test
           artifacts/deleted-reply-test | tee artifacts/deleted-reply-test.log
       - name: Test real media body against pinned source and bounded model facades
         run: |
@@ -38,6 +38,7 @@ jobs:
           git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' ../../patches/jg13-deleted-reply.patch
           JG13_SOURCE="$PWD/work/reply-native" python3 -m unittest discover -s tests -p test_jg13_deleted_reply.py
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_deleted_reply.py | tee artifacts/deleted-reply-body.log
+          python3 -m unittest discover -s tests -p test_jg13_package_digest.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:

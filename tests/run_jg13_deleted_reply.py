@@ -106,7 +106,7 @@ def main():
     ))
     with tempfile.TemporaryDirectory() as directory:
         target = Path(directory) / "main.swift"
-        target.write_text(FACADE + "\n" + helper + "\n" + owners + "\n" + FIXTURE)
+        target.write_text(FACADE + "\n" + helper + "\n" + owners + "\nprivate func runFixture() {\n" + FIXTURE + "\n}\nrunFixture()\n")
         subprocess.run(["xcrun", "swift", str(target)], check=True)
 
 
