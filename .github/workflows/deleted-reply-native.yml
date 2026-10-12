@@ -36,15 +36,16 @@ jobs:
           set -euo pipefail
           git clone --filter=blob:none --no-checkout https://github.com/TelegramMessenger/Telegram-iOS.git work/reply-upstream
           git -C work/reply-upstream fetch --depth 1 origin f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838
-          git -C work/reply-upstream archive f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838 submodules/TelegramCore/Sources/Account/Account.swift submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift | tar -x -C work/reply-native
-          git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' ../../patches/jg13-stable.product.patch
+          git -C work/reply-upstream archive f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838 submodules/TelegramCore/Sources/Account/Account.swift submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift submodules/TelegramCore/Sources/State/AccountStateManager.swift submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift | tar -x -C work/reply-native
+          git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' --include='submodules/TelegramCore/Sources/State/AccountStateManager.swift' --include='submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift' ../../patches/jg13-stable.product.patch
           git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' ../../patches/jg13-deleted-reply.patch
           if test -f patches/jg13-portable-copy.patch; then
-            git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' --include='submodules/TelegramCore/Sources/Account/Account.swift' ../../patches/jg13-portable-copy.patch
+            git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/State/AccountStateManager.swift' --include='submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift' ../../patches/jg13-portable-copy.patch
           fi
           JG13_SOURCE="$PWD/work/reply-native" python3 -m unittest discover -s tests -p test_jg13_deleted_reply.py
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_deleted_reply.py | tee artifacts/deleted-reply-body.log
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_recovery_media.py | tee artifacts/recovery-media.log
+          JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_protected_copy.py | tee artifacts/protected-copy.log
           python3 -m unittest discover -s tests -p test_jg13_package_digest.py
       - uses: actions/upload-artifact@v4
         if: always()
@@ -54,3 +55,4 @@ jobs:
             artifacts/deleted-reply-test.log
             artifacts/deleted-reply-body.log
             artifacts/recovery-media.log
+            artifacts/protected-copy.log
