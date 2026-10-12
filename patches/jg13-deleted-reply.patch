@@ -1,0 +1,364 @@
+diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
+index 8a99c14..f08d2f8 100644
+--- a/submodules/TelegramCore/Sources/Account/Account.swift
++++ b/submodules/TelegramCore/Sources/Account/Account.swift
+@@ -1348,6 +1348,16 @@ public class Account {
+     private let serviceQueue = Queue()
+     
+     private let accountManager: AccountManager<TelegramAccountManagerTypes>
++
++    // Queried only when a send includes a locally retained deleted reply.
++    // The app language may differ from the device language.
++    func jerkgramDeletedReplyLanguageCode() -> Signal<String, NoError> {
++        return self.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings])
++        |> take(1)
++        |> map { data in
++            return data.entries[SharedDataKeys.localizationSettings]?.get(LocalizationSettings.self)?.primaryComponent.languageCode ?? "en"
++        }
++    }
+     public private(set) var stateManager: AccountStateManager!
+     private(set) var contactSyncManager: ContactSyncManager!
+     public private(set) var callSessionManager: CallSessionManager!
+diff --git a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
+index b1bec8e..3fdea9a 100644
+--- a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
++++ b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
+@@ -1072,84 +1072,130 @@ private struct GhostBaseDeletedReplyPlan {
+ private struct GhostBaseDeletedQuoteBody {
+     let text: String
+     let originalTextOffset: Int?
++    let entities: [MessageTextEntity]
+ }
+ 
+-private func ghostBaseDeletedMediaLabel(_ message: Message) -> String? {
+-    // TelegramCore cannot depend on presentation/UI localization.
+-    // Portable recovery text therefore uses English canonical labels;
+-    // richer UI localization uses semantic JerkgramStringKey values.
++private func ghostBaseDeletedMediaLabel(_ message: Message, languageCode: String) -> String? {
++    func label(_ key: JerkgramDeletedReplyLabel) -> String {
++        return key.text(languageCode: languageCode)
++    }
+     if message.groupingKey != nil && !message.media.isEmpty {
+-        return "Album"
++        return label(.album)
+     }
+ 
+     guard let media = message.media.first else {
+         return nil
+     }
+     if media is TelegramMediaPoll {
+-        return "Poll"
++        return label(.poll)
+     }
+     if media is TelegramMediaMap {
+-        return "📍 Location"
++        return label(.location)
+     }
+     if media is TelegramMediaContact {
+-        return "👤 Contact"
++        return label(.contact)
+     }
+     if media is TelegramMediaDice {
+-        return "🎲 Dice"
++        return label(.dice)
+     }
+     if media is TelegramMediaTodo {
+-        return "Task List"
++        return label(.todo)
+     }
+     if media is TelegramMediaImage {
+-        return "📷 Photo"
++        return label(.photo)
+     }
+     if let file = media as? TelegramMediaFile {
+         if file.isSticker {
+-            return "Sticker"
++            return label(.sticker)
+         } else if file.isVoice {
+-            return "🎙 Voice Message"
++            return label(.voice)
+         } else if file.isInstantVideo {
+-            return "🎥 Video Message"
++            return label(.videoMessage)
+         } else if file.isAnimated {
+-            return "GIF"
++            return label(.gif)
+         } else if file.isVideo {
+-            return "🎬 Video"
++            return label(.video)
+         } else if file.isMusic {
+-            return "🎵 Audio"
+-        } else if let name = file.fileName, !name.isEmpty {
+-            return "📎 File: \(name)"
++            return label(.audio)
+         } else {
+-            return "📎 File"
++            return label(.file)
+         }
+     }
+-    return "Attachment"
++    return label(.attachment)
+ }
+ 
+ private func ghostBaseQuoteBody(
+     source: Message,
+-    recoveredMedia: Bool
++    recoveredMedia: Bool,
++    languageCode: String
+ ) -> GhostBaseDeletedQuoteBody {
+     let sourceText = source.text
+-
+-    if recoveredMedia || source.media.isEmpty {
+-        return GhostBaseDeletedQuoteBody(
+-            text: sourceText,
+-            originalTextOffset: sourceText.isEmpty ? nil : 0
+-        )
++    if recoveredMedia && !sourceText.isEmpty || source.media.isEmpty {
++        return GhostBaseDeletedQuoteBody(text: sourceText, originalTextOffset: sourceText.isEmpty ? nil : 0, entities: [])
+     }
+ 
+-    let label = ghostBaseDeletedMediaLabel(source) ?? "Deleted Message"
+-    if sourceText.isEmpty {
+-        return GhostBaseDeletedQuoteBody(
+-            text: label,
+-            originalTextOffset: nil
+-        )
++    var body = JerkgramDeletedReplyText()
++    var entities: [MessageTextEntity] = []
++    func append(_ text: String, _ sourceEntities: [MessageTextEntity] = [], prefix: String = "") {
++        guard let offset = body.append(text, prefix: prefix) else { return }
++        // Preserve rich text, excluding a nested quote inside the outer quote.
++        let validEntities = messageTextEntitiesInRange(entities: sourceEntities, range: NSRange(location: 0, length: (text as NSString).length), onlyQuoteable: false).filter {
++            if case .BlockQuote = $0.type { return false }
++            return true
++        }
++        entities.append(contentsOf: ghostBaseShiftEntities(validEntities, by: offset))
++    }
++    func label(_ key: JerkgramDeletedReplyLabel) {
++        append(key.text(languageCode: languageCode))
++    }
++
++    if let poll = source.media.first as? TelegramMediaPoll {
++        label(.poll)
++        append(poll.text, poll.textEntities)
++        for option in poll.options {
++            append(option.text, option.entities, prefix: "• ")
++        }
++        if let solution = poll.results.solution {
++            append(solution.text, solution.entities)
++        }
++    } else if let todo = source.media.first as? TelegramMediaTodo {
++        label(.todo)
++        append(todo.text, todo.textEntities)
++        let completed = Set(todo.completions.map { $0.id })
++        for item in todo.items {
++            append(item.text, item.entities, prefix: completed.contains(item.id) ? "☑ " : "☐ ")
++        }
++    } else if let contact = source.media.first as? TelegramMediaContact {
++        label(.contact)
++        append([contact.firstName, contact.lastName].filter { !$0.isEmpty }.joined(separator: " "))
++        append(contact.phoneNumber)
++    } else if let map = source.media.first as? TelegramMediaMap {
++        label(.location)
++        if let venue = map.venue {
++            append(venue.title)
++            append(venue.address ?? "")
++        }
++        append("\(map.latitude), \(map.longitude)")
++    } else if let dice = source.media.first as? TelegramMediaDice {
++        append(dice.emoji)
++        if let value = dice.value {
++            append("\(JerkgramDeletedReplyLabel.dice.text(languageCode: languageCode)): \(value)")
++        }
++    } else if let invoice = source.media.first as? TelegramMediaInvoice {
++        label(.invoice)
++        append(invoice.title)
++        append(invoice.description)
++    } else {
++        append(ghostBaseDeletedMediaLabel(source, languageCode: languageCode) ?? JerkgramDeletedReplyLabel.deletedMessage.text(languageCode: languageCode))
++        if let file = source.media.first as? TelegramMediaFile {
++            append(file.fileName ?? "")
++        }
+     }
+-    let offset = (label as NSString).length + 1
+-    return GhostBaseDeletedQuoteBody(
+-        text: label + "\n" + sourceText,
+-        originalTextOffset: offset
+-    )
++    let originalTextOffset = body.append(sourceText)
++    if body.text.isEmpty {
++        _ = body.append(JerkgramDeletedReplyLabel.deletedMessage.text(languageCode: languageCode))
++    }
++    return GhostBaseDeletedQuoteBody(text: body.text, originalTextOffset: originalTextOffset, entities: entities)
+ }
+ 
+ private func ghostBaseShiftEntities(
+@@ -1214,6 +1260,7 @@ private func ghostBaseBuildPortableDeletedReply(
+     authorUsername: String?,
+     mentionPeerId: PeerId?,
+     recoveredMedia: AnyMediaReference?,
++    languageCode: String,
+     forcedLocalGroupingKey: Int64? = nil
+ ) -> EnqueueMessage {
+     guard case let .message(
+@@ -1235,7 +1282,8 @@ private func ghostBaseBuildPortableDeletedReply(
+         userMediaReference == nil ? recoveredMedia : nil
+     let body = ghostBaseQuoteBody(
+         source: source,
+-        recoveredMedia: effectiveRecoveredMedia != nil
++        recoveredMedia: effectiveRecoveredMedia != nil,
++        languageCode: languageCode
+     )
+ 
+     var quoteText = authorName
+@@ -1254,6 +1302,7 @@ private func ghostBaseBuildPortableDeletedReply(
+     let userOffset = ((quoteText + separator) as NSString).length
+ 
+     var entities: [MessageTextEntity] = []
++    entities.append(contentsOf: ghostBaseShiftEntities(body.entities, by: authorLength + 1))
+     if authorLength > 0 {
+         if let authorUsername,
+            !authorUsername.isEmpty {
+@@ -1284,9 +1333,8 @@ private func ghostBaseBuildPortableDeletedReply(
+         )
+     }
+ 
+-    let sourceLength = (source.text as NSString).length
+-    let collapse = sourceLength > 320
+-        || source.text.components(separatedBy: "\n").count > 4
++    let collapse = quoteLength > 320
++        || quoteText.components(separatedBy: "\n").count > 4
+     if quoteLength > 0 {
+         entities.append(MessageTextEntity(
+             range: 0 ..< quoteLength,
+@@ -1502,6 +1550,16 @@ private func ghostBaseResolveDeletedReplies(
+     peerId: PeerId,
+     messages: [EnqueueMessage]
+ ) -> Signal<[EnqueueMessage], NoError> {
++    // Most sends have no reply. Avoid settings I/O, a Postbox transaction and
++    // an extra worker dispatch for those messages.
++    guard messages.contains(where: { outgoing in
++        if case let .message(_, _, _, _, _, replySubject, _, _, _, _) = outgoing {
++            return replySubject != nil
++        }
++        return false
++    }) else {
++        return .single(messages)
++    }
+     guard ghostBaseDeletedBool(
+         ghostBaseSaveDeletedKey,
+         defaultValue: true
+@@ -1616,6 +1674,11 @@ private func ghostBaseResolveDeletedReplies(
+         }
+     }
+     |> mapToSignal { plans -> Signal<[EnqueueMessage], NoError> in
++        guard plans.contains(where: { $0.source != nil }) else {
++            return .single(messages)
++        }
++        return account.jerkgramDeletedReplyLanguageCode()
++        |> mapToSignal { languageCode -> Signal<[EnqueueMessage], NoError> in
+         return Signal { subscriber in
+             DispatchQueue.global(qos: .utility).async {
+                 var result: [EnqueueMessage] = []
+@@ -1666,6 +1729,7 @@ private func ghostBaseResolveDeletedReplies(
+                                 authorUsername: plan.authorUsername,
+                                 mentionPeerId: plan.mentionPeerId,
+                                 recoveredMedia: recoveredGroup[0],
++                                languageCode: languageCode,
+                                 forcedLocalGroupingKey: localGroupingKey
+                             )
+ 
+@@ -1680,7 +1744,8 @@ private func ghostBaseResolveDeletedReplies(
+                                     authorName: authorName,
+                                     authorUsername: plan.authorUsername,
+                                     mentionPeerId: plan.mentionPeerId,
+-                                    recoveredMedia: nil
++                                    recoveredMedia: nil,
++                                    languageCode: languageCode
+                                 )
+ 
+                             result.append(first)
+@@ -1729,7 +1794,8 @@ private func ghostBaseResolveDeletedReplies(
+                             authorName: authorName,
+                             authorUsername: plan.authorUsername,
+                             mentionPeerId: plan.mentionPeerId,
+-                            recoveredMedia: recovered
++                            recoveredMedia: recovered,
++                            languageCode: languageCode
+                         )
+ 
+                     if recovered != nil,
+@@ -1744,7 +1810,8 @@ private func ghostBaseResolveDeletedReplies(
+                                 authorName: authorName,
+                                 authorUsername: plan.authorUsername,
+                                 mentionPeerId: plan.mentionPeerId,
+-                                recoveredMedia: nil
++                                recoveredMedia: nil,
++                                languageCode: languageCode
+                             )
+                     }
+ 
+@@ -1756,6 +1823,7 @@ private func ghostBaseResolveDeletedReplies(
+             }
+             return EmptyDisposable
+         }
++        }
+     }
+ }
+ 
+diff --git a/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift b/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift
+new file mode 100644
+index 0000000..b92bb50
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift
+@@ -0,0 +1,50 @@
++import Foundation
++
++// TelegramCore has no presentation-layer dependency. Keep semantic labels here;
++// resolve them once at send time using the account's selected app language.
++enum JerkgramDeletedReplyLabel {
++    case poll, todo, contact, location, dice, album, photo, sticker, voice
++    case videoMessage, gif, video, audio, file, attachment, invoice, deletedMessage
++
++    func text(languageCode: String) -> String {
++        let russian = languageCode.lowercased().split(whereSeparator: { $0 == "-" || $0 == "_" }).first == "ru"
++        switch self {
++        case .poll: return russian ? "Опрос" : "Poll"
++        case .todo: return russian ? "Список задач" : "Task List"
++        case .contact: return russian ? "👤 Контакт" : "👤 Contact"
++        case .location: return russian ? "📍 Местоположение" : "📍 Location"
++        case .dice: return russian ? "Результат" : "Result"
++        case .album: return russian ? "Альбом" : "Album"
++        case .photo: return russian ? "📷 Фото" : "📷 Photo"
++        case .sticker: return russian ? "Стикер" : "Sticker"
++        case .voice: return russian ? "🎙 Голосовое сообщение" : "🎙 Voice Message"
++        case .videoMessage: return russian ? "🎥 Видеосообщение" : "🎥 Video Message"
++        case .gif: return "GIF"
++        case .video: return russian ? "🎬 Видео" : "🎬 Video"
++        case .audio: return russian ? "🎵 Аудио" : "🎵 Audio"
++        case .file: return russian ? "📎 Файл" : "📎 File"
++        case .attachment: return russian ? "Вложение" : "Attachment"
++        case .invoice: return russian ? "Счёт" : "Invoice"
++        case .deletedMessage: return russian ? "Удалённое сообщение" : "Deleted Message"
++        }
++    }
++}
++
++struct JerkgramDeletedReplyText {
++    private(set) var text = ""
++    private var utf16Length = 0
++
++    // Return the UTF-16 start of the original chunk, after a generated prefix.
++    // Telegram entity ranges use UTF-16, not Swift Character counts.
++    mutating func append(_ value: String, prefix: String = "") -> Int? {
++        guard !value.isEmpty else { return nil }
++        if !self.text.isEmpty {
++            self.text += "\n"
++            self.utf16Length += 1
++        }
++        let start = self.utf16Length + (prefix as NSString).length
++        self.text += prefix + value
++        self.utf16Length = start + (value as NSString).length
++        return start
++    }
++}
