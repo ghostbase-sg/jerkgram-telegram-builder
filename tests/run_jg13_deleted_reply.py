@@ -43,9 +43,15 @@ typealias PeerId = Int64
 protocol MessageAttribute {}
 struct TextEntitiesMessageAttribute: MessageAttribute { let entities: [MessageTextEntity] }
 struct GhostBaseMessageAttribute: MessageAttribute { let originalEntities: [MessageTextEntity] }
-struct ReplyMessageAttribute: MessageAttribute {}
+struct ReplyMessageAttribute: MessageAttribute { var messageId: Int = 0 }
 struct RetainedTestAttribute: MessageAttribute {}
-struct AnyMediaReference: Equatable { let identity: Int }
+typealias Media = Any
+struct AnyMediaReference: Equatable {
+    let identity: Int
+    var media: Any? = nil
+    static func standalone(media: Any) -> AnyMediaReference { .init(identity: 0, media: media) }
+    static func ==(lhs: Self, rhs: Self) -> Bool { lhs.identity == rhs.identity }
+}
 struct UserLimitsConfiguration { let maxMessageLength: Int32; let maxCaptionLength: Int32 }
 enum EnqueueMessage {
     case message(text: String, attributes: [MessageAttribute], inlineStickers: [Int64: Int],
@@ -53,24 +59,70 @@ enum EnqueueMessage {
         replyToStoryId: Int?, localGroupingKey: Int64?, correlationId: Int64?, bubbleUpEmojiOrStickersets: [Int64])
     case other
 }
-struct Message { var text: String; var media: [Any]; var groupingKey: Int64? = nil; var attributes: [MessageAttribute] = [] }
+struct Message { var text: String; var media: [Any]; var groupingKey: Int64? = nil; var attributes: [MessageAttribute] = []; var associatedMessages: [Int: Message] = [:] }
+struct MediaId: Equatable { let namespace: Int32; let id: Int64 }
+enum Namespaces { enum Media { static let LocalPoll: Int32 = 9 } }
+enum TelegramMediaPollKind { case poll(multipleAnswers: Bool), quiz(multipleAnswers: Bool) }
+enum TelegramMediaPollPublicity { case anonymous, `public` }
+struct TelegramMediaPollOption { let text: String; let entities: [MessageTextEntity]; var opaqueIdentifier = Data(); var media: Any? = nil; var date: Int32? = nil; var addedBy: PeerId? = nil }
+struct TelegramMediaPollResults {
+    struct Solution { let text: String; let entities: [MessageTextEntity]; var media: Any? = nil }
+    struct Voter { let opaqueIdentifier: Data; let count: Int32?; let selected: Bool }
+    var voters: [Voter]? = nil; var totalVoters: Int32? = nil; var recentVoters: [PeerId] = []
+    var solution: Solution? = nil; var hasUnseenVotes: Bool? = nil; var canViewStats = false
+}
 struct TelegramMediaPoll {
-    struct Option { let text: String; let entities: [MessageTextEntity] }
-    struct Results {
-        struct Solution { let text: String; let entities: [MessageTextEntity] }
-        var solution: Solution? = nil
+    typealias Option = TelegramMediaPollOption
+    typealias Results = TelegramMediaPollResults
+    var pollId = MediaId(namespace: 0, id: 0); var publicity = TelegramMediaPollPublicity.anonymous
+    var kind = TelegramMediaPollKind.poll(multipleAnswers: false)
+    let text: String; let textEntities: [MessageTextEntity]; let options: [Option]; var correctAnswers: [Data]? = nil
+    var results = Results(); var isClosed = false; var deadlineTimeout: Int32? = nil; var deadlineDate: Int32? = nil; var pollHash: Int64 = 0
+    var attachedMedia: Any? = nil; var openAnswers = false; var restrictToSubscribers = false; var countries: [String] = []
+    init(text: String, textEntities: [MessageTextEntity], options: [Option], results: Results = Results()) {
+        self.text = text; self.textEntities = textEntities; self.options = options; self.results = results
     }
-    let text: String; let textEntities: [MessageTextEntity]; let options: [Option]; var results = Results()
+    init(pollId: MediaId, publicity: TelegramMediaPollPublicity, kind: TelegramMediaPollKind, text: String, textEntities: [MessageTextEntity], options: [Option], correctAnswers: [Data]?, results: Results, isClosed: Bool, deadlineTimeout: Int32?, deadlineDate: Int32?, pollHash: Int64) {
+        self.pollId = pollId; self.publicity = publicity; self.kind = kind; self.text = text; self.textEntities = textEntities; self.options = options
+        self.correctAnswers = correctAnswers; self.results = results; self.isClosed = isClosed; self.deadlineTimeout = deadlineTimeout; self.deadlineDate = deadlineDate; self.pollHash = pollHash
+    }
 }
 struct TelegramMediaTodo {
-    struct Item { let id: Int32; let text: String; let entities: [MessageTextEntity] }
+    struct Flags: OptionSet { let rawValue: Int32; static let othersCanAppend = Flags(rawValue: 1); static let othersCanComplete = Flags(rawValue: 2) }
+    struct Item {
+        let id: Int32; let text: String; let entities: [MessageTextEntity]
+        init(id: Int32, text: String, entities: [MessageTextEntity]) { self.id = id; self.text = text; self.entities = entities }
+        init(text: String, entities: [MessageTextEntity], id: Int32) { self.init(id: id, text: text, entities: entities) }
+    }
     struct Completion { let id: Int32 }
+    var flags: Flags = []
     let text: String; let textEntities: [MessageTextEntity]; let items: [Item]; let completions: [Completion]
+    init(text: String, textEntities: [MessageTextEntity], items: [Item], completions: [Completion]) {
+        self.text = text; self.textEntities = textEntities; self.items = items; self.completions = completions
+    }
+    init(flags: Flags, text: String, textEntities: [MessageTextEntity], items: [Item], completions: [Completion]) {
+        self.init(text: text, textEntities: textEntities, items: items, completions: completions); self.flags = flags
+    }
 }
-struct TelegramMediaContact { let firstName: String; let lastName: String; let phoneNumber: String }
+struct TelegramMediaContact {
+    let firstName: String; let lastName: String; let phoneNumber: String
+    var peerId: PeerId? = nil; var vCardData: String? = nil
+}
 struct TelegramMediaMap {
     struct Venue { let title: String; let address: String? }
     let latitude: Double; let longitude: Double; let venue: Venue?
+    var heading: Int32? = nil; var accuracyRadius: Double? = nil; var address: String? = nil
+    var liveBroadcastingTimeout: Int32? = nil; var liveProximityNotificationRadius: Int32? = nil
+    init(latitude: Double, longitude: Double, heading: Int32? = nil, accuracyRadius: Double? = nil,
+        venue: Venue?, address: String? = nil, liveBroadcastingTimeout: Int32? = nil, liveProximityNotificationRadius: Int32? = nil) {
+        self.latitude = latitude; self.longitude = longitude; self.heading = heading; self.accuracyRadius = accuracyRadius
+        self.venue = venue; self.address = address; self.liveBroadcastingTimeout = liveBroadcastingTimeout
+        self.liveProximityNotificationRadius = liveProximityNotificationRadius
+    }
+}
+struct TelegramMediaAction {
+    enum Action { case todoCompletions(completed: [Int32], incompleted: [Int32]), todoAppendTasks([TelegramMediaTodo.Item]), pollOptionAppended(TelegramMediaPollOption), pollOptionDeleted(TelegramMediaPollOption), other }
+    let action: Action
 }
 struct TelegramMediaDice { let emoji: String; let value: Int32? }
 struct TelegramMediaInvoice { let title: String; let description: String }

@@ -1,7 +1,7 @@
 name: Deleted reply production text gate
 on:
   push:
-    branches: [dev/portable-reply-158]
+    branches: [dev/portable-reply-158, dev/portable-copy-159]
   workflow_dispatch:
 concurrency:
   group: deleted-reply-${{ github.ref }}
@@ -38,6 +38,7 @@ jobs:
           git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' ../../patches/jg13-deleted-reply.patch
           JG13_SOURCE="$PWD/work/reply-native" python3 -m unittest discover -s tests -p test_jg13_deleted_reply.py
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_deleted_reply.py | tee artifacts/deleted-reply-body.log
+          JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_recovery_media.py | tee artifacts/recovery-media.log
           python3 -m unittest discover -s tests -p test_jg13_package_digest.py
       - uses: actions/upload-artifact@v4
         if: always()
@@ -46,3 +47,4 @@ jobs:
           path: |
             artifacts/deleted-reply-test.log
             artifacts/deleted-reply-body.log
+            artifacts/recovery-media.log
