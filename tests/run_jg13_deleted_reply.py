@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(os.environ.get("JG13_SOURCE", ROOT / "work/reply158"))
+SOURCE = Path(os.environ.get("JG13_SOURCE", ROOT / "work/swiftgram-src"))
 
 
 def block(text, needle):

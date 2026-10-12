@@ -13,6 +13,9 @@ python3 tests/run_jg13_profile_preferences.py
 python3 tests/run_jg13_expanded_diagnostics.py
 python3 tests/run_jg13_capture_retention.py
 python3 tests/run_jg13_history_bounds.py
+python3 -m unittest discover -s tests -p 'test_jg13_deleted_reply*.py'
+python3 tests/run_jg13_deleted_reply.py
+python3 -m unittest discover -s tests -p test_jg13_package_digest.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive

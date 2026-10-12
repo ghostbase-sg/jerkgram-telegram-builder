@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(os.environ.get("JG13_SOURCE", ROOT / "work/reply158"))
+SOURCE = Path(os.environ.get("JG13_SOURCE", ROOT / "work/swiftgram-src"))
 
 
 class DeletedReplyTests(unittest.TestCase):
