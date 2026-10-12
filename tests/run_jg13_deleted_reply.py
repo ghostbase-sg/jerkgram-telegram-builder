@@ -26,7 +26,7 @@ def block(text, needle):
 FACADE = r'''
 import Foundation
 struct MessageTextEntity: Equatable {
-    enum Kind: Equatable { case Bold, BlockQuote(isCollapsed: Bool), TextUrl(url: String), TextMention(peerId: Int64) }
+    enum Kind: Equatable { case Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji(stickerPack: Int64?, fileId: Int64), BlockQuote(isCollapsed: Bool), TextUrl(url: String), TextMention(peerId: Int64) }
     let range: Range<Int>
     let type: Kind
 }
@@ -147,7 +147,7 @@ precondition((pollBody.text as NSString).substring(from: pollBody.originalTextOf
 let todo = TelegramMediaTodo(text: "Покупки", textEntities: [], items: [
     .init(id: 7, text: "Да", entities: [bold]), .init(id: 9, text: "Хлеб", entities: [])], completions: [.init(id: 7)])
 let todoBody = ghostBaseQuoteBody(source: Message(text: "", media: [todo]), recoveredMedia: false, languageCode: "ru-RU")
-precondition(todoBody.text == "Список задач\nПокупки\n☑ Да\n☐ Хлеб")
+precondition(todoBody.text == "Список задач\nПокупки\n☑ Да\n- Хлеб")
 precondition(todoBody.originalTextOffset == nil)
 precondition((todoBody.text as NSString).substring(with: NSRange(location: todoBody.entities[0].range.lowerBound, length: 2)) == "Да")
 let photoBody = ghostBaseQuoteBody(source: Message(text: "", media: [TelegramMediaImage()]), recoveredMedia: true, languageCode: "ru")

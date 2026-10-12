@@ -1,5 +1,5 @@
 diff --git a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
-index 7577ac4..dfbff22 100644
+index 7577ac4..0414733 100644
 --- a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
 +++ b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
 @@ -1068,6 +1068,8 @@ private struct GhostBaseDeletedReplyPlan {
@@ -11,17 +11,21 @@ index 7577ac4..dfbff22 100644
  }
  
  private struct GhostBaseDeletedQuoteBody {
-@@ -1131,7 +1133,8 @@ private func ghostBaseQuoteBody(
+@@ -1131,7 +1133,12 @@ private func ghostBaseQuoteBody(
      languageCode: String
  ) -> GhostBaseDeletedQuoteBody {
      let sourceText = source.text
 -    if recoveredMedia && !sourceText.isEmpty || source.media.isEmpty {
++    if recoveredMedia && source.media.first is TelegramMediaContact {
++        // The attached contact already displays the name and phone number.
++        return GhostBaseDeletedQuoteBody(text: sourceText, originalTextOffset: sourceText.isEmpty ? nil : 0, entities: [])
++    }
 +    let interactiveSnapshot = source.media.first is TelegramMediaPoll || source.media.first is TelegramMediaTodo
 +    if recoveredMedia && !sourceText.isEmpty && !interactiveSnapshot || source.media.isEmpty {
          return GhostBaseDeletedQuoteBody(text: sourceText, originalTextOffset: sourceText.isEmpty ? nil : 0, entities: [])
      }
  
-@@ -1151,21 +1154,66 @@ private func ghostBaseQuoteBody(
+@@ -1151,20 +1158,74 @@ private func ghostBaseQuoteBody(
      }
  
      if let poll = source.media.first as? TelegramMediaPoll {
@@ -52,13 +56,23 @@ index 7577ac4..dfbff22 100644
          append(todo.text, todo.textEntities)
          let completed = Set(todo.completions.map { $0.id })
          for item in todo.items {
-             append(item.text, item.entities, prefix: completed.contains(item.id) ? "☑ " : "☐ ")
-         }
+-            append(item.text, item.entities, prefix: completed.contains(item.id) ? "☑ " : "☐ ")
++            append(item.text, item.entities, prefix: completed.contains(item.id) ? "☑ " : "- ")
++        }
 +    } else if let action = source.media.first as? TelegramMediaAction {
++        let reply = source.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute
++        let originalInteractive = reply.flatMap { source.associatedMessages[$0.messageId] }
++        if let originalPoll = originalInteractive?.media.first as? TelegramMediaPoll {
++            label(.poll)
++            append(originalPoll.text, originalPoll.textEntities)
++        } else if let originalTodo = originalInteractive?.media.first as? TelegramMediaTodo {
++            label(.todo)
++            append(originalTodo.text, originalTodo.textEntities)
++        }
 +        switch action.action {
 +        case let .todoAppendTasks(items):
 +            label(.tasksAdded)
-+            for item in items { append(item.text, item.entities, prefix: "☐ ") }
++            for item in items { append(item.text, item.entities, prefix: "+ ") }
 +        case let .pollOptionAppended(option):
 +            label(.pollOptionAdded)
 +            append(option.text, option.entities, prefix: "• ")
@@ -68,7 +82,7 @@ index 7577ac4..dfbff22 100644
 +        case let .todoCompletions(completed, incompleted):
 +            let reply = source.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute
 +            let originalTodo = reply.flatMap { source.associatedMessages[$0.messageId]?.media.first as? TelegramMediaTodo }
-+            for (ids, key, prefix) in [(completed, JerkgramDeletedReplyLabel.tasksCompleted, "☑ "), (incompleted, .tasksIncomplete, "☐ ")] where !ids.isEmpty {
++            for (ids, key, prefix) in [(completed, JerkgramDeletedReplyLabel.tasksCompleted, "☑ "), (incompleted, .tasksIncomplete, "- ")] where !ids.isEmpty {
 +                if let originalTodo {
 +                    label(key)
 +                    for id in ids {
@@ -86,11 +100,10 @@ index 7577ac4..dfbff22 100644
 +            if completed.isEmpty && incompleted.isEmpty { label(.todo) }
 +        default:
 +            append(ghostBaseDeletedMediaLabel(source, languageCode: languageCode) ?? JerkgramDeletedReplyLabel.deletedMessage.text(languageCode: languageCode))
-+        }
+         }
      } else if let contact = source.media.first as? TelegramMediaContact {
          label(.contact)
-         append([contact.firstName, contact.lastName].filter { !$0.isEmpty }.joined(separator: " "))
-@@ -1434,11 +1482,69 @@ private func ghostBaseBuildRecoveredAlbumTail(
+@@ -1434,11 +1495,69 @@ private func ghostBaseBuildRecoveredAlbumTail(
  }
  
  
@@ -161,20 +174,19 @@ index 7577ac4..dfbff22 100644
  ) -> AnyMediaReference? {
      guard ghostBaseDeletedBool(
          ghostBasePreserveDeletedMediaKey,
-@@ -1471,6 +1577,12 @@ private func ghostBaseReconstructedMedia(
+@@ -1471,6 +1590,11 @@ private func ghostBaseReconstructedMedia(
      }
  
      let media = source.media[0]
 +    if let structured = ghostBaseStaticDeletedMedia(media: media) { return structured }
 +    if media is TelegramMediaPoll || media is TelegramMediaTodo {
-+        return ghostBaseFreshDeletedInteractiveMedia(media: media,
-+            randomId: Int64.random(in: Int64.min ... Int64.max), canSendPolls: canSendPolls, canSendTodos: canSendTodos)
++        return nil // Keep the original poll/task contents as text, not a new interactive object.
 +    }
 +    guard media is TelegramMediaFile || media is TelegramMediaImage else { return nil }
      // Preserve the original TelegramMediaFile mimeType + attributes and
      // let the existing deleted-media reconstruction path rebuild it.
      // The textual Sticker label remains only as the missing-media fallback.
-@@ -1675,6 +1787,23 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1675,6 +1799,23 @@ private func ghostBaseResolveDeletedReplies(
                  let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.flags.contains(.isPremium) ?? false
                  retainedLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
              }
@@ -198,7 +210,7 @@ index 7577ac4..dfbff22 100644
              return GhostBaseDeletedReplyPlan(
                  outgoing: outgoing,
                  source: source,
-@@ -1682,7 +1811,9 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1682,7 +1823,9 @@ private func ghostBaseResolveDeletedReplies(
                  authorName: authorName,
                  authorUsername: authorUsername,
                  mentionPeerId: mentionPeerId,
@@ -209,7 +221,7 @@ index 7577ac4..dfbff22 100644
              )
          }
      }
-@@ -1720,7 +1851,9 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1720,7 +1863,9 @@ private func ghostBaseResolveDeletedReplies(
                                  account: account,
                                  peerId: peerId,
                                  source: groupSource,
@@ -220,7 +232,7 @@ index 7577ac4..dfbff22 100644
                              ) {
                              recoveredGroup.append(recovered)
                          }
-@@ -1957,22 +2090,221 @@ public func enqueueWelcomeMessages(account: Account, peerId: PeerId, messages: [
+@@ -1957,22 +2102,232 @@ public func enqueueWelcomeMessages(account: Account, peerId: PeerId, messages: [
      }
  }
  
@@ -256,15 +268,20 @@ index 7577ac4..dfbff22 100644
 +        else if let mentionPeerId { entities.append(MessageTextEntity(range: 0 ..< titleLength, type: .TextMention(peerId: mentionPeerId))) }
 +    }
 +    entities = messageTextEntitiesInRange(entities: entities, range: NSRange(location: 0, length: fitted.retainedLength), onlyQuoteable: false)
++    let quoteLength = (fitted.text as NSString).length
++    if quoteLength > 0 {
++        let collapse = quoteLength > 320 || fitted.text.components(separatedBy: "\n").count > 4
++        entities.append(MessageTextEntity(range: 0 ..< quoteLength, type: .BlockQuote(isCollapsed: collapse)))
++    }
 +    return (fitted.text, entities)
 +}
 +
-+private func ghostBaseBuildProtectedForward(outgoing: EnqueueMessage, source: Message, mediaReference: AnyMediaReference?, groupingKey: Int64?, limits: UserLimitsConfiguration, languageCode: String) -> EnqueueMessage {
++private func ghostBaseBuildProtectedForward(outgoing: EnqueueMessage, source: Message, mediaReference: AnyMediaReference?, groupingKey: Int64?, limits: UserLimitsConfiguration, languageCode: String, sourcePeer: Peer? = nil) -> EnqueueMessage {
 +    guard case let .forward(_, threadId, _, requested, correlationId) = outgoing else { return outgoing }
 +    let options = requested.compactMap { $0 as? ForwardOptionsMessageAttribute }.last
 +    let hideNames = options?.hideNames == true
 +    let hideCaptions = options?.hideCaptions == true && (source.media.first is TelegramMediaFile || source.media.first is TelegramMediaImage)
-+    let actualPeer = source.peers[source.id.peerId]
++    let actualPeer = sourcePeer ?? source.peers[source.id.peerId]
 +    let title = actualPeer.map { EnginePeer($0).debugDisplayTitle } ?? ""
 +    let username = actualPeer.map { EnginePeer($0).addressName } ?? nil
 +    let channelId: Int64? = source.id.peerId.namespace == Namespaces.Peer.CloudChannel ? source.id.peerId.id._internalGetInt64Value() : nil
@@ -276,7 +293,7 @@ index 7577ac4..dfbff22 100644
 +    let quoteBody = binaryMedia ? GhostBaseDeletedQuoteBody(text: source.text, originalTextOffset: source.text.isEmpty ? nil : 0, entities: []) : ghostBaseQuoteBody(source: source, recoveredMedia: mediaReference != nil, languageCode: languageCode)
 +    var bodyEntities = quoteBody.entities
 +    if let offset = quoteBody.originalTextOffset {
-+        bodyEntities.append(contentsOf: ghostBaseShiftEntities(source.textEntitiesAttribute?.entities ?? [], by: offset))
++        bodyEntities.append(contentsOf: ghostBaseShiftEntities(ghostBaseOriginalPortableEntities(source: source), by: offset))
 +    }
 +    let text = ghostBaseProtectedForwardText(title: title, link: attributionLink, mentionPeerId: mentionPeerId,
 +        body: hideCaptions ? "" : quoteBody.text, bodyEntities: hideCaptions ? [] : bodyEntities, hideNames: hideNames,
@@ -292,6 +309,12 @@ index 7577ac4..dfbff22 100644
 +    } + requested.filter { !($0 is TextEntitiesMessageAttribute) && !($0 is ForwardOptionsMessageAttribute) && !isCopyTransportAttribute($0) }
 +    if !text.entities.isEmpty { attributes.append(TextEntitiesMessageAttribute(entities: text.entities)) }
 +    var stickers: [MediaId: Media] = [:]
++    for entity in text.entities {
++        if case let .CustomEmoji(_, fileId) = entity.type {
++            let id = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
++            if let file = source.associatedMedia[id] as? TelegramMediaFile { stickers[id] = file }
++        }
++    }
 +    for attribute in attributes {
 +        if let embedded = attribute as? EmbeddedMediaStickersMessageAttribute {
 +            for file in embedded.files { stickers[file.fileId] = file }
@@ -306,7 +329,7 @@ index 7577ac4..dfbff22 100644
 +    guard let media = source.media.first, source.media.count == 1 else { return .single(nil) }
 +    if let structured = ghostBaseStaticDeletedMedia(media: media) { return .single(structured) }
 +    if media is TelegramMediaPoll || media is TelegramMediaTodo {
-+        return .single(ghostBaseFreshDeletedInteractiveMedia(media: media, randomId: Int64.random(in: Int64.min ... Int64.max), canSendPolls: canSendPolls, canSendTodos: canSendTodos))
++        return .single(nil) // Polls and task lists are copied as titled text snapshots.
 +    }
 +    if media is TelegramMediaWebpage { return .single(.standalone(media: media)) }
 +    let resource: TelegramMediaResource
@@ -367,7 +390,7 @@ index 7577ac4..dfbff22 100644
 +    guard enabled && chatForward,
 +        (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel),
 +        messages.contains(where: { if case .forward = $0 { return true }; return false }) else { return .single(messages) }
-+    return account.postbox.transaction { transaction -> [(EnqueueMessage, Message?, Int64?, UserLimitsConfiguration, Bool, Bool)] in
++    return account.postbox.transaction { transaction -> [(EnqueueMessage, Message?, Int64?, UserLimitsConfiguration, Bool, Bool, Peer?)] in
 +        let config = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
 +        let premium = (transaction.getPeer(account.peerId) as? TelegramUser)?.flags.contains(.isPremium) ?? false
 +        let limits = UserLimitsConfiguration(appConfiguration: config, isPremium: premium)
@@ -384,7 +407,7 @@ index 7577ac4..dfbff22 100644
 +        return messages.map { outgoing in
 +            guard case let .forward(id, _, grouping, _, _) = outgoing, id.namespace == Namespaces.Message.Cloud,
 +                id.peerId.namespace != Namespaces.Peer.SecretChat, let source = transaction.getMessage(id),
-+                !source.containsSecretMedia, !source.media.contains(where: { $0 is TelegramMediaPaidContent || $0 is TelegramMediaAction || $0 is TelegramMediaExpiredContent }) else { return (outgoing, nil, nil, limits, polls, todos) }
++                !source.containsSecretMedia, !source.media.contains(where: { $0 is TelegramMediaPaidContent || $0 is TelegramMediaAction || $0 is TelegramMediaExpiredContent }) else { return (outgoing, nil, nil, limits, polls, todos, nil) }
 +            let cached = transaction.getPeerCachedData(peerId: source.id.peerId) as? CachedUserData
 +            let dmProtected = cached.map { cached in cached.flags.contains(.copyProtectionEnabled) || cached.flags.contains(.myCopyProtectionEnabled) } ?? false
 +            let actualPeer = transaction.getPeer(source.id.peerId) ?? source.peers[source.id.peerId]
@@ -393,23 +416,23 @@ index 7577ac4..dfbff22 100644
 +            let protected = ghostBaseProtectedForwardEnabled(enabled: enabled, chatForward: chatForward,
 +                messageProtected: source.isCopyProtected(), peerProtected: actualPeer?.isCopyProtectionEnabled == true,
 +                dmProtected: dmProtected, myDmProtected: false, channelRestricted: channelRestricted)
-+            guard protected else { return (outgoing, nil, nil, limits, polls, todos) }
-+            return (outgoing, source, forwardGroupingKey(grouping: grouping, sourceGroupingKey: source.groupingKey, generatedKeys: &groupingKeys), limits, polls, todos)
++            guard protected else { return (outgoing, nil, nil, limits, polls, todos, nil) }
++            return (outgoing, source, forwardGroupingKey(grouping: grouping, sourceGroupingKey: source.groupingKey, generatedKeys: &groupingKeys), limits, polls, todos, actualPeer)
 +        }
 +    }
 +    |> mapToSignal { plans -> Signal<[EnqueueMessage]?, NoError> in
 +        guard plans.contains(where: { $0.1 != nil }) else { return .single(messages) }
 +        return account.jerkgramDeletedReplyLanguageCode()
 +        |> mapToSignal { languageCode in
-+            let signals: [Signal<EnqueueMessage?, NoError>] = plans.map { outgoing, source, grouping, limits, polls, todos in
++            let signals: [Signal<EnqueueMessage?, NoError>] = plans.map { outgoing, source, grouping, limits, polls, todos, sourcePeer in
 +                guard let source else { return .single(outgoing) }
 +                if source.media.isEmpty {
-+                    return .single(ghostBaseBuildProtectedForward(outgoing: outgoing, source: source, mediaReference: nil, groupingKey: grouping, limits: limits, languageCode: languageCode))
++                    return .single(ghostBaseBuildProtectedForward(outgoing: outgoing, source: source, mediaReference: nil, groupingKey: grouping, limits: limits, languageCode: languageCode, sourcePeer: sourcePeer))
 +                }
 +                return ghostBaseProtectedLocalMedia(account: account, source: source, canSendPolls: polls, canSendTodos: todos)
 +                |> map { media -> EnqueueMessage? in
 +                    guard media != nil || ghostBaseProtectedForwardAllowsTextFallback(source.media.first) else { return nil }
-+                    return ghostBaseBuildProtectedForward(outgoing: outgoing, source: source, mediaReference: media, groupingKey: grouping, limits: limits, languageCode: languageCode)
++                    return ghostBaseBuildProtectedForward(outgoing: outgoing, source: source, mediaReference: media, groupingKey: grouping, limits: limits, languageCode: languageCode, sourcePeer: sourcePeer)
 +                }
 +            }
 +            return combineLatest(signals) |> map { resolved -> [EnqueueMessage]? in

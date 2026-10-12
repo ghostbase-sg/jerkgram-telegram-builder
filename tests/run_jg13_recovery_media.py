@@ -11,6 +11,10 @@ let contact = TelegramMediaContact(firstName: "Иван", lastName: "Петро�
 let reconstructedContact = ghostBaseStaticDeletedMedia(media: contact)!.media as! TelegramMediaContact
 precondition(reconstructedContact.firstName == contact.firstName && reconstructedContact.lastName == contact.lastName)
 precondition(reconstructedContact.phoneNumber == contact.phoneNumber && reconstructedContact.vCardData == contact.vCardData)
+let contactBody = ghostBaseQuoteBody(source: .init(text: "", media: [contact]), recoveredMedia: true, languageCode: "ru")
+precondition(contactBody.text.isEmpty && contactBody.entities.isEmpty)
+let contactCaption = ghostBaseQuoteBody(source: .init(text: "Комментарий", media: [contact]), recoveredMedia: true, languageCode: "ru")
+precondition(contactCaption.text == "Комментарий" && contactCaption.originalTextOffset == 0)
 let map = TelegramMediaMap(latitude: 55.75, longitude: 37.61, heading: 5, accuracyRadius: 20, venue: .init(title: "Парк", address: "Москва"), address: "RU", liveBroadcastingTimeout: 900, liveProximityNotificationRadius: 50)
 let reconstructedMap = ghostBaseStaticDeletedMedia(media: map)!.media as! TelegramMediaMap
 precondition(reconstructedMap.latitude == map.latitude && reconstructedMap.longitude == map.longitude)
@@ -19,7 +23,7 @@ precondition(reconstructedMap.liveBroadcastingTimeout == nil && reconstructedMap
 let bold = MessageTextEntity(range: 0..<2, type: .Bold)
 let appended = TelegramMediaAction(action: .todoAppendTasks([.init(id: 8, text: "😀 хлеб", entities: [bold])]))
 let addedBody = ghostBaseQuoteBody(source: .init(text: "", media: [appended]), recoveredMedia: false, languageCode: "ru")
-precondition(addedBody.text == "Добавлены задачи\n☐ 😀 хлеб")
+precondition(addedBody.text == "Добавлены задачи\n+ 😀 хлеб")
 precondition((addedBody.text as NSString).substring(with: NSRange(location: addedBody.entities[0].range.lowerBound, length: 2)) == "😀")
 let option = TelegramMediaPollOption(text: "😀 Да", entities: [bold])
 for (action, expected) in [(TelegramMediaAction.Action.pollOptionAppended(option), "Добавлен вариант опроса"), (.pollOptionDeleted(option), "Удалён вариант опроса")] {
@@ -31,13 +35,17 @@ let completion = TelegramMediaAction(action: .todoCompletions(completed: [8, 9],
 let counts = ghostBaseQuoteBody(source: .init(text: "", media: [completion]), recoveredMedia: false, languageCode: "en")
 precondition(counts.text == "Tasks completed: 2\nTasks marked incomplete: 1")
 let todo = TelegramMediaTodo(text: "Покупки", textEntities: [], items: [.init(id: 8, text: "😀 хлеб", entities: [bold])], completions: [])
+let appendedContext = ghostBaseQuoteBody(source: .init(text: "", media: [appended], attributes: [ReplyMessageAttribute(messageId: 1)], associatedMessages: [1: .init(text: "", media: [todo])]), recoveredMedia: false, languageCode: "ru")
+precondition(appendedContext.text == "Список задач\nПокупки\nДобавлены задачи\n+ 😀 хлеб")
 let named = ghostBaseQuoteBody(source: .init(text: "", media: [TelegramMediaAction(action: .todoCompletions(completed: [8], incompleted: []))], attributes: [ReplyMessageAttribute(messageId: 1)], associatedMessages: [1: .init(text: "", media: [todo])]), recoveredMedia: false, languageCode: "ru")
-precondition(named.text == "Завершены задачи\n☑ 😀 хлеб")
+precondition(named.text == "Список задач\nПокупки\nЗавершены задачи\n☑ 😀 хлеб")
 precondition((named.text as NSString).substring(with: NSRange(location: named.entities[0].range.lowerBound, length: 2)) == "😀")
 var oldPoll = TelegramMediaPoll(text: "Выбор", textEntities: [], options: [.init(text: "Да", entities: [], opaqueIdentifier: Data([50])), .init(text: "Нет", entities: [], opaqueIdentifier: Data([60]))])
 oldPoll.pollId = .init(namespace: 99, id: 777); oldPoll.isClosed = true
 oldPoll.results.totalVoters = 20
 oldPoll.results.voters = [.init(opaqueIdentifier: Data([50]), count: 15, selected: true)]
+let optionContext = ghostBaseQuoteBody(source: .init(text: "", media: [TelegramMediaAction(action: .pollOptionAppended(option))], attributes: [ReplyMessageAttribute(messageId: 1)], associatedMessages: [1: .init(text: "", media: [oldPoll])]), recoveredMedia: false, languageCode: "en")
+precondition(optionContext.text == "Poll\nВыбор\nPoll option added\n• 😀 Да")
 let pollSnapshot = ghostBaseQuoteBody(source: .init(text: "подпись", media: [oldPoll]), recoveredMedia: true, languageCode: "ru")
 precondition(pollSnapshot.text.contains("Снимок исходного опроса") && pollSnapshot.text.contains("Закрыт"))
 precondition(pollSnapshot.text.contains("Голоса: 20") && pollSnapshot.text.contains("Голоса: 15") && pollSnapshot.text.contains("Выбран"))

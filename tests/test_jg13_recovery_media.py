@@ -23,4 +23,17 @@ class RecoveryMediaTests(unittest.TestCase):
     def test_fresh_interactive_media_is_gated_and_clean(self):
         for fragment in ('canSendPolls', 'canSendTodos', 'Namespaces.Media.LocalPoll', 'totalVoters: nil', 'completions: []', 'poll.attachedMedia == nil', 'case .quiz', 'peer.botInfo', '.banSendPolls'):
             self.assertIn(fragment, self.source)
+    def test_interactive_recovery_is_text_only(self):
+        for name, end in [('ghostBaseReconstructedMedia', 'ghostBaseResolveDeletedReplies'), ('ghostBaseProtectedLocalMedia', 'ghostBaseResolveProtectedForwards')]:
+            body = self.source.split('private func ' + name + '(', 1)[1].split('private func ' + end + '(', 1)[0]
+            self.assertNotIn('return ghostBaseFreshDeletedInteractiveMedia(', body)
+            self.assertNotIn('return .single(ghostBaseFreshDeletedInteractiveMedia(', body)
+    def test_service_context_and_contact_deduplication(self):
+        body = self.source.split('private func ghostBaseQuoteBody(', 1)[1].split('private func ghostBaseShiftEntities(', 1)[0]
+        self.assertIn('let originalInteractive', body)
+        self.assertIn('append(originalPoll.text, originalPoll.textEntities)', body)
+        self.assertIn('append(originalTodo.text, originalTodo.textEntities)', body)
+        self.assertIn('if recoveredMedia && source.media.first is TelegramMediaContact', body)
+        self.assertIn('prefix: "+ "', body)
+        self.assertNotIn('☐', body)
 if __name__ == '__main__': unittest.main()

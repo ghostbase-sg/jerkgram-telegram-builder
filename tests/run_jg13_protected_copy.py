@@ -43,8 +43,14 @@ let normal = ghostBaseProtectedForwardText(title: "Channel", link: "https://t.me
 precondition(normal.text == "Channel\n😀 caption")
 precondition(normal.entities.contains { $0.range == 8..<10 && $0.type == .Bold })
 precondition(normal.entities.contains { $0.range == 0..<7 && $0.type == .TextUrl(url: "https://t.me/channel/456") })
+precondition(normal.entities.contains { $0.range == 0..<7 && $0.type == .Bold })
+precondition(normal.entities.contains { $0.range == 0..<(normal.text as NSString).length && $0.type == .BlockQuote(isCollapsed: false) })
+let richEntities = [MessageTextEntity(range: 0..<2, type: .CustomEmoji(stickerPack: nil, fileId: 123)), MessageTextEntity(range: 3..<10, type: .TextUrl(url: "https://example.com")), MessageTextEntity(range: 3..<10, type: .Italic)]
+let rich = ghostBaseProtectedForwardText(title: "Приватный", link: "https://t.me/c/123/456", mentionPeerId: nil, body: "😀 caption", bodyEntities: richEntities, hideNames: false, limit: 1024, languageCode: "ru")
+let offset = ("Приватный\n" as NSString).length
+for entity in richEntities { precondition(rich.entities.contains(MessageTextEntity(range: (entity.range.lowerBound + offset)..<(entity.range.upperBound + offset), type: entity.type))) }
 let hidden = ghostBaseProtectedForwardText(title: "Channel", link: "https://t.me/channel/456", mentionPeerId: nil, body: body, bodyEntities: entities, hideNames: true, limit: 1024, languageCode: "en")
-precondition(hidden.text == body && hidden.entities == entities)
+precondition(hidden.text == body && hidden.entities.filter { if case .BlockQuote = $0.type { return false }; return true } == entities)
 let captionHidden = ghostBaseProtectedForwardText(title: "Channel", link: nil, mentionPeerId: 123, body: "", bodyEntities: [], hideNames: false, limit: 1024, languageCode: "en")
 precondition(captionHidden.text == "Channel")
 precondition(captionHidden.entities.contains { $0.type == .TextMention(peerId: 123) })

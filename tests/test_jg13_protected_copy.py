@@ -34,4 +34,11 @@ class ProtectedCopyTests(unittest.TestCase):
         body = self.source.split('private func ghostBaseBuildProtectedForward(', 1)[1].split('private func ghostBaseProtectedLocalMedia(', 1)[0]
         for token in ('forwardCopyRequestedAttributes(', 'ghostBaseProtectedForwardText(', 'maxCaptionLength', 'maxMessageLength', 'hideCaptions', 'hideNames', 'correlationId: correlationId', 'localGroupingKey: groupingKey', 'EmbeddedMediaStickersMessageAttribute'):
             self.assertIn(token, body)
+    def test_quote_appearance_and_rich_media(self):
+        helper = self.source.split('private func ghostBaseProtectedForwardText(', 1)[1].split('private func ghostBaseBuildProtectedForward(', 1)[0]
+        self.assertIn('.BlockQuote(isCollapsed:', helper)
+        builder = self.source.split('private func ghostBaseBuildProtectedForward(', 1)[1].split('private func ghostBaseProtectedLocalMedia(', 1)[0]
+        self.assertIn('ghostBaseOriginalPortableEntities(source: source)', builder)
+        self.assertIn('source.associatedMedia', builder)
+        self.assertIn('sourcePeer ?? source.peers[source.id.peerId]', builder)
 if __name__ == '__main__': unittest.main()
