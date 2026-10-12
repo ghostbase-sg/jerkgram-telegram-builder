@@ -72,7 +72,7 @@
     },
     "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": {
       "before_sha256": "1864dce2f0f5c2f02e7b47aa65bf75d333f4b2b946b89603fe3c916ef160bf0f",
-      "after_sha256": "9d16a3f127f8b83858cc81258dc0b3bca68a6362bab938ad98aff59cfc91eae3",
+      "after_sha256": "ebab740cd04c896ad65cd501c4b37c9d74e9ffbdfcd3b0748df0b2279800c91a",
       "survival_functions": [
         "augmentMediaWithReference",
         "cleanupIfNeeded",
@@ -133,7 +133,7 @@
     },
     "submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift": {
       "before_sha256": null,
-      "after_sha256": "a65255ac183f2f1236fe8c2c5bfa945094686c237a4c1ef4720b436f65861a87",
+      "after_sha256": "42b4823860b3b2b2e7a4feb4205035e3a1b817d2749c090c20a43af3e0c6ee49",
       "survival_functions": []
     }
   }

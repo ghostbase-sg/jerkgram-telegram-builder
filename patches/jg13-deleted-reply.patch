@@ -20,10 +20,16 @@ index 8a99c14..f08d2f8 100644
      private(set) var contactSyncManager: ContactSyncManager!
      public private(set) var callSessionManager: CallSessionManager!
 diff --git a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
-index b1bec8e..3fdea9a 100644
+index b1bec8e..7577ac4 100644
 --- a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
 +++ b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
-@@ -1072,84 +1072,130 @@ private struct GhostBaseDeletedReplyPlan {
+@@ -1067,89 +1067,136 @@ private struct GhostBaseDeletedReplyPlan {
+     let authorName: String?
+     let authorUsername: String?
+     let mentionPeerId: PeerId?
++    let limits: UserLimitsConfiguration
+ }
+ 
  private struct GhostBaseDeletedQuoteBody {
      let text: String
      let originalTextOffset: Int?
@@ -193,16 +199,21 @@ index b1bec8e..3fdea9a 100644
  }
  
  private func ghostBaseShiftEntities(
-@@ -1214,6 +1260,7 @@ private func ghostBaseBuildPortableDeletedReply(
+@@ -1214,6 +1261,8 @@ private func ghostBaseBuildPortableDeletedReply(
      authorUsername: String?,
      mentionPeerId: PeerId?,
      recoveredMedia: AnyMediaReference?,
 +    languageCode: String,
++    limits: UserLimitsConfiguration,
      forcedLocalGroupingKey: Int64? = nil
  ) -> EnqueueMessage {
      guard case let .message(
-@@ -1235,7 +1282,8 @@ private func ghostBaseBuildPortableDeletedReply(
-         userMediaReference == nil ? recoveredMedia : nil
+@@ -1232,10 +1281,11 @@ private func ghostBaseBuildPortableDeletedReply(
+     }
+ 
+     let effectiveRecoveredMedia: AnyMediaReference? =
+-        userMediaReference == nil ? recoveredMedia : nil
++        userMediaReference == nil && (userText as NSString).length <= Int(limits.maxCaptionLength) ? recoveredMedia : nil
      let body = ghostBaseQuoteBody(
          source: source,
 -        recoveredMedia: effectiveRecoveredMedia != nil
@@ -211,7 +222,18 @@ index b1bec8e..3fdea9a 100644
      )
  
      var quoteText = authorName
-@@ -1254,6 +1302,7 @@ private func ghostBaseBuildPortableDeletedReply(
+@@ -1248,12 +1298,17 @@ private func ghostBaseBuildPortableDeletedReply(
+         }
+     }
+ 
+-    let separator = userText.isEmpty ? "" : "\n\n"
++    let hasMedia = userMediaReference != nil || effectiveRecoveredMedia != nil
++    let limit = Int(hasMedia ? limits.maxCaptionLength : limits.maxMessageLength)
++    let fittedQuote = JerkgramDeletedReplyText.fittedQuote(quoteText, reply: userText, limit: limit, languageCode: languageCode)
++    quoteText = fittedQuote.text
++    let separator = userText.isEmpty || quoteText.isEmpty ? "" : "\n\n"
+     let finalText = quoteText + separator + userText
+     let quoteLength = (quoteText as NSString).length
      let userOffset = ((quoteText + separator) as NSString).length
  
      var entities: [MessageTextEntity] = []
@@ -219,19 +241,39 @@ index b1bec8e..3fdea9a 100644
      if authorLength > 0 {
          if let authorUsername,
             !authorUsername.isEmpty {
-@@ -1284,9 +1333,8 @@ private func ghostBaseBuildPortableDeletedReply(
+@@ -1284,16 +1339,6 @@ private func ghostBaseBuildPortableDeletedReply(
          )
      }
  
 -    let sourceLength = (source.text as NSString).length
 -    let collapse = sourceLength > 320
 -        || source.text.components(separatedBy: "\n").count > 4
-+    let collapse = quoteLength > 320
-+        || quoteText.components(separatedBy: "\n").count > 4
-     if quoteLength > 0 {
-         entities.append(MessageTextEntity(
-             range: 0 ..< quoteLength,
-@@ -1502,6 +1550,16 @@ private func ghostBaseResolveDeletedReplies(
+-    if quoteLength > 0 {
+-        entities.append(MessageTextEntity(
+-            range: 0 ..< quoteLength,
+-            type: .BlockQuote(isCollapsed: collapse)
+-        ))
+-    }
+-
+     if let originalTextStart {
+         entities.append(contentsOf: ghostBaseShiftEntities(
+             ghostBaseOriginalPortableEntities(source: source),
+@@ -1301,6 +1346,14 @@ private func ghostBaseBuildPortableDeletedReply(
+         ))
+     }
+ 
++    // Only the retained source prefix gets source/author formatting. The notice
++    // must not inherit a truncated URL, custom emoji or source formatting range.
++    entities = messageTextEntitiesInRange(entities: entities, range: NSRange(location: 0, length: fittedQuote.retainedLength), onlyQuoteable: false)
++    let collapse = quoteLength > 320 || quoteText.components(separatedBy: "\n").count > 4
++    if quoteLength > 0 {
++        entities.append(MessageTextEntity(range: 0 ..< quoteLength, type: .BlockQuote(isCollapsed: collapse)))
++    }
++
+     var attributes: [MessageAttribute] = []
+     var userEntities: [MessageTextEntity] = []
+     for attribute in requestedAttributes {
+@@ -1502,6 +1555,16 @@ private func ghostBaseResolveDeletedReplies(
      peerId: PeerId,
      messages: [EnqueueMessage]
  ) -> Signal<[EnqueueMessage], NoError> {
@@ -248,7 +290,43 @@ index b1bec8e..3fdea9a 100644
      guard ghostBaseDeletedBool(
          ghostBaseSaveDeletedKey,
          defaultValue: true
-@@ -1616,6 +1674,11 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1518,6 +1581,7 @@ private func ghostBaseResolveDeletedReplies(
+         || peerId.namespace == Namespaces.Peer.CloudChannel
+ 
+     return account.postbox.transaction { transaction -> [GhostBaseDeletedReplyPlan] in
++        var retainedLimits: UserLimitsConfiguration?
+         return messages.map { outgoing in
+             guard case let .message(
+                 _, _, _, _, _, replySubject, _, _, _, _
+@@ -1541,7 +1605,8 @@ private func ghostBaseResolveDeletedReplies(
+                     sourceGroup: [],
+                     authorName: nil,
+                     authorUsername: nil,
+-                    mentionPeerId: nil
++                    mentionPeerId: nil,
++                    limits: .defaultValue
+                 )
+             }
+ 
+@@ -1605,17 +1670,28 @@ private func ghostBaseResolveDeletedReplies(
+                 mentionPeerId = authorPeer.id
+             }
+ 
++            if retainedLimits == nil {
++                let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
++                let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.flags.contains(.isPremium) ?? false
++                retainedLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
++            }
+             return GhostBaseDeletedReplyPlan(
+                 outgoing: outgoing,
+                 source: source,
+                 sourceGroup: sourceGroup,
+                 authorName: authorName,
+                 authorUsername: authorUsername,
+-                mentionPeerId: mentionPeerId
++                mentionPeerId: mentionPeerId,
++                limits: retainedLimits!
+             )
          }
      }
      |> mapToSignal { plans -> Signal<[EnqueueMessage], NoError> in
@@ -260,45 +338,65 @@ index b1bec8e..3fdea9a 100644
          return Signal { subscriber in
              DispatchQueue.global(qos: .utility).async {
                  var result: [EnqueueMessage] = []
-@@ -1666,6 +1729,7 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1666,13 +1742,15 @@ private func ghostBaseResolveDeletedReplies(
                                  authorUsername: plan.authorUsername,
                                  mentionPeerId: plan.mentionPeerId,
                                  recoveredMedia: recoveredGroup[0],
 +                                languageCode: languageCode,
++                                limits: plan.limits,
                                  forcedLocalGroupingKey: localGroupingKey
                              )
  
-@@ -1680,7 +1744,8 @@ private func ghostBaseResolveDeletedReplies(
+                         if case let .message(
+                             text, _, _, _, _, _, _, _, _, _
+                         ) = first,
+-                        (text as NSString).length > 1024 {
++                        (text as NSString).length > Int(plan.limits.maxCaptionLength) {
+                             first =
+                                 ghostBaseBuildPortableDeletedReply(
+                                     outgoing: plan.outgoing,
+@@ -1680,7 +1758,9 @@ private func ghostBaseResolveDeletedReplies(
                                      authorName: authorName,
                                      authorUsername: plan.authorUsername,
                                      mentionPeerId: plan.mentionPeerId,
 -                                    recoveredMedia: nil
 +                                    recoveredMedia: nil,
-+                                    languageCode: languageCode
++                                    languageCode: languageCode,
++                                    limits: plan.limits
                                  )
  
                              result.append(first)
-@@ -1729,7 +1794,8 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1729,14 +1809,16 @@ private func ghostBaseResolveDeletedReplies(
                              authorName: authorName,
                              authorUsername: plan.authorUsername,
                              mentionPeerId: plan.mentionPeerId,
 -                            recoveredMedia: recovered
 +                            recoveredMedia: recovered,
-+                            languageCode: languageCode
++                            languageCode: languageCode,
++                            limits: plan.limits
                          )
  
                      if recovered != nil,
-@@ -1744,7 +1810,8 @@ private func ghostBaseResolveDeletedReplies(
+                        case let .message(
+                             text, _, _, _, _, _, _, _, _, _
+                        ) = candidate,
+-                       (text as NSString).length > 1024 {
++                       (text as NSString).length > Int(plan.limits.maxCaptionLength) {
+                         candidate =
+                             ghostBaseBuildPortableDeletedReply(
+                                 outgoing: plan.outgoing,
+@@ -1744,7 +1826,9 @@ private func ghostBaseResolveDeletedReplies(
                                  authorName: authorName,
                                  authorUsername: plan.authorUsername,
                                  mentionPeerId: plan.mentionPeerId,
 -                                recoveredMedia: nil
 +                                recoveredMedia: nil,
-+                                languageCode: languageCode
++                                languageCode: languageCode,
++                                limits: plan.limits
                              )
                      }
  
-@@ -1756,6 +1823,7 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1756,6 +1840,7 @@ private func ghostBaseResolveDeletedReplies(
              }
              return EmptyDisposable
          }
@@ -308,10 +406,10 @@ index b1bec8e..3fdea9a 100644
  
 diff --git a/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift b/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift
 new file mode 100644
-index 0000000..b92bb50
+index 0000000..edf58b6
 --- /dev/null
 +++ b/submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,71 @@
 +import Foundation
 +
 +// TelegramCore has no presentation-layer dependency. Keep semantic labels here;
@@ -347,6 +445,27 @@ index 0000000..b92bb50
 +struct JerkgramDeletedReplyText {
 +    private(set) var text = ""
 +    private var utf16Length = 0
++
++    static func fittedQuote(_ quote: String, reply: String, limit: Int, languageCode: String) -> (text: String, retainedLength: Int) {
++        let original = quote as NSString
++        let separatorLength = reply.isEmpty ? 0 : 2
++        let available = max(0, limit - (reply as NSString).length - separatorLength)
++        guard original.length > available else { return (quote, original.length) }
++        // If the user's text occupies the whole limit, even a notice cannot fit.
++        // Preserve their text exactly; never add messages or trim their input.
++        guard available > 0 else { return ("", 0) }
++        let russian = languageCode.lowercased().split(whereSeparator: { $0 == "-" || $0 == "_" }).first == "ru"
++        let fullMarker = russian ? "\n[Контекст сокращён]" : "\n[Context shortened]"
++        let marker = (fullMarker as NSString).length <= available ? fullMarker : "…"
++        var retained = min(original.length, available - (marker as NSString).length)
++        if retained > 0 && retained < original.length {
++            let sequence = original.rangeOfComposedCharacterSequence(at: retained - 1)
++            if NSMaxRange(sequence) > retained {
++                retained = sequence.location
++            }
++        }
++        return (original.substring(to: retained) + marker, retained)
++    }
 +
 +    // Return the UTF-16 start of the original chunk, after a generated prefix.
 +    // Telegram entity ranges use UTF-16, not Swift Character counts.

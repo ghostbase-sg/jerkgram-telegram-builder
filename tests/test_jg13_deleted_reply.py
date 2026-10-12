@@ -40,6 +40,15 @@ class DeletedReplyTests(unittest.TestCase):
         self.assertIn("if recoveredMedia && !sourceText.isEmpty", self.text)
         self.assertIn("JerkgramDeletedReplyLabel.deletedMessage.text(languageCode:", self.text)
 
+    def test_final_builder_budgets_quote_and_preserves_user_text(self):
+        builder = self.text.split("private func ghostBaseBuildPortableDeletedReply(", 1)[1].split("private func ghostBaseBuildRecoveredAlbumTail", 1)[0]
+        self.assertIn("JerkgramDeletedReplyText.fittedQuote(", builder)
+        self.assertIn("limits.maxCaptionLength", builder)
+        self.assertIn("limits.maxMessageLength", builder)
+        self.assertIn("fittedQuote.retainedLength", builder)
+        self.assertIn("quoteText + separator + userText", builder)
+        self.assertIn("UserLimitsConfiguration(appConfiguration:", self.text)
+
 
 if __name__ == "__main__":
     unittest.main()
