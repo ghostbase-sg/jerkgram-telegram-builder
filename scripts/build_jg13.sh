@@ -15,6 +15,12 @@ python3 tests/run_jg13_capture_retention.py
 python3 tests/run_jg13_history_bounds.py
 python3 -m unittest discover -s tests -p 'test_jg13_deleted_reply*.py'
 python3 tests/run_jg13_deleted_reply.py
+python3 -m unittest discover -s tests -p test_jg13_recovery_media.py
+python3 -m unittest discover -s tests -p test_jg13_protected_copy.py
+python3 -m unittest discover -s tests -p test_jg13_forward_routes.py
+python3 -m unittest discover -s tests -p test_jg13_portable_copy_stage.py
+python3 tests/run_jg13_recovery_media.py
+python3 tests/run_jg13_protected_copy.py
 python3 -m unittest discover -s tests -p test_jg13_package_digest.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
@@ -29,7 +35,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=158 \
+  --define=buildNumber=159 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 cd ../..

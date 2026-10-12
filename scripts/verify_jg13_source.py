@@ -5,7 +5,7 @@ import json
 import subprocess
 import sys
 from materialize_jg13_expanded_diagnostics import verify_expanded
-from materialize_jg13_deleted_reply import check as check_deleted_reply
+from materialize_jg13_portable_copy import verify_portable_copy
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -52,7 +52,7 @@ def main():
     ]:
         subprocess.run([sys.executable, str(ROOT / "scripts" / name)], cwd=SOURCE, check=True)
     verify_expanded(SOURCE)
-    check_deleted_reply(SOURCE, "after")
+    verify_portable_copy(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 

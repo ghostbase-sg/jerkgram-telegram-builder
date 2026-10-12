@@ -9,6 +9,7 @@ from materialize_jg13_profile_p0 import apply_p0
 from materialize_jg13_profile_preferences import apply_preferences
 from materialize_jg13_expanded_diagnostics import apply_expanded
 from materialize_jg13_deleted_reply import apply_deleted_reply
+from materialize_jg13_portable_copy import apply_portable_copy
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -42,7 +43,8 @@ def main():
     apply_preferences(SOURCE)
     apply_expanded(SOURCE)
     apply_deleted_reply(SOURCE)
-    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 8 profile diagnostic/compatibility owners + 4 preference snapshot owners + 11 expanded diagnostic owners + 3 deleted reply owners; NOT COMPILED")
+    apply_portable_copy(SOURCE)
+    print(f"PATCHED / VERIFIED: {len(manifest)} Stable owners + {len(followup_manifest)} bounded follow-up owners + 7 cleanup owners + 8 profile diagnostic/compatibility owners + 4 preference snapshot owners + 11 expanded diagnostic owners + 3 deleted reply owners + 4 portable copy owners; NOT COMPILED")
 
 
 if __name__ == "__main__":

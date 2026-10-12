@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build158 recovery and optimization
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build159 native recovery and protected copies
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
     branches:
       - dev/jg-1.1.0-beta1-upstream13
       - dev/portable-reply-158
+      - dev/portable-copy-159
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -50,8 +51,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build158-diagnostics
+          name: Jerkgram-Beta1-Build159-diagnostics
           path: |
+            patches/jg13-portable-copy.patch
+            patches/jg13-portable-copy.sha256.json
+            work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManager.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift
             patches/jg13-deleted-reply.patch
             patches/jg13-deleted-reply.sha256.json
             work/swiftgram-src/submodules/TelegramCore/Sources/Account/Account.swift
@@ -87,9 +92,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build158
+          name: Jerkgram-1.1.0-Beta-1-Build159
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build158.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build158.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build159.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build159.json
           if-no-files-found: error
           retention-days: 90
