@@ -1,6 +1,10 @@
 """UI route contracts; Core owns per-message protected normalization."""
+import hashlib
+import json
 import os
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,7 +14,20 @@ SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 class ForwardRouteTests(unittest.TestCase):
     def setUp(self):
         self.source = (SOURCE / 'submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift').read_text()
-        self.baseline = (ROOT / 'work/forward159-baseline/submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift').read_text()
+        # Reconstruct the exact parent in an isolated Git root. CI only has
+        # the materialized final tree, not a developer's scratch fixtures.
+        owner = 'submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift'
+        manifest = json.loads((ROOT / 'patches/jg13-portable-copy.sha256.json').read_text())['owners'][owner]
+        self.assertEqual(hashlib.sha256(self.source.encode()).hexdigest(), manifest['after_sha256'])
+        with tempfile.TemporaryDirectory() as directory:
+            baseline_root = Path(directory)
+            target = baseline_root / owner
+            target.parent.mkdir(parents=True)
+            target.write_text(self.source)
+            subprocess.run(['git', 'init', '-q', directory], check=True)
+            subprocess.run(['git', 'apply', '--reverse', '--include=' + owner, str(ROOT / 'patches/jg13-portable-copy.patch')], cwd=baseline_root, check=True)
+            self.assertEqual(hashlib.sha256(target.read_bytes()).hexdigest(), manifest['before_sha256'])
+            self.baseline = target.read_text()
 
     def test_generic_selection_reaches_core_as_forward(self):
         self.assertNotIn('jerkgramPortableMessagesSignal', self.source)
