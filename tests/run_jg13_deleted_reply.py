@@ -127,10 +127,11 @@ struct TelegramMediaAction {
 struct TelegramMediaDice { let emoji: String; let value: Int32? }
 struct TelegramMediaInvoice { let title: String; let description: String }
 struct TelegramMediaImage {}
+enum TelegramMediaFileAttribute { case Sticker(displayText: String, packReference: Int?, maskData: Int?), FileName(fileName: String) }
 struct TelegramMediaFile {
     var isSticker = false, isVoice = false, isInstantVideo = false, isAnimated = false, isVideo = false, isMusic = false
     var fileName: String? = nil
-    var stickerDisplayText: String? = nil
+    var attributes: [TelegramMediaFileAttribute] = []
 }
 '''
 FIXTURE = r'''

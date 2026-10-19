@@ -38,6 +38,8 @@ class RecoveryMediaTests(unittest.TestCase):
         self.assertNotIn('☐', body)
     def test_recovered_attachment_has_no_duplicate_label_and_sticker_uses_alt(self):
         body = self.source.split('private func ghostBaseQuoteBody(', 1)[1].split('private func ghostBaseShiftEntities(', 1)[0]
-        self.assertIn('file.stickerDisplayText', body)
+        self.assertIn('file.attributes', body)
+        self.assertIn('case let .Sticker(displayText, _, _)', body)
+        self.assertNotIn('file.stickerDisplayText', body)
         self.assertIn('if recoveredMedia && !interactiveSnapshot || source.media.isEmpty', body)
 if __name__ == '__main__': unittest.main()

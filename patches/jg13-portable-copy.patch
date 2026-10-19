@@ -1,5 +1,5 @@
 diff --git a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
-index 7577ac4..2a1a903 100644
+index 7577ac4..660bf98 100644
 --- a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
 +++ b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
 @@ -1,4 +1,5 @@
@@ -132,13 +132,19 @@ index 7577ac4..2a1a903 100644
  }
  
  private struct GhostBaseDeletedQuoteBody {
-@@ -1131,7 +1164,14 @@ private func ghostBaseQuoteBody(
+@@ -1131,7 +1164,20 @@ private func ghostBaseQuoteBody(
      languageCode: String
  ) -> GhostBaseDeletedQuoteBody {
      let sourceText = source.text
 -    if recoveredMedia && !sourceText.isEmpty || source.media.isEmpty {
 +    if let file = source.media.first as? TelegramMediaFile, file.isSticker {
-+        let association = file.stickerDisplayText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
++        var association = ""
++        for attribute in file.attributes {
++            if case let .Sticker(displayText, _, _) = attribute {
++                association = displayText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
++                break
++            }
++        }
 +        let emoji = association.isEmpty ? JerkgramDeletedReplyLabel.sticker.text(languageCode: languageCode) : association
 +        return GhostBaseDeletedQuoteBody(text: emoji + (sourceText.isEmpty ? "" : "\n" + sourceText), originalTextOffset: sourceText.isEmpty ? nil : (emoji as NSString).length + 1, entities: [])
 +    }
@@ -148,7 +154,7 @@ index 7577ac4..2a1a903 100644
          return GhostBaseDeletedQuoteBody(text: sourceText, originalTextOffset: sourceText.isEmpty ? nil : 0, entities: [])
      }
  
-@@ -1151,20 +1191,74 @@ private func ghostBaseQuoteBody(
+@@ -1151,20 +1197,74 @@ private func ghostBaseQuoteBody(
      }
  
      if let poll = source.media.first as? TelegramMediaPoll {
@@ -226,7 +232,7 @@ index 7577ac4..2a1a903 100644
          }
      } else if let contact = source.media.first as? TelegramMediaContact {
          label(.contact)
-@@ -1434,11 +1528,69 @@ private func ghostBaseBuildRecoveredAlbumTail(
+@@ -1434,11 +1534,69 @@ private func ghostBaseBuildRecoveredAlbumTail(
  }
  
  
@@ -297,7 +303,7 @@ index 7577ac4..2a1a903 100644
  ) -> AnyMediaReference? {
      guard ghostBaseDeletedBool(
          ghostBasePreserveDeletedMediaKey,
-@@ -1471,6 +1623,11 @@ private func ghostBaseReconstructedMedia(
+@@ -1471,6 +1629,11 @@ private func ghostBaseReconstructedMedia(
      }
  
      let media = source.media[0]
@@ -309,7 +315,7 @@ index 7577ac4..2a1a903 100644
      // Preserve the original TelegramMediaFile mimeType + attributes and
      // let the existing deleted-media reconstruction path rebuild it.
      // The textual Sticker label remains only as the missing-media fallback.
-@@ -1675,6 +1832,23 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1675,6 +1838,23 @@ private func ghostBaseResolveDeletedReplies(
                  let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.flags.contains(.isPremium) ?? false
                  retainedLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
              }
@@ -333,7 +339,7 @@ index 7577ac4..2a1a903 100644
              return GhostBaseDeletedReplyPlan(
                  outgoing: outgoing,
                  source: source,
-@@ -1682,7 +1856,9 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1682,7 +1862,9 @@ private func ghostBaseResolveDeletedReplies(
                  authorName: authorName,
                  authorUsername: authorUsername,
                  mentionPeerId: mentionPeerId,
@@ -344,7 +350,7 @@ index 7577ac4..2a1a903 100644
              )
          }
      }
-@@ -1720,7 +1896,9 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1720,7 +1902,9 @@ private func ghostBaseResolveDeletedReplies(
                                  account: account,
                                  peerId: peerId,
                                  source: groupSource,
@@ -355,7 +361,7 @@ index 7577ac4..2a1a903 100644
                              ) {
                              recoveredGroup.append(recovered)
                          }
-@@ -1957,22 +2135,232 @@ public func enqueueWelcomeMessages(account: Account, peerId: PeerId, messages: [
+@@ -1957,22 +2141,232 @@ public func enqueueWelcomeMessages(account: Account, peerId: PeerId, messages: [
      }
  }
  
