@@ -1,0 +1,420 @@
+name: Jerkgram 1.1.0 Source Export
+
+on:
+  push:
+    branches:
+      - release/source-export-1.1.0
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-source:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      PRODUCT_COMMIT: b584175486af87a2c3dc3b98893c83f2947ad741
+      VERSION: 1.1.0
+      BUILD_NUMBER: "163"
+      TELEGRAM_BASE: "13.0"
+      UPSTREAM_TAG: release-13.0.0
+      UPSTREAM_COMMIT: f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838
+      IPA_NAME: Jerkgram-1.1.0.ipa
+      IPA_SIZE: "93641504"
+      IPA_SHA256: 9c20a01417784d92973d5ae862e35aec827484369ee1e8c2bc3e6997f74dc61a
+      SOURCE_NAME: Jerkgram-1.1.0-source.tar.xz
+      MANIFEST_NAME: public-source-manifest.json
+      JERKGRAM_TELEGRAM_API_ID: "22732185"
+      JERKGRAM_TELEGRAM_API_HASH: "00000000000000000000000000000000"
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      BAZEL_BIN: bazelisk
+
+    steps:
+      - name: Checkout exact release exporter branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove product code is exact Stable Build163
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse ${PRODUCT_COMMIT}^{commit})" = "$PRODUCT_COMMIT"
+          mapfile -t changed < <(git diff --name-only "$PRODUCT_COMMIT"..HEAD)
+          if [ "${#changed[@]}" -ne 1 ] || [ "${changed[0]}" != ".github/workflows/export-source-1.1.0.yml" ]; then
+            printf 'Unexpected drift after Stable Build163:\n%s\n' "${changed[*]:-<none>}" >&2
+            exit 1
+          fi
+          echo "Exact product owner: $PRODUCT_COMMIT"
+
+      - name: Prepare clean pinned Official Telegram 13.0 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/prepare_source_official.sh
+          test "$(git -C work/swiftgram-src rev-parse HEAD)" = "$UPSTREAM_COMMIT"
+          python3 - <<'PY'
+          import json
+          v = json.load(open('work/swiftgram-src/versions.json'))
+          assert v['app'] == '13.0', v
+          assert v['xcode'] == '26.6', v
+          assert v['bazel'].split(':')[0] == '9.2.0', v
+          PY
+
+      - name: Materialize the exact Build163 source and stop before Bazel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('scripts/build_jg13.sh')
+          out = Path('scripts/source_only_materialize_build163_tmp.sh')
+          text = src.read_text(encoding='utf-8')
+          anchor = '"${BAZEL_BIN:-bazelisk}" build \\\n'
+          if text.count(anchor) != 1:
+              raise SystemExit(f'unexpected Bazel boundary count: {text.count(anchor)}')
+          pos = text.index(anchor)
+          before = text[:pos]
+          required = [
+              'python3 scripts/materialize_jg13.py',
+              'python3 scripts/configure_jg13.py',
+              'python3 scripts/verify_jg13_source.py',
+              'python3 scripts/pin_jg13_dependencies.py',
+              'git submodule update --init --recursive --depth 1',
+              'python3 ../../scripts/pin_jg13_dependencies.py --verify',
+              'python3 ../../scripts/prepare_jg13_build_rules.py',
+          ]
+          missing = [item for item in required if item not in before]
+          if missing:
+              raise SystemExit('pre-Bazel materialization chain drifted: ' + ', '.join(missing))
+          replacement = 'echo "=== MATERIALIZED BUILD163 SOURCE READY; BAZEL NOT RUN ==="\nexit 0\n' + anchor
+          out.write_text(text.replace(anchor, replacement, 1), encoding='utf-8')
+          out.chmod(0o755)
+          PY
+          bash -n scripts/source_only_materialize_build163_tmp.sh
+          scripts/source_only_materialize_build163_tmp.sh
+
+      - name: Stage signer-neutral public source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
+          ROOT="$GITHUB_WORKSPACE/export/Jerkgram-1.1.0-source"
+          rm -rf "$GITHUB_WORKSPACE/export"
+          mkdir -p "$ROOT"
+          rsync -a "$SRC/" "$ROOT/"
+
+          # Private/generated build configuration is not public product source.
+          rm -rf "$ROOT/build-input"
+          rm -rf "$ROOT/ghostbase-final"
+          rm -rf "$ROOT/.github/workflows"
+
+          # Match the proven 1.0.2 publication policy: normalize deployment-only
+          # signer/infrastructure values without renaming Jerkgram feature code.
+          python3 - "$ROOT" <<'PY'
+          from pathlib import Path
+          import re, sys
+
+          root = Path(sys.argv[1])
+          text_names = {'BUILD', 'BUILD.bazel', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel'}
+          text_suffixes = {
+              '.swift', '.m', '.mm', '.h', '.hpp', '.c', '.cc', '.cpp', '.bzl',
+              '.plist', '.entitlements', '.json', '.txt', '.md', '.xcconfig',
+              '.pbxproj', '.yml', '.yaml', '.sh', '.py'
+          }
+          literal = {
+              'app.pumpkin6584.lion7414': 'ph.telegra.Telegraph',
+              '5VZ6BJLW8Q': 'C67CF9S4VU',
+              'https://jerkgram-telemetry.cronusk1809.workers.dev/v1/activity': 'https://example.invalid/jerkgram-telemetry/v1/activity',
+          }
+          changed = 0
+          replacements = {key: 0 for key in literal}
+          group_replacements = 0
+          for p in root.rglob('*'):
+              if not p.is_file() or p.is_symlink():
+                  continue
+              if p.name not in text_names and p.suffix.lower() not in text_suffixes:
+                  continue
+              try:
+                  text = p.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              old = text
+              for source, public in literal.items():
+                  n = text.count(source)
+                  if n:
+                      replacements[source] += n
+                      text = text.replace(source, public)
+              text, n = re.subn(r'group\.4a348a9b186b700c\.[0-9]+', 'group.ph.telegra.Telegraph', text)
+              group_replacements += n
+              if text != old:
+                  p.write_text(text, encoding='utf-8')
+                  changed += 1
+          print(f'public normalization files: {changed}')
+          for key, count in replacements.items():
+              print(f'normalized {key}: {count}')
+          print(f'normalized private app groups: {group_replacements}')
+          PY
+
+          # Strip every nested repository/worktree marker and Bazel output link.
+          python3 - "$ROOT" <<'PY'
+          from pathlib import Path
+          import shutil, sys
+          root = Path(sys.argv[1])
+          for p in sorted(root.rglob('.git'), key=lambda x: len(x.parts), reverse=True):
+              if p.is_dir() and not p.is_symlink():
+                  shutil.rmtree(p)
+              else:
+                  p.unlink(missing_ok=True)
+          for p in root.glob('bazel-*'):
+              if p.is_dir() and not p.is_symlink():
+                  shutil.rmtree(p)
+              else:
+                  p.unlink(missing_ok=True)
+          PY
+
+      - name: Public-source safety and identity gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE/export/Jerkgram-1.1.0-source"
+          SRC="$GITHUB_WORKSPACE/work/swiftgram-src"
+
+          test -f "$ROOT/Telegram/BUILD"
+          test -f "$ROOT/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
+          test -f "$ROOT/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+          test ! -e "$ROOT/build-input"
+          test ! -e "$ROOT/.github/workflows"
+          test -z "$(find "$ROOT" -name .git -print -quit)"
+          test -z "$(find "$ROOT" -type f \( -name '*.ipa' -o -name '*.p12' -o -name '*.mobileprovision' \) -print -quit)"
+
+          grep -Fq 'public static let displayVersion = "1.1.0"' "$ROOT/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+          grep -Fq 'public static let technicalVersion = "1.1.0"' "$ROOT/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+          grep -Fq 'public static let build = "163"' "$ROOT/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+          grep -Fq 'public static let telegramBase = "13.0"' "$ROOT/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+
+          INTERNAL_PATHS="$(find "$ROOT" -print | grep -Ei '/(apply|verify|install)_(ghostbase|jerkgram)_[^/]*\.py$|/jerkgram_publish_build[^/]*\.py$|/gb_patch_[^/]*\.py$|/fix_ghostbase_[^/]*\.py$' || true)"
+          if [ -n "$INTERNAL_PATHS" ]; then
+            echo "$INTERNAL_PATHS" | sed -n '1,120p'
+            echo 'ERROR: internal patch/build script filenames leaked into public source'
+            exit 1
+          fi
+
+          INTERNAL_LINKS="$(grep -RIlE 'ghostbase-sg/jerkgram-telegram-builder|/root/gb_builder|GHOSTBASE_(REPORTS|INBOX|EXPORT)|work/swiftgram-src|cronusk1809' "$ROOT" 2>/dev/null || true)"
+          if [ -n "$INTERNAL_LINKS" ]; then
+            echo "$INTERNAL_LINKS" | sed -n '1,120p'
+            echo 'ERROR: private builder/infrastructure linkage leaked into public source'
+            exit 1
+          fi
+
+          PRIVATE_IDENTITY="$(grep -RIlE 'app\.pumpkin6584\.lion7414|group\.4a348a9b186b700c\.[0-9]+|5VZ6BJLW8Q' "$ROOT" 2>/dev/null || true)"
+          if [ -n "$PRIVATE_IDENTITY" ]; then
+            echo "$PRIVATE_IDENTITY" | sed -n '1,120p'
+            echo 'ERROR: private build/signing identity leaked into public source'
+            exit 1
+          fi
+
+          SECRET_MARKERS="$(grep -RIlE 'JERKGRAM_TELEGRAM_API_HASH|00000000000000000000000000000000' "$ROOT" 2>/dev/null || true)"
+          if [ -n "$SECRET_MARKERS" ]; then
+            echo "$SECRET_MARKERS" | sed -n '1,120p'
+            echo 'ERROR: build credential material leaked into public source'
+            exit 1
+          fi
+
+          TMP_OFFICIAL="$(mktemp -d)"
+          git -C "$SRC" archive HEAD build-system/example-configuration | tar -x -C "$TMP_OFFICIAL"
+          diff -qr "$TMP_OFFICIAL/build-system/example-configuration" "$ROOT/build-system/example-configuration"
+          rm -rf "$TMP_OFFICIAL"
+          echo 'Official example configuration preserved exactly.'
+
+          FILE_COUNT="$(find "$ROOT" -type f | wc -l | tr -d ' ')"
+          echo "public source files: $FILE_COUNT"
+          if [ "$FILE_COUNT" -lt 40000 ]; then
+            echo 'ERROR: public source tree is unexpectedly small'
+            exit 1
+          fi
+
+      - name: Package source archive and generate manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE/export/Jerkgram-1.1.0-source"
+          ARCHIVE="$GITHUB_WORKSPACE/$SOURCE_NAME"
+          MANIFEST="$GITHUB_WORKSPACE/$MANIFEST_NAME"
+
+          # Fixed stage mtimes make the one-time release archive stable across retries.
+          find "$ROOT" -exec touch -h -t 202610190000.00 {} +
+          /usr/bin/tar -cJf "$ARCHIVE" -C "$GITHUB_WORKSPACE/export" Jerkgram-1.1.0-source
+
+          SOURCE_SHA256="$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')"
+          SOURCE_SIZE="$(stat -f '%z' "$ARCHIVE")"
+          export SOURCE_SHA256 SOURCE_SIZE ROOT ARCHIVE MANIFEST
+
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, stat
+
+          root = pathlib.Path(os.environ['ROOT'])
+          files = []
+          for p in sorted(root.rglob('*'), key=lambda x: x.relative_to(root).as_posix()):
+              rel = p.relative_to(root).as_posix()
+              st = p.lstat()
+              mode = oct(stat.S_IMODE(st.st_mode))[2:]
+              if p.is_symlink():
+                  files.append({'path': rel, 'type': 'symlink', 'target': os.readlink(p), 'mode': mode})
+              elif p.is_file():
+                  h = hashlib.sha256()
+                  with p.open('rb') as f:
+                      for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                          h.update(chunk)
+                  files.append({'path': rel, 'type': 'file', 'size': st.st_size, 'sha256': h.hexdigest(), 'mode': mode})
+
+          manifest = {
+              'schemaVersion': 1,
+              'project': 'Jerkgram',
+              'version': '1.1.0',
+              'build': 163,
+              'upstream': {
+                  'repository': 'TelegramMessenger/Telegram-iOS',
+                  'tag': 'release-13.0.0',
+                  'commit': 'f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838',
+              },
+              'sourceArchive': {
+                  'filename': 'Jerkgram-1.1.0-source.tar.xz',
+                  'sha256': os.environ['SOURCE_SHA256'],
+                  'size': int(os.environ['SOURCE_SIZE']),
+              },
+              'publicSourceNormalizations': [
+                  'private signing identity replaced with upstream public example identity where present',
+                  'private telemetry deployment hostname replaced with example.invalid where present',
+                  'generated private build-input configuration omitted',
+              ],
+              'dependencyOverrides': {
+                  'submodules/rlottie/rlottie': {
+                      'repository': 'TelegramMessenger/rlottie',
+                      'original_sha': '53c9679069eb6b6513ccc3c892ef4f4a760658da',
+                      'source_sha': '67f103bc8b625f2a4a9e94f1d8c7bd84c5a08d1d',
+                      'reason': 'Exact upstream gitlink unavailable; explicit user-approved source fallback on 2026-10-09',
+                  }
+              },
+              'files': files,
+          }
+          pathlib.Path(os.environ['MANIFEST']).write_text(
+              json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(',', ':')) + '\n',
+              encoding='utf-8'
+          )
+          print(f'manifest leaves: {len(files)}')
+          PY
+
+          shasum -a 256 "$ARCHIVE" | tee "$ARCHIVE.sha256"
+          shasum -a 256 "$MANIFEST" | tee "$MANIFEST.sha256"
+          echo "source bytes: $SOURCE_SIZE"
+          echo "manifest bytes: $(stat -f '%z' "$MANIFEST")"
+
+      - name: Verify archive byte-for-byte against manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, posixpath, tarfile
+          from pathlib import PurePosixPath
+
+          source_name = 'Jerkgram-1.1.0-source.tar.xz'
+          manifest_name = 'public-source-manifest.json'
+          root_prefix = 'Jerkgram-1.1.0-source/'
+          manifest = json.load(open(manifest_name, encoding='utf-8'))
+          assert manifest['schemaVersion'] == 1
+          assert manifest['project'] == 'Jerkgram'
+          assert manifest['version'] == '1.1.0'
+          assert manifest['build'] == 163
+          assert manifest['upstream'] == {
+              'repository': 'TelegramMessenger/Telegram-iOS',
+              'tag': 'release-13.0.0',
+              'commit': 'f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838',
+          }
+          expected = {entry['path']: entry for entry in manifest['files']}
+          assert len(expected) == len(manifest['files'])
+          actual = {}
+          with tarfile.open(source_name, mode='r:xz') as tf:
+              for member in tf:
+                  name = member.name
+                  if name == root_prefix[:-1]:
+                      continue
+                  assert name.startswith(root_prefix), name
+                  rel = name[len(root_prefix):]
+                  if not rel:
+                      continue
+                  parts = PurePosixPath(rel).parts
+                  assert not rel.startswith('/') and '..' not in parts, rel
+                  assert parts[0] != '.git', rel
+                  assert not rel.startswith('.github/workflows/'), rel
+                  mode = format(member.mode & 0o777, 'o')
+                  if member.isfile():
+                      f = tf.extractfile(member)
+                      assert f is not None
+                      h = hashlib.sha256()
+                      size = 0
+                      while True:
+                          chunk = f.read(1024 * 1024)
+                          if not chunk:
+                              break
+                          h.update(chunk)
+                          size += len(chunk)
+                      actual[rel] = {'path': rel, 'type': 'file', 'size': size, 'sha256': h.hexdigest(), 'mode': mode}
+                  elif member.issym():
+                      base = posixpath.dirname(rel)
+                      resolved = posixpath.normpath(posixpath.join(base, member.linkname))
+                      assert resolved != '..' and not resolved.startswith('../') and not resolved.startswith('/'), rel
+                      actual[rel] = {'path': rel, 'type': 'symlink', 'target': member.linkname, 'mode': mode}
+                  elif member.isdir():
+                      continue
+                  else:
+                      raise AssertionError(f'unsupported tar member type: {rel}')
+          assert set(actual) == set(expected), (len(actual), len(expected))
+          for path, entry in expected.items():
+              assert actual[path] == entry, path
+          print(f'Verified {len(expected)} public source leaves against manifest.')
+          PY
+
+      - name: Write release source metadata summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          def info(path):
+              p = pathlib.Path(path)
+              h = hashlib.sha256(p.read_bytes()).hexdigest()
+              return {'filename': p.name, 'size': p.stat().st_size, 'sha256': h}
+          out = {
+              'version': '1.1.0',
+              'build': 163,
+              'telegramBase': '13.0',
+              'upstreamTag': 'release-13.0.0',
+              'upstreamCommit': 'f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838',
+              'builderProductCommit': 'b584175486af87a2c3dc3b98893c83f2947ad741',
+              'ipa': {
+                  'filename': 'Jerkgram-1.1.0.ipa',
+                  'size': 93641504,
+                  'sha256': '9c20a01417784d92973d5ae862e35aec827484369ee1e8c2bc3e6997f74dc61a',
+              },
+              'source': info('Jerkgram-1.1.0-source.tar.xz'),
+              'manifest': info('public-source-manifest.json'),
+          }
+          pathlib.Path('Jerkgram-1.1.0-release-source-metadata.json').write_text(json.dumps(out, indent=2) + '\n')
+          print(json.dumps(out, indent=2))
+          PY
+
+      - name: Upload verified clean source artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.1.0-clean-source
+          path: |
+            Jerkgram-1.1.0-source.tar.xz
+            Jerkgram-1.1.0-source.tar.xz.sha256
+            public-source-manifest.json
+            public-source-manifest.json.sha256
+            Jerkgram-1.1.0-release-source-metadata.json
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
