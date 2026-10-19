@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build161 native recovery and protected copies
+name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build162 native recovery and protected copies
 
 on:
   workflow_dispatch:
@@ -11,6 +11,7 @@ on:
       - dev/portable-copy-159
       - dev/portable-copy-160
       - dev/portable-copy-161
+      - dev/cache-performance-162
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -53,7 +54,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build161-diagnostics
+          name: Jerkgram-Beta1-Build162-diagnostics
           path: |
             patches/jg13-portable-copy.patch
             patches/jg13-portable-copy.sha256.json
@@ -94,9 +95,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build161
+          name: Jerkgram-1.1.0-Beta-1-Build162
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build161.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build161.json
+            artifacts/Jerkgram-1.1.0-Beta-1-Build162.ipa
+            artifacts/Jerkgram-1.1.0-Beta-1-Build162.json
           if-no-files-found: error
           retention-days: 90
