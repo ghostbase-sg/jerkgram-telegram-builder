@@ -5,6 +5,7 @@ import json
 import shutil
 import apply_jerkgram_build124_telegram_api_credentials1 as credentials
 import os
+from configure_jg13_release_ui import apply_release_ui
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -18,6 +19,7 @@ def replace_once(text, old, new):
 
 def main():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
+    apply_release_ui(SOURCE)
     p = SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
     text = p.read_text()
     for key, old, value in [

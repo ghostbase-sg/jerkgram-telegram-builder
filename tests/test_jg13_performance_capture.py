@@ -13,11 +13,10 @@ class CaptureTests(unittest.TestCase):
     def test_extracted_cache_fixture_includes_real_capture_owner(self):
         text = (ROOT / "tests/run_jg13_followup.py").read_text()
         self.assertTrue('run("avatar-cache", owner("submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift")' in text)
-    def test_visible_about_controls_and_export(self):
+    def test_internal_capture_actions_and_export_remain_available(self):
         text = read(SETTINGS)
-        about = text.split("if page == .about {", 1)[1].split("if page == .debugResearch", 1)[0]
-        for token in ("performanceStart", "performanceStop", "performanceShare", "performanceCopy", "JerkgramPerformanceDiagnostics.shared.status"):
-            self.assertTrue(token in about, token)
+        for token in ("performanceStart", "performanceStop", "performanceShare", "performanceCopy"):
+            self.assertTrue(token in text, token)
         self.assertTrue("UIActivityViewController(activityItems:" in text)
         self.assertTrue("popoverPresentationController" in text)
     def test_bounded_session_and_shutdown(self):

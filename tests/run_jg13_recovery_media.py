@@ -22,7 +22,10 @@ precondition(reconstructedMap.venue?.title == "Парк" && reconstructedMap.add
 precondition(reconstructedMap.liveBroadcastingTimeout == nil && reconstructedMap.liveProximityNotificationRadius == nil)
 var sticker = TelegramMediaFile(isSticker: true, fileName: "sticker.tgs", attributes: [.FileName(fileName: "sticker.tgs"), .Sticker(displayText: " 😎 ", packReference: nil, maskData: nil)])
 let stickerBody = ghostBaseQuoteBody(source: .init(text: "", media: [sticker]), recoveredMedia: false, languageCode: "ru")
-precondition(stickerBody.text == "😎" && stickerBody.originalTextOffset == nil)
+precondition(stickerBody.text == "Стикер 😎" && stickerBody.originalTextOffset == nil)
+let stickerCaption = ghostBaseQuoteBody(source: .init(text: "caption 😀", media: [sticker]), recoveredMedia: false, languageCode: "en")
+precondition(stickerCaption.text == "Sticker 😎\ncaption 😀")
+precondition(stickerCaption.originalTextOffset == ("Sticker 😎\n" as NSString).length)
 sticker.attributes = []
 precondition(ghostBaseQuoteBody(source: .init(text: "", media: [sticker]), recoveredMedia: false, languageCode: "en").text == "Sticker")
 for media in [TelegramMediaImage(), TelegramMediaFile(fileName: "document.pdf"), map, contact] as [Any] {

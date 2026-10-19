@@ -63,7 +63,7 @@ def main():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     out = ROOT / "artifacts"
     out.mkdir(exist_ok=True)
-    artifact_name = f'Jerkgram-1.1.0-Beta-1-Build{config["build_number"]}'
+    artifact_name = f'Jerkgram-{config["product_version"]}-Build{config["build_number"]}'
     ipa = out / (artifact_name + ".ipa")
     shutil.copy2(Path(sys.argv[1]), ipa)
     # Same asset hashes and main-app-only packaging as the proven Build138.

@@ -41,5 +41,6 @@ class RecoveryMediaTests(unittest.TestCase):
         self.assertIn('file.attributes', body)
         self.assertIn('case let .Sticker(displayText, _, _)', body)
         self.assertNotIn('file.stickerDisplayText', body)
+        self.assertIn('JerkgramDeletedReplyLabel.sticker.text(languageCode: languageCode) +', body)
         self.assertIn('if recoveredMedia && !interactiveSnapshot || source.media.isEmpty', body)
 if __name__ == '__main__': unittest.main()

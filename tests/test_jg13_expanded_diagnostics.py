@@ -94,12 +94,16 @@ class ExpandedDiagnosticsTests(unittest.TestCase):
             for name in set(manifest["owners"]) | set(manifest["regression_locks"]):
                 target=fixture/name;target.parent.mkdir(parents=True,exist_ok=True)
                 shutil.copyfile(SOURCE/name,target)
-            gate.check(fixture,"after")
+            import hashlib
+            from configure_jg13_release_ui import OWNER, read_manifest, verify_release_ui
+            release = read_manifest()
+            final_owners = verify_release_ui(SOURCE) if hashlib.sha256((SOURCE / OWNER).read_bytes()).hexdigest() == release['after_sha256'] else {}
+            gate.check(fixture,"after", final_owners=final_owners)
             for name in manifest["owners"]:
                 target=fixture/name;before=target.read_bytes()
                 target.write_bytes(before+b"\n// hash-preserving-marker tamper\n")
                 with self.assertRaisesRegex(RuntimeError,"after hash mismatch"):
-                    gate.check(fixture,"after")
+                    gate.check(fixture,"after", final_owners=final_owners)
                 target.write_bytes(before)
     def test_canonical_gate_after_preferences(self):
         s=(ROOT / "scripts/materialize_jg13.py").read_text()

@@ -1,0 +1,7 @@
+{
+  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838",
+  "owner": "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+  "before_sha256": "ac950f2f12d48c5ff0848b29eb7fe54519e29cd472768a02afd26c9bcd783df9",
+  "after_sha256": "cf24592a3072106260fff04fb330fbfaabe6a30889dfa64572786f3d830b2854",
+  "removed_about_block": "            .header(4, \"P0 · Диагностика производительности\"),\n            .researchAction(4, 1, \"Начать запись (до 10 минут)\", \"performanceStart\"),\n            .researchAction(4, 2, \"Остановить запись\", \"performanceStop\"),\n            .researchAction(4, 3, \"Поделиться отчётом\", \"performanceShare\"),\n            .researchAction(4, 4, \"Копировать отчёт\", \"performanceCopy\"),\n            .info(4, JerkgramPerformanceDiagnostics.shared.status),\n            .info(5, \"Начните запись, повторите фризы Settings и профилей, затем вернитесь сюда, остановите запись и поделитесь отчётом. CPU: 100% = одно ядро; память: пиковая RSS; GPU не измеряется. Новая запись заменяет предыдущую. После перезапуска приложения отчёт не сохраняется.\")\n"
+}

@@ -10,7 +10,7 @@
   "owners": {
     "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": {
       "before_sha256": "ebab740cd04c896ad65cd501c4b37c9d74e9ffbdfcd3b0748df0b2279800c91a",
-      "after_sha256": "f772fdb0a2c44d026ca15a6c33f6ee8d97c517b8bd7bf605bcd550abe1ce91ca",
+      "after_sha256": "22a2bfe3ee6eb4ae627f507d4039e019f4426b99ff2e1a6418cf231f0c50c39c",
       "survival_functions": [
         "append",
         "augmentMediaWithReference",
