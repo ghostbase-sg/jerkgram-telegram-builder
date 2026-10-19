@@ -62,6 +62,26 @@ jobs:
           assert v['bazel'].split(':')[0] == '9.2.0', v
           PY
 
+      - name: Make Swift fixture arguments launcher-independent
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tests/run_jg13_followup.py')
+          s = p.read_text()
+          old = '        subprocess.run(["xcrun", "swift", str(p), *args], check=True)\n'
+          new = (
+              '        executable = Path(tmp) / "fixture"\n'
+              '        subprocess.run(["xcrun", "swiftc", str(p), "-o", str(executable)], check=True)\n'
+              '        subprocess.run([str(executable), *args], check=True)\n'
+          )
+          if s.count(old) != 1:
+              raise SystemExit(f'expected exactly one Swift fixture launcher, found {s.count(old)}')
+          p.write_text(s.replace(old, new))
+          PY
+          git diff --check -- tests/run_jg13_followup.py
+
       - name: Materialize the exact Build163 source and stop before Bazel
         shell: bash
         run: |
