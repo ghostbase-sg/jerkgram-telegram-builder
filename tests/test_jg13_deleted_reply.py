@@ -36,8 +36,8 @@ class DeletedReplyTests(unittest.TestCase):
         self.assertIn("languageCode: languageCode", resolver)
         self.assertNotIn("Locale.preferredLanguages", self.text)
 
-    def test_empty_recovered_media_still_has_a_localized_body(self):
-        self.assertIn("if recoveredMedia && !sourceText.isEmpty", self.text)
+    def test_native_attachment_does_not_repeat_its_type(self):
+        self.assertIn("if recoveredMedia && !interactiveSnapshot", self.text)
         self.assertIn("JerkgramDeletedReplyLabel.deletedMessage.text(languageCode:", self.text)
 
     def test_final_builder_budgets_quote_and_preserves_user_text(self):

@@ -130,6 +130,7 @@ struct TelegramMediaImage {}
 struct TelegramMediaFile {
     var isSticker = false, isVoice = false, isInstantVideo = false, isAnimated = false, isVideo = false, isMusic = false
     var fileName: String? = nil
+    var stickerDisplayText: String? = nil
 }
 '''
 FIXTURE = r'''
@@ -151,7 +152,7 @@ precondition(todoBody.text == "Список задач\nПокупки\n☑ Да
 precondition(todoBody.originalTextOffset == nil)
 precondition((todoBody.text as NSString).substring(with: NSRange(location: todoBody.entities[0].range.lowerBound, length: 2)) == "Да")
 let photoBody = ghostBaseQuoteBody(source: Message(text: "", media: [TelegramMediaImage()]), recoveredMedia: true, languageCode: "ru")
-precondition(photoBody.text == "📷 Фото", "Recovered captionless media must not produce an author-only reply")
+precondition(photoBody.text.isEmpty, "The native attachment already identifies the media")
 let caption = ghostBaseQuoteBody(source: Message(text: "caption", media: [TelegramMediaImage()]), recoveredMedia: true, languageCode: "en")
 precondition(caption.text == "caption" && caption.originalTextOffset == 0)
 let contact = ghostBaseQuoteBody(source: Message(text: "", media: [TelegramMediaContact(firstName: "Иван", lastName: "Иванов", phoneNumber: "+7000")]), recoveredMedia: false, languageCode: "ru")

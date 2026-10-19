@@ -33,7 +33,11 @@ class RecoveryMediaTests(unittest.TestCase):
         self.assertIn('let originalInteractive', body)
         self.assertIn('append(originalPoll.text, originalPoll.textEntities)', body)
         self.assertIn('append(originalTodo.text, originalTodo.textEntities)', body)
-        self.assertIn('if recoveredMedia && source.media.first is TelegramMediaContact', body)
+        self.assertIn('if recoveredMedia && !interactiveSnapshot', body)
         self.assertIn('prefix: "+ "', body)
         self.assertNotIn('☐', body)
+    def test_recovered_attachment_has_no_duplicate_label_and_sticker_uses_alt(self):
+        body = self.source.split('private func ghostBaseQuoteBody(', 1)[1].split('private func ghostBaseShiftEntities(', 1)[0]
+        self.assertIn('file.stickerDisplayText', body)
+        self.assertIn('if recoveredMedia && !interactiveSnapshot || source.media.isEmpty', body)
 if __name__ == '__main__': unittest.main()

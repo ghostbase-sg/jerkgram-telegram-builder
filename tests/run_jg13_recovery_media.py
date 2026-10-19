@@ -20,6 +20,17 @@ let reconstructedMap = ghostBaseStaticDeletedMedia(media: map)!.media as! Telegr
 precondition(reconstructedMap.latitude == map.latitude && reconstructedMap.longitude == map.longitude)
 precondition(reconstructedMap.venue?.title == "Парк" && reconstructedMap.address == "RU" && reconstructedMap.accuracyRadius == 20)
 precondition(reconstructedMap.liveBroadcastingTimeout == nil && reconstructedMap.liveProximityNotificationRadius == nil)
+var sticker = TelegramMediaFile(isSticker: true, fileName: "sticker.tgs", stickerDisplayText: "😎")
+let stickerBody = ghostBaseQuoteBody(source: .init(text: "", media: [sticker]), recoveredMedia: false, languageCode: "ru")
+precondition(stickerBody.text == "😎" && stickerBody.originalTextOffset == nil)
+sticker.stickerDisplayText = nil
+precondition(ghostBaseQuoteBody(source: .init(text: "", media: [sticker]), recoveredMedia: false, languageCode: "en").text == "Sticker")
+for media in [TelegramMediaImage(), TelegramMediaFile(fileName: "document.pdf"), map, contact] as [Any] {
+    let native = ghostBaseQuoteBody(source: .init(text: "", media: [media]), recoveredMedia: true, languageCode: "ru")
+    precondition(native.text.isEmpty && native.entities.isEmpty)
+    let captioned = ghostBaseQuoteBody(source: .init(text: "Текст", media: [media]), recoveredMedia: true, languageCode: "ru")
+    precondition(captioned.text == "Текст" && captioned.originalTextOffset == 0)
+}
 let bold = MessageTextEntity(range: 0..<2, type: .Bold)
 let appended = TelegramMediaAction(action: .todoAppendTasks([.init(id: 8, text: "😀 хлеб", entities: [bold])]))
 let addedBody = ghostBaseQuoteBody(source: .init(text: "", media: [appended]), recoveredMedia: false, languageCode: "ru")
