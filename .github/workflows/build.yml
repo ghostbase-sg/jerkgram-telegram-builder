@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 Beta 1 / Telegram 13.0 / Build162 native recovery and protected copies
+name: Jerkgram 1.1.0 / Telegram 13.0 / Build163 native recovery and protected copies
 
 on:
   workflow_dispatch:
@@ -12,6 +12,7 @@ on:
       - dev/portable-copy-160
       - dev/portable-copy-161
       - dev/cache-performance-162
+      - dev/release-1.1.0-163
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -43,7 +44,7 @@ jobs:
           bazelisk --version
       - name: Prepare clean pinned Official Telegram 13.0 source
         run: bash scripts/prepare_source_official.sh
-      - name: Build Jerkgram 1.1.0 Beta 1
+      - name: Build Jerkgram 1.1.0
         run: |
           set -euo pipefail
           mkdir -p artifacts
@@ -54,8 +55,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-Beta1-Build162-diagnostics
+          name: Jerkgram-1.1.0-Build163-diagnostics
           path: |
+            patches/jg13-release-ui.sha256.json
+            scripts/configure_jg13_release_ui.py
             patches/jg13-portable-copy.patch
             patches/jg13-portable-copy.sha256.json
             work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManager.swift
@@ -91,13 +94,13 @@ jobs:
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
             work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
           if-no-files-found: warn
-      - name: Upload verified Beta IPA
+      - name: Upload verified IPA
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Beta-1-Build162
+          name: Jerkgram-1.1.0-Build163
           path: |
-            artifacts/Jerkgram-1.1.0-Beta-1-Build162.ipa
-            artifacts/Jerkgram-1.1.0-Beta-1-Build162.json
+            artifacts/Jerkgram-1.1.0-Build163.ipa
+            artifacts/Jerkgram-1.1.0-Build163.json
           if-no-files-found: error
           retention-days: 90
