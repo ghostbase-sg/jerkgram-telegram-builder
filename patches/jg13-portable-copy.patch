@@ -1,8 +1,129 @@
 diff --git a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
-index 7577ac4..2aea6ee 100644
+index 7577ac4..2a1a903 100644
 --- a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
 +++ b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
-@@ -1068,6 +1068,8 @@ private struct GhostBaseDeletedReplyPlan {
+@@ -1,4 +1,5 @@
+ import Foundation
++import Darwin
+ import Postbox
+ import TelegramApi
+ import SwiftSignalKit
+@@ -685,6 +686,15 @@ private enum GhostBasePublicPeerNameStore {
+     private static let orderKey = "jerkgram.PublicPeerNamesOrder.V11T"
+     private static let maximumCount = 256
+     private static let lock = NSLock()
++    private static var values: [String: String]?
++    private static var order: [String] = []
++
++    // All access is protected by lock; these private keys have one in-process writer.
++    private static func loadIfNeeded() {
++        guard self.values == nil else { return }
++        self.values = UserDefaults.standard.dictionary(forKey: self.valuesKey) as? [String: String] ?? [:]
++        self.order = UserDefaults.standard.stringArray(forKey: self.orderKey) ?? []
++    }
+ 
+     static func store(
+         peerId: PeerId,
+@@ -701,12 +711,12 @@ private enum GhostBasePublicPeerNameStore {
+         self.lock.lock()
+         defer { self.lock.unlock() }
+ 
++        self.loadIfNeeded()
+         let defaults = UserDefaults.standard
+-        var values = defaults.dictionary(
+-            forKey: self.valuesKey
+-        ) as? [String: String] ?? [:]
+-        var order = defaults.stringArray(forKey: self.orderKey) ?? []
+         let key = String(peerId.toInt64())
++        if self.values?[key] == name && self.order.last == key { return }
++        var values = self.values ?? [:]
++        var order = self.order
+         values[key] = name
+         order.removeAll(where: { $0 == key })
+         order.append(key)
+@@ -715,17 +725,17 @@ private enum GhostBasePublicPeerNameStore {
+             let removed = order.removeFirst()
+             values.removeValue(forKey: removed)
+         }
+-        defaults.set(values, forKey: self.valuesKey)
+-        defaults.set(order, forKey: self.orderKey)
++        if self.values != values { defaults.set(values, forKey: self.valuesKey) }
++        if self.order != order { defaults.set(order, forKey: self.orderKey) }
++        self.values = values
++        self.order = order
+     }
+ 
+     static func name(peerId: PeerId) -> String? {
+         self.lock.lock()
+         defer { self.lock.unlock() }
+-        return (
+-            UserDefaults.standard.dictionary(forKey: self.valuesKey)
+-            as? [String: String]
+-        )?[String(peerId.toInt64())]
++        self.loadIfNeeded()
++        return self.values?[String(peerId.toInt64())]
+     }
+ }
+ 
+@@ -746,11 +756,24 @@ private struct GhostBaseDeletedMediaResourceSpec {
+     let pathExtension: String?
+ }
+ 
++private func ghostBasePruneEmptyDeletedMediaDirectories(root: URL) {
++    let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey]
++    guard let children = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles]) else { return }
++    for directory in children {
++        guard let values = try? directory.resourceValues(forKeys: Set(keys)),
++            values.isDirectory == true, values.isSymbolicLink != true else { continue }
++        // Atomic empty-directory removal: never recursively remove media or follow links.
++        _ = directory.path.withCString { Darwin.rmdir($0) }
++    }
++}
++
+ private enum GhostBaseDeletedMediaCache {
+-    private static let queue = DispatchQueue(
+-        label: "org.ghostbase.deleted-media-cache",
+-        qos: .utility
+-    )
++    private static let queueKey = DispatchSpecificKey<Bool>()
++    private static let queue: DispatchQueue = {
++        let queue = DispatchQueue(label: "org.ghostbase.deleted-media-cache", qos: .utility)
++        queue.setSpecific(key: queueKey, value: true)
++        return queue
++    }()
+     private static let cleanupLock = NSLock()
+     private static var lastCleanupTimestamp: TimeInterval = 0.0
+ 
+@@ -860,6 +883,9 @@ private enum GhostBaseDeletedMediaCache {
+         messageId: MessageId,
+         spec: GhostBaseDeletedMediaResourceSpec
+     ) -> String? {
++        if DispatchQueue.getSpecific(key: self.queueKey) != true {
++            return self.queue.sync { self.copyCompleteResource(mediaBox: mediaBox, messageId: messageId, spec: spec) }
++        }
+         let destination = self.fileURL(
+             mediaBox: mediaBox,
+             messageId: messageId,
+@@ -969,6 +995,10 @@ private enum GhostBaseDeletedMediaCache {
+     }
+ 
+     private static func cleanupIfNeeded(mediaBox: MediaBox) {
++        if DispatchQueue.getSpecific(key: self.queueKey) != true {
++            self.queue.async { self.cleanupIfNeeded(mediaBox: mediaBox) }
++            return
++        }
+         let now = Date().timeIntervalSince1970
+         self.cleanupLock.lock()
+         if now - self.lastCleanupTimestamp < 300.0 {
+@@ -1037,6 +1067,7 @@ private enum GhostBaseDeletedMediaCache {
+                 }
+             }
+         }
++        ghostBasePruneEmptyDeletedMediaDirectories(root: root)
+     }
+ }
+ 
+@@ -1068,6 +1099,8 @@ private struct GhostBaseDeletedReplyPlan {
      let authorUsername: String?
      let mentionPeerId: PeerId?
      let limits: UserLimitsConfiguration
@@ -11,7 +132,7 @@ index 7577ac4..2aea6ee 100644
  }
  
  private struct GhostBaseDeletedQuoteBody {
-@@ -1131,7 +1133,14 @@ private func ghostBaseQuoteBody(
+@@ -1131,7 +1164,14 @@ private func ghostBaseQuoteBody(
      languageCode: String
  ) -> GhostBaseDeletedQuoteBody {
      let sourceText = source.text
@@ -27,7 +148,7 @@ index 7577ac4..2aea6ee 100644
          return GhostBaseDeletedQuoteBody(text: sourceText, originalTextOffset: sourceText.isEmpty ? nil : 0, entities: [])
      }
  
-@@ -1151,20 +1160,74 @@ private func ghostBaseQuoteBody(
+@@ -1151,20 +1191,74 @@ private func ghostBaseQuoteBody(
      }
  
      if let poll = source.media.first as? TelegramMediaPoll {
@@ -105,7 +226,7 @@ index 7577ac4..2aea6ee 100644
          }
      } else if let contact = source.media.first as? TelegramMediaContact {
          label(.contact)
-@@ -1434,11 +1497,69 @@ private func ghostBaseBuildRecoveredAlbumTail(
+@@ -1434,11 +1528,69 @@ private func ghostBaseBuildRecoveredAlbumTail(
  }
  
  
@@ -176,7 +297,7 @@ index 7577ac4..2aea6ee 100644
  ) -> AnyMediaReference? {
      guard ghostBaseDeletedBool(
          ghostBasePreserveDeletedMediaKey,
-@@ -1471,6 +1592,11 @@ private func ghostBaseReconstructedMedia(
+@@ -1471,6 +1623,11 @@ private func ghostBaseReconstructedMedia(
      }
  
      let media = source.media[0]
@@ -188,7 +309,7 @@ index 7577ac4..2aea6ee 100644
      // Preserve the original TelegramMediaFile mimeType + attributes and
      // let the existing deleted-media reconstruction path rebuild it.
      // The textual Sticker label remains only as the missing-media fallback.
-@@ -1675,6 +1801,23 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1675,6 +1832,23 @@ private func ghostBaseResolveDeletedReplies(
                  let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.flags.contains(.isPremium) ?? false
                  retainedLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
              }
@@ -212,7 +333,7 @@ index 7577ac4..2aea6ee 100644
              return GhostBaseDeletedReplyPlan(
                  outgoing: outgoing,
                  source: source,
-@@ -1682,7 +1825,9 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1682,7 +1856,9 @@ private func ghostBaseResolveDeletedReplies(
                  authorName: authorName,
                  authorUsername: authorUsername,
                  mentionPeerId: mentionPeerId,
@@ -223,7 +344,7 @@ index 7577ac4..2aea6ee 100644
              )
          }
      }
-@@ -1720,7 +1865,9 @@ private func ghostBaseResolveDeletedReplies(
+@@ -1720,7 +1896,9 @@ private func ghostBaseResolveDeletedReplies(
                                  account: account,
                                  peerId: peerId,
                                  source: groupSource,
@@ -234,7 +355,7 @@ index 7577ac4..2aea6ee 100644
                              ) {
                              recoveredGroup.append(recovered)
                          }
-@@ -1957,22 +2104,232 @@ public func enqueueWelcomeMessages(account: Account, peerId: PeerId, messages: [
+@@ -1957,22 +2135,232 @@ public func enqueueWelcomeMessages(account: Account, peerId: PeerId, messages: [
      }
  }
  

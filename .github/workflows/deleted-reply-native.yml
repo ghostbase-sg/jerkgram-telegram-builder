@@ -1,7 +1,7 @@
 name: Deleted reply production text gate
 on:
   push:
-    branches: [dev/portable-reply-158, dev/portable-copy-159, dev/portable-copy-160, dev/portable-copy-161]
+    branches: [dev/portable-reply-158, dev/portable-copy-159, dev/portable-copy-160, dev/portable-copy-161, dev/cache-performance-162]
   workflow_dispatch:
 concurrency:
   group: deleted-reply-${{ github.ref }}
@@ -46,6 +46,8 @@ jobs:
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_deleted_reply.py | tee artifacts/deleted-reply-body.log
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_recovery_media.py | tee artifacts/recovery-media.log
           JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_protected_copy.py | tee artifacts/protected-copy.log
+          JG13_SOURCE="$PWD/work/reply-native" python3 -m unittest discover -s tests -p test_jg13_recovery_cache.py
+          JG13_SOURCE="$PWD/work/reply-native" python3 tests/run_jg13_recovery_cache.py | tee artifacts/recovery-cache.log
           python3 -m unittest discover -s tests -p test_jg13_package_digest.py
       - uses: actions/upload-artifact@v4
         if: always()
@@ -56,3 +58,4 @@ jobs:
             artifacts/deleted-reply-body.log
             artifacts/recovery-media.log
             artifacts/protected-copy.log
+            artifacts/recovery-cache.log
