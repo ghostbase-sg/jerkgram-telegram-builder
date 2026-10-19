@@ -41,9 +41,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse ${PRODUCT_COMMIT}^{commit})" = "$PRODUCT_COMMIT"
-          mapfile -t changed < <(git diff --name-only "$PRODUCT_COMMIT"..HEAD)
-          if [ "${#changed[@]}" -ne 1 ] || [ "${changed[0]}" != ".github/workflows/export-source-1.1.0.yml" ]; then
-            printf 'Unexpected drift after Stable Build163:\n%s\n' "${changed[*]:-<none>}" >&2
+          changed="$(git diff --name-only "$PRODUCT_COMMIT"..HEAD)"
+          if [ "$changed" != ".github/workflows/export-source-1.1.0.yml" ]; then
+            printf 'Unexpected drift after Stable Build163:\n%s\n' "${changed:-<none>}" >&2
             exit 1
           fi
           echo "Exact product owner: $PRODUCT_COMMIT"
@@ -105,13 +105,10 @@ jobs:
           mkdir -p "$ROOT"
           rsync -a "$SRC/" "$ROOT/"
 
-          # Private/generated build configuration is not public product source.
           rm -rf "$ROOT/build-input"
           rm -rf "$ROOT/ghostbase-final"
           rm -rf "$ROOT/.github/workflows"
 
-          # Match the proven 1.0.2 publication policy: normalize deployment-only
-          # signer/infrastructure values without renaming Jerkgram feature code.
           python3 - "$ROOT" <<'PY'
           from pathlib import Path
           import re, sys
@@ -157,7 +154,6 @@ jobs:
           print(f'normalized private app groups: {group_replacements}')
           PY
 
-          # Strip every nested repository/worktree marker and Bazel output link.
           python3 - "$ROOT" <<'PY'
           from pathlib import Path
           import shutil, sys
@@ -243,7 +239,6 @@ jobs:
           ARCHIVE="$GITHUB_WORKSPACE/$SOURCE_NAME"
           MANIFEST="$GITHUB_WORKSPACE/$MANIFEST_NAME"
 
-          # Fixed stage mtimes make the one-time release archive stable across retries.
           find "$ROOT" -exec touch -h -t 202610190000.00 {} +
           /usr/bin/tar -cJf "$ARCHIVE" -C "$GITHUB_WORKSPACE/export" Jerkgram-1.1.0-source
 
@@ -316,7 +311,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import hashlib, json, os, posixpath, tarfile
+          import hashlib, json, posixpath, tarfile
           from pathlib import PurePosixPath
 
           source_name = 'Jerkgram-1.1.0-source.tar.xz'
