@@ -25,8 +25,12 @@ OWNERS = {
     'submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift',
     'submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift',
 }
-def check(source, stage):
+def check(source, stage, final_owners=None):
     manifest = json.loads(MANIFEST.read_text())
+    if final_owners:
+        if stage != 'after': raise RuntimeError('Final owner override is only valid after materialization')
+        for name in set(manifest['owners']) & set(final_owners):
+            manifest['owners'][name]['after_sha256'] = final_owners[name]['after_sha256']
     config = json.loads((ROOT / 'jerkgram-migration.json').read_text())
     if config['upstream_new_sha'] != manifest['upstream_sha'] or set(manifest['owners']) != OWNERS:
         raise RuntimeError('Expanded diagnostics pin/owner scope changed')
@@ -42,10 +46,10 @@ def check(source, stage):
             raise RuntimeError('Expanded diagnostics regression lock changed: ' + name)
     return manifest
 
-def verify_expanded(source):
+def verify_expanded(source, final_owners=None):
     source = Path(source).resolve()
-    manifest = check(source, 'after')
-    verify_preferences(source, final_owners=manifest['owners'])
+    manifest = check(source, 'after', final_owners=final_owners)
+    verify_preferences(source, final_owners={**manifest['owners'], **(final_owners or {})})
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_expanded_diagnostics.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_history_detail.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
     subprocess.run([sys.executable, str(ROOT / 'tests/test_jg13_row_detail.py')], env=dict(os.environ, JG13_SOURCE=str(source)), cwd=ROOT, check=True)
