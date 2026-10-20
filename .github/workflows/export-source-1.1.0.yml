@@ -203,7 +203,17 @@ jobs:
           test ! -e "$ROOT/build-input"
           test ! -e "$ROOT/.github/workflows"
           test -z "$(find "$ROOT" -name .git -print -quit)"
-          test -z "$(find "$ROOT" -type f \( -name '*.ipa' -o -name '*.p12' -o -name '*.mobileprovision' \) -print -quit)"
+
+          # Official Telegram ships public example provisioning profiles in
+          # build-system/example-configuration/provisioning. They are required to
+          # remain byte-identical to upstream (verified below). Reject IPA/P12 files
+          # everywhere and mobileprovision files everywhere else.
+          FORBIDDEN_SIGNING_FILES="$(find "$ROOT" -type f \( -name '*.ipa' -o -name '*.p12' -o -name '*.mobileprovision' \) -print | grep -vE "^${ROOT}/build-system/example-configuration/provisioning/[^/]+\.mobileprovision$" || true)"
+          if [ -n "$FORBIDDEN_SIGNING_FILES" ]; then
+            echo "$FORBIDDEN_SIGNING_FILES" | sed -n '1,120p'
+            echo 'ERROR: unexpected signing/package material leaked into public source'
+            exit 1
+          fi
 
           grep -Fq 'public static let displayVersion = "1.1.0"' "$ROOT/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
           grep -Fq 'public static let technicalVersion = "1.1.0"' "$ROOT/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
