@@ -20,7 +20,8 @@ def verify_release_ui(source):
     actual = hashlib.sha256(text.encode()).hexdigest()
     if hashlib.sha256(without_app_icons(text).encode()).hexdigest() != m['after_sha256']:
         raise RuntimeError('Release About final owner changed')
-    return {OWNER: {'after_sha256': actual}}
+    from materialize_jg13_profile_capture import final_profile_owners
+    return {OWNER: {'after_sha256': actual}, **final_profile_owners(source)}
 
 def without_app_icons(text):
     from materialize_jg13_download_boost import without_boost

@@ -8,6 +8,8 @@ import os
 from configure_jg13_release_ui import apply_release_ui
 from materialize_jg13_premium_icons import apply_icons
 from materialize_jg13_download_boost import apply_boost
+from materialize_jg13_sponsored import apply_sponsored
+from materialize_jg13_profile_capture import apply_profile_capture
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -24,6 +26,8 @@ def main():
     apply_release_ui(SOURCE)
     apply_icons(SOURCE)
     apply_boost(SOURCE)
+    apply_sponsored(SOURCE)
+    apply_profile_capture(SOURCE)
     p = SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
     text = p.read_text()
     for key, old, value in [

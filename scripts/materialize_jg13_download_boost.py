@@ -139,6 +139,8 @@ def transform(name, text):
     return text
 
 def restore_owner(name, text):
+    from materialize_jg13_sponsored import without_sponsored
+    text = without_sponsored(name, text)
     m = read_manifest()
     text = canonical(name, text)
     if digest(text.encode()) != m['owners'][name]['after_sha256']: raise RuntimeError('Download Boost final owner changed: ' + name)
@@ -148,6 +150,8 @@ def restore_owner(name, text):
     return text
 
 def without_boost(name, text):
+    from materialize_jg13_sponsored import without_sponsored
+    text = without_sponsored(name, text)
     m = read_manifest()
     if name in m['owners'] and digest(canonical(name, text).encode()) == m['owners'][name]['after_sha256']:
         return restore_owner(name, text)

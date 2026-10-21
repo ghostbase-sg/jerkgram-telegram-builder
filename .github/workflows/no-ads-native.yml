@@ -1,0 +1,50 @@
+name: No Ads and profile capture 13.0 source and native gate
+on:
+  push:
+    branches: [dev/no-ads-166]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: no-ads-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  policy:
+    runs-on: macos-26
+    timeout-minutes: 15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean materialization, regressions and actual native fragments
+        env:
+          JERKGRAM_TELEGRAM_API_ID: '22732185'
+          JERKGRAM_TELEGRAM_API_HASH: '00000000000000000000000000000000'
+        run: |
+          set -euo pipefail
+          bash scripts/prepare_source_official.sh
+          python3 -m py_compile scripts/materialize_jg13_sponsored.py scripts/materialize_jg13_profile_capture.py tests/run_jg13_sponsored.py tests/test_jg13_sponsored.py tests/test_jg13_profile_capture.py
+          python3 scripts/materialize_jg13.py
+          python3 scripts/configure_jg13.py
+          python3 scripts/verify_jg13_source.py
+          python3 -m unittest discover -s tests -p test_jg13_sponsored.py
+          python3 -m unittest discover -s tests -p test_jg13_profile_capture.py
+          python3 -m unittest discover -s tests -p test_jg13_download_boost.py
+          python3 -m unittest discover -s tests -p test_jg13_premium_icons.py
+          python3 -m unittest discover -s tests -p test_jg13_release_ui.py
+          python3 -m unittest discover -s tests -p test_jg13_beta_followup.py
+          python3 -m unittest discover -s tests -p 'test_jg13_deleted_reply*.py'
+          python3 -m unittest discover -s tests -p test_jg13_recovery_media.py
+          python3 -m unittest discover -s tests -p test_jg13_protected_copy.py
+          python3 -m unittest discover -s tests -p test_jg13_forward_routes.py
+          python3 -m unittest discover -s tests -p test_jg13_portable_copy_stage.py
+          python3 -m unittest discover -s tests -p test_jg13_recovery_cache.py
+          python3 -m unittest discover -s tests -p test_jg13_package_digest.py
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
+          python3 tests/run_jg13_sponsored.py
+          python3 tests/run_jg13_download_boost.py
+          python3 tests/run_jg13_premium_icons.py
