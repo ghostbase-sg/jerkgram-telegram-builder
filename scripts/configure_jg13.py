@@ -7,6 +7,7 @@ import apply_jerkgram_build124_telegram_api_credentials1 as credentials
 import os
 from configure_jg13_release_ui import apply_release_ui
 from materialize_jg13_premium_icons import apply_icons
+from materialize_jg13_download_boost import apply_boost
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -22,6 +23,7 @@ def main():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     apply_release_ui(SOURCE)
     apply_icons(SOURCE)
+    apply_boost(SOURCE)
     p = SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
     text = p.read_text()
     for key, old, value in [

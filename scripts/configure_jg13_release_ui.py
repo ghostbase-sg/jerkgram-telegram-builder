@@ -23,6 +23,8 @@ def verify_release_ui(source):
     return {OWNER: {'after_sha256': actual}}
 
 def without_app_icons(text):
+    from materialize_jg13_download_boost import without_boost
+    text = without_boost(OWNER, text)
     from materialize_jg13_premium_icons import read_manifest as icons_manifest, restore_owner
     m = icons_manifest()
     if hashlib.sha256(text.encode()).hexdigest() == m['owners'][OWNER]['after_sha256']:

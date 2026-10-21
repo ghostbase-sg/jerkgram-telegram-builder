@@ -8,6 +8,7 @@ from materialize_jg13_expanded_diagnostics import verify_expanded
 from materialize_jg13_portable_copy import verify_portable_copy
 from configure_jg13_release_ui import verify_release_ui
 from materialize_jg13_premium_icons import verify_icons
+from materialize_jg13_download_boost import verify_boost
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -56,6 +57,7 @@ def main():
     verify_expanded(SOURCE, final_owners=verify_release_ui(SOURCE))
     verify_portable_copy(SOURCE)
     verify_icons(SOURCE)
+    verify_boost(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 

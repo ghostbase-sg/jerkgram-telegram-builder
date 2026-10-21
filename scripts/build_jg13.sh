@@ -4,6 +4,8 @@ cd "$(dirname "$0")/.."
 python3 scripts/materialize_jg13.py
 python3 scripts/configure_jg13.py
 python3 scripts/verify_jg13_source.py
+python3 -m unittest discover -s tests -p test_jg13_download_boost.py
+python3 tests/run_jg13_download_boost.py
 python3 -m unittest discover -s tests -p test_jg13_premium_icons.py
 python3 tests/run_jg13_premium_icons.py
 python3 -m unittest discover -s tests -p test_jg13_release_ui.py
@@ -40,7 +42,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=164 \
+  --define=buildNumber=165 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 cd ../..

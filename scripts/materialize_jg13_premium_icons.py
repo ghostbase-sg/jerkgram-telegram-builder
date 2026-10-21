@@ -82,6 +82,8 @@ def check_locks(source, manifest):
             raise RuntimeError('App Icons resource/global status lock changed: ' + name)
 
 def restore_owner(name, text):
+    from materialize_jg13_download_boost import without_boost
+    text = without_boost(name, text)
     m = read_manifest()
     if digest(text.encode()) != m['owners'][name]['after_sha256']:
         raise RuntimeError('App Icons restoration requires exact final owner: ' + name)
