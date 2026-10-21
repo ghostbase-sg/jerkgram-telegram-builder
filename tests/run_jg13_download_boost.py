@@ -47,8 +47,10 @@ for fast in [false, true] {
     precondition(maximum.partSize > medium.partSize)
     precondition(fast ? maximum.initialWindow > medium.initialWindow : maximum.maxPendingParts > medium.maxPendingParts)
 }
-for length in [Int64(128 * 1024), 512 * 1024, 1024 * 1024] {
-    for offset in [Int64(0), 4095, 4096, 131071, 1048575, 1048576, 4_294_967_297] {
+let alignmentLengths: [Int64] = [128 * 1024, 512 * 1024, 1024 * 1024]
+let alignmentOffsets: [Int64] = [0, 4095, 4096, 131071, 1048575, 1048576, 4_294_967_297]
+for length in alignmentLengths {
+    for offset in alignmentOffsets {
         let r = alignPartFetchRange(partRange: offset ..< offset + length, minPartSize: 4096, maxPartSize: 1024 * 1024, alignment: 4096, boundaryLimit: 1024 * 1024)
         precondition(r.fetchRange.lowerBound % 4096 == 0)
         precondition(r.fetchRange.count <= 1024 * 1024)
