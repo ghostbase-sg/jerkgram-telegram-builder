@@ -8,10 +8,10 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 class ReleaseUiTests(unittest.TestCase):
-    def test_identity_is_final_and_package_uses_config(self):
+    def test_identity_matches_release_and_package_uses_config(self):
         config = json.loads((ROOT / 'jerkgram-migration.json').read_text())
-        self.assertEqual(config['product_display_version'], '1.1.0')
-        self.assertEqual(config['product_technical_version'], '1.1.0')
+        self.assertEqual(config['product_display_version'], '1.2.0 Beta 1')
+        self.assertEqual(config['product_technical_version'], '1.2.0-beta.1')
         package = (ROOT / 'scripts/package_jg13.py').read_text()
         self.assertNotIn('Jerkgram-1.1.0-Beta-1-Build', package)
     def test_about_only_cleanup_is_exact_and_rejects_repeat(self):

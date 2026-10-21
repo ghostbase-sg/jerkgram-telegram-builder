@@ -97,7 +97,7 @@ class ExpandedDiagnosticsTests(unittest.TestCase):
             import hashlib
             from configure_jg13_release_ui import OWNER, read_manifest, verify_release_ui
             release = read_manifest()
-            final_owners = verify_release_ui(SOURCE) if hashlib.sha256((SOURCE / OWNER).read_bytes()).hexdigest() == release['after_sha256'] else {}
+            final_owners = verify_release_ui(SOURCE) if hashlib.sha256((SOURCE / OWNER).read_bytes()).hexdigest() != manifest['owners'][OWNER]['after_sha256'] else {}
             gate.check(fixture,"after", final_owners=final_owners)
             for name in manifest["owners"]:
                 target=fixture/name;before=target.read_bytes()

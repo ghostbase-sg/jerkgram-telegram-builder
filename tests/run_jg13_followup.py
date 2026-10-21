@@ -169,7 +169,7 @@ sender = block(app, "private final class JerkgramTelemetry {")
 telemetry_fixture = r'''import Foundation
 import Darwin
 struct UIDevice { static let current = UIDevice(); let systemVersion = "26.0" }
-enum JerkgramReleaseIdentity { static let technicalVersion = "1.1.0"; static let build = "143" }
+enum JerkgramReleaseIdentity { static let technicalVersion = "1.2.0-beta.1"; static let build = "164" }
 final class Logger {
     static let shared = Logger()
     private let lock = NSLock()
@@ -219,8 +219,8 @@ precondition(request.httpMethod == "POST" && request.timeoutInterval == 8)
 precondition(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
 let payload = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
 precondition(payload["schema"] as? Int == 1)
-precondition(payload["appVersion"] as? String == "1.1.0")
-precondition(payload["build"] as? String == "143")
+precondition(payload["appVersion"] as? String == "1.2.0-beta.1")
+precondition(payload["build"] as? String == "164")
 precondition(payload["event"] as? String == "app_active")
 precondition(payload["openCountToday"] as? Int == 1)
 precondition(payload["installReceiptId"] as? String != nil)

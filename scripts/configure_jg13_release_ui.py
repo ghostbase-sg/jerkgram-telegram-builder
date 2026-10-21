@@ -16,9 +16,18 @@ def read_manifest():
 
 def verify_release_ui(source):
     m = read_manifest()
-    if hashlib.sha256((Path(source) / OWNER).read_bytes()).hexdigest() != m['after_sha256']:
+    text = (Path(source) / OWNER).read_text()
+    actual = hashlib.sha256(text.encode()).hexdigest()
+    if hashlib.sha256(without_app_icons(text).encode()).hexdigest() != m['after_sha256']:
         raise RuntimeError('Release About final owner changed')
-    return {OWNER: {'after_sha256': m['after_sha256']}}
+    return {OWNER: {'after_sha256': actual}}
+
+def without_app_icons(text):
+    from materialize_jg13_premium_icons import read_manifest as icons_manifest, restore_owner
+    m = icons_manifest()
+    if hashlib.sha256(text.encode()).hexdigest() == m['owners'][OWNER]['after_sha256']:
+        return restore_owner(OWNER, text)
+    return text
 
 def apply_release_ui(source):
     m = read_manifest()
@@ -34,6 +43,7 @@ def apply_release_ui(source):
 
 def restore_parent(text):
     m = read_manifest()
+    text = without_app_icons(text)
     if hashlib.sha256(text.encode()).hexdigest() != m['after_sha256'] or text.count(ANCHOR) != 1:
         raise RuntimeError('Release About restoration requires the exact final owner')
     restored = text.replace(ANCHOR, ANCHOR + m['removed_about_block'], 1)

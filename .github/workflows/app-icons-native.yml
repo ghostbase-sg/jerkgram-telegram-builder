@@ -1,0 +1,31 @@
+name: App Icons 13.0 source and native capability gate
+on:
+  push:
+    branches: [dev/local-premium-icons-164]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: app-icons-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  app-icons:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize exact product source and verify App Icons
+        env:
+          # Syntactic fixtures for source configuration only; no Telegram login/API call.
+          JERKGRAM_TELEGRAM_API_ID: '22732185'
+          JERKGRAM_TELEGRAM_API_HASH: '00000000000000000000000000000000'
+        run: |
+          set -euo pipefail
+          bash scripts/prepare_source_official.sh
+          python3 scripts/materialize_jg13.py
+          python3 scripts/configure_jg13.py
+          python3 scripts/verify_jg13_source.py
+          python3 -m unittest discover -s tests -p test_jg13_premium_icons.py
+          python3 -m unittest discover -s tests -p test_jg13_release_ui.py
+          python3 -m unittest discover -s tests -p test_jg13_beta_followup.py
+          python3 tests/run_jg13_premium_icons.py
