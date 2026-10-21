@@ -3,10 +3,11 @@ on:
   push:
     branches: [dev/no-ads-166]
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 concurrency:
-  group: no-ads-${{ github.ref }}
+  group: no-ads-${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 jobs:
   policy:

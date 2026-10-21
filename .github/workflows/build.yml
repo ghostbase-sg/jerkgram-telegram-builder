@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build165 Download Boost
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build166 No Ads and profile capture
 
 on:
   workflow_dispatch:
@@ -15,6 +15,7 @@ on:
       - dev/release-1.1.0-163
       - dev/local-premium-icons-164
       - dev/download-boost-165
+      - dev/no-ads-166
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -24,7 +25,10 @@ permissions:
   contents: read
 
 jobs:
+  source-preflight:
+    uses: ./.github/workflows/no-ads-native.yml
   build-probe:
+    needs: source-preflight
     runs-on: macos-26
     env:
       USE_BAZEL_VERSION: 9.2.0
@@ -57,8 +61,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build165-diagnostics
+          name: Jerkgram-1.2.0-Build166-diagnostics
           path: |
+            patches/jg13-sponsored.sha256.json
+            patches/jg13-profile-capture.sha256.json
+            scripts/materialize_jg13_sponsored.py
+            scripts/materialize_jg13_profile_capture.py
+            scripts/payloads/JerkgramSponsoredContentPolicy.swift
+            tests/run_jg13_sponsored.py
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
             patches/jg13-download-boost.sha256.json
             scripts/materialize_jg13_download_boost.py
             scripts/payloads/JerkgramDownloadBoostPolicy.swift
@@ -110,9 +124,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build165
+          name: Jerkgram-1.2.0-Build166
           path: |
-            artifacts/Jerkgram-1.2.0-Build165.ipa
-            artifacts/Jerkgram-1.2.0-Build165.json
+            artifacts/Jerkgram-1.2.0-Build166.ipa
+            artifacts/Jerkgram-1.2.0-Build166.json
           if-no-files-found: error
           retention-days: 90
