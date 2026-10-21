@@ -1,4 +1,4 @@
-name: Jerkgram 1.1.0 / Telegram 13.0 / Build163 native recovery and protected copies
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build164 Premium App Icons
 
 on:
   workflow_dispatch:
@@ -13,6 +13,7 @@ on:
       - dev/portable-copy-161
       - dev/cache-performance-162
       - dev/release-1.1.0-163
+      - dev/local-premium-icons-164
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -44,7 +45,7 @@ jobs:
           bazelisk --version
       - name: Prepare clean pinned Official Telegram 13.0 source
         run: bash scripts/prepare_source_official.sh
-      - name: Build Jerkgram 1.1.0
+      - name: Build Jerkgram 1.2.0 Beta 1
         run: |
           set -euo pipefail
           mkdir -p artifacts
@@ -55,8 +56,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Build163-diagnostics
+          name: Jerkgram-1.2.0-Build164-diagnostics
           path: |
+            patches/jg13-premium-icons.sha256.json
+            scripts/materialize_jg13_premium_icons.py
+            work/swiftgram-src/submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
+            work/swiftgram-src/submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift
             patches/jg13-release-ui.sha256.json
             scripts/configure_jg13_release_ui.py
             patches/jg13-portable-copy.patch
@@ -98,9 +103,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.1.0-Build163
+          name: Jerkgram-1.2.0-Build164
           path: |
-            artifacts/Jerkgram-1.1.0-Build163.ipa
-            artifacts/Jerkgram-1.1.0-Build163.json
+            artifacts/Jerkgram-1.2.0-Build164.ipa
+            artifacts/Jerkgram-1.2.0-Build164.json
           if-no-files-found: error
           retention-days: 90
