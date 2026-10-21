@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build164 Premium App Icons
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build165 Download Boost
 
 on:
   workflow_dispatch:
@@ -14,6 +14,7 @@ on:
       - dev/cache-performance-162
       - dev/release-1.1.0-163
       - dev/local-premium-icons-164
+      - dev/download-boost-165
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -56,8 +57,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build164-diagnostics
+          name: Jerkgram-1.2.0-Build165-diagnostics
           path: |
+            patches/jg13-download-boost.sha256.json
+            scripts/materialize_jg13_download_boost.py
+            scripts/payloads/JerkgramDownloadBoostPolicy.swift
+            tests/run_jg13_download_boost.py
+            work/swiftgram-src/submodules/TelegramCore/Sources/Network/FetchV2.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift
             patches/jg13-premium-icons.sha256.json
             scripts/materialize_jg13_premium_icons.py
             work/swiftgram-src/submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
@@ -103,9 +110,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build164
+          name: Jerkgram-1.2.0-Build165
           path: |
-            artifacts/Jerkgram-1.2.0-Build164.ipa
-            artifacts/Jerkgram-1.2.0-Build164.json
+            artifacts/Jerkgram-1.2.0-Build165.ipa
+            artifacts/Jerkgram-1.2.0-Build165.json
           if-no-files-found: error
           retention-days: 90
