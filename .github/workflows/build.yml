@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build166 No Ads and profile capture
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build167 Stars and gift fixes
 
 on:
   workflow_dispatch:
@@ -16,6 +16,7 @@ on:
       - dev/local-premium-icons-164
       - dev/download-boost-165
       - dev/no-ads-166
+      - dev/stars-gift-167
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -61,8 +62,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build166-diagnostics
+          name: Jerkgram-1.2.0-Build167-diagnostics
           path: |
+            patches/jg13-stars-gift.sha256.json
+            scripts/materialize_jg13_stars_gift.py
+            tests/run_jg13_stars_gift.py
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftViewScreen.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftPagerComponent.swift
             patches/jg13-sponsored.sha256.json
             patches/jg13-profile-capture.sha256.json
             scripts/materialize_jg13_sponsored.py
@@ -124,9 +132,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build166
+          name: Jerkgram-1.2.0-Build167
           path: |
-            artifacts/Jerkgram-1.2.0-Build166.ipa
-            artifacts/Jerkgram-1.2.0-Build166.json
+            artifacts/Jerkgram-1.2.0-Build167.ipa
+            artifacts/Jerkgram-1.2.0-Build167.json
           if-no-files-found: error
           retention-days: 90

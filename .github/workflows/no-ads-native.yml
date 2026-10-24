@@ -1,4 +1,4 @@
-name: No Ads and profile capture 13.0 source and native gate
+name: Jerkgram 13.0 source and native regression gate
 on:
   push:
     branches: [dev/no-ads-166]
@@ -24,10 +24,17 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/prepare_source_official.sh
+          python3 -m py_compile scripts/materialize_jg13_stars_gift.py tests/run_jg13_stars_gift.py tests/test_jg13_stars_gift.py
           python3 -m py_compile scripts/materialize_jg13_sponsored.py scripts/materialize_jg13_profile_capture.py tests/run_jg13_sponsored.py tests/test_jg13_sponsored.py tests/test_jg13_profile_capture.py
           python3 scripts/materialize_jg13.py
           python3 scripts/configure_jg13.py
           python3 scripts/verify_jg13_source.py
+          python3 -m unittest discover -s tests -p test_jg13_stars_gift.py
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftViewScreen.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftPagerComponent.swift
+          python3 tests/run_jg13_stars_gift.py
           python3 -m unittest discover -s tests -p test_jg13_sponsored.py
           python3 -m unittest discover -s tests -p test_jg13_profile_capture.py
           python3 -m unittest discover -s tests -p test_jg13_download_boost.py

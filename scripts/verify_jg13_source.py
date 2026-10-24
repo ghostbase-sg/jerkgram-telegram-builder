@@ -11,6 +11,7 @@ from materialize_jg13_premium_icons import verify_icons
 from materialize_jg13_download_boost import verify_boost
 from materialize_jg13_sponsored import verify_sponsored
 from materialize_jg13_profile_capture import verify_profile_capture
+from materialize_jg13_stars_gift import verify_stars_gift
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -62,6 +63,7 @@ def main():
     verify_boost(SOURCE)
     verify_sponsored(SOURCE)
     verify_profile_capture(SOURCE)
+    verify_stars_gift(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 
