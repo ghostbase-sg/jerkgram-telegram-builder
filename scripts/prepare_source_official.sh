@@ -2,10 +2,10 @@
 set -e
 
 TELEGRAM_REPO="https://github.com/TelegramMessenger/Telegram-iOS.git"
-EXPECTED_COMMIT="f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838"
+EXPECTED_COMMIT="fb0e62ba8a147f0821da6aa63c09da7d79a10111"
 TELEGRAM_REF="$EXPECTED_COMMIT"
 
-rm -rf work
+rm -rf work/swiftgram-src
 mkdir -p work
 
 echo "== Clone official Telegram-iOS $TELEGRAM_REF =="
@@ -31,9 +31,9 @@ cat versions.json 2>/dev/null || true
 python3 - <<'PY'
 import json
 versions = json.load(open('versions.json'))
-assert versions['app'] == '13.0', versions
+assert versions['app'] == '13.1.1', versions
 assert versions['bazel'].split(':')[0] == '9.2.0', versions
-assert versions['xcode'] == '26.6', versions
+assert versions['xcode'] == '27.1', versions
 PY
 
 echo "== Source prepared =="

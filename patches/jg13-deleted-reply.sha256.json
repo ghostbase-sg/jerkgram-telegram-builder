@@ -1,16 +1,16 @@
 {
-  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838",
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
   "regression_locks": {
-    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "c6109edf35231b263a4029fe2c3f4a133f78031efe8bd7349797ea443c5394e3",
-    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "8e2338e8a66e429d9c8ebab6d2543682b4b3a9f761f84eb67e6b4c018907e261",
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
   },
   "owners": {
     "submodules/TelegramCore/Sources/Account/Account.swift": {
-      "before_sha256": "1a69a68be7d091e3610d25c863acda16a89cac43415e767075963f042ce1da59",
-      "after_sha256": "6f27aab9b1be7f0598081fce6669b69c17a0651ae13e6526dc62fde2ee292ed2",
+      "before_sha256": "3af7d2c9497c1105d1c8f9ecfab52954caf55eb598aa60274d4af15c7e3f8d2a",
+      "after_sha256": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
       "survival_functions": [
         "_internal_deletePasskey",
         "_internal_passkeysData",
@@ -71,8 +71,8 @@
       ]
     },
     "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": {
-      "before_sha256": "1864dce2f0f5c2f02e7b47aa65bf75d333f4b2b946b89603fe3c916ef160bf0f",
-      "after_sha256": "ebab740cd04c896ad65cd501c4b37c9d74e9ffbdfcd3b0748df0b2279800c91a",
+      "before_sha256": "b674920b7015f7a08362ba6b5fa384e19955e643c15cac745c8f9c901b8a29c0",
+      "after_sha256": "4a875c4487e0326e5bf8dd6256d9b64106bd5bfef7a9399fce9a6ab457226ad6",
       "survival_functions": [
         "augmentMediaWithReference",
         "cleanupIfNeeded",

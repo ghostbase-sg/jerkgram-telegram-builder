@@ -85,7 +85,9 @@ def without_sponsored(name, text):
 
 def check_locks(source, m):
     for name, expected in m['locks'].items():
-        if digest((Path(source)/name).read_bytes()) != expected: raise RuntimeError('Sponsored unrelated owner changed: ' + name)
+        from materialize_jg13_history_backend import preceding_owner
+        text = preceding_owner(name, (Path(source)/name).read_text())
+        if digest(text.encode()) != expected: raise RuntimeError('Sponsored unrelated owner changed: ' + name)
 
 def verify_sponsored(source):
     m = read_manifest()

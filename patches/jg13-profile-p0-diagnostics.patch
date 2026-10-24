@@ -775,7 +775,7 @@ index f168490..bd7ef44 100644
              return fallback
          }
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
-index e8119a5..b4bb1ac 100644
+index 67afb5a..8ac3f1e 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
 @@ -19,6 +19,7 @@ import GalleryUI
@@ -786,7 +786,7 @@ index e8119a5..b4bb1ac 100644
      let context: AccountContext
      
      let containerNode: ContextControllerSourceNode
-@@ -184,6 +185,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
+@@ -193,6 +194,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
      }
          
      func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -795,7 +795,7 @@ index e8119a5..b4bb1ac 100644
          if let videoNode = self.videoNode {
              if case .immediate = transition, fraction == 1.0 {
                  return
-@@ -193,24 +196,30 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
+@@ -202,24 +205,30 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
              // V11O:
              // Fullscreen background and circular avatar share the same
              // is enabled this node must not pause that shared playback.
@@ -826,107 +826,19 @@ index e8119a5..b4bb1ac 100644
          }
          if let markupNode = self.markupNode {
              if case .immediate = transition, fraction == 1.0 {
-diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index 623ec86..2b813cf 100644
---- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-+++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -439,6 +439,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-         
-         super.init()
-         if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
-+            self.headerNode.avatarListNode.avatarContainerNode.performanceProbe = ghostBaseProfileBackgroundView.performanceProbe
-+            self.headerNode.ghostBasePerformanceProbe = ghostBaseProfileBackgroundView.performanceProbe
-             self.view.insertSubview(
-                 ghostBaseProfileBackgroundView,
-                 at: 0
-@@ -2720,6 +2722,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-     }
-     
-     private func updateData(_ data: PeerInfoScreenData) {
-+        let timing = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.data)
-+        defer { if let timing { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.data, timing) } }
-         let previousData = self.data
-         var previousMemberCount: Int?
-         if let data = self.data {
-@@ -5436,6 +5440,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-     }
-     
-     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool = false) {
-+        let timing = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.layout)
-+        defer { if let timing { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.layout, timing) } }
-         self.validLayout = (layout, navigationHeight)
-         if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
-             transition.updateFrame(
-@@ -5515,7 +5521,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-         }
-         let headerInset = sectionInset
-         
-+        let headerTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.header)
-         let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: transition.isAnimated && self.headerNode.navigationTransition == nil)
-+        if let headerTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.header, headerTiming) }
-         self.ghostBaseProfileBackgroundView?.refreshAnimatedVideoOwner(
-             self.headerNode.avatarListNode.avatarContainerNode.videoNode
-         )
-@@ -5532,6 +5540,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-         
-         var validRegularSections: [AnyHashable] = []
-         if !self.isMediaOnly {
-+            let sectionsTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.sections)
-+            defer { if let sectionsTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.sections, sectionsTiming) } }
-             var insets = UIEdgeInsets()
-             insets.left += sectionInset
-             insets.right += sectionInset
-@@ -5664,6 +5674,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-             }
-         }
-         
-+        let panesTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.panesAndTail)
-+        defer { if let panesTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.panesAndTail, panesTiming) } }
-         let paneContainerSize = CGSize(width: layout.size.width, height: layout.size.height - navigationHeight)
-         var restoreContentOffset: CGPoint?
-         if additive {
-@@ -5897,6 +5909,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-         
-     private var hasQrButton = false
-     fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) {
-+        let navigationTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.navigation)
-+        defer { if let navigationTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.navigation, navigationTiming) } }
-         let offsetY = self.scrollNode.view.contentOffset.y
-         
-         if self.isSettings, !(self.controller?.movingInHierarchy == true) {
-@@ -5936,7 +5950,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-                 }
-                 let headerInset = sectionInset
- 
-+                let scrollHeaderTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.scrollHeader)
-                 let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: animateHeader && self.headerNode.navigationTransition == nil)
-+                if let scrollHeaderTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.scrollHeader, scrollHeaderTiming) }
-             }
-             
-             let paneAreaExpansionDistance: CGFloat = 32.0
-@@ -5969,7 +5985,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
-                         
-             let navigationBarHeight: CGFloat = !self.isSettings && layout.presentedInFormSheet ? 68.0 : 60.0
-             let paneContainerTopInset = navigationBarHeight + (layout.statusBarHeight ?? 0.0)
-+            let scrollPanesTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.scrollPanes)
-             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, topInset: paneContainerTopInset, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: self.initialExpandPanes ? 1.0 : effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, disableTabSwitching: disableTabSwitching, navigationHeight: navigationHeight, transition: transition)
-+            if let scrollPanesTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.scrollPanes, scrollPanesTiming) }
-           
-             transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
-             var searchBarContainerY: CGFloat = layout.statusBarHeight ?? 0.0
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
-index 6febff9..8a5a844 100644
+index 2423ce7..74e8074 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
-@@ -83,6 +83,7 @@ private let TitleNodeStateRegular = 0
- private let TitleNodeStateExpanded = 1
+@@ -65,6 +65,7 @@ let TitleNodeStateRegular = 0
+ let TitleNodeStateExpanded = 1
  
  final class PeerInfoHeaderNode: ASDisplayNode {
 +    weak var ghostBasePerformanceProbe: JerkgramProfilePerformanceProbe?
      private var context: AccountContext
      private let ghostBaseProfileGlassSettings: GhostBaseProfileBlurSettings?
      private let isPremiumDisabled: Bool
-@@ -1284,6 +1285,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -1327,6 +1328,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
              
              if self.isSettings, case let .user(user) = peer {
@@ -934,7 +846,7 @@ index 6febff9..8a5a844 100644
                  let hideOwnPhone =
                      (
                          UserDefaults.standard
-@@ -1295,6 +1297,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -1338,6 +1340,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                      )
                      ?? false
  
@@ -943,7 +855,7 @@ index 6febff9..8a5a844 100644
                  var subtitle =
                      hideOwnPhone
                      ? ""
-@@ -1997,9 +2001,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -1978,9 +1982,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              })
          }
          
@@ -955,7 +867,7 @@ index 6febff9..8a5a844 100644
          if additive {
              transition.updateSublayerTransformScaleAdditive(node: self.avatarListNode.avatarContainerNode, scale: avatarScale)
              transition.updateSublayerTransformScaleAdditive(node: self.avatarOverlayNode, scale: avatarScale)
-@@ -2569,6 +2575,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -2489,6 +2495,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              transition.updateFrame(view: self.backgroundBannerView, frame: bannerFrame)
          }
                          
@@ -963,7 +875,7 @@ index 6febff9..8a5a844 100644
          let backgroundCoverSize = self.backgroundCover.update(
              transition: ComponentTransition(transition),
              component: AnyComponent(PeerInfoCoverComponent(
-@@ -2587,6 +2594,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -2507,6 +2514,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              environment: {},
              containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
          )
@@ -971,3 +883,92 @@ index 6febff9..8a5a844 100644
          if let backgroundCoverView = self.backgroundCover.view as? PeerInfoCoverComponent.View {
              // Keep PeerInfoCoverComponent alive so Premium emoji/status, patterns,
              // gifts decorations and badges remain above the fullscreen background.
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+index 00ea0b1..a9a48d5 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -519,6 +519,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         
+         super.init()
+         if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
++            self.headerNode.avatarListNode.avatarContainerNode.performanceProbe = ghostBaseProfileBackgroundView.performanceProbe
++            self.headerNode.ghostBasePerformanceProbe = ghostBaseProfileBackgroundView.performanceProbe
+             self.view.insertSubview(
+                 ghostBaseProfileBackgroundView,
+                 at: 0
+@@ -2841,6 +2843,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+     private var didPreloadShareTheme = false
+ 
+     private func updateData(_ data: PeerInfoScreenData) {
++        let timing = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.data)
++        defer { if let timing { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.data, timing) } }
+         let previousData = self.data
+         if !self.didPreloadShareTheme, let peer = data.peer, peer.id != self.context.account.peerId, let addressName = peer.addressName, !addressName.isEmpty {
+             self.didPreloadShareTheme = true
+@@ -5671,6 +5675,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+             self.layoutHeldDuringExpansion = (layout, navigationHeight)
+             return
+         }
++        let timing = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.layout)
++        defer { if let timing { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.layout, timing) } }
+         self.validLayout = (layout, navigationHeight)
+         if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
+             transition.updateFrame(
+@@ -5744,7 +5750,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         let sideInsets = peerInfoSideInsets(layout: layout)
+         let headerInset = sideInsets.base
+         
++        let headerTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.header)
+         let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: transition.isAnimated)
++        if let headerTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.header, headerTiming) }
+         self.ghostBaseProfileBackgroundView?.refreshAnimatedVideoOwner(
+             self.headerNode.avatarListNode.avatarContainerNode.videoNode
+         )
+@@ -5761,6 +5769,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         
+         var validRegularSections: [AnyHashable] = []
+         if !self.isMediaOnly {
++            let sectionsTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.sections)
++            defer { if let sectionsTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.sections, sectionsTiming) } }
+             var insets = UIEdgeInsets()
+             insets.left += sideInsets.sectionLeft
+             insets.right += sideInsets.sectionRight
+@@ -5893,6 +5903,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+             }
+         }
+         
++        let panesTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.panesAndTail)
++        defer { if let panesTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.panesAndTail, panesTiming) } }
+         let paneContainerSize = CGSize(width: layout.size.width, height: layout.size.height - navigationHeight)
+         var restoreContentOffset: CGPoint?
+         if additive {
+@@ -6134,6 +6146,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         if self.isLentToExpansion {
+             return
+         }
++        let navigationTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.navigation)
++        defer { if let navigationTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.navigation, navigationTiming) } }
+         let offsetY = self.scrollNode.view.contentOffset.y
+         
+         if self.isSettings, !(self.controller?.movingInHierarchy == true) {
+@@ -6168,7 +6182,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+                 let sideInsets = peerInfoSideInsets(layout: layout)
+                 let headerInset = sideInsets.base
+ 
+-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
++                let scrollHeaderTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.scrollHeader)
++                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
++                if let scrollHeaderTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.scrollHeader, scrollHeaderTiming) }
+             }
+             
+             let paneAreaExpansionDistance: CGFloat = 32.0
+@@ -6204,7 +6220,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+             // iPhone Duo: the panes and tabs stay out of the side strip; the container stays full width.
+             let paneSideInsets = peerInfoSideInsets(layout: layout)
+             self.paneContainerNode.stripInsets = (paneSideInsets.stripLeft, paneSideInsets.stripRight)
++            let scrollPanesTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.scrollPanes)
+             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: paneSideInsets.paneSideInset, topInset: paneContainerTopInset, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: self.initialExpandPanes ? 1.0 : effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, disableTabSwitching: disableTabSwitching, navigationHeight: navigationHeight, transition: transition)
++            if let scrollPanesTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.scrollPanes, scrollPanesTiming) }
+           
+             // iPhone Duo unfolded portrait: the search field ends left of the status island.
+             let navigationButtonsWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.navigationBarTrailingButtonsInset

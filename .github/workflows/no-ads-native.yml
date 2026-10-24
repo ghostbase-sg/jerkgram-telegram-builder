@@ -1,4 +1,4 @@
-name: Jerkgram 13.0 source and native regression gate
+name: Jerkgram 13.1.1 source and native regression gate
 on:
   push:
     branches: [dev/no-ads-166]
@@ -11,10 +11,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   policy:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 15
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
       - name: Clean materialization, regressions and actual native fragments
@@ -29,6 +29,10 @@ jobs:
           python3 scripts/materialize_jg13.py
           python3 scripts/configure_jg13.py
           python3 scripts/verify_jg13_source.py
+          python3 -m unittest discover -s tests -p test_jg13_history_backend.py
+          python3 -m unittest discover -s tests -p test_jg131_migration.py
+          python3 tests/run_jg13_history_backend.py
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
           python3 -m unittest discover -s tests -p test_jg13_stars_gift.py
           xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift
           xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift

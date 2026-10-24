@@ -10,8 +10,10 @@ permissions:
   contents: read
 jobs:
   text-contract:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 10
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
       - name: Test actual production text helper
@@ -34,10 +36,11 @@ jobs:
       - name: Test real media body against pinned source and bounded model facades
         run: |
           set -euo pipefail
+          python3 -c "from scripts.materialize_jg131_stable import reviewed_stable_patch; reviewed_stable_patch()"
           git clone --filter=blob:none --no-checkout https://github.com/TelegramMessenger/Telegram-iOS.git work/reply-upstream
-          git -C work/reply-upstream fetch --depth 1 origin f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838
-          git -C work/reply-upstream archive f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838 submodules/TelegramCore/Sources/Account/Account.swift submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift submodules/TelegramCore/Sources/State/AccountStateManager.swift submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift | tar -x -C work/reply-native
-          git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' --include='submodules/TelegramCore/Sources/State/AccountStateManager.swift' --include='submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift' ../../patches/jg13-stable.product.patch
+          git -C work/reply-upstream fetch --depth 1 origin fb0e62ba8a147f0821da6aa63c09da7d79a10111
+          git -C work/reply-upstream archive fb0e62ba8a147f0821da6aa63c09da7d79a10111 submodules/TelegramCore/Sources/Account/Account.swift submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift submodules/TelegramCore/Sources/State/AccountStateManager.swift submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift | tar -x -C work/reply-native
+          git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' --include='submodules/TelegramCore/Sources/State/AccountStateManager.swift' --include='submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift' ../jg131-reviewed-stable.patch
           git -C work/reply-native apply --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' ../../patches/jg13-deleted-reply.patch
           if test -f patches/jg13-portable-copy.patch; then
             git -C work/reply-native apply --include='submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift' --include='submodules/TelegramCore/Sources/Account/Account.swift' --include='submodules/TelegramCore/Sources/State/AccountStateManager.swift' --include='submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift' ../../patches/jg13-portable-copy.patch

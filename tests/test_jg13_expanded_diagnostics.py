@@ -10,6 +10,10 @@ class ExpandedDiagnosticsTests(unittest.TestCase):
         manifest=json.loads((ROOT/'patches/jg13-expanded-diagnostics.sha256.json').read_text())
         for path in ('submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift','submodules/TelegramUI/Sources/ChatControllerNode.swift','submodules/TelegramUI/Sources/ChatHistoryListNode.swift','submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift','submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift','submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift'):
             text=(SOURCE/path).read_text()
+            import sys
+            sys.path.insert(0, str(ROOT / "scripts"))
+            from materialize_jg13_history_backend import preceding_owner
+            text=preceding_owner(path, text)
             text=re.sub(r'JerkgramPerformanceDiagnostics.shared.measureOperation\(\.\w+\) \{ ([^\n]+) \}',r'\1',text)
             if path.endswith('CoreListChatHistoryBackend.swift'):
                 text=text.replace('import TelegramCore\n','',1)

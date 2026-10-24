@@ -2,12 +2,12 @@
   "base_builder_sha": "4bc1548dc91306e76b97f694d017eb8af7932ed5",
   "owners": {
     "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": {
-      "after_sha256": "c6109edf35231b263a4029fe2c3f4a133f78031efe8bd7349797ea443c5394e3",
-      "before_sha256": "5a49325a5be7a80f732603f8113951a7e2a77660571a277ffeaffbb01b559161"
+      "after_sha256": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+      "before_sha256": "3ade78080125672c871b1c9a39e52e3f87010edbf0fceeab80ff50d42d756e77"
     },
     "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": {
-      "after_sha256": "8e2338e8a66e429d9c8ebab6d2543682b4b3a9f761f84eb67e6b4c018907e261",
-      "before_sha256": "3aab7ad1162cf0b970768fce869f984ae1127332a8d178a7853923dee6d6144c"
+      "after_sha256": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+      "before_sha256": "4f5994cc458dc4bdc2a249186a1791f1ae7418ef68ce6b7056e39d272822bff8"
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
       "after_sha256": "bdc01a66591ce4d19b2dc520e045e35075a128f9084d5f14590f561e4a6aee75",
@@ -18,8 +18,8 @@
       "before_sha256": "9fc8839120ab9d76aa94203cf47e9048dc4c77e7449e1271610e8ac22775e54a"
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
-      "after_sha256": "6ff0628e2b0f94029f0fd2d9414f13abbcad8fc30808d7014ba1ad17daccc4a4",
-      "before_sha256": "7d5fd2e850e9851542709ed1996bece61d70f80e786f6d425083f59f985ed454"
+      "after_sha256": "98011eff066ef76e7f93b5216d1216033cfaedd7c7afa1accb0b64a9c7043572",
+      "before_sha256": "2843a4dc2bb327e11974ad1f7077c77bfe8e68fc3f3e2d5de9d2505daafc9258"
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": {
       "after_sha256": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
@@ -30,5 +30,5 @@
       "before_sha256": "6ee6a7d61697390e2c2cfa8a62475601119eaf183928537213a72ea25405ed4d"
     }
   },
-  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838"
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111"
 }

@@ -1,16 +1,16 @@
 {
-  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838",
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
   "regression_locks": {
-    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "c6109edf35231b263a4029fe2c3f4a133f78031efe8bd7349797ea443c5394e3",
-    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "8e2338e8a66e429d9c8ebab6d2543682b4b3a9f761f84eb67e6b4c018907e261",
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
   },
   "owners": {
     "submodules/ChatListUI/Sources/ChatListController.swift": {
-      "before_sha256": "7799daa0038357657347239157c996a35601cce926bb4ec05cd922a0ccf19efe",
-      "after_sha256": "3e5673b23dc19a4bdbfeddb9a4e741f785162978296a4627e6dd1e861783bd7a",
+      "before_sha256": "0e81ccec2eb2a0899a23c653377823e42b014cadb8bc4df19ccdf219bea79c0f",
+      "after_sha256": "17f5a4999771296d8f4209ee12fe9082dd8632fd61500e990e47f090b0eba4bf",
       "survival_functions": [
         "activateCompose",
         "activateEdit",
@@ -171,8 +171,8 @@
       ]
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
-      "before_sha256": "ba2375e940fe73b64500753e561613fe3f06ed66dff8c0d74d73bcbc19c6bf44",
-      "after_sha256": "9717aa7f6350078b449d508e02617161f561ea2ac3dbccec82b4d118c82811f1",
+      "before_sha256": "df2aeca41b9fde37b2dd93bd53fa39f5761f162d0337cd8dcb2cfe373a0b61a7",
+      "after_sha256": "a81949b3d9254ea94b3bce77a26b6b90512c2cd498a2631588409da0933a89f3",
       "survival_functions": [
         "activateEdit",
         "activateSearch",
@@ -293,7 +293,6 @@
         "updateBlocked",
         "updateData",
         "updateNavigation",
-        "updateNavigationExpansionPresentation",
         "updateNavigationHeight",
         "updatePresentationData",
         "viewDidAppear",
@@ -304,8 +303,8 @@
       ]
     },
     "submodules/TelegramUI/Sources/ChatController.swift": {
-      "before_sha256": "bf2528c18358ceeb289e17b31070943182a51a25b101c9b54720178fabf18672",
-      "after_sha256": "42350a34753fd10a1837edbca85a1a04701a8cc69b789659a71420021ae63efa",
+      "before_sha256": "83bf4c14f7b20be32aa1dfa8c93e440a379c6368cffad0402245008def062764",
+      "after_sha256": "9c8ee8652379ebff12ff78ba323b3326e867fc8c831bd84d338448a2bf72d022",
       "survival_functions": [
         "acceptPossibleControllerDropContent",
         "activateInput",
@@ -394,7 +393,7 @@
         "startBot",
         "themeAndStringsUpdated",
         "topPinnedMessageSignal",
-        "topPinnedScrollMessage",
+        "topPinnedScrollMessageState",
         "topPinnedScrollReferenceMessage",
         "transferScrollingVelocity",
         "transformEnqueueMessages",
@@ -458,8 +457,8 @@
       ]
     },
     "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift": {
-      "before_sha256": "87512514ad430d822d18362d6546d62eb00125a4f36992cc56752c32f606d064",
-      "after_sha256": "e585e07b68e3b8b2a2529c0e8f55b59a61bd774b7461a980179d63fd4eeefa31",
+      "before_sha256": "5ea7772bf0888bc71f90b79ad5df90187e9bcd22157dc69c80d02f1f1123ce12",
+      "after_sha256": "b024bb02f020dd0a63e45838212d7219e466f0ffb773ab2199751238c2bddb2c",
       "survival_functions": [
         "_accessibilitySpeak",
         "_showTextStyleOptions",
@@ -568,8 +567,8 @@
       ]
     },
     "submodules/TelegramUI/Sources/ChatControllerNode.swift": {
-      "before_sha256": "fbda7a8a143625ee69362d2dff635d6c56429266c5c4b751a21da55806fbcb29",
-      "after_sha256": "4d49c73e39892f4d1ce909aa523d18e870721152c58da56898aae189fb258bf2",
+      "before_sha256": "ddf24a9fcd1d84621a9b9ccd299688c005df0b46c769e203f8718b302f9f4317",
+      "after_sha256": "bce65215e8bb2840661ba3159a6e7a6d44ce6500fbe34fdaccb1a49a283e7a7b",
       "survival_functions": [
         "animateDismissAsOverlay",
         "animateFromSnapshot",
@@ -649,8 +648,8 @@
       ]
     },
     "submodules/TelegramUI/Sources/ChatHistoryListNode.swift": {
-      "before_sha256": "0b7e96ab8d76a3929e644001fcce380f220b5cf0ab65bc2389693af1d28a44b2",
-      "after_sha256": "bb46a0d5c089ddc18f6f9f35956e180e73fe613ac3ced09469bdb7cb9d03554d",
+      "before_sha256": "700fdf2830dcf172a85d2223669234931bc3f5ce8289b283727887dc948db00a",
+      "after_sha256": "74f5caf67badb6f214bf474e34f5c830158ef10333fb84caf8e32bd30af73ee6",
       "survival_functions": [
         "addAfterTransactionsCompleted",
         "addContentGestureRecognizer",
@@ -732,8 +731,8 @@
       ]
     },
     "submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift": {
-      "before_sha256": "fb1825fe0df922e1d713fd04f6a973a3156d0bc07788d76a519bbbb0765828b3",
-      "after_sha256": "2ee6ed97d8188f7a32c822a22a0802b303b39d12807885f7ed895b2f80bdff12",
+      "before_sha256": "a518c61c231770fb770e388824b35b9a70ce3f489b380149ac1001ed66c6e50e",
+      "after_sha256": "49834803ad3d78603e7f20dd6f82fa5e8373212808c1a534c3dd25eb07cc6a50",
       "survival_functions": [
         "addAfterTransactionsCompleted",
         "apply",
@@ -786,8 +785,8 @@
       ]
     },
     "submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift": {
-      "before_sha256": "db0088deac4f4de738565ac97d22e014256723ae0f59c775f11f5202b2164c75",
-      "after_sha256": "dbb15ffd668311c15179d4dea8a44578dbcd11cdba6b80f9cd3e5504bb25d20a",
+      "before_sha256": "8706b8ae843c6cda4a4318e1100df521a14798852f8f71ed6f2796f515ff69b1",
+      "after_sha256": "77fc1d3cc861eb771ea51c157431c89b9fefc2e0b7dc3d8d9b96b60a1acc2f22",
       "survival_functions": [
         "merged",
         "nodeConfiguredForParams",

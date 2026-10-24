@@ -3,6 +3,7 @@
 from pathlib import Path
 import importlib.util
 import os
+import json
 
 
 ROOT = Path(os.environ.get("JERKGRAM_SOURCE_ROOT", os.environ.get("GHOSTBASE_SOURCE_ROOT", str(Path.cwd())))).resolve()
@@ -30,7 +31,7 @@ def main() -> None:
     require(controller.is_file(), "materialized controller owner missing")
     require(node.is_file(), "materialized node owner missing")
 
-    patch.PINNED_OFFICIAL_COMMIT = "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838"
+    patch.PINNED_OFFICIAL_COMMIT = json.loads((BUILDER_ROOT / "jerkgram-migration.json").read_text())["upstream_new_sha"]
     official_controller = patch.official_source(patch.CONTROLLER_REL)
     official_node = patch.official_source(patch.NODE_REL)
     expected_node = patch.apply_native_material(official_node)

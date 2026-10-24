@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.0 / Build167 Stars and gift fixes
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build168 ListView history and upstream update
 
 on:
   workflow_dispatch:
@@ -17,6 +17,7 @@ on:
       - dev/download-boost-165
       - dev/no-ads-166
       - dev/stars-gift-167
+      - dev/telegram-13.1.1-168
 
 concurrency:
   group: jerkgram-build-${{ github.workflow }}-${{ github.ref }}
@@ -30,11 +31,11 @@ jobs:
     uses: ./.github/workflows/no-ads-native.yml
   build-probe:
     needs: source-preflight
-    runs-on: macos-26
+    runs-on: xcode-27
     env:
       USE_BAZEL_VERSION: 9.2.0
       BAZEL_BIN: bazelisk
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
       JERKGRAM_TELEGRAM_API_ID: ${{ secrets.JERKGRAM_TELEGRAM_API_ID }}
       JERKGRAM_TELEGRAM_API_HASH: ${{ secrets.JERKGRAM_TELEGRAM_API_HASH }}
     steps:
@@ -44,12 +45,12 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild -version
-          test "$(xcodebuild -version | head -1)" = "Xcode 26.6"
+          test "$(xcodebuild -version | head -1)" = "Xcode 27.1"
           if ! command -v bazelisk >/dev/null 2>&1; then
             brew install bazelisk
           fi
           bazelisk --version
-      - name: Prepare clean pinned Official Telegram 13.0 source
+      - name: Prepare clean pinned Official Telegram 13.1.1 source
         run: bash scripts/prepare_source_official.sh
       - name: Build Jerkgram 1.2.0 Beta 1
         run: |
@@ -62,7 +63,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build167-diagnostics
+          name: Jerkgram-1.2.0-Build168-diagnostics
           path: |
             patches/jg13-stars-gift.sha256.json
             scripts/materialize_jg13_stars_gift.py
@@ -132,9 +133,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build167
+          name: Jerkgram-1.2.0-Build168
           path: |
-            artifacts/Jerkgram-1.2.0-Build167.ipa
-            artifacts/Jerkgram-1.2.0-Build167.json
+            artifacts/Jerkgram-1.2.0-Build168.ipa
+            artifacts/Jerkgram-1.2.0-Build168.json
           if-no-files-found: error
           retention-days: 90

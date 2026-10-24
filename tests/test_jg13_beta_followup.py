@@ -49,7 +49,7 @@ class FollowupTests(unittest.TestCase):
     def test_bundle_metadata_owner_uses_explicit_bundle_version(self):
         self.assertIn('config["bundle_short_version"]', (ROOT / "scripts/configure_jg13.py").read_text())
         config = json.loads((ROOT / "jerkgram-migration.json").read_text())
-        self.assertEqual(config.get("bundle_short_version"), "13.0")
+        self.assertEqual(config.get("bundle_short_version"), "13.1.1")
         self.assertEqual(config["product_display_version"], "1.2.0 Beta 1")
         self.assertEqual(config["product_technical_version"], "1.2.0-beta.1")
 

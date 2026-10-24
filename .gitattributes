@@ -1,3 +1,4 @@
 # Unified diff context retains exact upstream whitespace; source outputs are
 # independently full-hash verified. Do not mistake patch syntax for source EOL.
-patches/jg13-expanded-diagnostics.patch -whitespace
+patches/jg13-*.patch -whitespace
+patches/jg131-stable-port.delta -whitespace

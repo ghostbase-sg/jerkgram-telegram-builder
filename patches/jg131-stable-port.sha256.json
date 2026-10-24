@@ -1,0 +1,6 @@
+{
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "original_patch_sha256": "c6449542039d11cd351b0f32454e50013c53b1fcfe45a5130109a892facb30cf",
+  "port_delta_sha256": "1cb056abf8a68574a39e7257433456e7e96f5a8da94e4994b169be5533ce262c",
+  "effective_patch_sha256": "23f9df80481718a457c963e5f2fb87deb07436323cdae5d0c66d6ee66f2f4e94"
+}

@@ -1,8 +1,8 @@
 {
-  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838",
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
   "regression_locks": {
-    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "c6109edf35231b263a4029fe2c3f4a133f78031efe8bd7349797ea443c5394e3",
-    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "8e2338e8a66e429d9c8ebab6d2543682b4b3a9f761f84eb67e6b4c018907e261",
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
@@ -23,8 +23,8 @@
       ]
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift": {
-      "before_sha256": "2b55cf351e60dfd0c58d20591aaee34ac92fc700af6f3ac55300129f0a00c0fd",
-      "after_sha256": "e035debad10d8ccc7a8443c36eb6b7e307027df4b116577b36b046b51021b259",
+      "before_sha256": "9f2f8eb1e9cf5c07c51a83c025b474c8a314bc0d122b9c4d575584951ca27442",
+      "after_sha256": "025ff4c0f4ac38e2bf90cf568fae518e00ebb8433cb6ea86c95d140b21143b7f",
       "survival_functions": [
         "emojiTapGesture",
         "tapGesture",
@@ -91,8 +91,8 @@
       ]
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift": {
-      "before_sha256": "f8c45f2b8f34cc8861ef99bb312d84894b07f556ca25ca7769c21a4c86ef8bdb",
-      "after_sha256": "65f6734452e32d5249ca636e93e0fe846f29fbfcafed581660abe6baabd16e82",
+      "before_sha256": "fa3cb8c732e98d91f971a0b5199ca2ca59734b1c57d18ca88496d0dbcec20c6d",
+      "after_sha256": "9767f87e0699f99d330dcdbd2aceb07bb085b9960740d35428ec16c7a88a556a",
       "survival_functions": [
         "actionButtonPressed",
         "addToAvatarTransitionSurface",

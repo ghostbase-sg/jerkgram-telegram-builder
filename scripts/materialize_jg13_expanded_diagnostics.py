@@ -36,6 +36,9 @@ def check(source, stage, final_owners=None):
         raise RuntimeError('Expanded diagnostics pin/owner scope changed')
     for name, values in manifest['owners'].items():
         data = (source / name).read_bytes()
+        if stage == 'after':
+            from materialize_jg13_history_backend import preceding_owner
+            data = preceding_owner(name, data.decode()).encode()
         if hashlib.sha256(data).hexdigest() != values[stage + '_sha256']:
             raise RuntimeError('Expanded diagnostics ' + stage + ' hash mismatch: ' + name)
         declarations = set(re.findall(r'(?m)^\s*(?:(?:public|private|fileprivate|internal|override|static|class|final|@objc)\s+)*func\s+(\w+)', data.decode()))

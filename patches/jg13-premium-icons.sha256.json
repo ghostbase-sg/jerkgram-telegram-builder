@@ -1,13 +1,13 @@
 {
-  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838",
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
   "owners": {
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": {
-      "before_sha256": "9f98b2ef1e2843663534032ceb103d6bf7b4e9b836003b85c39997e81965ec09",
-      "after_sha256": "eea26fb03a0d56d38b573ff84e2f48006db66ab82e4a74f74534c8b2cc4066d3"
+      "before_sha256": "8d52d145d0bd5380ea8eb7b9a53fae88057630b3ad1e5b388db675bbf1b11560",
+      "after_sha256": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4"
     },
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": {
-      "before_sha256": "7a162315e84a6168999f65b59e7fba86502d66ac8d55efbf9c1eb03a6d7ff751",
-      "after_sha256": "15351548f8ca1a6f3a5d4fd89a223f824724b2abd90d0e0b71e135d4a4bb01c3"
+      "before_sha256": "e60c6663dab7d5a19e940fd324d97d3fd4981101ab7d848b1ffa95c947c0a49c",
+      "after_sha256": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6"
     },
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
       "before_sha256": "cf24592a3072106260fff04fb330fbfaabe6a30889dfa64572786f3d830b2854",
@@ -15,8 +15,8 @@
     }
   },
   "locks": {
-    "submodules/TelegramUI/Sources/AppDelegate.swift": "3e8d5b231f001280f05f699245e9b5f6e6ef3f6781901f2f076f1910dcf38244",
-    "Telegram/BUILD": "e0574cd93ce2efad3ca81e7320fa1529b7fb990cdf65f70f711c9bc253420090",
+    "submodules/TelegramUI/Sources/AppDelegate.swift": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
+    "Telegram/BUILD": "7188ddd74bde335f1fefe9e287b8c1d01013dee6434748be6306ab8ebffeb692",
     "Telegram/Telegram-iOS/Premium.alticon/Premium@2x.png": "c75459dcb688df649e21e48999a352ae5683b7b09a0bfff53dbf7bb071abb872",
     "Telegram/Telegram-iOS/Premium.alticon/Premium@3x.png": "b0ed5687b268c111a725c558a6388a693d02852e24ed34c55ef4020200728c3e",
     "Telegram/Telegram-iOS/PremiumBlack.alticon/PremiumBlack@2x.png": "c03af83b0d5074021beb52b752266a05bda589131fc8c49bc972e8357fefadca",

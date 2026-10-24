@@ -1,16 +1,16 @@
 {
-  "upstream_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838",
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
   "regression_locks": {
-    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "c6109edf35231b263a4029fe2c3f4a133f78031efe8bd7349797ea443c5394e3",
-    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "8e2338e8a66e429d9c8ebab6d2543682b4b3a9f761f84eb67e6b4c018907e261",
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
   },
   "owners": {
     "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": {
-      "before_sha256": "ebab740cd04c896ad65cd501c4b37c9d74e9ffbdfcd3b0748df0b2279800c91a",
-      "after_sha256": "22a2bfe3ee6eb4ae627f507d4039e019f4426b99ff2e1a6418cf231f0c50c39c",
+      "before_sha256": "4a875c4487e0326e5bf8dd6256d9b64106bd5bfef7a9399fce9a6ab457226ad6",
+      "after_sha256": "f17333b7b0b20a725b18530d805e04f1f6c4000a5df1d8df28460eb34cbb2ccd",
       "survival_functions": [
         "append",
         "augmentMediaWithReference",
@@ -82,8 +82,8 @@
       "removed_functions": []
     },
     "submodules/TelegramCore/Sources/State/AccountStateManager.swift": {
-      "before_sha256": "b9e0628cd28a7864b8311a1f886b69930694bae91df288a30853b18fd49fad34",
-      "after_sha256": "337b941deaa816b1b7e2573b3fda2979f0fa7ffdfa607af0c89144fca4f85612",
+      "before_sha256": "2bcab16b1330ed9a02f93fb887c36a1588695bf9a273f9ca16c920af83dea418",
+      "after_sha256": "9b7faf226d585fb3aa9ba02bc005c30abc16d5371202ec77b31bc85860e66936",
       "survival_functions": [
         "addAsyncResetChannels",
         "addCustomOperation",

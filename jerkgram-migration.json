@@ -6,17 +6,17 @@
   "upstream_repository": "TelegramMessenger/Telegram-iOS",
   "upstream_old_tag": "release-12.9.2",
   "upstream_old_sha": "6ad963e5b62d354da79040f388ae2b9132fb17b8",
-  "upstream_new_source": "pinned Telegram-iOS master for 13.0",
-  "upstream_new_sha": "f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838",
-  "upstream_new_version": "13.0",
+  "upstream_new_source": "Official Telegram-iOS release-13.1.1",
+  "upstream_new_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_new_version": "13.1.1",
   "product_name": "Jerkgram",
   "product_version": "1.2.0",
   "product_display_version": "1.2.0 Beta 1",
   "product_technical_version": "1.2.0-beta.1",
-  "bundle_short_version": "13.0",
-  "build_number": 167,
+  "bundle_short_version": "13.1.1",
+  "build_number": 168,
   "bundle_id": "com.jerkgram.ios",
-  "source_snapshot_sha256": "5f0eb1e6dbfcd7d955eba10e6aa6caddfa755f2960e86aedb824a84e1b060731",
+  "source_snapshot_sha256": "6499b01ab4a5db475dde15ac7b773643a1d6188d2432b9746dab2adde2a18813",
   "dependency_overrides": {
     "submodules/rlottie/rlottie": {
       "repository": "TelegramMessenger/rlottie",
@@ -25,5 +25,6 @@
       "reason": "Exact upstream gitlink unavailable; explicit user-approved source fallback on 2026-10-09",
       "runtime_status": "NOT RUNTIME TESTED"
     }
-  }
+  },
+  "source_snapshot_format": "git archive tar"
 }

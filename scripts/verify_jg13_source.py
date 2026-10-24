@@ -12,6 +12,7 @@ from materialize_jg13_download_boost import verify_boost
 from materialize_jg13_sponsored import verify_sponsored
 from materialize_jg13_profile_capture import verify_profile_capture
 from materialize_jg13_stars_gift import verify_stars_gift
+from materialize_jg13_history_backend import verify_backend
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -37,9 +38,9 @@ def main():
     build_owner = (SOURCE / "Telegram/BUILD").read_text()
     require(f'<key>CFBundleShortVersionString</key>\n    <string>{config["bundle_short_version"]}</string>' in build_owner, "Wrong generated bundle version owner")
     require('"1.0.2"' not in identity, "Stale product version")
-    auth = (SOURCE / "submodules/TelegramApi/Sources/Api43.swift").read_text()
-    require('("botAuthToken", ConstructorParameterDescription("[REDACTED]"))' in auth, "Bot token diagnostic not redacted")
-    require('serializeString(botAuthToken, buffer: buffer, boxed: false)' in auth, "Bot login wire token lost")
+    auth = (SOURCE / "submodules/TelegramApi/Sources/TLObjectSupport.swift").read_text()
+    require('fieldName == "botAuthToken" ? "[REDACTED]"' in auth, "Bot token diagnostic not redacted")
+    require('TLSerialize(call, &writer, true)' in auth, "API runtime serialization owner changed")
     app = (SOURCE / "submodules/TelegramUI/Sources/AppDelegate.swift").read_text()
     require("func handleDidBecomeActive()" in app and "JerkgramTelemetry.shared.applicationDidBecomeActive()" in app, "Active telemetry owner lost")
     require("func handleDidEnterBackground()" in app and "JerkgramTelemetry.shared.applicationDidEnterBackground()" in app, "Background telemetry owner lost")
@@ -64,6 +65,7 @@ def main():
     verify_sponsored(SOURCE)
     verify_profile_capture(SOURCE)
     verify_stars_gift(SOURCE)
+    verify_backend(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 

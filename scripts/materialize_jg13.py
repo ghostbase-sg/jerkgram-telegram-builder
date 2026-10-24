@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the reviewed Stable delta to the one pinned clean Telegram 13.0 tree."""
+"""Apply the reviewed Stable delta to the one pinned clean Telegram 13.1.1 tree."""
 from pathlib import Path
 import hashlib
 import json
@@ -10,6 +10,7 @@ from materialize_jg13_profile_preferences import apply_preferences
 from materialize_jg13_expanded_diagnostics import apply_expanded
 from materialize_jg13_deleted_reply import apply_deleted_reply
 from materialize_jg13_portable_copy import apply_portable_copy
+from materialize_jg131_stable import reviewed_stable_patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -22,7 +23,7 @@ def main():
         raise RuntimeError("Wrong upstream SHA; refusing to patch")
     if subprocess.check_output(["git", "status", "--porcelain"], cwd=SOURCE):
         raise RuntimeError("Expected clean upstream before materialization")
-    patch = ROOT / "patches/jg13-stable.product.patch"
+    patch = reviewed_stable_patch()
     subprocess.run(["git", "apply", "--check", str(patch)], cwd=SOURCE, check=True)
     subprocess.run(["git", "apply", str(patch)], cwd=SOURCE, check=True)
     manifest = json.loads((ROOT / "patches/jg13-stable.product.sha256.json").read_text())
