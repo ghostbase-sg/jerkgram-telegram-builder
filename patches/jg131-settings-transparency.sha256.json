@@ -1,6 +1,6 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "5833f1672755063d8b1964af8ea7ed50093e56d04a4e2ef68729f7b9d57fd513",
+  "patch_sha256": "347d1e59d8a40906a9182832b4dbe4045c9c4c1e35a9de2fd199acc5ab3b7a34",
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
       "before_sha256": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
@@ -8,7 +8,7 @@
     },
     "submodules/Display/Source/ViewController.swift": {
       "before_sha256": "906dc689c32c820d092cd8f1ea2d8ac393ecb823f51acfd5543a3d10dbcd8d68",
-      "after_sha256": "9fca32823a59fec855fb4d68484ac059a10ae1d01356e995c5c76d1c79430cfb"
+      "after_sha256": "7b1a351a5cef9ae8a9dc5d92e2bc0ac2c00eb7890eb8413aed2d24b17f3241fb"
     },
     "submodules/Display/Source/Navigation/NavigationController.swift": {
       "before_sha256": "50201ef844b3650993acc4cdc2f85395825a2750134feb7c1cd361a788821a74",

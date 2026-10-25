@@ -79,7 +79,7 @@ diff --git a/submodules/Display/Source/GhostBaseGlass.swift b/submodules/Display
 diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display/Source/ViewController.swift
 --- a/submodules/Display/Source/ViewController.swift
 +++ b/submodules/Display/Source/ViewController.swift
-@@ -164,6 +164,75 @@
+@@ -164,6 +164,72 @@
      
      open var navigationPresentation: ViewControllerNavigationPresentation = .default
      open var _presentedInModal: Bool = false
@@ -145,9 +145,6 @@ diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display
 +                self.jerkgramSettingsBackdropView?.isHidden = true
 +            }
 +        }
-+        if let navigation = self as? NavigationController {
-+            for case let child as ViewController in navigation.viewControllers { child.jerkgramInheritSettingsSurface(from: self) }
-+        }
 +        self.jerkgramSettingsStyleRevision.set(0)
 +        if let layout = self.validLayout, self.isViewLoaded { self.containerLayoutUpdated(layout, transition: .immediate) }
 +    }
@@ -155,7 +152,7 @@ diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display
      open var _hasGlassStyle: Bool = false
      open var flatReceivesModalTransition: Bool = false
      /// A full-screen viewer (a web page, a document) presented as a modal fills the screen beside a top-right status
-@@ -466,7 +535,7 @@
+@@ -466,7 +532,7 @@
      }
      
      deinit {
@@ -164,7 +161,7 @@ diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display
      }
  
      open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-@@ -530,6 +599,7 @@
+@@ -530,6 +596,7 @@
              self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
          }
          
@@ -172,7 +169,7 @@ diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display
          self.updateNavigationBarLayout(layout, transition: transition)
          
          if self.automaticallyControlPresentationContextLayout {
-@@ -550,6 +620,7 @@
+@@ -550,6 +617,7 @@
          self.view.autoresizingMask = []
          self.view.addSubview(self.statusBar.view)
          self.presentationContext.view = self.view
@@ -180,7 +177,7 @@ diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display
      }
      
      open func loadDisplayNode() {
-@@ -644,6 +715,7 @@
+@@ -644,6 +712,7 @@
      }
      
      public func push(_ controller: ViewController) {
@@ -188,7 +185,7 @@ diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display
          (self.navigationController as? NavigationController)?.pushViewController(controller)
      }
      
-@@ -657,6 +729,9 @@
+@@ -657,6 +726,9 @@
      }
      
      open func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
@@ -198,7 +195,7 @@ diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display
          if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation, self.navigationController != nil {
              controller.navigationPresentation = .modal
              self.push(controller)
-@@ -705,6 +780,7 @@
+@@ -705,6 +777,7 @@
      
      open override func viewDidAppear(_ animated: Bool) {
          self.activeInputView = nil
