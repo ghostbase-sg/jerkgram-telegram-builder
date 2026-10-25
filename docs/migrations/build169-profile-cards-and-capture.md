@@ -11,3 +11,10 @@ The four-owner final stage follows the Build167 Stars/gift fixes and ListView ba
 Validation: observed missing-stage RED before implementation, observed corner-contract RED before layer clipping, then three repair tests GREEN. Fresh separate source worktree materialized/configured the full canonical chain and passed the root source verifier. Focused migration, history backend and Stars/gift checks pass. Broader current-source discovery retains the same 108 tests with four historical failures and one historical error documented in the Build168 migration report.
 
 A macOS Swift fixture compiles the actual picker callback in its nested capture shape with warnings-as-errors, then checks navigation, dismissal and release of its weak controller. The fixture plus syntax parsing of all four changed owners run before IPA compilation. These native checks and full application compilation await the new CI run. Screenshot parity and performance still require iPhone validation in both themes, toggles and repeated edit/open/close flows.
+
+
+## TelegramUI follow-up after the full Build169 compilation
+
+Run 40176153336 passed all native preflight checks and compiled SettingsUI, then failed in TelegramUI/Chat/ChatControllerLoadDisplayNode.swift:133 and :4970: `cannot find type PeerId in scope`. Upstream 13.1.1 removed that file's Postbox import, but two injected helper signatures retained bare PeerId. Both now use TelegramCore's public EnginePeer.Id alias (defined as PeerId by upstream). No message, unread policy, scheduling or storage behavior changes.
+
+A separate exact one-owner final stage follows the UI repair. The new type-compatibility test was observed RED on the failing source and GREEN after repair, and audits all Stable TelegramUI overlay owners for newly introduced unimported Postbox ID types. An independent broader public-Postbox-type scan found no additional instances. Parent/output hashes, repeat/tamper refusal, root source verification and application to the independently materialized source tree pass. None of these replace whole-module compilation. Full IPA success remains unproven until a new CI build completes.

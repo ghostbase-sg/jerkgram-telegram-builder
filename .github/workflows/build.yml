@@ -65,6 +65,9 @@ jobs:
         with:
           name: Jerkgram-1.2.0-Build169-diagnostics
           path: |
+            patches/jg131-ui-type-compat.sha256.json
+            scripts/materialize_jg131_ui_type_compat.py
+            work/swiftgram-src/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
             patches/jg131-ui-repair.patch
             patches/jg131-ui-repair.sha256.json
             scripts/materialize_jg131_ui_repair.py

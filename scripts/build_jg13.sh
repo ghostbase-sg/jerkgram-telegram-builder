@@ -7,6 +7,7 @@ python3 scripts/verify_jg13_source.py
 python3 -m unittest discover -s tests -p test_jg13_history_backend.py
 python3 -m unittest discover -s tests -p test_jg131_migration.py
 python3 -m unittest discover -s tests -p test_jg131_ui_repair.py
+python3 -m unittest discover -s tests -p test_jg131_ui_type_compat.py
 python3 tests/run_jg131_capture_repair.py
 python3 tests/run_jg13_history_backend.py
 xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
