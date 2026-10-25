@@ -47,7 +47,7 @@ func run() {
     picker.peerSelected?(Peer(id: PeerId(value: 42)), false)
     precondition(controller?.pushes == 2)
     precondition(picker.dismissals == 1)
-    weak var releasedController = controller
+    weak let releasedController = controller
     controller = nil
     precondition(releasedController == nil)
     picker.peerSelected?(Peer(id: PeerId(value: 42)), false)
