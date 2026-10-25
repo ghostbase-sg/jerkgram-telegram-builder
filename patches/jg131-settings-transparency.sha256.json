@@ -1,0 +1,74 @@
+{
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "patch_sha256": "5833f1672755063d8b1964af8ea7ed50093e56d04a4e2ef68729f7b9d57fd513",
+  "owners": {
+    "submodules/Display/Source/GhostBaseGlass.swift": {
+      "before_sha256": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
+      "after_sha256": "e1fb6f4b17db0d27964ac2490241602ffecdb37c4b233b39f2e7b848db03c149"
+    },
+    "submodules/Display/Source/ViewController.swift": {
+      "before_sha256": "906dc689c32c820d092cd8f1ea2d8ac393ecb823f51acfd5543a3d10dbcd8d68",
+      "after_sha256": "9fca32823a59fec855fb4d68484ac059a10ae1d01356e995c5c76d1c79430cfb"
+    },
+    "submodules/Display/Source/Navigation/NavigationController.swift": {
+      "before_sha256": "50201ef844b3650993acc4cdc2f85395825a2750134feb7c1cd361a788821a74",
+      "after_sha256": "b84560fd0e4e1c0b2c736e871c458cedeef71570a5242cd90289eb389b171487"
+    },
+    "submodules/TelegramPresentationData/Sources/PresentationTheme.swift": {
+      "before_sha256": "e0df884681e586f848df68b939c4c53d0ed6e1dec53472a54f65f9037884dcd5",
+      "after_sha256": "fdc4f56ac23ec926e453e455f14d981d4d3b8eb618f3d7eecacbdcdd94cf1111"
+    },
+    "submodules/ItemListUI/Sources/ItemListController.swift": {
+      "before_sha256": "ab83b55f4418ac4e4ddcdfa9e458cc400f2c8c2145bb578e2d2244e4f7743005",
+      "after_sha256": "4f3a56b7140580baa563a24f82c6e44dc2313c2cbe1c5340f6b944eb8b0d58d3"
+    },
+    "submodules/ItemListUI/Sources/ItemListControllerNode.swift": {
+      "before_sha256": "4148dfb0bdeb1abe436759b6d28946b9757e4d26d158aa93d2da40d68f94117f",
+      "after_sha256": "48f8fff447eaa56ce2728e5c4c5ccfe6b645b04569e36d2d759812df0b675ba0"
+    },
+    "submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift": {
+      "before_sha256": "7cc622777cbef939eb2377707bdeb9213112389c5ee488ef477d5fd96ed5eee6",
+      "after_sha256": "f4179716218a932ac9e3ef932a80631e8cd0ff8553bb9ebb3590721faa0cee62"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
+      "before_sha256": "7f434c7dfd888a08793426833af5fefb40c23b6ac33f3bad801861424e7632f0",
+      "after_sha256": "4b63fead057757a428f695cfe8d56d60f1e0ad3eb4fe7ec56f15859e130343ea"
+    },
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+      "before_sha256": "5f19a50e24c2ba3347419dbb68d07de100e6391f968785b75e9e3489bdad369f",
+      "after_sha256": "5394a84f9a802b47484b8f1fc059875b2795112bc2569a4052ca91ce92c86624"
+    },
+    "submodules/TelegramUI/Sources/ChatController.swift": {
+      "before_sha256": "9c8ee8652379ebff12ff78ba323b3326e867fc8c831bd84d338448a2bf72d022",
+      "after_sha256": "9ab38be9c2713ec08b0348e20bd074f7ea0f29c23acd34c7b2a9275d65c1f635"
+    },
+    "submodules/SettingsUI/Sources/Notifications/Exceptions/NotificationExceptions.swift": {
+      "before_sha256": "e74cd54f81d72cfeea7f65e5e8bb0b5d70f1d80d276a08a76c3e8007cfcd5c9e",
+      "after_sha256": "b0a0d16375b239e97a2d1515303cd2e7b91c6a80d531f71d3c77f6b4693429dd"
+    },
+    "submodules/SettingsUI/Sources/Language Selection/LocalizationListController.swift": {
+      "before_sha256": "c1441ecdc1592d030c48edbc9fa3dd07fe0e9822f45cadf5a86cfa01aa48a7ed",
+      "after_sha256": "b073636bcc79b3f617295f14699035f5aaa8390e25a72b4374d10fedf1b82f24"
+    },
+    "submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeGridController.swift": {
+      "before_sha256": "f20e6a43955ae4c4ccc4b25863f3de635dcce8cdb39b8e15712347bc82e3af9b",
+      "after_sha256": "4648a1d28137de303bba9bdde98c1168fc6e7081954d146c468e8b5faeaaa43e"
+    },
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": {
+      "before_sha256": "8ed660ebeeb5c004414edd30a9009c0c419ac0ef7a554c19b40381681bdb5ba4",
+      "after_sha256": "fcfc1db96ddc39bd30ba777866cee558dec2f54b806a371010d95ab9b5d22c8e"
+    },
+    "submodules/TelegramUI/Sources/SharedAccountContext.swift": {
+      "before_sha256": "5fb6afb2aebf2910a252b22f938f3806ca4383adac759b3119e53af453e74d1b",
+      "after_sha256": "9cb521a2a329fa7ca26c091208f51e93d8d7257154ce59f5cd49a84ff1511e7a"
+    },
+    "submodules/SettingsUI/Sources/Privacy and Security/PrivacyIntroController.swift": {
+      "before_sha256": "bf92e147482abc962e42ba77d1ae732fe8f81918131b592152c04a72333b802c",
+      "after_sha256": "a4b391d27ff72d2461af5872271d80ecb39459283ffe7b08c3a130183c33e407"
+    },
+    "submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeColorsGridController.swift": {
+      "before_sha256": "df4e57eba4c1c86af12c3f442ed4e00a2a5f961709e5c23596b0354bcede3605",
+      "after_sha256": "f32fa366328ef465735d548e0a836a9bc408d8601c1fce975d1f95308e4105da"
+    }
+  }
+}

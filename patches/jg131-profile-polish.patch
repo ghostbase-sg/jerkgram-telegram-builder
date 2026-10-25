@@ -1,0 +1,67 @@
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
+@@ -94,7 +94,6 @@
+         if self.theme !== presentationData.theme {
+             self.theme = presentationData.theme
+             
+-            self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+             
+             self.textNode.textField.textColor = presentationData.theme.list.itemPrimaryTextColor
+             self.textNode.textField.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
+@@ -103,6 +102,13 @@
+             self.clearIconNode.image = PresentationResourcesItemList.itemListClearInputIcon(presentationData.theme)
+         }
+         
++        // Re-evaluate outside the theme identity gate: the glass preference
++        // can change without replacing PresentationTheme.
++        self.backgroundNode.backgroundColor = GhostBaseGlassStyle.isEnabled
++            ? UIColor(white: presentationData.theme.overallDarkAppearance ? 0.0 : 1.0,
++                      alpha: presentationData.theme.overallDarkAppearance ? 0.26 : 0.18)
++            : presentationData.theme.list.itemBlocksBackgroundColor
++
+         let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
+         if self.textNode.textField.attributedPlaceholder == nil || !self.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
+             self.textNode.textField.attributedPlaceholder = attributedPlaceholderText
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+@@ -10,6 +10,7 @@
+     private let backgroundNode: ASDisplayNode
+     private let topSeparatorNode: ASDisplayNode
+     private let bottomSeparatorNode: ASDisplayNode
++    private let bioContentMask = CAShapeLayer()
+     private let itemContainerNode: ASDisplayNode
+     
+     private var currentItems: [PeerInfoScreenItem] = []
+@@ -148,10 +149,28 @@
+         transition.updateFrame(node: self.itemContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: contentHeight)))
+         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset), size: CGSize(width: width, height: max(0.0, contentWithBackgroundHeight - contentWithBackgroundOffset))))
+         if self.ghostBaseGlassEnabled {
+-            let radius: CGFloat = hasCorners ? 16.0 : 0.0
++            let containsBio = items.contains(where: { $0 is PeerInfoScreenMultilineInputItem })
++            let radius: CGFloat = hasCorners ? (containsBio ? 26.0 : 16.0) : 0.0
+             self.backgroundNode.cornerRadius = radius
+             self.backgroundNode.clipsToBounds = hasCorners
+-            self.itemContainerNode.cornerRadius = radius
++            if containsBio && hasCorners {
++                // The comment is outside the card. Round at the card's bottom,
++                // not at the bottom of the card plus its comment footer.
++                let cardBottom = max(contentWithBackgroundOffset, contentWithBackgroundHeight)
++                let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: contentWithBackgroundOffset, width: width, height: max(0.0, cardBottom - contentWithBackgroundOffset)), cornerRadius: radius)
++                if contentWithBackgroundOffset > 0.0 {
++                    path.append(UIBezierPath(rect: CGRect(x: 0.0, y: 0.0, width: width, height: contentWithBackgroundOffset)))
++                }
++                if contentHeight > cardBottom {
++                    path.append(UIBezierPath(rect: CGRect(x: 0.0, y: cardBottom, width: width, height: contentHeight - cardBottom)))
++                }
++                self.itemContainerNode.cornerRadius = 0.0
++                self.itemContainerNode.layer.mask = self.bioContentMask
++                transition.updatePath(layer: self.bioContentMask, path: path.cgPath)
++            } else {
++                self.itemContainerNode.layer.mask = nil
++                self.itemContainerNode.cornerRadius = radius
++            }
+             self.itemContainerNode.clipsToBounds = hasCorners
+         }
+         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))

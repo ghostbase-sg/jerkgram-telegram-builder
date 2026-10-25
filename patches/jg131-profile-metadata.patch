@@ -1,0 +1,155 @@
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift
+@@ -17,6 +17,61 @@
+ import PeerNameColorItem
+ import BoostLevelIconComponent
+ 
++// JG170 metadata policy begin
++private enum JerkgramProfileMetadataPolicy {
++    static func showMutualContact(isMutual: Bool, isSelf: Bool, isBot: Bool) -> Bool {
++        return isMutual && !isSelf && !isBot
++    }
++
++    static func registrationMonth(_ value: String, currentYear: Int) -> (month: Int, year: Int)? {
++        let parts = value.split(separator: ".", omittingEmptySubsequences: false)
++        guard parts.count == 2, let month = Int(parts[0]), let year = Int(parts[1]),
++              (1 ... 12).contains(month), (2013 ... max(2013, currentYear)).contains(year) else {
++            return nil
++        }
++        return (month, year)
++    }
++
++    // Offline observations from lastochkin-group/telegram-account-age-estimator/ages.json.
++    // These are empirical samples, not Telegram guarantees. Do not extrapolate.
++    private static let anchors: [(id: Int64, year: Int)] = [
++        (2_768_409, 2013), (7_679_610, 2013), (11_538_514, 2014),
++        (15_835_244, 2014), (23_646_077, 2014), (38_015_510, 2014),
++        (44_634_663, 2014), (46_145_305, 2014), (54_845_238, 2014),
++        (63_263_518, 2014), (101_260_938, 2015), (101_323_197, 2015),
++        (103_151_531, 2015), (103_258_382, 2015), (109_393_468, 2015),
++        (111_220_210, 2015), (112_594_714, 2015), (116_812_045, 2015),
++        (122_600_695, 2015), (124_872_445, 2015), (125_828_524, 2015),
++        (130_029_930, 2015), (133_909_606, 2015), (143_445_125, 2015),
++        (148_670_295, 2016), (152_079_341, 2016), (157_242_073, 2015),
++        (171_295_414, 2016), (181_783_990, 2016), (222_021_233, 2016),
++        (225_034_354, 2016), (278_941_742, 2016), (285_253_072, 2016),
++        (294_851_037, 2016), (297_621_225, 2016), (328_594_461, 2016),
++        (337_808_429, 2017), (341_546_272, 2017), (352_940_995, 2017),
++        (369_669_043, 2017), (400_169_472, 2017), (805_158_066, 2019),
++        (1_974_255_900, 2021), (5_520_018_289, 2024)
++    ]
++
++    static func estimatedYears(userId: Int64) -> ClosedRange<Int>? {
++        guard let first = self.anchors.first, let last = self.anchors.last,
++              userId >= first.id, userId <= last.id else {
++            return nil
++        }
++        // Report years rather than inventing a precise month. Non-monotonic
++        // observations deliberately produce a range instead of a negative slope.
++        if let exact = self.anchors.first(where: { $0.id == userId }) {
++            return exact.year ... exact.year
++        }
++        for index in 1 ..< self.anchors.count where userId < self.anchors[index].id {
++            let a = self.anchors[index - 1].year
++            let b = self.anchors[index].year
++            return min(a, b) ... max(a, b)
++        }
++        return nil
++    }
++}
++// JG170 metadata policy end
++
+ private let enabledPublicBioEntities: EnabledEntityTypes = [.allUrl, .mention, .hashtag]
+ private let enabledPrivateBioEntities: EnabledEntityTypes = [.internalUrl, .mention, .hashtag]
+ 
+@@ -118,6 +173,22 @@
+         var itemId = 990000
+         var metricItems: [PeerInfoScreenItem] = []
+ 
++        let isRussian = JerkgramStrings(baseLanguageCode: presentationData.strings.baseLanguageCode).languageCode == "ru"
++        if case let .user(user) = peer,
++           JerkgramProfileMetadataPolicy.showMutualContact(
++               isMutual: user.flags.contains(.mutualContact),
++               isSelf: user.id == context.account.peerId,
++               isBot: user.botInfo != nil
++           ) {
++            let value = isRussian ? "Взаимный контакт" : "Mutual Contact"
++            metricItems.append(PeerInfoScreenLabeledValueItem(
++                id: itemId, label: isRussian ? "Контакт" : "Contact", text: value,
++                textColor: .primary, action: nil, longTapAction: nil,
++                requestLayout: { _ in interaction.requestLayout(false) }
++            ))
++            itemId += 1
++        }
++
+         if ghostBaseMetricsSettings.showIds {
+             let idText: String
+             if case let .channel(channel) = peer {
+@@ -175,40 +246,32 @@
+             itemId += 1
+         }
+ 
+-        if ghostBaseMetricsSettings.showRegistration,
+-           let cachedData = data.cachedData as? CachedUserData,
+-           let registrationDate =
+-                cachedData.peerStatusSettings?.registrationDate {
+-            let components = registrationDate.components(
+-                separatedBy: "."
+-            )
+-
+-            if components.count == 2,
+-               let monthValue = Int32(components[0]),
+-               let yearValue = Int32(components[1]) {
+-                let dateText = stringForMonth(
+-                    strings: presentationData.strings,
+-                    month: monthValue - 1,
+-                    ofYear: yearValue - 1900
+-                )
+-
+-                metricItems.append(
+-                    PeerInfoScreenLabeledValueItem(
+-                        id: itemId,
+-                        label: "Дата регистрации",
+-                        text: dateText,
+-                        textColor: .primary,
+-                        action: { _, _ in
+-                            UIPasteboard.general.string = dateText
+-                        },
+-                        longTapAction: { _ in
+-                            UIPasteboard.general.string = dateText
+-                        },
+-                        requestLayout: { _ in
+-                            interaction.requestLayout(false)
+-                        }
+-                    )
+-                )
++        if ghostBaseMetricsSettings.showRegistration, case let .user(user) = peer, user.botInfo == nil, !user.isDeleted {
++            let currentYear = Calendar(identifier: .gregorian).component(.year, from: Date())
++            let reportedValue = (data.cachedData as? CachedUserData)?.peerStatusSettings?.registrationDate
++            let reported = reportedValue.flatMap { JerkgramProfileMetadataPolicy.registrationMonth($0, currentYear: currentYear) }
++            let label: String
++            let dateText: String?
++            if let reported {
++                label = isRussian ? "Дата регистрации" : "Registration Date"
++                dateText = stringForMonth(strings: presentationData.strings, month: Int32(reported.month - 1), ofYear: Int32(reported.year - 1900))
++            } else if let range = JerkgramProfileMetadataPolicy.estimatedYears(userId: user.id.id._internalGetInt64Value()) {
++                label = isRussian ? "Регистрация (оценка по ID)" : "Registration (ID estimate)"
++                dateText = range.lowerBound == range.upperBound
++                    ? "≈ \(range.lowerBound)"
++                    : "≈ \(range.lowerBound)–\(range.upperBound)"
++            } else {
++                label = isRussian ? "Дата регистрации" : "Registration Date"
++                dateText = nil
++            }
++            if let dateText {
++                metricItems.append(PeerInfoScreenLabeledValueItem(
++                    id: itemId, label: label, text: dateText, textColor: .primary,
++                    action: { _, _ in UIPasteboard.general.string = dateText },
++                    longTapAction: { _ in UIPasteboard.general.string = dateText },
++                    requestLayout: { _ in interaction.requestLayout(false) }
++                ))
++                itemId += 1
+             }
+         }
+ 

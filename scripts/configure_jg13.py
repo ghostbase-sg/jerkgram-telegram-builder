@@ -14,6 +14,7 @@ from materialize_jg13_stars_gift import apply_stars_gift
 from materialize_jg13_history_backend import apply_backend
 from materialize_jg131_ui_repair import apply_ui_repair
 from materialize_jg131_ui_type_compat import apply_ui_types
+from jg131_final_stages import apply_final_stages
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -36,6 +37,8 @@ def main():
     apply_backend(SOURCE)
     apply_ui_repair(SOURCE)
     apply_ui_types(SOURCE)
+    if "--previous-contracts-only" not in __import__("sys").argv:
+        apply_final_stages(SOURCE)
     p = SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
     text = p.read_text()
     for key, old, value in [

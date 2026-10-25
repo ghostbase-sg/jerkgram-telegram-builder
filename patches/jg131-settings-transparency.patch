@@ -1,0 +1,594 @@
+diff --git a/submodules/Display/Source/GhostBaseGlass.swift b/submodules/Display/Source/GhostBaseGlass.swift
+--- a/submodules/Display/Source/GhostBaseGlass.swift
++++ b/submodules/Display/Source/GhostBaseGlass.swift
+@@ -1,7 +1,36 @@
+ import Foundation
+ import UIKit
+ 
++// JG170 settings policy begin
++public enum JerkgramSettingsSurfacePolicy {
++    public static func active(isSettings: Bool, accepts: Bool, master: Bool, enabled: Bool, hasBackdrop: Bool) -> Bool {
++        return isSettings && accepts && master && enabled && hasBackdrop
++    }
++}
++// JG170 settings policy end
++
+ public enum GhostBaseGlassStyle {
++    public static let settingsTranslucencyKey = "jerkgram.Settings.Translucency"
++    public static let settingsStyleDidChange = Notification.Name("jerkgram.SettingsSurfaceDidChange")
++    private static var settingsTranslucencyValue = UserDefaults.standard.object(forKey: settingsTranslucencyKey) as? Bool ?? false
++
++    private static func notifySettingsStyleChanged() {
++        DispatchQueue.main.async { NotificationCenter.default.post(name: self.settingsStyleDidChange, object: nil) }
++    }
++    public static var settingsTranslucencyEnabled: Bool {
++        self.enabledLock.lock()
++        defer { self.enabledLock.unlock() }
++        return self.settingsTranslucencyValue
++    }
++    public static func setSettingsTranslucencyEnabled(_ value: Bool) {
++        self.enabledLock.lock()
++        let changed = self.settingsTranslucencyValue != value
++        self.settingsTranslucencyValue = value
++        self.preferenceGeneration &+= 1
++        self.enabledLock.unlock()
++        if changed { self.notifySettingsStyleChanged() }
++    }
++
+     public static let enabledKey = "jerkgram.Glass.Enabled"
+ 
+     private static let enabledLock = NSLock()
+@@ -29,6 +58,7 @@
+         self.enabledLock.unlock()
+         let defaults = UserDefaults.standard
+         let enabled = defaults.object(forKey: self.enabledKey) as? Bool ?? true
++        let settingsTranslucency = defaults.object(forKey: self.settingsTranslucencyKey) as? Bool ?? false
+         let animated = defaults.object(forKey: "jerkgram.ProfileBlur.Animated") as? Bool ?? true
+         let avatar = defaults.object(forKey: "jerkgram.ProfileBlur.Avatar") as? Bool ?? true
+         let tint = defaults.object(forKey: "jerkgram.ProfileBlur.Tint") as? Bool ?? true
+@@ -38,11 +68,13 @@
+         defer { self.enabledLock.unlock() }
+         guard self.preferenceGeneration == generation else { return }
+         self.enabledValue = enabled
++        self.settingsTranslucencyValue = settingsTranslucency
+         self.profileAnimatedValue = animated
+         self.profileAvatarValue = avatar
+         self.profileTintValue = tint
+         self.profileReducedValue = reduced
+         self.profileHideOwnPhoneValue = hideOwnPhone
++        self.notifySettingsStyleChanged()
+     }
+ 
+     public static var profileBlurSettings: GhostBaseProfileBlurSettings? {
+@@ -80,6 +112,7 @@
+         if let hideOwnPhone { self.profileHideOwnPhoneValue = hideOwnPhone }
+         self.preferenceGeneration &+= 1
+         self.enabledLock.unlock()
++        self.notifySettingsStyleChanged()
+     }
+ 
+     public static var isEnabled: Bool {
+@@ -98,6 +131,7 @@
+         self.enabledValue = value
+         self.preferenceGeneration &+= 1
+         self.enabledLock.unlock()
++        self.notifySettingsStyleChanged()
+     }
+ 
+     // Pure compatibility tokens for the existing lightweight settings/gifts
+diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display/Source/ViewController.swift
+--- a/submodules/Display/Source/ViewController.swift
++++ b/submodules/Display/Source/ViewController.swift
+@@ -164,6 +164,75 @@
+     
+     open var navigationPresentation: ViewControllerNavigationPresentation = .default
+     open var _presentedInModal: Bool = false
++    // Explicit false stops inherited settings styling at chat/profile boundaries.
++    public var jerkgramSettingsScope: Bool? {
++        didSet { self.jerkgramRefreshSettingsSurface() }
++    }
++    public var jerkgramSettingsBackdropProvider: (() -> UIImage?)? {
++        didSet { self.jerkgramRefreshSettingsSurface() }
++    }
++    open var jerkgramAcceptsSettingsSurface: Bool { return true }
++    public let jerkgramSettingsStyleRevision = ValuePromise<Int>(0, ignoreRepeated: false)
++    private var jerkgramSettingsBackdropImage: UIImage?
++    private var jerkgramSettingsBackdropView: UIImageView?
++    private var jerkgramSettingsObserver: NSObjectProtocol?
++
++    public var jerkgramSettingsSurfaceActive: Bool {
++        return JerkgramSettingsSurfacePolicy.active(isSettings: self.jerkgramSettingsScope == true, accepts: self.jerkgramAcceptsSettingsSurface, master: GhostBaseGlassStyle.isEnabled, enabled: GhostBaseGlassStyle.settingsTranslucencyEnabled, hasBackdrop: self.jerkgramSettingsBackdropImage != nil)
++    }
++
++    public func jerkgramInheritSettingsSurface(from source: ViewController) {
++        guard self.jerkgramSettingsScope == nil, self.jerkgramAcceptsSettingsSurface, source.jerkgramSettingsScope == true else { return }
++        self.jerkgramSettingsBackdropProvider = source.jerkgramSettingsBackdropProvider
++        self.jerkgramSettingsScope = true
++    }
++
++    public func jerkgramRefreshSettingsSurface() {
++        guard Thread.isMainThread else {
++            DispatchQueue.main.async { [weak self] in self?.jerkgramRefreshSettingsSurface() }
++            return
++        }
++        guard self.jerkgramSettingsScope == true && self.jerkgramAcceptsSettingsSurface else {
++            self.jerkgramSettingsBackdropView?.isHidden = true
++            return
++        }
++        if self.jerkgramSettingsScope == true && self.jerkgramSettingsObserver == nil {
++            self.jerkgramSettingsObserver = NotificationCenter.default.addObserver(forName: GhostBaseGlassStyle.settingsStyleDidChange, object: nil, queue: .main) { [weak self] _ in self?.jerkgramRefreshSettingsSurface() }
++        }
++        if self.jerkgramSettingsScope == true && GhostBaseGlassStyle.settingsTranslucencyEnabled && GhostBaseGlassStyle.isEnabled {
++            // Refresh on appearance, preference notifications and provider changes.
++            // A failed capture drops the old account/theme image and restores opaque surfaces.
++            self.jerkgramSettingsBackdropImage = self.jerkgramSettingsBackdropProvider?()
++        } else {
++            self.jerkgramSettingsBackdropImage = nil
++        }
++        if self.isViewLoaded {
++            if self.jerkgramSettingsSurfaceActive, let image = self.jerkgramSettingsBackdropImage {
++                let imageView: UIImageView
++                if let current = self.jerkgramSettingsBackdropView { imageView = current }
++                else {
++                    imageView = UIImageView(image: image)
++                    imageView.contentMode = .scaleAspectFill
++                    imageView.clipsToBounds = true
++                    imageView.isUserInteractionEnabled = false
++                    imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
++                    self.jerkgramSettingsBackdropView = imageView
++                    self.view.insertSubview(imageView, at: 0)
++                }
++                imageView.image = image
++                imageView.frame = self.view.bounds
++                imageView.isHidden = false
++            } else {
++                self.jerkgramSettingsBackdropView?.isHidden = true
++            }
++        }
++        if let navigation = self as? NavigationController {
++            for case let child as ViewController in navigation.viewControllers { child.jerkgramInheritSettingsSurface(from: self) }
++        }
++        self.jerkgramSettingsStyleRevision.set(0)
++        if let layout = self.validLayout, self.isViewLoaded { self.containerLayoutUpdated(layout, transition: .immediate) }
++    }
++
+     open var _hasGlassStyle: Bool = false
+     open var flatReceivesModalTransition: Bool = false
+     /// A full-screen viewer (a web page, a document) presented as a modal fills the screen beside a top-right status
+@@ -466,7 +535,7 @@
+     }
+     
+     deinit {
+-        
++        if let observer = self.jerkgramSettingsObserver { NotificationCenter.default.removeObserver(observer) }
+     }
+ 
+     open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+@@ -530,6 +599,7 @@
+             self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
+         }
+         
++        self.jerkgramSettingsBackdropView?.frame = CGRect(origin: .zero, size: layout.size)
+         self.updateNavigationBarLayout(layout, transition: transition)
+         
+         if self.automaticallyControlPresentationContextLayout {
+@@ -550,6 +620,7 @@
+         self.view.autoresizingMask = []
+         self.view.addSubview(self.statusBar.view)
+         self.presentationContext.view = self.view
++        self.jerkgramRefreshSettingsSurface()
+     }
+     
+     open func loadDisplayNode() {
+@@ -644,6 +715,7 @@
+     }
+     
+     public func push(_ controller: ViewController) {
++        controller.jerkgramInheritSettingsSurface(from: self)
+         (self.navigationController as? NavigationController)?.pushViewController(controller)
+     }
+     
+@@ -657,6 +729,9 @@
+     }
+     
+     open func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
++        if !(controller is StandalonePresentableController) {
++            controller.jerkgramInheritSettingsSurface(from: self)
++        }
+         if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation, self.navigationController != nil {
+             controller.navigationPresentation = .modal
+             self.push(controller)
+@@ -705,6 +780,7 @@
+     
+     open override func viewDidAppear(_ animated: Bool) {
+         self.activeInputView = nil
++        self.jerkgramRefreshSettingsSurface()
+         
+         super.viewDidAppear(animated)
+     }
+diff --git a/submodules/Display/Source/Navigation/NavigationController.swift b/submodules/Display/Source/Navigation/NavigationController.swift
+--- a/submodules/Display/Source/Navigation/NavigationController.swift
++++ b/submodules/Display/Source/Navigation/NavigationController.swift
+@@ -1741,6 +1741,10 @@
+             if self.viewControllers.contains(where: { $0 === controller }) {
+                 continue
+             }
++            if i > 0, let previous = viewControllers[i - 1] as? ViewController {
++                let source = (previous as? TabBarController)?.currentController ?? previous
++                controller.jerkgramInheritSettingsSurface(from: source)
++            }
+             if let customNavigationData = controller.customNavigationData {
+                 var found = false
+                 for previousIndex in (0 ..< self.viewControllers.count).reversed() {
+diff --git a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
+--- a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
++++ b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
+@@ -1671,3 +1671,36 @@
+         }
+     }
+ }
++
++private enum JerkgramSettingsThemeCache {
++    static let lock = NSLock()
++    static weak var base: PresentationTheme?
++    static var reduced = false
++    static var transformed: PresentationTheme?
++}
++
++extension PresentationTheme {
++    public func jerkgramSettingsSurfaceTheme(enabled: Bool) -> PresentationTheme {
++        guard enabled else { return self }
++        let reduced = GhostBaseGlassStyle.usesReducedEffects
++        JerkgramSettingsThemeCache.lock.lock()
++        defer { JerkgramSettingsThemeCache.lock.unlock() }
++        if JerkgramSettingsThemeCache.base === self, JerkgramSettingsThemeCache.reduced == reduced, let cached = JerkgramSettingsThemeCache.transformed { return cached }
++        let alpha: CGFloat = reduced ? 0.90 : (self.overallDarkAppearance ? 0.26 : 0.18)
++        let list = self.list.withUpdated(
++            blocksBackgroundColor: .clear, modalBlocksBackgroundColor: .clear,
++            plainBackgroundColor: .clear, modalPlainBackgroundColor: .clear,
++            itemBlocksBackgroundColor: self.list.itemBlocksBackgroundColor.withAlphaComponent(alpha),
++            itemModalBlocksBackgroundColor: self.list.itemModalBlocksBackgroundColor.withAlphaComponent(alpha),
++            itemHighlightedBackgroundColor: self.list.itemHighlightedBackgroundColor.withAlphaComponent(max(alpha, 0.4))
++        )
++        let chatList = PresentationThemeChatList(backgroundColor: .clear, itemSeparatorColor: self.chatList.itemSeparatorColor, itemBackgroundColor: self.chatList.itemBackgroundColor.withAlphaComponent(alpha), pinnedItemBackgroundColor: self.chatList.pinnedItemBackgroundColor.withAlphaComponent(alpha), itemHighlightedBackgroundColor: self.chatList.itemHighlightedBackgroundColor, pinnedItemHighlightedBackgroundColor: self.chatList.pinnedItemHighlightedBackgroundColor, itemSelectedBackgroundColor: self.chatList.itemSelectedBackgroundColor, titleColor: self.chatList.titleColor, secretTitleColor: self.chatList.secretTitleColor, dateTextColor: self.chatList.dateTextColor, authorNameColor: self.chatList.authorNameColor, messageTextColor: self.chatList.messageTextColor, messageHighlightedTextColor: self.chatList.messageHighlightedTextColor, messageDraftTextColor: self.chatList.messageDraftTextColor, checkmarkColor: self.chatList.checkmarkColor, pendingIndicatorColor: self.chatList.pendingIndicatorColor, failedFillColor: self.chatList.failedFillColor, failedForegroundColor: self.chatList.failedForegroundColor, muteIconColor: self.chatList.muteIconColor, unreadBadgeActiveBackgroundColor: self.chatList.unreadBadgeActiveBackgroundColor, unreadBadgeActiveTextColor: self.chatList.unreadBadgeActiveTextColor, unreadBadgeInactiveBackgroundColor: self.chatList.unreadBadgeInactiveBackgroundColor, unreadBadgeInactiveTextColor: self.chatList.unreadBadgeInactiveTextColor, reactionBadgeActiveBackgroundColor: self.chatList.reactionBadgeActiveBackgroundColor, pinnedBadgeColor: self.chatList.pinnedBadgeColor, pinnedSearchBarColor: self.chatList.pinnedSearchBarColor, regularSearchBarColor: self.chatList.regularSearchBarColor, sectionHeaderFillColor: self.chatList.sectionHeaderFillColor.withAlphaComponent(alpha), sectionHeaderTextColor: self.chatList.sectionHeaderTextColor, verifiedIconFillColor: self.chatList.verifiedIconFillColor, verifiedIconForegroundColor: self.chatList.verifiedIconForegroundColor, secretIconColor: self.chatList.secretIconColor, pinnedArchiveAvatarColor: self.chatList.pinnedArchiveAvatarColor, unpinnedArchiveAvatarColor: self.chatList.unpinnedArchiveAvatarColor, onlineDotColor: self.chatList.onlineDotColor, storyUnseenColors: self.chatList.storyUnseenColors, storyUnseenPrivateColors: self.chatList.storyUnseenPrivateColors, storySeenColors: self.chatList.storySeenColors)
++        let theme = PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: list, chatList: chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
++        theme.forceSync = self.forceSync
++        theme.starGift = self.starGift
++        JerkgramSettingsThemeCache.base = self
++        JerkgramSettingsThemeCache.reduced = reduced
++        JerkgramSettingsThemeCache.transformed = theme
++        return theme
++    }
++}
+diff --git a/submodules/ItemListUI/Sources/ItemListController.swift b/submodules/ItemListUI/Sources/ItemListController.swift
+--- a/submodules/ItemListUI/Sources/ItemListController.swift
++++ b/submodules/ItemListUI/Sources/ItemListController.swift
+@@ -331,7 +331,8 @@
+     
+     override open func loadDisplayNode() {
+         let previousControllerState = Atomic<ItemListControllerState?>(value: nil)
+-        let nodeState = self.state
++        let nodeState = combineLatest(self.state, self.jerkgramSettingsStyleRevision.get())
++        |> map { state, _ in state }
+         |> deliverOnMainQueue
+         |> afterNext { [weak self] controllerState, state in
+             Queue.mainQueue().async {
+diff --git a/submodules/ItemListUI/Sources/ItemListControllerNode.swift b/submodules/ItemListUI/Sources/ItemListControllerNode.swift
+--- a/submodules/ItemListUI/Sources/ItemListControllerNode.swift
++++ b/submodules/ItemListUI/Sources/ItemListControllerNode.swift
+@@ -443,8 +443,12 @@
+         }
+     
+         let previousState = Atomic<ItemListNodeState?>(value: nil)
++        let previousPresentation = Atomic<ItemListPresentationData?>(value: nil)
+         self.transitionDisposable.set(((state
+-        |> map { presentationData, stateAndArguments -> ItemListNodeTransition in
++        |> map { [weak controller = controller] presentationData, stateAndArguments -> ItemListNodeTransition in
++            let theme = presentationData.theme.jerkgramSettingsSurfaceTheme(enabled: controller?.jerkgramSettingsSurfaceActive ?? false)
++            let presentationData = ItemListPresentationData(theme: theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat)
++            let oldPresentation = previousPresentation.swap(presentationData)
+             let (state, arguments) = stateAndArguments
+             if state.entries.count > 1 {
+                 for i in 1 ..< state.entries.count {
+@@ -452,7 +456,7 @@
+                 }
+             }
+             let previous = previousState.swap(state)
+-            let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, presentationData: presentationData, arguments: arguments, presentationDataUpdated: previous?.presentationData != presentationData)
++            let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, presentationData: presentationData, arguments: arguments, presentationDataUpdated: oldPresentation != presentationData)
+             var updatedStyle: ItemListStyle?
+             if previous?.style != state.style {
+                 updatedStyle = state.style
+diff --git a/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift b/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift
+--- a/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift
++++ b/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift
+@@ -283,7 +283,7 @@
+                 screenCornerRadii: layout.screenCornerRadii,
+                 orientation: layout.metrics.orientation,
+                 isVisible: self.currentIsVisible,
+-                theme: self.resolvedTheme,
++                theme: self.resolvedTheme.jerkgramSettingsSurfaceTheme(enabled: self.controller?.jerkgramSettingsSurfaceActive ?? false),
+                 strings: self.presentationData.strings,
+                 dateTimeFormat: self.presentationData.dateTimeFormat,
+                 controller: { [weak self] in
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -249,7 +249,7 @@
+     var regularSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
+     var editingSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
+     let paneContainerNode: PeerInfoPaneContainerNode
+-    private let ghostBaseProfileBackgroundView: GhostBaseProfileBackgroundView?
++    fileprivate let ghostBaseProfileBackgroundView: GhostBaseProfileBackgroundView?
+     private let ghostBaseProfileMetricsSettings: GhostBaseProfileMetricsSettings
+     var ignoreScrolling: Bool = false
+     lazy var hapticFeedback = { HapticFeedback() }()
+@@ -6660,6 +6660,8 @@
+ }
+ 
+ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
++    public override var jerkgramAcceptsSettingsSurface: Bool { return false }
++
+     let context: AccountContext
+     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
+     public let peerId: EnginePeer.Id
+@@ -6835,8 +6837,19 @@
+         ))
+         
+         self._hasGlassStyle = true
+-        
+-                
++        self.jerkgramSettingsScope = isSettings
++        self.jerkgramSettingsBackdropProvider = { [weak self] in
++            guard let self, self.isNodeLoaded, let background = self.controllerNode.ghostBaseProfileBackgroundView, !background.bounds.isEmpty else { return nil }
++            // Reuse only the existing blurred backdrop, never a screenshot of text/rows.
++            let format = UIGraphicsImageRendererFormat()
++            format.scale = 1.0
++            var rendered = false
++            let image = UIGraphicsImageRenderer(size: background.bounds.size, format: format).image { _ in
++                rendered = background.drawHierarchy(in: background.bounds, afterScreenUpdates: false)
++            }
++            return rendered ? image : nil
++        }
++
+         if isSettings || isMyProfile {
+             let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError> in
+                 let activeSessionsContext = context.engine.privacy.activeSessions()
+@@ -7065,6 +7078,12 @@
+                 
+                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                     strongSelf.controllerNode.updatePresentationData(strongSelf.presentationData)
++                    if strongSelf.isSettings {
++                        // Recapture descendants after the root's new visual state is installed.
++                        DispatchQueue.main.async {
++                            NotificationCenter.default.post(name: GhostBaseGlassStyle.settingsStyleDidChange, object: nil)
++                        }
++                    }
+                     
+                     if strongSelf.navigationItem.backBarButtonItem != nil {
+                         strongSelf.navigationItem.backBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -84,6 +84,7 @@
+     static let hideBlockedMessages = "jerkgram.Messages.HideBlockedMessages"
+     static let hideBlockedReactions = "jerkgram.Messages.HideBlockedReactions"
+ 
++    static let settingsTranslucency = "jerkgram.Settings.Translucency"
+     static let glassEnabled = "jerkgram.Glass.Enabled"
+     static let profileAvatarBlur = "jerkgram.ProfileBlur.Avatar"
+     static let profileAnimatedBackground = "jerkgram.ProfileBlur.Animated"
+@@ -487,6 +488,7 @@
+         GhostBaseKey.showIds: .bool(state.showIds),
+         GhostBaseKey.showDCs: .bool(state.showDCs),
+         GhostBaseKey.showRegistration: .bool(state.showRegistration),
++        GhostBaseKey.settingsTranslucency: .bool(state.settingsTranslucency),
+         GhostBaseKey.glassEnabled: .bool(state.glassEnabled),
+         GhostBaseKey.profileAvatarBlur: .bool(state.profileAvatarBlur),
+         GhostBaseKey.profileAnimatedBackground: .bool(state.profileAnimatedBackground),
+@@ -544,6 +546,7 @@
+     let newValues = jerkgramStateValues(current)
+     let changes = newValues.filter { oldValues[$0.key] != $0.value }
+     guard !changes.isEmpty else {
++    GhostBaseGlassStyle.setSettingsTranslucencyEnabled(current.settingsTranslucency)
+     GhostBaseGlassStyle.setProfilePlaybackSettings(
+         glassEnabled: current.glassEnabled,
+         animatedBackgroundEnabled: current.profileAnimatedBackground,
+@@ -565,6 +568,7 @@
+     // avoid any forced defaults/filesystem synchronization here.
+     let jerkgramSynchronousRuntimeSettingKeys: Set<String> = Set<String>([
+         // Only preference changes project here, never avatar transition ticks.
++        GhostBaseKey.settingsTranslucency,
+         GhostBaseKey.glassEnabled,
+         GhostBaseKey.profileAnimatedBackground,
+         GhostBaseKey.profileAvatarBlur,
+@@ -600,6 +604,7 @@
+             value.write(to: sharedDefaults, key: key)
+         }
+     }
++    GhostBaseGlassStyle.setSettingsTranslucencyEnabled(current.settingsTranslucency)
+     GhostBaseGlassStyle.setProfilePlaybackSettings(
+         glassEnabled: current.glassEnabled,
+         animatedBackgroundEnabled: current.profileAnimatedBackground,
+@@ -642,6 +647,7 @@
+     var showIds: Bool
+     var showDCs: Bool
+     var showRegistration: Bool
++    var settingsTranslucency: Bool
+     var glassEnabled: Bool
+     var profileAvatarBlur: Bool
+     var profileAnimatedBackground: Bool
+@@ -697,6 +703,7 @@
+             showIds: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showIds, defaultValue: true),
+             showDCs: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showDCs, defaultValue: true),
+             showRegistration: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showRegistration, defaultValue: true),
++            settingsTranslucency: UserDefaults.standard.object(forKey: jerkgramScopedSettingsKey(accountPeerId: accountPeerId, key: GhostBaseKey.settingsTranslucency)) as? Bool ?? false,
+             glassEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.glassEnabled, defaultValue: true),
+             profileAvatarBlur: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAvatarBlur, defaultValue: true),
+             profileAnimatedBackground: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAnimatedBackground, defaultValue: true),
+@@ -2229,6 +2236,7 @@
+             .toggle(0, 4, GhostBaseKey.profileBlurTint, strings.colorTint, state.profileBlurTint),
+             .toggle(0, 5, GhostBaseKey.profileBlurReduced, strings.reducedBlur, state.profileBlurReduced),
+             .header(1, strings.interface),
++            .toggle(1, 4, GhostBaseKey.settingsTranslucency, strings.languageCode == "ru" ? "Полупрозрачность всех настроек" : "Translucent Settings and Sections", state.settingsTranslucency),
+             .toggle(1, 5, GhostBaseKey.messageSeconds, strings.messageSeconds, state.messageSeconds),
+             .toggle(1, 6, GhostBaseKey.hideOwnPhone, strings.hideMyPhone, state.hideOwnPhone),
+             .toggle(
+@@ -3794,6 +3802,8 @@
+             case GhostBaseKey.hideBlockedReactions:
+                 updated.hideBlockedReactions = value
+ 
++            case GhostBaseKey.settingsTranslucency:
++                updated.settingsTranslucency = value
+             case GhostBaseKey.glassEnabled:
+                 updated.glassEnabled = value
+                 GhostBaseGlassStyle.setEnabled(value)
+diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/TelegramUI/Sources/ChatController.swift
+--- a/submodules/TelegramUI/Sources/ChatController.swift
++++ b/submodules/TelegramUI/Sources/ChatController.swift
+@@ -241,7 +241,9 @@
+     var allowedReplacementDirection: AllowedReplacementDirections
+ }
+ 
+-public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {    
++public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
++    public override var jerkgramAcceptsSettingsSurface: Bool { return false }
++
+     var validLayout: ContainerViewLayout?
+     
+     public weak var parentController: ViewController?
+@@ -1795,6 +1797,7 @@
+             guard let strongSelf = self else {
+                 return
+             }
++            guard !jerkgramIsRetainedExcludedChat(strongSelf.presentationInterfaceState.renderedPeer?.peer) else { return }
+             guard !strongSelf.presentAccountFrozenInfoIfNeeded() else {
+                 return
+             }
+@@ -4101,6 +4104,7 @@
+             guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
+                 return
+             }
++            guard !jerkgramIsRetainedExcludedChat(strongSelf.presentationInterfaceState.renderedPeer?.peer) else { return }
+             
+             guard strongSelf.presentationInterfaceState.subject != .scheduledMessages else {
+                 strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_PollUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+@@ -4234,6 +4238,7 @@
+             guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
+                 return
+             }
++            guard !jerkgramIsRetainedExcludedChat(strongSelf.presentationInterfaceState.renderedPeer?.peer) else { return }
+ 
+             guard strongSelf.presentationInterfaceState.subject != .scheduledMessages else {
+                 strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_PollUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+@@ -9382,6 +9387,7 @@
+     }
+     
+     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
++        guard !jerkgramIsRetainedExcludedChat(self.presentationInterfaceState.renderedPeer?.peer) else { return }
+         let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.sendEnqueue)
+         defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if case let .customChatContents(customChatContents) = self.subject {
+diff --git a/submodules/SettingsUI/Sources/Notifications/Exceptions/NotificationExceptions.swift b/submodules/SettingsUI/Sources/Notifications/Exceptions/NotificationExceptions.swift
+--- a/submodules/SettingsUI/Sources/Notifications/Exceptions/NotificationExceptions.swift
++++ b/submodules/SettingsUI/Sources/Notifications/Exceptions/NotificationExceptions.swift
+@@ -62,9 +62,11 @@
+             }
+         }
+         
+-        self.presentationDataDisposable = (context.sharedContext.presentationData
++        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, self.jerkgramSettingsStyleRevision.get())
++        |> map { value, _ in value }
+         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+             if let strongSelf = self {
++                let presentationData = presentationData.withUpdated(theme: presentationData.theme.jerkgramSettingsSurfaceTheme(enabled: strongSelf.jerkgramSettingsSurfaceActive))
+                 let previousTheme = strongSelf.presentationData.theme
+                 let previousStrings = strongSelf.presentationData.strings
+                 
+diff --git a/submodules/SettingsUI/Sources/Language Selection/LocalizationListController.swift b/submodules/SettingsUI/Sources/Language Selection/LocalizationListController.swift
+--- a/submodules/SettingsUI/Sources/Language Selection/LocalizationListController.swift
++++ b/submodules/SettingsUI/Sources/Language Selection/LocalizationListController.swift
+@@ -72,9 +72,11 @@
+             }
+         }
+         
+-        self.presentationDataDisposable = (context.sharedContext.presentationData
++        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, self.jerkgramSettingsStyleRevision.get())
++        |> map { value, _ in value }
+         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+             if let strongSelf = self {
++                let presentationData = presentationData.withUpdated(theme: presentationData.theme.jerkgramSettingsSurfaceTheme(enabled: strongSelf.jerkgramSettingsSurfaceActive))
+                 let previousTheme = strongSelf.presentationData.theme
+                 let previousStrings = strongSelf.presentationData.strings
+                 
+diff --git a/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeGridController.swift b/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeGridController.swift
+--- a/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeGridController.swift
++++ b/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeGridController.swift
+@@ -83,9 +83,11 @@
+             }
+         }
+         
+-        self.presentationDataDisposable = (context.sharedContext.presentationData
++        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, self.jerkgramSettingsStyleRevision.get())
++        |> map { value, _ in value }
+         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+             if let strongSelf = self {
++                let presentationData = presentationData.withUpdated(theme: presentationData.theme.jerkgramSettingsSurfaceTheme(enabled: strongSelf.jerkgramSettingsSurfaceActive))
+                 let previousTheme = strongSelf.presentationData.theme
+                 let previousStrings = strongSelf.presentationData.strings
+                 
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+@@ -12,7 +12,7 @@
+ 
+ private let jerkgramPortableBooleanKeys: [String] = [
+     "jerkgram.Profile.Enabled", "jerkgram.Profile.ShowIds", "jerkgram.Profile.ShowDCs",
+-    "jerkgram.Profile.ShowRegistration", "jerkgram.Glass.Enabled",
++    "jerkgram.Profile.ShowRegistration", "jerkgram.Glass.Enabled", "jerkgram.Settings.Translucency",
+     "jerkgram.ProfileBlur.Avatar", "jerkgram.ProfileBlur.Animated",
+     "jerkgram.ProfileBlur.Tint", "jerkgram.ProfileBlur.Reduced",
+     "jerkgram.GhostMode.ReadMessages", "jerkgram.GhostMode.TypingActions",
+diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+--- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
++++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+@@ -177,6 +177,7 @@
+         "jerkgram.Profile.ShowDCs",
+         "jerkgram.Profile.ShowRegistration",
+         "jerkgram.Glass.Enabled",
++        "jerkgram.Settings.Translucency",
+         "jerkgram.ProfileBlur.Avatar",
+         "jerkgram.ProfileBlur.Animated",
+         "jerkgram.ProfileBlur.Tint",
+diff --git a/submodules/SettingsUI/Sources/Privacy and Security/PrivacyIntroController.swift b/submodules/SettingsUI/Sources/Privacy and Security/PrivacyIntroController.swift
+--- a/submodules/SettingsUI/Sources/Privacy and Security/PrivacyIntroController.swift
++++ b/submodules/SettingsUI/Sources/Privacy and Security/PrivacyIntroController.swift
+@@ -133,9 +133,11 @@
+             self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+         }
+         
+-        self.presentationDataDisposable = (context.sharedContext.presentationData
++        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, self.jerkgramSettingsStyleRevision.get())
++        |> map { value, _ in value }
+         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+             if let strongSelf = self {
++                let presentationData = presentationData.withUpdated(theme: presentationData.theme.jerkgramSettingsSurfaceTheme(enabled: strongSelf.jerkgramSettingsSurfaceActive))
+                 let previousTheme = strongSelf.presentationData.theme
+                 let previousStrings = strongSelf.presentationData.strings
+                 
+diff --git a/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeColorsGridController.swift b/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeColorsGridController.swift
+--- a/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeColorsGridController.swift
++++ b/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeColorsGridController.swift
+@@ -168,9 +168,11 @@
+             }
+         }
+ 
+-        self.presentationDataDisposable = (context.sharedContext.presentationData
++        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, self.jerkgramSettingsStyleRevision.get())
++        |> map { value, _ in value }
+         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+             if let strongSelf = self {
++                let presentationData = presentationData.withUpdated(theme: presentationData.theme.jerkgramSettingsSurfaceTheme(enabled: strongSelf.jerkgramSettingsSurfaceActive))
+                 let previousTheme = strongSelf.presentationData.theme
+                 let previousStrings = strongSelf.presentationData.strings
+ 

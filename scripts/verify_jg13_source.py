@@ -15,6 +15,7 @@ from materialize_jg13_stars_gift import verify_stars_gift
 from materialize_jg13_history_backend import verify_backend
 from materialize_jg131_ui_repair import verify_ui_repair
 from materialize_jg131_ui_type_compat import verify_ui_types
+from jg131_final_stages import preceding_source_view, verify_final_stages
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -25,7 +26,7 @@ def require(value, message):
         raise RuntimeError(message)
 
 
-def main():
+def _verify_previous_contracts():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     manifest = json.loads((ROOT / "patches/jg13-stable.product.sha256.json").read_text())
     for name in manifest:
@@ -71,6 +72,22 @@ def main():
     verify_ui_repair(SOURCE)
     verify_ui_types(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
+
+
+def main():
+    global SOURCE
+    final_source = SOURCE
+    if "--previous-contracts-only" in sys.argv:
+        _verify_previous_contracts()
+        return
+    verify_final_stages(final_source)
+    try:
+        with preceding_source_view(final_source) as preceding:
+            SOURCE = preceding
+            _verify_previous_contracts()
+    finally:
+        SOURCE = final_source
+    print("Build170 final owners VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 
 if __name__ == "__main__":

@@ -2,8 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python3 scripts/materialize_jg13.py
-python3 scripts/configure_jg13.py
-python3 scripts/verify_jg13_source.py
+python3 scripts/configure_jg13.py --previous-contracts-only
+python3 scripts/verify_jg13_source.py --previous-contracts-only
 python3 -m unittest discover -s tests -p test_jg13_history_backend.py
 python3 -m unittest discover -s tests -p test_jg131_migration.py
 python3 -m unittest discover -s tests -p test_jg131_ui_repair.py
@@ -41,6 +41,18 @@ python3 -m unittest discover -s tests -p test_jg13_recovery_cache.py
 python3 tests/run_jg13_recovery_cache.py
 python3 tests/run_jg13_protected_copy.py
 python3 -m unittest discover -s tests -p test_jg13_package_digest.py
+python3 scripts/apply_jg131_final_stages.py
+python3 scripts/verify_jg13_source.py
+python3 -m unittest discover -s tests -p test_jg131_profile_polish.py
+python3 -m unittest discover -s tests -p test_jg131_profile_metadata_stage.py
+python3 -m unittest discover -s tests -p test_jg131_profile_metadata.py
+python3 -m unittest discover -s tests -p test_jg131_excluded_history_stage.py
+python3 -m unittest discover -s tests -p test_jg131_excluded_history.py
+python3 -m unittest discover -s tests -p test_jg131_settings_transparency_stage.py
+python3 -m unittest discover -s tests -p test_jg131_settings_transparency.py
+python3 -m unittest discover -s tests -p test_jg131_final_stages.py
+python3 tests/run_jg131_settings_preferences.py
+python3 tests/run_jg131_final_syntax.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive
@@ -54,7 +66,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=169 \
+  --define=buildNumber=170 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 cd ../..

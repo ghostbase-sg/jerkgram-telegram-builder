@@ -1,0 +1,66 @@
+{
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "patch_sha256": "0b3e99912eb05808c6bca50bce663dcb01f1ab29ea31461517858f18c041b005",
+  "owners": {
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift": {
+      "before_sha256": "9212154bdbfc42def582e61c940135e462686388541a88c6c0bdf02625adeb2c",
+      "after_sha256": "17328c564ac0242132998501d417d95b4be87a639e7d384a587c41430c7da9d7"
+    },
+    "submodules/TelegramCore/Sources/UpdatePeers.swift": {
+      "before_sha256": "12ea1969e3b99b5c54d44e67b28b3e1de7e12338bd35418984e07f255e36967e",
+      "after_sha256": "f19511f527df22fa0f3742f7fba7059d48bda43b71559150ca2d2fad83f89ae1"
+    },
+    "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift": {
+      "before_sha256": "41fedef61e0d33d040762385b4c2fcb7984eb735077e77b9cbc6320162c73cdd",
+      "after_sha256": "2a2279ee61e452faf2791024b3b697c73b7136eed06f0d1f75d677d7749ac1a9"
+    },
+    "submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramChannel.swift": {
+      "before_sha256": "d314d6da12aa9400f7a36bcdc1552f7a7660b629a655673e02caa8a936750ce2",
+      "after_sha256": "aac6cbe9fe5f3847009bf0f92951ced3dffc506f3ca84ea4718cffdfa4d33aed"
+    },
+    "submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramGroup.swift": {
+      "before_sha256": "d61b451a275fb4df07a2c15feeebb7dcee1fdff2ee6be66b3bffca20ea95731e",
+      "after_sha256": "c1a83257b5ba91869f04e2ec01944e6ef5050940c6b8f08e8b9c32606a813d73"
+    },
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/RemovePeerChat.swift": {
+      "before_sha256": "e24b3bebaa0e15081e1ed74e8fa78848bd0c3dd0a0c037fc122330f240116ac6",
+      "after_sha256": "3ba54c327c5fe3884f800d9f7c227ee77634c77edc410c27abbab15c63d2cdb0"
+    },
+    "submodules/JerkgramCore/Sources/JerkgramRetention.swift": {
+      "before_sha256": "31a1bb0129518cbfd250702e1e098a4f48e572908b24ff4e8caa7bdfabfc0223",
+      "after_sha256": "2eb63880346e230bcfbcbb999cd67563a7953f3bcbf4ad52775468b72245687a"
+    },
+    "submodules/TelegramCore/Sources/State/JerkgramRetainedChat.swift": {
+      "before_sha256": null,
+      "after_sha256": "afe913d6de7ddaf28a6ccddb005700d261e4965fee89f49e7b1c11408bbcbb49"
+    },
+    "submodules/TelegramUI/Sources/ChatControllerContentData.swift": {
+      "before_sha256": "3726696640613add5b970c50ccb7dbefd7531a27a4ca87cca1049f8b35af252c",
+      "after_sha256": "a994d9731f72309ded77cd07706ef118e9ad856b9eda94ecf11caac337c5d008"
+    },
+    "submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift": {
+      "before_sha256": "7147c268175ac51fe93b020c03981a0d19ca414861f5e5bb7a35bd0a280663f0",
+      "after_sha256": "1b27f2d0666326c7159494be58b257d1dc3f20715c7c7935b0d0ac219199b154"
+    },
+    "submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.swift": {
+      "before_sha256": null,
+      "after_sha256": "6c0b12e21467b9ac1e10e9d9490cc05384cee3d2afc6d912376fdc59df040531"
+    },
+    "submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift": {
+      "before_sha256": "a39a138ef98fb41dafcd2dd3cbd3b4d88d5e9943d424fb641234e6526bdcb67d",
+      "after_sha256": "2cdf4a59390e8c7d9c68796d1acd198924c78c67264a88dffe4bc0da96f8bd3b"
+    },
+    "submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift": {
+      "before_sha256": "1749a11eb0ebf54adff01da5a5eb12590ef98472cf5f93eea78b857b8519d5e8",
+      "after_sha256": "399c80374233d2ac61503ce036fc67cef33851e184522b97dc2a5a84641319da"
+    },
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelMembers.swift": {
+      "before_sha256": "8f2ac65541456e61b3278c9fc65b6477e2c8146e0dcb5869cb1355da66500549",
+      "after_sha256": "1c44fa283ee83b5d8aa29391d02b1ce31f87e3ca7ebcc11965c8915c5ea34aa7"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoMembers.swift": {
+      "before_sha256": "bfec375d1ea7a89e33ceb1d911bda92b4b26d59637bae0a1c8a37ddc61e709b1",
+      "after_sha256": "8c14f4a051d5c3b5292f198112974045a0c24f1d9ffcbfbc94e5f2fe30f97f09"
+    }
+  }
+}

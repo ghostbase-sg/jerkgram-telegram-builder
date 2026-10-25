@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build169 profile cards and Swift capture repair
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build170 settings, profile metadata and excluded history
 
 on:
   workflow_dispatch:
@@ -63,10 +63,30 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build169-diagnostics
+          name: Jerkgram-1.2.0-Build170-diagnostics
           path: |
             patches/jg131-ui-type-compat.sha256.json
             scripts/materialize_jg131_ui_type_compat.py
+            patches/jg131-profile-polish.patch
+            patches/jg131-profile-polish.sha256.json
+            scripts/materialize_jg131_profile_polish.py
+            patches/jg131-profile-metadata.patch
+            patches/jg131-profile-metadata.sha256.json
+            scripts/materialize_jg131_profile_metadata.py
+            patches/jg131-excluded-history.patch
+            patches/jg131-excluded-history.sha256.json
+            scripts/materialize_jg131_excluded_history.py
+            patches/jg131-settings-transparency.patch
+            patches/jg131-settings-transparency.sha256.json
+            scripts/materialize_jg131_settings_transparency.py
+            scripts/jg131_final_stages.py
+            scripts/apply_jg131_final_stages.py
+            tests/run_jg131_final_syntax.py
+            tests/run_jg131_settings_preferences.py
+            tests/test_jg131_excluded_history.py
+            work/swiftgram-src/submodules/TelegramCore/Sources/UpdatePeers.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/State/JerkgramRetainedChat.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
             patches/jg131-ui-repair.patch
             patches/jg131-ui-repair.sha256.json
@@ -144,9 +164,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build169
+          name: Jerkgram-1.2.0-Build170
           path: |
-            artifacts/Jerkgram-1.2.0-Build169.ipa
-            artifacts/Jerkgram-1.2.0-Build169.json
+            artifacts/Jerkgram-1.2.0-Build170.ipa
+            artifacts/Jerkgram-1.2.0-Build170.json
           if-no-files-found: error
           retention-days: 90

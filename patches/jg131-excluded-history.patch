@@ -1,0 +1,473 @@
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+@@ -117,8 +117,10 @@
+         .action(1, 1, strings.historyDuration, jerkgramDurationTitle(policy.historyDuration, strings: strings), "duration"),
+         .action(1, 2, strings.recoveredMediaLimit, jerkgramMediaLimitTitle(policy.mediaByteLimit, strings: strings), "media"),
+         .toggle(1, 3, strings.archiveSecretChats, "secretChats", policy.archiveSecretChats),
++
+         .action(1, 4, strings.perChatRules, "", "perChat"),
+         .action(1, 5, strings.cleanupExpired, "", "cleanup"),
++        .toggle(1, 6, strings.languageCode == "ru" ? "Оставлять чаты после исключения" : "Keep Chats After Removal", "excludedHistory", policy.retainExcludedChats),
+     ]
+     if policy.historyDuration == .forever && policy.mediaByteLimit == .unlimited {
+         entries.append(.info(1, strings.foreverUnlimitedWarning + " (Forever + Unlimited)"))
+@@ -128,6 +130,7 @@
+         .action(2, 1, strings.exportArchive, "Archive v2", "export"),
+         .action(2, 2, strings.importArchive, "Archive v2", "import"),
+         .info(2, strings.backupAccountHint(state.configuration.accountPeerId)),
++        .info(3, strings.languageCode == "ru" ? "После исключения чат остаётся в списке с уже загруженной перепиской и сведениями. Доступен только просмотр. Включите до исключения." : "After removal, keep the chat in the list with locally loaded history and information. Read-only. Enable before removal."),
+     ])
+     return entries
+ }
+@@ -209,6 +212,7 @@
+             break
+         }
+     }, toggle: { action, value in
++        if action == "excludedHistory" { update { $0.accountPolicy.retainExcludedChats = value } }
+         if action == "secretChats" {
+             update { $0.accountPolicy.archiveSecretChats = value }
+         }
+diff --git a/submodules/TelegramCore/Sources/UpdatePeers.swift b/submodules/TelegramCore/Sources/UpdatePeers.swift
+--- a/submodules/TelegramCore/Sources/UpdatePeers.swift
++++ b/submodules/TelegramCore/Sources/UpdatePeers.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import JerkgramCore
+ import Postbox
+ internal import TelegramApi
+ 
+@@ -401,6 +402,7 @@
+         return false
+     }
+ 
++    if jerkgramIsRetainedExcludedChat(peer) { return false }
+     if let group = peer as? TelegramGroup {
+         if group.flags.contains(.deactivated) {
+             return true
+@@ -592,7 +594,7 @@
+             parsedPeers.append(peer)
+         }
+     }
+-    updatePeersCustom(transaction: transaction, peers: parsedPeers, update: { _, updated in updated })
++    updatePeersCustom(transaction: transaction, peers: parsedPeers, accountPeerId: accountPeerId, update: { _, updated in updated })
+     
+     updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peers.users)
+ }
+@@ -692,7 +694,7 @@
+     }
+ }
+ 
+-public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
++public func updatePeersCustom(transaction: Transaction, peers: [Peer], accountPeerId: PeerId? = nil, update: (Peer?, Peer) -> Peer?) {
+     transaction.updatePeersInternal(peers, update: { previous, updated in
+         let peerId = updated.id
+         
+@@ -727,6 +729,18 @@
+             updated = mergeCommunity(lhs: previous as? TelegramCommunity, rhs: updatedCommunity)
+         }
+         
++        if jerkgramIsRetainedExcludedChat(previous), let channel = updated as? TelegramChannel, channel.participationStatus == .member {
++            transaction.removeItemCacheEntry(id: jerkgramRetainedMembersKey(peerId: peerId))
++        }
++        let retainEnabled = accountPeerId.map { JerkgramRetentionRuntime.shouldRetainExcludedHistory(accountPeerId: $0.toInt64(), chatPeerId: peerId.toInt64()) } ?? false
++        updated = jerkgramRetainExcludedPeer(previous: previous, updated: updated, enabled: retainEnabled)
++        if jerkgramIsRetainedExcludedChat(updated) {
++            if transaction.getPeerChatListInclusion(peerId) == .notIncluded {
++                transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessagesOrOneOf(groupId: .root, pinningIndex: nil, minTimestamp: Int32(Date().timeIntervalSince1970)))
++            }
++            return update(previous, updated)
++        }
++
+         switch peerId.namespace {
+             case Namespaces.Peer.CloudUser:
+                 if let updated = updated as? TelegramUser, let previous = previous as? TelegramUser {
+diff --git a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
+--- a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
++++ b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
+@@ -5434,7 +5434,7 @@
+                         }
+                     }
+                     
+-                    updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
++                    updatePeersCustom(transaction: transaction, peers: [peer], accountPeerId: accountPeerId, update: { _, updated in
+                         return updated
+                     })
+                 }
+diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramChannel.swift b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramChannel.swift
+--- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramChannel.swift
++++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramChannel.swift
+@@ -160,6 +160,8 @@
+ }
+ 
+ public struct TelegramChannelFlags: OptionSet {
++    // Client-only: retained excluded chat, never a server membership/permission.
++    public static let jerkgramRetainedExcluded = TelegramChannelFlags(rawValue: 1 << 30)
+     public var rawValue: Int32
+     
+     public init() {
+diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramGroup.swift b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramGroup.swift
+--- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramGroup.swift
++++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramGroup.swift
+@@ -106,6 +106,8 @@
+ }
+ 
+ public struct TelegramGroupFlags: OptionSet {
++    // Client-only: retained excluded chat, never a server membership/permission.
++    public static let jerkgramRetainedExcluded = TelegramGroupFlags(rawValue: 1 << 30)
+     public var rawValue: Int32
+     
+     public init() {
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/RemovePeerChat.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/RemovePeerChat.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/RemovePeerChat.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/RemovePeerChat.swift
+@@ -25,6 +25,14 @@
+ }
+ 
+ func _internal_removePeerChat(account: Account, transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
++    if let peer = transaction.getPeer(peerId), jerkgramIsRetainedExcludedChat(peer) {
++        jerkgramClearRetainedExcludedChat(transaction: transaction, peer: peer)
++        transaction.setPeerChatInterfaceState(peerId, state: nil)
++        _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, threadId: nil, namespaces: .all)
++        transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
++        transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
++        return
++    }
+     if let _ = transaction.getPeerChatInterfaceState(peerId) {
+         transaction.setPeerChatInterfaceState(peerId, state: nil)
+     }
+diff --git a/submodules/JerkgramCore/Sources/JerkgramRetention.swift b/submodules/JerkgramCore/Sources/JerkgramRetention.swift
+--- a/submodules/JerkgramCore/Sources/JerkgramRetention.swift
++++ b/submodules/JerkgramCore/Sources/JerkgramRetention.swift
+@@ -56,15 +56,24 @@
+     public var historyDuration: JerkgramHistoryDuration
+     public var mediaByteLimit: JerkgramMediaByteLimit
+     public var archiveSecretChats: Bool
+-
+-    public init(
+-        historyDuration: JerkgramHistoryDuration = .days30,
+-        mediaByteLimit: JerkgramMediaByteLimit = .gigabytes1,
+-        archiveSecretChats: Bool = false
+-    ) {
++    public var retainExcludedChats: Bool
++
++    public init(historyDuration: JerkgramHistoryDuration = .days30, mediaByteLimit: JerkgramMediaByteLimit = .gigabytes1, archiveSecretChats: Bool = false, retainExcludedChats: Bool = false) {
+         self.historyDuration = historyDuration
+         self.mediaByteLimit = mediaByteLimit
+         self.archiveSecretChats = archiveSecretChats
++        self.retainExcludedChats = retainExcludedChats
++    }
++
++    private enum CodingKeys: String, CodingKey {
++        case historyDuration, mediaByteLimit, archiveSecretChats, retainExcludedChats
++    }
++    public init(from decoder: Decoder) throws {
++        let values = try decoder.container(keyedBy: CodingKeys.self)
++        self.historyDuration = try values.decode(JerkgramHistoryDuration.self, forKey: .historyDuration)
++        self.mediaByteLimit = try values.decode(JerkgramMediaByteLimit.self, forKey: .mediaByteLimit)
++        self.archiveSecretChats = try values.decode(Bool.self, forKey: .archiveSecretChats)
++        self.retainExcludedChats = try values.decodeIfPresent(Bool.self, forKey: .retainExcludedChats) ?? false
+     }
+ }
+ 
+@@ -120,7 +129,8 @@
+             JerkgramRetentionPolicy(
+                 historyDuration: override.historyDuration ?? self.accountPolicy.historyDuration,
+                 mediaByteLimit: override.mediaByteLimit ?? self.accountPolicy.mediaByteLimit,
+-                archiveSecretChats: override.archiveSecretChats ?? self.accountPolicy.archiveSecretChats
++                archiveSecretChats: override.archiveSecretChats ?? self.accountPolicy.archiveSecretChats,
++                retainExcludedChats: self.accountPolicy.retainExcludedChats
+             )
+         )
+     }
+@@ -197,7 +207,8 @@
+                 JerkgramRetentionPolicy(
+                     historyDuration: override.historyDuration ?? self.configuration.accountPolicy.historyDuration,
+                     mediaByteLimit: override.mediaByteLimit ?? self.configuration.accountPolicy.mediaByteLimit,
+-                    archiveSecretChats: override.archiveSecretChats ?? self.configuration.accountPolicy.archiveSecretChats
++                    archiveSecretChats: override.archiveSecretChats ?? self.configuration.accountPolicy.archiveSecretChats,
++                retainExcludedChats: self.configuration.accountPolicy.retainExcludedChats
+                 )
+             )
+         }
+@@ -239,6 +250,15 @@
+         configuration = value
+         self.snapshots[accountPeerId] = Snapshot(configuration: configuration)
+         return configuration
++    }
++
++    public static func shouldRetainExcludedHistory(accountPeerId: Int64, chatPeerId: Int64, userDefaults: UserDefaults = .standard) -> Bool {
++        self.lock.lock()
++        let cached = self.snapshots[accountPeerId]
++        self.lock.unlock()
++        let snapshot = cached ?? Snapshot(configuration: self.configuration(accountPeerId: accountPeerId, userDefaults: userDefaults))
++        let (enabled, policy) = snapshot.effectivePolicy(chatPeerId: chatPeerId)
++        return enabled && policy.retainExcludedChats
+     }
+ 
+     public static func shouldCapture(
+@@ -408,3 +428,11 @@
+         try eventStore.replaceAtomically(accountPeerId: accountPeerId, events: retained)
+     }
+ }
++
++// JG170 retained chat policy begin
++public enum JerkgramRetainedChatPolicy {
++    public static func keep(excluded: Bool, wasMember: Bool, wasRetained: Bool, enabled: Bool) -> Bool {
++        return excluded && (wasRetained || (wasMember && enabled))
++    }
++}
++// JG170 retained chat policy end
+diff --git a/submodules/TelegramCore/Sources/State/JerkgramRetainedChat.swift b/submodules/TelegramCore/Sources/State/JerkgramRetainedChat.swift
+new file mode 100644
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/State/JerkgramRetainedChat.swift
+@@ -0,0 +1,89 @@
++import Foundation
++import Postbox
++import JerkgramCore
++
++public func jerkgramIsRetainedExcludedChat(_ peer: Peer?) -> Bool {
++    if let peer = peer as? TelegramChannel {
++        return peer.participationStatus == .kicked && peer.flags.contains(.jerkgramRetainedExcluded)
++    }
++    if let peer = peer as? TelegramGroup {
++        return peer.membership == .Removed && peer.flags.contains(.jerkgramRetainedExcluded)
++    }
++    return false
++}
++
++func jerkgramRetainExcludedPeer(previous: Peer?, updated: Peer, enabled: Bool) -> Peer {
++    if let previous = previous as? TelegramChannel, let updated = updated as? TelegramChannel,
++       JerkgramRetainedChatPolicy.keep(excluded: updated.participationStatus == .kicked, wasMember: previous.participationStatus == .member, wasRetained: jerkgramIsRetainedExcludedChat(previous), enabled: enabled) {
++        var flags = previous.flags
++        flags.insert(.jerkgramRetainedExcluded)
++        flags.remove(.isCreator)
++        flags.remove(.hasVoiceChat)
++        flags.remove(.hasActiveVoiceChat)
++        return TelegramChannel(id: previous.id, accessHash: previous.accessHash, title: updated.title.isEmpty ? previous.title : updated.title, username: previous.username, photo: previous.photo, creationDate: previous.creationDate, version: updated.version, participationStatus: updated.participationStatus, info: previous.info, flags: flags, restrictionInfo: updated.restrictionInfo ?? previous.restrictionInfo, adminRights: nil, bannedRights: updated.bannedRights, defaultBannedRights: previous.defaultBannedRights, usernames: previous.usernames, storiesHidden: previous.storiesHidden, nameColor: previous.nameColor, backgroundEmojiId: previous.backgroundEmojiId, profileColor: previous.profileColor, profileBackgroundEmojiId: previous.profileBackgroundEmojiId, emojiStatus: previous.emojiStatus, approximateBoostLevel: previous.approximateBoostLevel, subscriptionUntilDate: previous.subscriptionUntilDate, verificationIconFileId: previous.verificationIconFileId, sendPaidMessageStars: previous.sendPaidMessageStars, linkedMonoforumId: previous.linkedMonoforumId, linkedCommunityId: previous.linkedCommunityId)
++    }
++    if let previous = previous as? TelegramGroup, let updated = updated as? TelegramGroup,
++       JerkgramRetainedChatPolicy.keep(excluded: updated.membership == .Removed && !updated.flags.contains(.deactivated), wasMember: previous.membership == .Member, wasRetained: jerkgramIsRetainedExcludedChat(previous), enabled: enabled) {
++        var flags = previous.flags
++        flags.insert(.jerkgramRetainedExcluded)
++        flags.remove(.hasVoiceChat)
++        flags.remove(.hasActiveVoiceChat)
++        return TelegramGroup(id: updated.id, title: updated.title.isEmpty ? previous.title : updated.title, photo: previous.photo, participantCount: previous.participantCount, role: .member, membership: updated.membership, flags: flags, defaultBannedRights: updated.defaultBannedRights, migrationReference: previous.migrationReference, creationDate: previous.creationDate, version: updated.version)
++    }
++    return updated
++}
++
++func jerkgramClearRetainedExcludedChat(transaction: Transaction, peer: Peer) {
++    let cleared: Peer
++    if let channel = peer as? TelegramChannel {
++        var flags = channel.flags
++        flags.remove(.jerkgramRetainedExcluded)
++        cleared = channel.withUpdatedFlags(flags)
++    } else if let group = peer as? TelegramGroup {
++        var flags = group.flags
++        flags.remove(.jerkgramRetainedExcluded)
++        cleared = group.updateFlags(flags: flags, version: group.version)
++    } else { return }
++    transaction.removeItemCacheEntry(id: jerkgramRetainedMembersKey(peerId: peer.id))
++    // The explicit update result clears the bit even while normal merge preserves it.
++    updatePeersCustom(transaction: transaction, peers: [cleared], update: { _, _ in cleared })
++}
++
++private struct JerkgramRetainedMembersSnapshot: Codable {
++    let data: Data
++}
++
++func jerkgramRetainedMembersKey(peerId: PeerId) -> ItemCacheEntryId {
++    let key = ValueBoxKey(length: 8)
++    key.setInt64(0, value: peerId.toInt64())
++    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.jerkgramRetainedChatMembers, key: key)
++}
++
++private func jerkgramSavedMembers(transaction: Transaction, peerId: PeerId) -> [ChannelParticipant] {
++    guard let entry = transaction.retrieveItemCacheEntry(id: jerkgramRetainedMembersKey(peerId: peerId))?.get(JerkgramRetainedMembersSnapshot.self) else { return [] }
++    return CachedChannelParticipants(decoder: PostboxDecoder(buffer: MemoryBuffer(data: entry.data))).participants
++}
++
++func jerkgramSaveKnownChannelMembers(transaction: Transaction, accountPeerId: PeerId, peerId: PeerId, participants: [ChannelParticipant]) {
++    guard JerkgramRetentionRuntime.shouldRetainExcludedHistory(accountPeerId: accountPeerId.toInt64(), chatPeerId: peerId.toInt64()),
++          let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.participationStatus == .member else { return }
++    var known = jerkgramSavedMembers(transaction: transaction, peerId: peerId)
++    let incomingIds = Set(participants.map { $0.peerId })
++    known.removeAll { incomingIds.contains($0.peerId) }
++    known.append(contentsOf: participants)
++    // Keep a bounded snapshot of members actually loaded, not a fabricated full roster.
++    let encoder = PostboxEncoder()
++    CachedChannelParticipants(participants: Array(known.suffix(4096))).encode(encoder)
++    if let entry = CodableEntry(JerkgramRetainedMembersSnapshot(data: encoder.makeData())) {
++        transaction.putItemCacheEntry(id: jerkgramRetainedMembersKey(peerId: peerId), entry: entry)
++    }
++}
++
++func jerkgramRetainedChannelMembers(transaction: Transaction, peerId: PeerId, offset: Int32, limit: Int32) -> [RenderedChannelParticipant] {
++    let participants = jerkgramSavedMembers(transaction: transaction, peerId: peerId)
++    let page = participants.dropFirst(max(0, Int(offset))).prefix(max(0, Int(limit)))
++    return page.compactMap { participant in
++        guard let peer = transaction.getPeer(participant.peerId) else { return nil }
++        return RenderedChannelParticipant(participant: participant, peer: EnginePeer(peer), peers: [peer.id: EnginePeer(peer)], presences: [:])
++    }
++}
+diff --git a/submodules/TelegramUI/Sources/ChatControllerContentData.swift b/submodules/TelegramUI/Sources/ChatControllerContentData.swift
+--- a/submodules/TelegramUI/Sources/ChatControllerContentData.swift
++++ b/submodules/TelegramUI/Sources/ChatControllerContentData.swift
+@@ -794,6 +794,8 @@
+                         shouldDismiss = true
+                     }
+                     
++                    if jerkgramIsRetainedExcludedChat(peerView.peers[peerView.peerId]) { shouldDismiss = false }
++
+                     var wasGroupChannel: Bool?
+                     if let previousPeerView = strongSelf.state.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
+                         if case .group = info {
+@@ -943,7 +945,7 @@
+                     
+                     var isNotAccessible: Bool = false
+                     if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+-                        isNotAccessible = cachedChannelData.isNotAccessible
++                        isNotAccessible = cachedChannelData.isNotAccessible && !jerkgramIsRetainedExcludedChat(peerView.peers[peerView.peerId])
+                     }
+                     
+                     if firstTime && isNotAccessible {
+@@ -1741,7 +1743,7 @@
+                         
+                         var isNotAccessible: Bool = false
+                         if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+-                            isNotAccessible = cachedChannelData.isNotAccessible
++                            isNotAccessible = cachedChannelData.isNotAccessible && !jerkgramIsRetainedExcludedChat(peerView.peers[peerView.peerId])
+                         }
+                         
+                         if firstTime && isNotAccessible {
+diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
+--- a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
+@@ -33,6 +33,11 @@
+ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, chatControllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
+     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
+         return (nil, nil)
++    }
++    if jerkgramIsRetainedExcludedChat(chatPresentationInterfaceState.renderedPeer?.peer) {
++        if let panel = currentPanel as? JerkgramExcludedChatInputPanelNode { return (panel, nil) }
++        let panel = JerkgramExcludedChatInputPanelNode()
++        return (panel, nil)
+     }
+     if chatPresentationInterfaceState.isNotAccessible && !canJoinInaccessibleCommunityChat(chatPresentationInterfaceState) {
+         return (nil, nil)
+diff --git a/submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.swift b/submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.swift
+new file mode 100644
+--- /dev/null
++++ b/submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.swift
+@@ -0,0 +1,27 @@
++import Foundation
++import UIKit
++import AsyncDisplayKit
++import Display
++import ChatPresentationInterfaceState
++import ChatInputPanelNode
++
++final class JerkgramExcludedChatInputPanelNode: ChatInputPanelNode {
++    private let label = ASTextNode()
++    override init() {
++        super.init()
++        self.isUserInteractionEnabled = false
++        self.label.maximumNumberOfLines = 2
++        self.addSubnode(self.label)
++    }
++    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isMediaInputExpanded: Bool) -> CGFloat {
++        let text = interfaceState.strings.baseLanguageCode == "ru" ? "Вы были исключены из этого чата" : "You were removed from this chat"
++        self.label.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.panelControlColor)
++        let size = self.label.measure(CGSize(width: max(0.0, width - leftInset - rightInset - 24.0), height: 100.0))
++        let height = max(defaultHeight(metrics: metrics), size.height + 20.0)
++        self.label.frame = CGRect(x: leftInset + (width - leftInset - rightInset - size.width) / 2.0, y: (height - size.height) / 2.0, width: size.width, height: size.height)
++        return height
++    }
++    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
++        return defaultHeight(metrics: metrics)
++    }
++}
+diff --git a/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift b/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift
+--- a/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift
++++ b/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift
+@@ -1604,6 +1604,7 @@
+ }
+ 
+ public func canSendMessagesToChat(_ state: ChatPresentationInterfaceState) -> Bool {
++    if jerkgramIsRetainedExcludedChat(state.renderedPeer?.peer) { return false }
+     if let peer = state.renderedPeer?.peer {
+         let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: state)
+         if canSendMessagesToPeer(EnginePeer(peer), ignoreDefault: canBypassRestrictions) {
+@@ -1627,6 +1628,7 @@
+ }
+ 
+ public func canSendReactionsToChat(_ state: ChatPresentationInterfaceState) -> Bool {
++    if jerkgramIsRetainedExcludedChat(state.renderedPeer?.peer) { return false }
+     if let peer = state.renderedPeer?.peer {
+         let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: state)
+         return canSendReactionsToPeer(EnginePeer(peer), ignoreDefault: canBypassRestrictions)
+diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift b/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
+--- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
++++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
+@@ -171,6 +171,7 @@
+         public static let feed: Int8 = 60
+         public static let shareThemeBackdrops: Int8 = 61
+         public static let cachedUniqueStarGifts: Int8 = 62
++        public static let jerkgramRetainedChatMembers: Int8 = 63
+     }
+     
+     public struct UnorderedItemList {
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelMembers.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelMembers.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelMembers.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelMembers.swift
+@@ -22,6 +22,14 @@
+ 
+ func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int64 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
+     return postbox.transaction { transaction -> Signal<[RenderedChannelParticipant]?, NoError> in
++        if jerkgramIsRetainedExcludedChat(transaction.getPeer(peerId)) {
++            switch category {
++            case .recent(.all):
++                return .single(jerkgramRetainedChannelMembers(transaction: transaction, peerId: peerId, offset: offset, limit: limit))
++            default:
++                return .single([])
++            }
++        }
+         if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+             if let channel = peer as? TelegramChannel {
+                 if case .broadcast = channel.info {
+@@ -108,7 +116,11 @@
+                                 }
+                             }
+                             
+-                            for participant in CachedChannelParticipants(apiParticipants: participants).participants {
++                            let knownParticipants = CachedChannelParticipants(apiParticipants: participants).participants
++                            if case .recent(.all) = category {
++                                jerkgramSaveKnownChannelMembers(transaction: transaction, accountPeerId: accountPeerId, peerId: peerId, participants: knownParticipants)
++                            }
++                            for participant in knownParticipants {
+                                 if let peer = parsedPeers.get(participant.peerId) {
+                                     var renderedPresences: [PeerId: PeerPresence] = [:]
+                                     if let presence = transaction.getPeerPresence(peerId: participant.peerId) {
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoMembers.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoMembers.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoMembers.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoMembers.swift
+@@ -204,7 +204,7 @@
+                             canAddMembers = true
+                         }
+                     }
+-                    strongSelf.canAddMembers = canAddMembers
++                    strongSelf.canAddMembers = canAddMembers && !jerkgramIsRetainedExcludedChat(peerViewMainPeer(view))
+                     strongSelf.pushState()
+                 }
+                 
+@@ -270,7 +270,7 @@
+                     if !group.hasBannedPermission(.banAddMembers) {
+                         canAddMembers = true
+                     }
+-                    strongSelf.canAddMembers = canAddMembers
++                    strongSelf.canAddMembers = canAddMembers && !jerkgramIsRetainedExcludedChat(peerViewMainPeer(view))
+                 }
+                 
+                 strongSelf.members = membersSortedByPresence(unsortedMembers, accountPeerId: strongSelf.context.account.peerId)
