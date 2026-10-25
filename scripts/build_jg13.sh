@@ -6,6 +6,8 @@ python3 scripts/configure_jg13.py
 python3 scripts/verify_jg13_source.py
 python3 -m unittest discover -s tests -p test_jg13_history_backend.py
 python3 -m unittest discover -s tests -p test_jg131_migration.py
+python3 -m unittest discover -s tests -p test_jg131_ui_repair.py
+python3 tests/run_jg131_capture_repair.py
 python3 tests/run_jg13_history_backend.py
 xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
 python3 -m unittest discover -s tests -p test_jg13_stars_gift.py
@@ -51,7 +53,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=168 \
+  --define=buildNumber=169 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 cd ../..

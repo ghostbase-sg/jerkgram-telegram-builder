@@ -13,6 +13,7 @@ from materialize_jg13_sponsored import verify_sponsored
 from materialize_jg13_profile_capture import verify_profile_capture
 from materialize_jg13_stars_gift import verify_stars_gift
 from materialize_jg13_history_backend import verify_backend
+from materialize_jg131_ui_repair import verify_ui_repair
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -66,6 +67,7 @@ def main():
     verify_profile_capture(SOURCE)
     verify_stars_gift(SOURCE)
     verify_backend(SOURCE)
+    verify_ui_repair(SOURCE)
     print("Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
 
 

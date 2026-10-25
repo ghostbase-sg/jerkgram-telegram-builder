@@ -12,6 +12,7 @@ from materialize_jg13_sponsored import apply_sponsored
 from materialize_jg13_profile_capture import apply_profile_capture
 from materialize_jg13_stars_gift import apply_stars_gift
 from materialize_jg13_history_backend import apply_backend
+from materialize_jg131_ui_repair import apply_ui_repair
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "work/swiftgram-src"
@@ -32,6 +33,7 @@ def main():
     apply_profile_capture(SOURCE)
     apply_stars_gift(SOURCE)
     apply_backend(SOURCE)
+    apply_ui_repair(SOURCE)
     p = SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
     text = p.read_text()
     for key, old, value in [

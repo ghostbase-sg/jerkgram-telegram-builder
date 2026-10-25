@@ -1,0 +1,22 @@
+{
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "owners": {
+    "submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift": {
+      "before_sha256": "dc0138ea58e686c513262a884d00afbe940f2dd78230270e0da691d8cd05b07d",
+      "after_sha256": "e153488593a50e81faa69091187b0f19b31f7ccd6c74c894525c94579304bf1b"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift": {
+      "before_sha256": "66ad1bad038df6c5e0cafad54f66a95ecd94080a362e8ee9b5b1546b5a0e490c",
+      "after_sha256": "27790698063c5c4c366f9290b7da048461b432f700b8da16cc580a82e66a191c"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift": {
+      "before_sha256": "b910326702db13c0e2444417ce530365c3af6eec1bf711bcf32bcf4162ecd5f7",
+      "after_sha256": "7b0d1c3e6742e3721c007f7424d86dc1b24c00553d932e2e2482469a7e10a5fe"
+    },
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift": {
+      "before_sha256": "e1449f25fdade67d7caae8c7eb2583613dfbe547e57ddcd977bd85b003eff4ad",
+      "after_sha256": "9212154bdbfc42def582e61c940135e462686388541a88c6c0bdf02625adeb2c"
+    }
+  },
+  "patch_sha256": "114de6dc0db4e86985df0a1352c31839e1f744c53cf80c1d9ee5474eb99e38bf"
+}

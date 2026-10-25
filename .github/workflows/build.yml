@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build168 ListView history and upstream update
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build169 profile cards and Swift capture repair
 
 on:
   workflow_dispatch:
@@ -63,8 +63,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build168-diagnostics
+          name: Jerkgram-1.2.0-Build169-diagnostics
           path: |
+            patches/jg131-ui-repair.patch
+            patches/jg131-ui-repair.sha256.json
+            scripts/materialize_jg131_ui_repair.py
+            tests/run_jg131_capture_repair.py
+            work/swiftgram-src/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
             patches/jg13-stars-gift.sha256.json
             scripts/materialize_jg13_stars_gift.py
             tests/run_jg13_stars_gift.py
@@ -133,9 +141,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build168
+          name: Jerkgram-1.2.0-Build169
           path: |
-            artifacts/Jerkgram-1.2.0-Build168.ipa
-            artifacts/Jerkgram-1.2.0-Build168.json
+            artifacts/Jerkgram-1.2.0-Build169.ipa
+            artifacts/Jerkgram-1.2.0-Build169.json
           if-no-files-found: error
           retention-days: 90

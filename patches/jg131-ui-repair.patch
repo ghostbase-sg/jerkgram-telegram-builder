@@ -1,0 +1,408 @@
+diff --git a/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift b/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift
+index ea6e0cb..721c9d4 100644
+--- a/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift
++++ b/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift
+@@ -25,8 +25,6 @@ public protocol ListSectionComponentChildRevealView: ListSectionComponentChildVi
+ }
+ 
+ public final class ListSectionContentView: UIView {
+-    private let ghostBaseDirectGlassBackgroundView = UIView()
+-    private var ghostBaseUsesDirectGlassBackground = false
+     public final class ItemView: UIView {
+         public let contents = ComponentView<Empty>()
+         public let separatorLayer = SimpleLayer()
+@@ -115,11 +113,6 @@ public final class ListSectionContentView: UIView {
+         
+         super.init(frame: CGRect())
+         
+-        self.ghostBaseDirectGlassBackgroundView.isUserInteractionEnabled = false
+-        self.ghostBaseDirectGlassBackgroundView.clipsToBounds = true
+-        self.ghostBaseDirectGlassBackgroundView.isHidden = true
+-        self.addSubview(self.ghostBaseDirectGlassBackgroundView)
+-        
+         self.layer.addSublayer(self.contentSeparatorContainerLayer)
+         self.layer.addSublayer(self.contentHighlightContainerLayer)
+         self.addSubview(self.contentItemContainerView)
+@@ -143,33 +136,15 @@ public final class ListSectionContentView: UIView {
+         if configuration.extendsItemHighlightToSection {
+             let transition: ComponentTransition
+             let backgroundColor: UIColor
+-
+             if itemId != nil {
+                 transition = .immediate
+                 backgroundColor = configuration.theme.list.itemHighlightedBackgroundColor
+-            } else if self.ghostBaseUsesDirectGlassBackground {
+-                transition = .easeInOut(duration: 0.2)
+-                let isDark = configuration.theme.overallDarkAppearance
+-                backgroundColor = UIColor(
+-                    white: isDark ? 0.0 : 1.0,
+-                    alpha: isDark ? 0.13 : 0.16
+-                )
+             } else {
+                 transition = .easeInOut(duration: 0.2)
+                 backgroundColor = configuration.backgroundColor ?? (configuration.isModal ? configuration.theme.list.itemModalBlocksBackgroundColor : configuration.theme.list.itemBlocksBackgroundColor)
+             }
+             
+-            if self.ghostBaseUsesDirectGlassBackground {
+-                transition.setBackgroundColor(
+-                    view: self.ghostBaseDirectGlassBackgroundView,
+-                    color: backgroundColor
+-                )
+-            } else {
+-                self.externalContentBackgroundView.updateColor(
+-                    color: backgroundColor,
+-                    transition: transition
+-                )
+-            }
++            self.externalContentBackgroundView.updateColor(color: backgroundColor, transition: transition)
+         } else {
+             if let previousHighlightedItemId, let previousItemView = self.itemViews[previousHighlightedItemId] {
+                 ComponentTransition.easeInOut(duration: 0.2).setBackgroundColor(layer: previousItemView.highlightLayer, color: .clear)
+@@ -203,21 +178,6 @@ public final class ListSectionContentView: UIView {
+     public func update(configuration: Configuration, width: CGFloat, leftInset: CGFloat, readyItems: [ReadyItem], transition: ComponentTransition) -> UpdateResult {
+         self.configuration = configuration
+         self.orderedItemIds = readyItems.map(\.id)
+-
+-        let ghostBaseDirectGlassBackground: Bool
+-
+-        if GhostBaseGlassStyle.isEnabled {
+-            switch (configuration.style, configuration.background) {
+-            case (.glass, .all):
+-                ghostBaseDirectGlassBackground = true
+-            default:
+-                ghostBaseDirectGlassBackground = false
+-            }
+-        } else {
+-            ghostBaseDirectGlassBackground = false
+-        }
+-
+-        self.ghostBaseUsesDirectGlassBackground = ghostBaseDirectGlassBackground
+         
+         switch configuration.background {
+         case .all, .range:
+@@ -238,30 +198,7 @@ public final class ListSectionContentView: UIView {
+                 backgroundColor = configuration.isModal ? configuration.theme.list.itemModalBlocksBackgroundColor : configuration.theme.list.itemBlocksBackgroundColor
+             }
+         }
+-        if ghostBaseDirectGlassBackground {
+-            let isDark = configuration.theme.overallDarkAppearance
+-            let directColor: UIColor
+-
+-            if self.highlightedItemId != nil,
+-               configuration.extendsItemHighlightToSection {
+-                directColor = configuration.theme.list.itemHighlightedBackgroundColor
+-            } else {
+-                directColor = UIColor(
+-                    white: isDark ? 0.0 : 1.0,
+-                    alpha: isDark ? 0.13 : 0.16
+-                )
+-            }
+-
+-            transition.setBackgroundColor(
+-                view: self.ghostBaseDirectGlassBackgroundView,
+-                color: directColor
+-            )
+-        } else {
+-            self.externalContentBackgroundView.updateColor(
+-                color: backgroundColor,
+-                transition: transition
+-            )
+-        }
++        self.externalContentBackgroundView.updateColor(color: backgroundColor, transition: transition)
+         
+         let cornerRadius: CGFloat
+         switch configuration.style {
+@@ -427,37 +364,7 @@ public final class ListSectionContentView: UIView {
+         if self.automaticallyLayoutExternalContentBackgroundView {
+             transition.setFrame(view: self.externalContentBackgroundView, frame: backgroundFrame)
+         }
+-
+-        if ghostBaseDirectGlassBackground {
+-            transition.setFrame(
+-                view: self.ghostBaseDirectGlassBackgroundView,
+-                frame: backgroundFrame
+-            )
+-            transition.setCornerRadius(
+-                layer: self.ghostBaseDirectGlassBackgroundView.layer,
+-                cornerRadius: cornerRadius
+-            )
+-            transition.setAlpha(
+-                view: self.ghostBaseDirectGlassBackgroundView,
+-                alpha: backgroundAlpha
+-            )
+-            self.ghostBaseDirectGlassBackgroundView.isHidden = backgroundAlpha <= 0.0
+-            transition.setAlpha(
+-                view: self.externalContentBackgroundView,
+-                alpha: 0.0
+-            )
+-        } else {
+-            self.ghostBaseDirectGlassBackgroundView.isHidden = true
+-            transition.setAlpha(
+-                view: self.ghostBaseDirectGlassBackgroundView,
+-                alpha: 0.0
+-            )
+-            transition.setAlpha(
+-                view: self.externalContentBackgroundView,
+-                alpha: backgroundAlpha
+-            )
+-        }
+-
++        transition.setAlpha(view: self.externalContentBackgroundView, alpha: backgroundAlpha)
+         transition.setCornerRadius(layer: self.layer, cornerRadius: contentCornerRadius)
+         
+         return UpdateResult(
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift
+index acb46b1..04aa18f 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift
+@@ -106,14 +106,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
+         if self.theme !== presentationData.theme {
+             self.theme = presentationData.theme
+             
+-            // The fullscreen profile scene owns the blur. Editing rows only add
+-            // a light readability tint; when Jerkgram Glass is off, preserve
+-            // Telegram's stock opaque block background exactly.
+-            self.backgroundNode.backgroundColor = GhostBaseGlassStyle.isEnabled
+-                ? presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(
+-                    presentationData.theme.overallDarkAppearance ? 0.26 : 0.18
+-                )
+-                : presentationData.theme.list.itemBlocksBackgroundColor
++            self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+             
+             let textColor = presentationData.theme.list.itemPrimaryTextColor
+             self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
+@@ -173,87 +166,20 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
+         let hasTopCorners = hasCorners && !hasPrevious
+         let hasBottomCorners = hasCorners && !hasNext
+         
+-        // Edit-profile fields must follow the visible profile Glass setting,
+-        // not a separate persisted flag which leaves the bio opaque.
+-        let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled
+-
+-        if ghostBaseGlassEnabled {
+-            // This is the actual final visual owner. Keep it visibly lighter
+-            // than the legacy card so the profile backdrop remains readable.
+-            // Keep this node as a tint only. `itemBlocksBackgroundColor`
+-            // is an opaque list surface on Telegram 12.9.2 even after alpha is
+-            // applied, which is why the bio still looked like a solid black card.
+-            self.backgroundNode.isOpaque = false
+-            self.backgroundNode.backgroundColor = presentationData.theme.overallDarkAppearance
+-                ? UIColor.white.withAlphaComponent(0.025)
+-                : UIColor.black.withAlphaComponent(0.018)
+-
+-            self.maskNode.image = nil
+-            self.backgroundNode.cornerRadius =
+-                hasCorners
+-                ? 16.0
+-                : 0.0
+-            self.backgroundNode.clipsToBounds =
+-                hasCorners
+-
+-            if hasTopCorners && hasBottomCorners {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = [
+-                        .layerMinXMinYCorner,
+-                        .layerMaxXMinYCorner,
+-                        .layerMinXMaxYCorner,
+-                        .layerMaxXMaxYCorner
+-                    ]
+-            } else if hasTopCorners {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = [
+-                        .layerMinXMinYCorner,
+-                        .layerMaxXMinYCorner
+-                    ]
+-            } else if hasBottomCorners {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = [
+-                        .layerMinXMaxYCorner,
+-                        .layerMaxXMaxYCorner
+-                    ]
+-            } else {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = []
+-            }
+-        } else {
+-            self.backgroundNode.backgroundColor =
+-                presentationData
+-                    .theme
+-                    .list
+-                    .itemBlocksBackgroundColor
+-
+-            self.backgroundNode.cornerRadius = 0.0
+-            self.backgroundNode.clipsToBounds = false
+-
+-            self.backgroundNode
+-                .layer
+-                .maskedCorners = [
+-                    .layerMinXMinYCorner,
+-                    .layerMaxXMinYCorner,
+-                    .layerMinXMaxYCorner,
+-                    .layerMaxXMaxYCorner
+-                ]
+-
+-            self.maskNode.image =
+-                hasCorners
+-                ? PresentationResourcesItemList
+-                    .cornersImage(
+-                        presentationData.theme,
+-                        top: hasTopCorners,
+-                        bottom: hasBottomCorners,
+-                        glass: true
+-                    )
+-                : nil
++        // JG169 field corners begin
++        // Clip the card itself: a theme-colored corner image paints black over the profile backdrop.
++        self.maskNode.image = nil
++        self.backgroundNode.cornerRadius = hasCorners ? 26.0 : 0.0
++        self.backgroundNode.clipsToBounds = hasCorners
++        var fieldCorners: CACornerMask = []
++        if hasTopCorners {
++            fieldCorners.formUnion([.layerMinXMinYCorner, .layerMaxXMinYCorner])
++        }
++        if hasBottomCorners {
++            fieldCorners.formUnion([.layerMinXMaxYCorner, .layerMaxXMaxYCorner])
+         }
++        self.backgroundNode.layer.maskedCorners = fieldCorners
++        // JG169 field corners end
+         self.maskNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: height))
+         
+         return height
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
+index 1504c38..da7fc2e 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
+@@ -94,14 +94,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
+         if self.theme !== presentationData.theme {
+             self.theme = presentationData.theme
+             
+-            // The fullscreen profile scene owns the blur. Editing rows only add
+-            // a light readability tint; when Jerkgram Glass is off, preserve
+-            // Telegram's stock opaque block background exactly.
+-            self.backgroundNode.backgroundColor = GhostBaseGlassStyle.isEnabled
+-                ? presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(
+-                    presentationData.theme.overallDarkAppearance ? 0.26 : 0.18
+-                )
+-                : presentationData.theme.list.itemBlocksBackgroundColor
++            self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+             
+             self.textNode.textField.textColor = presentationData.theme.list.itemPrimaryTextColor
+             self.textNode.textField.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
+@@ -150,87 +143,20 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
+         let hasTopCorners = hasCorners && !hasPrevious
+         let hasBottomCorners = hasCorners && !hasNext
+         
+-        // Edit-profile fields must follow the visible profile Glass setting,
+-        // not a separate persisted flag which leaves the bio opaque.
+-        let ghostBaseGlassEnabled = GhostBaseGlassStyle.isEnabled
+-
+-        if ghostBaseGlassEnabled {
+-            // This is the actual final visual owner. Keep it visibly lighter
+-            // than the legacy card so the profile backdrop remains readable.
+-            // Keep this node as a tint only. `itemBlocksBackgroundColor`
+-            // is an opaque list surface on Telegram 12.9.2 even after alpha is
+-            // applied, which is why the bio still looked like a solid black card.
+-            self.backgroundNode.isOpaque = false
+-            self.backgroundNode.backgroundColor = presentationData.theme.overallDarkAppearance
+-                ? UIColor.white.withAlphaComponent(0.025)
+-                : UIColor.black.withAlphaComponent(0.018)
+-
+-            self.maskNode.image = nil
+-            self.backgroundNode.cornerRadius =
+-                hasCorners
+-                ? 16.0
+-                : 0.0
+-            self.backgroundNode.clipsToBounds =
+-                hasCorners
+-
+-            if hasTopCorners && hasBottomCorners {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = [
+-                        .layerMinXMinYCorner,
+-                        .layerMaxXMinYCorner,
+-                        .layerMinXMaxYCorner,
+-                        .layerMaxXMaxYCorner
+-                    ]
+-            } else if hasTopCorners {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = [
+-                        .layerMinXMinYCorner,
+-                        .layerMaxXMinYCorner
+-                    ]
+-            } else if hasBottomCorners {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = [
+-                        .layerMinXMaxYCorner,
+-                        .layerMaxXMaxYCorner
+-                    ]
+-            } else {
+-                self.backgroundNode
+-                    .layer
+-                    .maskedCorners = []
+-            }
+-        } else {
+-            self.backgroundNode.backgroundColor =
+-                presentationData
+-                    .theme
+-                    .list
+-                    .itemBlocksBackgroundColor
+-
+-            self.backgroundNode.cornerRadius = 0.0
+-            self.backgroundNode.clipsToBounds = false
+-
+-            self.backgroundNode
+-                .layer
+-                .maskedCorners = [
+-                    .layerMinXMinYCorner,
+-                    .layerMaxXMinYCorner,
+-                    .layerMinXMaxYCorner,
+-                    .layerMaxXMaxYCorner
+-                ]
+-
+-            self.maskNode.image =
+-                hasCorners
+-                ? PresentationResourcesItemList
+-                    .cornersImage(
+-                        presentationData.theme,
+-                        top: hasTopCorners,
+-                        bottom: hasBottomCorners,
+-                        glass: true
+-                    )
+-                : nil
++        // JG169 field corners begin
++        // Clip the card itself: a theme-colored corner image paints black over the profile backdrop.
++        self.maskNode.image = nil
++        self.backgroundNode.cornerRadius = hasCorners ? 26.0 : 0.0
++        self.backgroundNode.clipsToBounds = hasCorners
++        var fieldCorners: CACornerMask = []
++        if hasTopCorners {
++            fieldCorners.formUnion([.layerMinXMinYCorner, .layerMaxXMinYCorner])
++        }
++        if hasBottomCorners {
++            fieldCorners.formUnion([.layerMinXMaxYCorner, .layerMaxXMaxYCorner])
+         }
++        self.backgroundNode.layer.maskedCorners = fieldCorners
++        // JG169 field corners end
+         self.maskNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: height))
+         
+         self.textNode.isUserInteractionEnabled = isEnabled
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+index fbb9fb9..6f6dcd4 100644
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+@@ -178,7 +178,7 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
+                     title: strings.perChatRules
+                 )
+             )
+-            picker.peerSelected = { [weak picker, weak controller] peer, _ in
++            picker.peerSelected = { [weak picker, weak controller = controller] peer, _ in
+                 picker?.dismiss()
+                 controller?.push(jerkgramChatRetentionController(
+                     context: context,
