@@ -37,7 +37,7 @@ class SettingsAnimationTests(unittest.TestCase):
   method='    public func registerSecondaryVideoLayer('+source.split('    public func registerSecondaryVideoLayer(',1)[1].split('    public func play()',1)[0]
   owner='final class OutputOwner {let manager=Manager();let content=Content();'+method+'}'
   with tempfile.TemporaryDirectory() as d:
-   p=Path(d)/'main.swift';p.write_text('import Foundation\n'+OUTPUT_MOCKS+owner+OUTPUT_CHECKS)
+   p=Path(d)/'main.swift';p.write_text('import Foundation\n'+OUTPUT_MOCKS+owner+'\n'+OUTPUT_CHECKS)
    subprocess.run(['swiftc',str(p),'-o',d+'/check'],check=True)
    subprocess.run([d+'/check'],check=True)
  @unittest.skipUnless(shutil.which('swiftc'), 'Swift compiler unavailable; actual session fixture runs on macOS CI')
