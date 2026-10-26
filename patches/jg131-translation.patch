@@ -457,7 +457,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
-@@ -280,12 +280,112 @@
+@@ -280,12 +280,118 @@
      }
  }
  
@@ -499,7 +499,13 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
 +        if let solution = poll.results.solution { texts.append(solution.text) }
 +        return texts
 +    }
-+    if !message.text.isEmpty { return [message.text] }
++    if !message.text.isEmpty {
++        // Native caption and transcription renderers share the same primary
++        // translation slot. Do not put a caption into the transcript or vice versa.
++        if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute,
++           !audio.isPending, !audio.text.isEmpty { return nil }
++        return [message.text]
++    }
 +    if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute,
 +       !audio.isPending, !audio.text.isEmpty { return [audio.text] }
 +    return nil
