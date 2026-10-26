@@ -13,7 +13,7 @@ SOURCE = Path(os.environ.get('JG_PERFORMANCE_SOURCE', ROOT/'work/swiftgram-src')
 sys.path.insert(0, str(ROOT/'scripts'))
 import materialize_jg131_performance_followup as stage
 OWNERS = list(stage.manifest()['owners'])
-ACCOUNT, HISTORY, TIMESTAMP = OWNERS
+ACCOUNT, HISTORY, TIMESTAMP = OWNERS[:3]
 
 class PerformanceFollowupTests(unittest.TestCase):
     def read(self, owner): return (SOURCE / owner).read_text()

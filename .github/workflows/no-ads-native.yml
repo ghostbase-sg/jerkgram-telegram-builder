@@ -80,6 +80,7 @@ jobs:
           python3 tests/run_jg131_settings_preferences.py
           python3 -m unittest discover -s tests -p test_jg131_performance_followup_stage.py
           python3 -m unittest discover -s tests -p test_jg131_performance_followup.py
+          python3 -m unittest discover -s tests -p test_jg131_chat_visit.py
           python3 -m unittest discover -s tests -p test_jg131_profile_metadata_dc.py
           python3 -m unittest discover -s tests -p test_jg131_settings_visual_followup.py
           python3 -m unittest discover -s tests -p test_jg131_excluded_chat_interactions.py

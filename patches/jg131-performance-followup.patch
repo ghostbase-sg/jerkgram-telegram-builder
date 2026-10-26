@@ -57,3 +57,75 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/
              forKey: "jerkgram.Appearance.MessageSeconds"
          ) as? Bool
      ) ?? false
+diff --git a/submodules/JerkgramCore/Sources/JerkgramStore.swift b/submodules/JerkgramCore/Sources/JerkgramStore.swift
+--- a/submodules/JerkgramCore/Sources/JerkgramStore.swift
++++ b/submodules/JerkgramCore/Sources/JerkgramStore.swift
+@@ -687,6 +687,41 @@
+ 
+ // Transaction boundaries call this lightweight serial recorder. The event id
+ // is generated once before enqueueing; equal text never participates in identity.
++// A visit is owned by its visible chat, not by a blocked worker/controller closure.
++public final class JerkgramArchiveVisitRequest {
++    private let lock = NSLock()
++    private var cancelled = false
++
++    public func cancel() {
++        self.lock.lock()
++        self.cancelled = true
++        self.lock.unlock()
++    }
++
++    fileprivate var isCancelled: Bool {
++        self.lock.lock()
++        defer { self.lock.unlock() }
++        return self.cancelled
++    }
++
++    fileprivate static func schedule(
++        on queue: DispatchQueue,
++        work: @escaping (JerkgramArchiveVisitRequest) -> JerkgramChangesSinceLastOpening?,
++        completion: @escaping (JerkgramChangesSinceLastOpening) -> Void
++    ) -> JerkgramArchiveVisitRequest {
++        let request = JerkgramArchiveVisitRequest()
++        queue.async { [weak request] in
++            guard let request, !request.isCancelled else { return }
++            guard let result = work(request), !request.isCancelled else { return }
++            DispatchQueue.main.async { [weak request] in
++                guard let request, !request.isCancelled else { return }
++                completion(result)
++            }
++        }
++        return request
++    }
++}
++
+ public enum JerkgramCaptureRecorder {
+     private static let queueKey = DispatchSpecificKey<Void>()
+     private static let queue: DispatchQueue = {
+@@ -751,6 +786,26 @@
+         }
+     }
+ 
++    public static func requestChangesSinceLastOpening(
++        accountPeerId: Int64,
++        chatPeerId: Int64,
++        completion: @escaping (JerkgramChangesSinceLastOpening) -> Void
++    ) -> JerkgramArchiveVisitRequest {
++        return JerkgramArchiveVisitRequest.schedule(on: self.queue, work: { request in
++            guard !request.isCancelled else { return nil }
++            let watermarkStore = JerkgramVisitWatermarkStore(rootURL: self.rootURL)
++            let previousSequence = watermarkStore.previousSequence(accountPeerId: accountPeerId, chatPeerId: chatPeerId)
++            guard let records = try? self.store.readyIndexRecords(
++                accountPeerId: accountPeerId, chatPeerId: chatPeerId,
++                afterSequence: previousSequence, throughSequence: nil
++            ), !request.isCancelled else { return nil }
++            guard let changes = try? watermarkStore.snapshotChangesSinceLastOpening(
++                accountPeerId: accountPeerId, chatPeerId: chatPeerId, records: records
++            ), changes.deletedCount + changes.editedCount + changes.recoveredMediaCount > 0 else { return nil }
++            return changes
++        }, completion: completion)
++    }
++
+     public static func record(
+         accountPeerId: Int64,
+         chatPeerId: Int64,

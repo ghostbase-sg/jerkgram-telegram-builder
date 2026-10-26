@@ -506,18 +506,19 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
 diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/TelegramUI/Sources/ChatController.swift
 --- a/submodules/TelegramUI/Sources/ChatController.swift
 +++ b/submodules/TelegramUI/Sources/ChatController.swift
-@@ -241,7 +241,9 @@
+@@ -241,7 +241,10 @@
      var allowedReplacementDirection: AllowedReplacementDirections
  }
  
 -public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {    
 +public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
 +    public override var jerkgramAcceptsSettingsSurface: Bool { return false }
++    private var jerkgramArchiveVisitRequest: JerkgramArchiveVisitRequest?
 +
      var validLayout: ContainerViewLayout?
      
      public weak var parentController: ViewController?
-@@ -1795,6 +1797,7 @@
+@@ -1795,6 +1798,7 @@
              guard let strongSelf = self else {
                  return
              }
@@ -525,7 +526,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/Tel
              guard !strongSelf.presentAccountFrozenInfoIfNeeded() else {
                  return
              }
-@@ -4101,6 +4104,7 @@
+@@ -4101,6 +4105,7 @@
              guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                  return
              }
@@ -533,7 +534,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/Tel
              
              guard strongSelf.presentationInterfaceState.subject != .scheduledMessages else {
                  strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_PollUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-@@ -4234,6 +4238,7 @@
+@@ -4234,6 +4239,7 @@
              guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                  return
              }
@@ -541,7 +542,70 @@ diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/Tel
  
              guard strongSelf.presentationInterfaceState.subject != .scheduledMessages else {
                  strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_PollUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-@@ -9382,6 +9387,7 @@
+@@ -7085,6 +7091,7 @@
+     }
+ 
+     deinit {
++        self.jerkgramArchiveVisitRequest?.cancel()
+         let _ = ChatControllerCount.modify { value in
+             return value - 1
+         }
+@@ -7879,30 +7886,14 @@
+         
+         self.didAppear = true
+         
++        self.jerkgramArchiveVisitRequest?.cancel()
++        self.jerkgramArchiveVisitRequest = nil
+         if case .standard(.default) = self.mode, let chatPeerId = self.chatLocation.peerId {
+-            let accountPeerId = self.context.account.peerId.toInt64()
+             let chatPeerIdValue = chatPeerId.toInt64()
+-            Queue.concurrentDefaultQueue().async { [weak self] in
+-                guard let self else { return }
+-                let rootURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+-                    .appendingPathComponent("Jerkgram", isDirectory: true)
+-                let watermarkStore = JerkgramVisitWatermarkStore(rootURL: rootURL)
+-                let previousSequence = watermarkStore.previousSequence(
+-                    accountPeerId: accountPeerId,
+-                    chatPeerId: chatPeerIdValue
+-                )
+-                guard let records = try? JerkgramCaptureRecorder.readyIndexRecords(
+-                    accountPeerId: accountPeerId,
+-                    chatPeerId: chatPeerIdValue,
+-                    afterSequence: previousSequence,
+-                    throughSequence: nil
+-                ) else { return }
+-                guard let changes = try? watermarkStore.snapshotChangesSinceLastOpening(
+-                    accountPeerId: accountPeerId,
+-                    chatPeerId: chatPeerIdValue,
+-                    records: records
+-                ), changes.deletedCount + changes.editedCount + changes.recoveredMediaCount > 0 else { return }
+-                Queue.mainQueue().async { [weak self] in
++            self.jerkgramArchiveVisitRequest = JerkgramCaptureRecorder.requestChangesSinceLastOpening(
++                accountPeerId: self.context.account.peerId.toInt64(),
++                chatPeerId: chatPeerIdValue,
++                completion: { [weak self] changes in
+                     guard let self, self.viewIfLoaded?.window != nil else { return }
+                     let text = self.presentationData.strings.jerkgram.changesSinceLastOpening(
+                         changes.deletedCount,
+@@ -7935,7 +7926,7 @@
+                         }
+                     ), in: .current)
+                 }
+-            }
++            )
+         }
+ 
+         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
+@@ -8381,6 +8372,8 @@
+     
+     override public func viewWillDisappear(_ animated: Bool) {
+         super.viewWillDisappear(animated)
++        self.jerkgramArchiveVisitRequest?.cancel()
++        self.jerkgramArchiveVisitRequest = nil
+ 
+         self.walletTransferAnimationsVisible = false
+         JerkgramPerformanceDiagnostics.shared.clearVisibleRoute(owner: self)
+@@ -9382,6 +9375,7 @@
      }
      
      func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
