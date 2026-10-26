@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build170 settings, profile metadata and excluded history
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build171 settings, profile metadata and excluded history
 
 on:
   workflow_dispatch:
@@ -63,7 +63,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build170-diagnostics
+          name: Jerkgram-1.2.0-Build171-diagnostics
           path: |
             patches/jg131-ui-type-compat.sha256.json
             scripts/materialize_jg131_ui_type_compat.py
@@ -79,6 +79,14 @@ jobs:
             patches/jg131-settings-transparency.patch
             patches/jg131-settings-transparency.sha256.json
             scripts/materialize_jg131_settings_transparency.py
+            patches/jg131-performance-followup.patch
+            patches/jg131-performance-followup.sha256.json
+            scripts/materialize_jg131_performance_followup.py
+            tests/test_jg131_performance_followup.py
+            tests/test_jg131_performance_followup_stage.py
+            tests/test_jg131_settings_visual_followup.py
+            tests/test_jg131_profile_metadata_dc.py
+            tests/test_jg131_excluded_chat_interactions.py
             scripts/jg131_final_stages.py
             scripts/apply_jg131_final_stages.py
             tests/run_jg131_final_syntax.py
@@ -164,9 +172,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build170
+          name: Jerkgram-1.2.0-Build171
           path: |
-            artifacts/Jerkgram-1.2.0-Build170.ipa
-            artifacts/Jerkgram-1.2.0-Build170.json
+            artifacts/Jerkgram-1.2.0-Build171.ipa
+            artifacts/Jerkgram-1.2.0-Build171.json
           if-no-files-found: error
           retention-days: 90

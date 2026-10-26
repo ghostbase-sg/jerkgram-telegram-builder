@@ -1,0 +1,59 @@
+diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
+--- a/submodules/TelegramCore/Sources/Account/Account.swift
++++ b/submodules/TelegramCore/Sources/Account/Account.swift
+@@ -1041,6 +1041,7 @@
+ 
+ public enum JerkgramHotSettings {
+     public static let keys: Set<String> = [
++        "jerkgram.Appearance.MessageSeconds",
+         "jerkgram.GhostMode.ScheduledSend",
+         "jerkgram.Messages.SendTextStyle",
+         "jerkgram.Messages.ShowDeleted",
+diff --git a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
+--- a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
+@@ -140,6 +140,11 @@
+         }
+     }
+     
++    // One preference snapshot per mapping, rather than one locked lookup per entry.
++    let ghostBaseShowDeleted = ((JerkgramHotSettings.object(forKey: "jerkgram.Messages.ShowDeleted") as? Bool) ?? true)
++    let ghostBaseProtectedContentEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
++    let ghostBaseOneTimeSaveEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
++
+     var count = 0
+     loop: for entry in view.entries {
+         var message = entry.message.withAppliedEphemeralReplacementMessage()
+@@ -224,18 +229,14 @@
+         }
+         
+         if skipViewOnceMedia, let minAutoremoveOrClearTimeout = message.minAutoremoveOrClearTimeout {
+-            let ghostBaseOT2KeepViewOnceVisible = (((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
++            let ghostBaseOT2KeepViewOnceVisible = (ghostBaseProtectedContentEnabled && ghostBaseOneTimeSaveEnabled && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+             if minAutoremoveOrClearTimeout <= 60 {
+-                if ghostBaseOT2KeepViewOnceVisible {
+-                    UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "jerkgram.OT2.ViewOnceVisibleKeep.Count") + 1, forKey: "jerkgram.OT2.ViewOnceVisibleKeep.Count")
+-                    UserDefaults.standard.set("\(message.id)", forKey: "jerkgram.OT2.LastViewOnceVisibleId")
+-                } else {
++                if !ghostBaseOT2KeepViewOnceVisible {
+                     continue loop
+                 }
+             }
+         }
+         
+-        let ghostBaseShowDeleted = ((JerkgramHotSettings.object(forKey: "jerkgram.Messages.ShowDeleted") as? Bool) ?? true)
+         let ghostBaseIsDeleted = ((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted) ?? false
+ 
+         if !ghostBaseShowDeleted && ghostBaseIsDeleted {
+diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift b/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
+@@ -108,7 +108,7 @@
+     }
+     
+     let ghostBaseMessageSeconds = (
+-        UserDefaults.standard.object(
++        JerkgramHotSettings.object(
+             forKey: "jerkgram.Appearance.MessageSeconds"
+         ) as? Bool
+     ) ?? false

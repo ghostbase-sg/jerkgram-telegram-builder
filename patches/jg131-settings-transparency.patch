@@ -273,7 +273,15 @@ diff --git a/submodules/ItemListUI/Sources/ItemListController.swift b/submodules
 diff --git a/submodules/ItemListUI/Sources/ItemListControllerNode.swift b/submodules/ItemListUI/Sources/ItemListControllerNode.swift
 --- a/submodules/ItemListUI/Sources/ItemListControllerNode.swift
 +++ b/submodules/ItemListUI/Sources/ItemListControllerNode.swift
-@@ -443,8 +443,12 @@
+@@ -338,6 +338,7 @@
+         self.listNodeContainer.addSubnode(self.listNode)
+         
+         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
++            self?.jerkgramUpdateRowCorners()
+             if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
+                 if let visible = displayedRange.visibleRange {
+                     let indexRange = (visible.firstIndex, visible.lastIndex)
+@@ -443,8 +444,12 @@
          }
      
          let previousState = Atomic<ItemListNodeState?>(value: nil)
@@ -287,7 +295,7 @@ diff --git a/submodules/ItemListUI/Sources/ItemListControllerNode.swift b/submod
              let (state, arguments) = stateAndArguments
              if state.entries.count > 1 {
                  for i in 1 ..< state.entries.count {
-@@ -452,7 +456,7 @@
+@@ -452,7 +457,7 @@
                  }
              }
              let previous = previousState.swap(state)
@@ -296,6 +304,54 @@ diff --git a/submodules/ItemListUI/Sources/ItemListControllerNode.swift b/submod
              var updatedStyle: ItemListStyle?
              if previous?.style != state.style {
                  updatedStyle = state.style
+@@ -653,6 +658,12 @@
+     
+     /// The list's side margins: as wide as today's, and on a side with a side strip (iPhone Duo) at least
+     /// 16pt clear of the strip.
++    private func jerkgramUpdateRowCorners() {
++        self.listNode.forEachItemNode { node in
++            PresentationResourcesItemList.updateTranslucentRowCorners(node)
++        }
++    }
++
+     private func listSideMargins(layout: ContainerViewLayout) -> (left: CGFloat, right: CGFloat) {
+         let base: CGFloat = layout.size.width >= 320.0 ? max(16.0, floor((layout.size.width - 674.0) / 2.0)) : 0.0
+         return layout.listSideMargins(base: base)
+@@ -904,7 +915,7 @@
+         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+         
+         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
++        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { [weak self] _ in self?.jerkgramUpdateRowCorners() })
+         
+         self.updateMarginOverlays(layout: layout, listInsets: insets)
+         
+@@ -1146,7 +1157,7 @@
+                             insets.right += margins.right
+                               
+                             let (duration, curve) = listViewAnimationDurationAndCurve(transition: .immediate)
+-                            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
++                            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { [weak self] _ in self?.jerkgramUpdateRowCorners() })
+                         }
+                     }
+                 } else if let footerItemNode = self.footerItemNode {
+@@ -1166,6 +1177,7 @@
+             
+             self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, scrollToItem: scrollToItem, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
+                 if let strongSelf = self {
++                    strongSelf.jerkgramUpdateRowCorners()
+                     if !strongSelf.didSetReady {
+                         strongSelf.didSetReady = true
+                         strongSelf._ready.set(true)
+@@ -1299,7 +1311,7 @@
+     }
+     
+     open func scrollToTop() {
+-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
++        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { [weak self] _ in self?.jerkgramUpdateRowCorners() })
+         self.searchNode?.scrollToTop()
+     }
+     
 diff --git a/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift b/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift
 --- a/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift
 +++ b/submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift
@@ -329,7 +385,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
      let context: AccountContext
      let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
      public let peerId: EnginePeer.Id
-@@ -6835,8 +6837,19 @@
+@@ -6835,8 +6837,12 @@
          ))
          
          self._hasGlassStyle = true
@@ -338,20 +394,13 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
 +        self.jerkgramSettingsScope = isSettings
 +        self.jerkgramSettingsBackdropProvider = { [weak self] in
 +            guard let self, self.isNodeLoaded, let background = self.controllerNode.ghostBaseProfileBackgroundView, !background.bounds.isEmpty else { return nil }
-+            // Reuse only the existing blurred backdrop, never a screenshot of text/rows.
-+            let format = UIGraphicsImageRendererFormat()
-+            format.scale = 1.0
-+            var rendered = false
-+            let image = UIGraphicsImageRenderer(size: background.bounds.size, format: format).image { _ in
-+                rendered = background.drawHierarchy(in: background.bounds, afterScreenUpdates: false)
-+            }
-+            return rendered ? image : nil
++            return background.settingsBackdropImage(isDark: self.presentationData.theme.overallDarkAppearance)
 +        }
 +
          if isSettings || isMyProfile {
              let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError> in
                  let activeSessionsContext = context.engine.privacy.activeSessions()
-@@ -7065,6 +7078,12 @@
+@@ -7065,6 +7071,12 @@
                  
                  if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                      strongSelf.controllerNode.updatePresentationData(strongSelf.presentationData)
@@ -589,3 +638,215 @@ diff --git a/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sourc
                  let previousTheme = strongSelf.presentationData.theme
                  let previousStrings = strongSelf.presentationData.strings
  
+diff --git a/submodules/TelegramPresentationData/Sources/Resources/PresentationResourcesItemList.swift b/submodules/TelegramPresentationData/Sources/Resources/PresentationResourcesItemList.swift
+--- a/submodules/TelegramPresentationData/Sources/Resources/PresentationResourcesItemList.swift
++++ b/submodules/TelegramPresentationData/Sources/Resources/PresentationResourcesItemList.swift
+@@ -1,5 +1,7 @@
+ import Foundation
+ import UIKit
++import AsyncDisplayKit
++import ObjectiveC
+ import Display
+ import AppBundle
+ 
+@@ -385,7 +387,7 @@
+             return nil
+         }
+         if !top && !bottom {
+-            return nil
++            return theme.list.blocksBackgroundColor.cgColor.alpha == 0.0 ? JerkgramListCornerSpec.middleImage : nil
+         }
+         let key: PresentationResourceKey
+         if top && bottom {
+@@ -396,8 +398,9 @@
+             key = glass ? PresentationResourceKey.itemListCornersBottomGlass : PresentationResourceKey.itemListCornersBottom
+         }
+         return theme.image(key.rawValue, { theme in
+-            return generateImage(CGSize(width: 56.0, height: 56.0), rotatedContext: { (size, context) in
++            let image = generateImage(CGSize(width: 56.0, height: 56.0), rotatedContext: { (size, context) in
+                 let bounds = CGRect(origin: CGPoint(), size: size)
++                context.clear(bounds)
+                 context.setFillColor(theme.list.blocksBackgroundColor.cgColor)
+                 context.fill(bounds)
+                 
+@@ -417,7 +420,54 @@
+                 context.addPath(path.cgPath)
+                 context.fillPath()
+             })?.stretchableImage(withLeftCapWidth: 28, topCapHeight: 28)
+-        })
++            if let image, theme.list.blocksBackgroundColor.cgColor.alpha == 0.0 {
++                objc_setAssociatedObject(image, &jerkgramCornerImageKey, JerkgramListCornerSpec(top: top, bottom: bottom, radius: glass ? 26.0 : 11.0), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
++            }
++            return image
++        })
++    }
++
++    public static func updateTranslucentRowCorners(_ node: ASDisplayNode) {
++        var imageNode: ASImageNode?
++        for child in node.subnodes ?? [] {
++            if let candidate = child as? ASImageNode, let image = candidate.image,
++               objc_getAssociatedObject(image, &jerkgramCornerImageKey) is JerkgramListCornerSpec {
++                imageNode = candidate
++                break
++            }
++        }
++        let previous = objc_getAssociatedObject(node, &jerkgramCornerLayerKey) as? JerkgramListCornerLayer
++        guard let imageNode, let image = imageNode.image,
++              let spec = objc_getAssociatedObject(image, &jerkgramCornerImageKey) as? JerkgramListCornerSpec else {
++            if let previous {
++                if node.layer.mask === previous.layer { node.layer.mask = nil }
++                previous.imageNode?.isHidden = false
++                objc_setAssociatedObject(node, &jerkgramCornerLayerKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
++            }
++            return
++        }
++        guard node.layer.mask == nil || node.layer.mask === previous?.layer else { return }
++        let owned = previous ?? JerkgramListCornerLayer()
++        let rect = imageNode.frame
++        guard rect.width > 0.0, rect.height > 0.0 else { return }
++        var corners: UIRectCorner = []
++        if spec.top { corners.formUnion([.topLeft, .topRight]) }
++        if spec.bottom { corners.formUnion([.bottomLeft, .bottomRight]) }
++        let key = "\(rect):\(node.bounds):\(spec.top):\(spec.bottom):\(spec.radius)"
++        if owned.geometry != key {
++            CATransaction.begin()
++            CATransaction.setDisableActions(true)
++            owned.layer.frame = node.bounds
++            let localRect = rect.offsetBy(dx: -node.bounds.minX, dy: -node.bounds.minY)
++            owned.layer.path = UIBezierPath(roundedRect: localRect, byRoundingCorners: corners, cornerRadii: CGSize(width: spec.radius, height: spec.radius)).cgPath
++            owned.layer.fillColor = UIColor.black.cgColor
++            CATransaction.commit()
++            owned.geometry = key
++        }
++        owned.imageNode = imageNode
++        imageNode.isHidden = true
++        node.layer.mask = owned.layer
++        objc_setAssociatedObject(node, &jerkgramCornerLayerKey, owned, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+     }
+     
+     public static func uploadToneIcon(_ theme: PresentationTheme) -> UIImage? {
+@@ -526,3 +576,26 @@
+         })
+     }
+ }
++
++private var jerkgramCornerImageKey: UInt8 = 0
++private var jerkgramCornerLayerKey: UInt8 = 0
++private final class JerkgramListCornerSpec {
++    static let middleImage: UIImage? = {
++        let image = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
++            context.clear(CGRect(origin: .zero, size: size))
++        })
++        if let image {
++            objc_setAssociatedObject(image, &jerkgramCornerImageKey, JerkgramListCornerSpec(top: false, bottom: false, radius: 0.0), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
++        }
++        return image
++    }()
++    let top: Bool
++    let bottom: Bool
++    let radius: CGFloat
++    init(top: Bool, bottom: Bool, radius: CGFloat) { self.top = top; self.bottom = bottom; self.radius = radius }
++}
++private final class JerkgramListCornerLayer {
++    let layer = CAShapeLayer()
++    weak var imageNode: ASImageNode?
++    var geometry = ""
++}
+diff --git a/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift b/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
+--- a/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
++++ b/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
+@@ -346,7 +346,12 @@
+                             strongSelf.bottomStripeNode.isHidden = hasCorners
+                     }
+                     
++                    if item.noInsets && item.backgroundColor != nil && GhostBaseGlassStyle.isEnabled {
++                        // The enclosing profile section owns clipping, including its footer boundary.
++                        strongSelf.maskNode.image = nil
++                    } else {
+                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
++                    }
+                     
+                     if !item.noInsets {
+                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+@@ -1,5 +1,6 @@
+ import Foundation
+ import UIKit
++import CoreImage
+ import AVFoundation
+ import Display
+ import Postbox
+@@ -502,6 +503,50 @@
+ 
+     // Exactly one reusable image view, one persistent visual-effect view and
+     // one independent tint/dimming view. They are created once in init().
++    private static let settingsCIContext = CIContext(options: [.cacheIntermediates: false])
++    private weak var settingsSnapshotSource: UIImage?
++    private var settingsSnapshotState: GhostBaseProfileBackgroundStateKey?
++    private var settingsSnapshotDark = false
++    private var settingsSnapshotAspect: CGFloat = 0.0
++    private var settingsSnapshot: UIImage?
++
++    func settingsBackdropImage(isDark: Bool) -> UIImage? {
++        guard self.usesCustomBackground, !self.bounds.isEmpty else { return nil }
++        let source = self.imageView.image
++        let aspect = self.bounds.height / self.bounds.width
++        if let cached = self.settingsSnapshot, self.settingsSnapshotSource === source,
++           self.settingsSnapshotState == self.currentStateKey, self.settingsSnapshotDark == isDark,
++           abs(self.settingsSnapshotAspect - aspect) < 0.001 { return cached }
++        let size = CGSize(width: 192.0, height: min(512.0, max(192.0, 192.0 * aspect)))
++        let format = UIGraphicsImageRendererFormat()
++        format.scale = 1.0
++        format.opaque = true
++        let pixels = UIGraphicsImageRenderer(size: size, format: format).image { context in
++            (self.backgroundColor ?? (isDark ? UIColor.black : UIColor.white)).setFill()
++            context.fill(CGRect(origin: .zero, size: size))
++            if let source, source.size.width > 0.0, source.size.height > 0.0 {
++                let factor = max(size.width / source.size.width, size.height / source.size.height)
++                let target = CGSize(width: source.size.width * factor, height: source.size.height * factor)
++                source.draw(in: CGRect(x: (size.width - target.width) / 2.0, y: (size.height - target.height) / 2.0, width: target.width, height: target.height))
++            }
++        }
++        guard let cgImage = pixels.cgImage else { return nil }
++        let input = CIImage(cgImage: cgImage)
++        let blurred = input.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 12.0]).cropped(to: input.extent)
++        guard let output = Self.settingsCIContext.createCGImage(blurred, from: input.extent) else { return nil }
++        let result = UIGraphicsImageRenderer(size: size, format: format).image { context in
++            UIImage(cgImage: output).draw(in: CGRect(origin: .zero, size: size))
++            (isDark ? UIColor.black : UIColor.white).withAlphaComponent(isDark ? 0.52 : 0.58).setFill()
++            context.fill(CGRect(origin: .zero, size: size))
++        }
++        self.settingsSnapshotSource = source
++        self.settingsSnapshotState = self.currentStateKey
++        self.settingsSnapshotDark = isDark
++        self.settingsSnapshotAspect = aspect
++        self.settingsSnapshot = result
++        return result
++    }
++
+     private let imageView: UIImageView
+     private let blurView: UIVisualEffectView
+     private let tintView: UIView
+@@ -1501,16 +1546,13 @@
+                 )
+             )
+ 
+-            contrastColor = sourceColor.mixedWith(
+-                UIColor.black,
+-                alpha: 0.72
+-            )
++            contrastColor = UIColor.black
+ 
+             contrastAlpha = min(
+-                reduced ? 0.24 : 0.32,
+-                (reduced ? 0.10 : 0.14)
++                reduced ? 0.58 : 0.62,
++                (reduced ? 0.38 : 0.42)
+                     + brightBoost
+-                    * (reduced ? 0.12 : 0.17)
++                    * 0.20
+             )
+         } else {
+             let darkBoost = max(

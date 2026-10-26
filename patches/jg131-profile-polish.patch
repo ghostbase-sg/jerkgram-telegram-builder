@@ -9,10 +9,11 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
              
              self.textNode.textField.textColor = presentationData.theme.list.itemPrimaryTextColor
              self.textNode.textField.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
-@@ -103,6 +102,13 @@
+@@ -103,7 +102,17 @@
              self.clearIconNode.image = PresentationResourcesItemList.itemListClearInputIcon(presentationData.theme)
          }
          
+-        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
 +        // Re-evaluate outside the theme identity gate: the glass preference
 +        // can change without replacing PresentationTheme.
 +        self.backgroundNode.backgroundColor = GhostBaseGlassStyle.isEnabled
@@ -20,9 +21,13 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
 +                      alpha: presentationData.theme.overallDarkAppearance ? 0.26 : 0.18)
 +            : presentationData.theme.list.itemBlocksBackgroundColor
 +
-         let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
++        let placeholderColor = GhostBaseGlassStyle.isEnabled
++            ? (presentationData.theme.overallDarkAppearance ? UIColor.white.withAlphaComponent(0.60) : UIColor.black.withAlphaComponent(0.55))
++            : presentationData.theme.list.itemPlaceholderTextColor
++        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: placeholderColor)
          if self.textNode.textField.attributedPlaceholder == nil || !self.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
              self.textNode.textField.attributedPlaceholder = attributedPlaceholderText
+             self.textNode.textField.accessibilityHint = attributedPlaceholderText.string
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
@@ -65,3 +70,33 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
              self.itemContainerNode.clipsToBounds = hasCorners
          }
          transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
+@@ -72,11 +72,7 @@
+             // `systemStyle` only controls corners/insets. Supply an explicit
+             // tint for this one profile-bio field so the generic `.blocks`
+             // renderer cannot replace it with Telegram's opaque list card.
+-            backgroundColor: GhostBaseGlassStyle.isEnabled
+-                ? (presentationData.theme.overallDarkAppearance
+-                    ? UIColor.white.withAlphaComponent(0.025)
+-                    : UIColor.black.withAlphaComponent(0.018))
+-                : nil,
++            backgroundColor: GhostBaseGlassStyle.isEnabled ? .clear : nil,
+             text: item.text, placeholder: item.placeholder, maxLength: item.maxLength.flatMap { ItemListMultilineInputItemTextLimit(value: $0, display: true) }, sectionId: 0, style: .blocks, returnKeyType: .done, textUpdated: { updatedText in
+             item.textUpdated(updatedText)
+         }, action: {
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
+@@ -104,7 +104,9 @@
+         )
+         
+         let textFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
+-        let textColor = presentationData.theme.list.freeTextColor
++        let textColor = GhostBaseGlassStyle.isEnabled
++            ? (presentationData.theme.overallDarkAppearance ? UIColor.white.withAlphaComponent(0.82) : UIColor.black.withAlphaComponent(0.72))
++            : presentationData.theme.list.freeTextColor
+         
+         var text = item.text
+         text = text.replacingOccurrences(of: " >]", with: "\u{00A0}>]")

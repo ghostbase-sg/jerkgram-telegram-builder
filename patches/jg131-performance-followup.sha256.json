@@ -1,0 +1,18 @@
+{
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "patch_sha256": "02b312b69ba3eb05954c491b5b29f59f7fdd372bf7a3949d348fa6dc884b7d15",
+  "owners": {
+    "submodules/TelegramCore/Sources/Account/Account.swift": {
+      "before_sha256": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
+      "after_sha256": "c942afebd59f356fc4a860051550d03fa94e57aa79ee9d979e2d89eaa8bb8d4c"
+    },
+    "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift": {
+      "before_sha256": "a30f76a86de22b16fc22214cfdee98f10fd1943a8c93bc33e87f113fe7b5b7f9",
+      "after_sha256": "a44acb4ee67598516387a1385655940648b3128ea28cd4035c8e1f12e4df835e"
+    },
+    "submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift": {
+      "before_sha256": "c2f977f1c17cffe123a174128cba0d80480792b9b94d28aa9af83251e752f8bf",
+      "after_sha256": "b6d82bc0515f48351b9ece424183fbe73de2d09435629e541046085d7e337477"
+    }
+  }
+}

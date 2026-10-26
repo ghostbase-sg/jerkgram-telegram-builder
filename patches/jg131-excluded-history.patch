@@ -350,7 +350,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift b
      if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
          return (nil, nil)
 +    }
-+    if jerkgramIsRetainedExcludedChat(chatPresentationInterfaceState.renderedPeer?.peer) {
++    if jerkgramIsRetainedExcludedChat(chatPresentationInterfaceState.renderedPeer?.peer) && chatPresentationInterfaceState.interfaceState.selectionState == nil {
 +        if let panel = currentPanel as? JerkgramExcludedChatInputPanelNode { return (panel, nil) }
 +        let panel = JerkgramExcludedChatInputPanelNode()
 +        return (panel, nil)
@@ -471,3 +471,177 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
                  }
                  
                  strongSelf.members = membersSortedByPresence(unsortedMembers, accountPeerId: strongSelf.context.account.peerId)
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/ApplyMaxReadIndexInteractively.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/ApplyMaxReadIndexInteractively.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/ApplyMaxReadIndexInteractively.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/ApplyMaxReadIndexInteractively.swift
+@@ -35,7 +35,7 @@
+             return false
+         }
+         // A channel the account is not a member of has no read state to apply to.
+-        guard peerKeepsReadState(transaction.getPeer(messageId.peerId)) else {
++        guard jerkgramIsRetainedExcludedChat(transaction.getPeer(messageId.peerId)) || peerKeepsReadState(transaction.getPeer(messageId.peerId)) else {
+             return false
+         }
+         let index = transaction.getMessage(messageId)?.index ?? MessageIndex(id: messageId, timestamp: 0)
+@@ -45,6 +45,15 @@
+ }
+ 
+ func _internal_applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex) {
++    // Retained history has a local read position, while membership stays kicked/removed.
++    // Use the noninteractive update, then discard any validation it may request for holes.
++    // Do not queue a receipt, notify the state manager, or touch secret-chat countdowns.
++    if jerkgramIsRetainedExcludedChat(transaction.getPeer(index.id.peerId)) {
++        transaction.applyIncomingReadMaxId(index.id)
++        transaction.applyMarkUnread(peerId: index.id.peerId, namespace: index.id.namespace, value: false, interactive: false)
++        transaction.confirmSynchronizedIncomingReadState(index.id.peerId)
++        return
++    }
+     // A channel the account is not a member of has no read state on the server
+     // (NonMemberChannelReadState.swift): nothing moves locally and no push is queued.
+     guard peerKeepsReadState(transaction.getPeer(index.id.peerId)) else {
+diff --git a/submodules/TelegramCore/Sources/State/NonMemberChannelReadState.swift b/submodules/TelegramCore/Sources/State/NonMemberChannelReadState.swift
+--- a/submodules/TelegramCore/Sources/State/NonMemberChannelReadState.swift
++++ b/submodules/TelegramCore/Sources/State/NonMemberChannelReadState.swift
+@@ -16,9 +16,10 @@
+ // fetch (`resolveMissingPeerChatInfos`) cannot be relied on: it is skipped for a channel whose
+ // notification settings are stored, which opening the chat does.
+ 
+-/// False only for a stored channel the account is not a member of. A peer that is not stored keeps today's
+-/// behaviour.
++/// Whether server read state is meaningful for this peer. Retained excluded chats keep a local
++/// position only; a peer that is not stored keeps today's behaviour.
+ func peerKeepsReadState(_ peer: Peer?) -> Bool {
++    if jerkgramIsRetainedExcludedChat(peer) { return false }
+     if let channel = peer as? TelegramChannel {
+         // A monoforum is a user's direct messages with a channel: its replies and read receipts matter
+         // whatever the participation status says.
+diff --git a/submodules/TelegramCore/Sources/State/AccountViewTracker.swift b/submodules/TelegramCore/Sources/State/AccountViewTracker.swift
+--- a/submodules/TelegramCore/Sources/State/AccountViewTracker.swift
++++ b/submodules/TelegramCore/Sources/State/AccountViewTracker.swift
+@@ -2048,7 +2048,7 @@
+                     
+                     let resetPeerHoleManagement = self.resetPeerHoleManagement
+                     let prepared = self.account!.postbox.transaction { transaction -> Void in
+-                        if transaction.getPeerChatListIndex(peerId) == nil {
++                        if transaction.getPeerChatListIndex(peerId) == nil && !jerkgramIsRetainedExcludedChat(transaction.getPeer(peerId)) {
+                             if isPeerHiddenByCollapsedCommunity(transaction: transaction, peerId: peerId) {
+                                 return
+                             }
+diff --git a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
+--- a/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
++++ b/submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift
+@@ -2263,7 +2263,7 @@
+         correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+ }
+ 
+-private func ghostBaseProtectedLocalMedia(account: Account, source: Message, canSendPolls: Bool, canSendTodos: Bool) -> Signal<AnyMediaReference?, NoError> {
++private func ghostBaseProtectedLocalMedia(account: Account, source: Message, canSendPolls: Bool, canSendTodos: Bool, localOnly: Bool = false) -> Signal<AnyMediaReference?, NoError> {
+     guard let media = source.media.first, source.media.count == 1 else { return .single(nil) }
+     if let structured = ghostBaseStaticDeletedMedia(media: media) { return .single(structured) }
+     if media is TelegramMediaPoll || media is TelegramMediaTodo {
+@@ -2305,6 +2305,8 @@
+     |> take(1)
+     |> mapToSignal { cached -> Signal<AnyMediaReference?, NoError> in
+         if cached.complete { return .single(localCopy(cached)) }
++        // A retained source is inaccessible: copy received bytes only, without fetching it again.
++        if localOnly { return .single(nil) }
+         return Signal { subscriber in
+             let disposables = DisposableSet()
+             disposables.add(mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: true)).start(next: { data in
+@@ -2325,8 +2327,7 @@
+ private func ghostBaseResolveProtectedForwards(account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> Signal<[EnqueueMessage]?, NoError> {
+     let enabled = (JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true
+     let chatForward = (JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.ChatForward") as? Bool) ?? true
+-    guard enabled && chatForward,
+-        (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel),
++    guard (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel),
+         messages.contains(where: { if case .forward = $0 { return true }; return false }) else { return .single(messages) }
+     return account.postbox.transaction { transaction -> [(EnqueueMessage, Message?, Int64?, UserLimitsConfiguration, Bool, Bool, Peer?)] in
+         let config = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
+@@ -2354,7 +2355,11 @@
+             let protected = ghostBaseProtectedForwardEnabled(enabled: enabled, chatForward: chatForward,
+                 messageProtected: source.isCopyProtected(), peerProtected: actualPeer?.isCopyProtectionEnabled == true,
+                 dmProtected: dmProtected, myDmProtected: false, channelRestricted: channelRestricted)
+-            guard protected else { return (outgoing, nil, nil, limits, polls, todos, nil) }
++            // Forwarding OUT of retained history uses the existing portable copy transport.
++            // Keep the source kicked/removed and send a new message to the chosen target.
++            let hasCopyRestriction = source.isCopyProtected() || actualPeer?.isCopyProtectionEnabled == true || dmProtected || channelRestricted
++            let retainedCopy = id.peerId != peerId && jerkgramIsRetainedExcludedChat(actualPeer) && !hasCopyRestriction
++            guard protected || retainedCopy else { return (outgoing, nil, nil, limits, polls, todos, nil) }
+             return (outgoing, source, forwardGroupingKey(grouping: grouping, sourceGroupingKey: source.groupingKey, generatedKeys: &groupingKeys), limits, polls, todos, actualPeer)
+         }
+     }
+@@ -2367,7 +2372,7 @@
+                 if source.media.isEmpty {
+                     return .single(ghostBaseBuildProtectedForward(outgoing: outgoing, source: source, mediaReference: nil, groupingKey: grouping, limits: limits, languageCode: languageCode, sourcePeer: sourcePeer))
+                 }
+-                return ghostBaseProtectedLocalMedia(account: account, source: source, canSendPolls: polls, canSendTodos: todos)
++                return ghostBaseProtectedLocalMedia(account: account, source: source, canSendPolls: polls, canSendTodos: todos, localOnly: jerkgramIsRetainedExcludedChat(sourcePeer))
+                 |> map { media -> EnqueueMessage? in
+                     guard media != nil || ghostBaseProtectedForwardAllowsTextFallback(source.media.first) else { return nil }
+                     return ghostBaseBuildProtectedForward(outgoing: outgoing, source: source, mediaReference: media, groupingKey: grouping, limits: limits, languageCode: languageCode, sourcePeer: sourcePeer)
+@@ -2464,6 +2469,10 @@
+ }
+ 
+ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false, transformGroupingKeysWithPeerId: Bool = false) -> [MessageId?] {
++    // All callers, including share/forward pickers, must respect the retained target boundary.
++    if jerkgramIsRetainedExcludedChat(transaction.getPeer(peerId)) {
++        return Array<MessageId?>(repeating: nil, count: messages.count)
++    }
+     /**
+      * If it is a support account, mark messages as read here as they are
+      * not marked as read when chat is opened.
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift
+@@ -431,7 +431,8 @@
+                 }
+             }
+ 
+-            let inputPeer = transaction.getPeer(messageIndex.id.peerId).flatMap(apiInputPeer)
++            // Retained topic history advances locally, without a server read receipt.
++            let inputPeer = jerkgramIsRetainedExcludedChat(peer) ? nil : apiInputPeer(peer)
+             let readCount = transaction.getThreadMessageCount(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, fromIdExclusive: fromIdExclusive, toIndex: toIndex)
+             let topMessageId = transaction.getMessagesWithThreadId(peerId: peerId, namespace: Namespaces.Message.Cloud, threadId: threadId, from: MessageIndex.upperBound(peerId: peerId, namespace: Namespaces.Message.Cloud), includeFrom: false, to: MessageIndex.lowerBound(peerId: peerId, namespace: Namespaces.Message.Cloud), limit: 1).first?.id
+             
+@@ -441,10 +442,6 @@
+             guard let strongSelf = self else {
+                 return
+             }
+-            guard let inputPeer else {
+-                return
+-            }
+-
+             var revalidate = false
+ 
+             var unreadCountValue = strongSelf.unreadCountValue
+@@ -475,6 +472,10 @@
+                         revalidate = true
+                     }
+                 }
++            }
++
++            guard let inputPeer else {
++                return
+             }
+ 
+             if let subPeerId {
+diff --git a/submodules/TelegramCore/Sources/Utils/CanSendMessagesToPeer.swift b/submodules/TelegramCore/Sources/Utils/CanSendMessagesToPeer.swift
+--- a/submodules/TelegramCore/Sources/Utils/CanSendMessagesToPeer.swift
++++ b/submodules/TelegramCore/Sources/Utils/CanSendMessagesToPeer.swift
+@@ -7,6 +7,7 @@
+ }
+ 
+ public func canSendMessagesToPeer(_ peer: EnginePeer, ignoreDefault: Bool = false) -> Bool {
++    if jerkgramIsRetainedExcludedChat(peer._asPeer()) { return false }
+     if case let .user(user) = peer, user.addressName == "replies" {
+         return false
+     }
+@@ -23,6 +24,7 @@
+ }
+ 
+ public func canSendReactionsToPeer(_ peer: EnginePeer, ignoreDefault: Bool = false) -> Bool {
++    if jerkgramIsRetainedExcludedChat(peer._asPeer()) { return false }
+     switch peer {
+     case .user:
+         return !peer.isDeleted

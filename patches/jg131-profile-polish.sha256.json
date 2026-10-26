@@ -1,14 +1,22 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "0260ba2f586a60e0684b63a4cf8ba5b15065d820186e70a2a6abba36fdefd5c7",
+  "patch_sha256": "e1bbb676161da6dc16e87e84a8db2695289317e6091b2b3a3648c7b8354fec17",
   "owners": {
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift": {
       "before_sha256": "7b0d1c3e6742e3721c007f7424d86dc1b24c00553d932e2e2482469a7e10a5fe",
-      "after_sha256": "a228dd8dc3d5c23b69c903c5810fec1193b09933405872ca532fc061e4d074df"
+      "after_sha256": "e603047509b97e1ee44557676432eb1499ed455af2dd61ef59de6bc33815b760"
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": {
       "before_sha256": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
       "after_sha256": "b8b264030e0f7591f75b69fbab3c76e3d8e4537af9b9938e7b030f95e8b8a714"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift": {
+      "before_sha256": "dea90fd7341897da7171284f48ec779091eb0bf925ac09442692c898ffd5a535",
+      "after_sha256": "3da8405c7e7167195a032c12ac5291050bb57837a69c1697157ab64af9881472"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift": {
+      "before_sha256": "1af032e878142782a75d5a169889d25dee90faad9d0010d8de5a77db3da48576",
+      "after_sha256": "0aa8ab1d71f44536ef8f3633ba29097240b8e01324bf534c29fc1a61b52336cb"
     }
   }
 }

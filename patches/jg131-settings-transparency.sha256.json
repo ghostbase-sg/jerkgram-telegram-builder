@@ -1,6 +1,6 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "347d1e59d8a40906a9182832b4dbe4045c9c4c1e35a9de2fd199acc5ab3b7a34",
+  "patch_sha256": "9453ace1c16df61bbdcb7e42d6da92590ba6b035820d44f33aa8b944b94e8370",
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
       "before_sha256": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
@@ -24,7 +24,7 @@
     },
     "submodules/ItemListUI/Sources/ItemListControllerNode.swift": {
       "before_sha256": "4148dfb0bdeb1abe436759b6d28946b9757e4d26d158aa93d2da40d68f94117f",
-      "after_sha256": "48f8fff447eaa56ce2728e5c4c5ccfe6b645b04569e36d2d759812df0b675ba0"
+      "after_sha256": "0fc8ae922a8a83c6bea19b1e449a63c7c74a410d0a4f8a917507bd4cdca1e8cf"
     },
     "submodules/Components/ViewControllerComponent/Sources/ViewControllerComponent.swift": {
       "before_sha256": "7cc622777cbef939eb2377707bdeb9213112389c5ee488ef477d5fd96ed5eee6",
@@ -32,7 +32,7 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
       "before_sha256": "7f434c7dfd888a08793426833af5fefb40c23b6ac33f3bad801861424e7632f0",
-      "after_sha256": "4b63fead057757a428f695cfe8d56d60f1e0ad3eb4fe7ec56f15859e130343ea"
+      "after_sha256": "1a1f6d442c2e9bdd592ba0db7c52c5ddbb3be5aa9d4c2ae88703a3780e913583"
     },
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
       "before_sha256": "5f19a50e24c2ba3347419dbb68d07de100e6391f968785b75e9e3489bdad369f",
@@ -69,6 +69,18 @@
     "submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sources/ThemeColorsGridController.swift": {
       "before_sha256": "df4e57eba4c1c86af12c3f442ed4e00a2a5f961709e5c23596b0354bcede3605",
       "after_sha256": "f32fa366328ef465735d548e0a836a9bc408d8601c1fce975d1f95308e4105da"
+    },
+    "submodules/TelegramPresentationData/Sources/Resources/PresentationResourcesItemList.swift": {
+      "before_sha256": "6a298ed0e41e7c3d5710760f8e9ccfcfce5c18834d1786c549bf57a60bc20936",
+      "after_sha256": "da8983592249952d25c72dc7dc2c8f9490b7a78aaf23a70e6241c531f706a417"
+    },
+    "submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift": {
+      "before_sha256": "e499ba2fd09cc12915cbe5427de3739347ef23c8c7731903cbfeadbff29ffdcc",
+      "after_sha256": "179a5ef9658377c372a75ad616c3cf1158f41f90499babcd0946b02cd936742c"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
+      "before_sha256": "edb079507cb49747116db246c8deb7a2684ad677ef98ff8c43b04cc8a9195380",
+      "after_sha256": "f713b5dde2ab5451991210c8d7b8e1e77a4746277b914f58a90596e4b9abfe3b"
     }
   }
 }
