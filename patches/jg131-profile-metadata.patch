@@ -9,7 +9,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
 +private enum JerkgramProfileMetadataPolicy {
 +    // Production DC locations: https://docs.pyrogram.org/faq/what-are-the-ip-addresses-of-telegram-data-centers
 +    // This identifies avatar storage, never the person's location or phone country.
-+    static func avatarDataCenterText(_ id: Int32, isRussian: Bool) -> String {
++    static func avatarDataCenterText(_ id: Int, isRussian: Bool) -> String {
 +        let country: String
 +        switch id {
 +        case 1, 3:

@@ -21,3 +21,7 @@ Unchanged: valid Telegram-provided registration month takes precedence; otherwis
 Source contracts, exact stage apply/reverse/refusal tests and focused regressions pass locally. Native Swift fixtures cannot run on this Linux host; the workflow runs them, parses every changed Swift owner, then compiles IPA. Compilation and runtime behavior are not proven by local source checks.
 
 After a successful build: inspect Profile Edit bio edges, footer and placeholders; leave nested settings open for several seconds, navigate back/forward, rotate, scroll, and toggle existing translucency. In a disposable group and supergroup, enable retention before exclusion, then read to bottom, reopen/restart and verify no repeated unread jump. Copy/select/forward text and cached media out; verify reactions, votes and sends into the excluded chat stay blocked. Check avatar DC labels and compare scrolling on the same device/history with Build170. Account registration remains approximate.
+
+## Compile repair after first Build171 run
+
+Run40265660738 passed source/native preflight, then failed full PeerInfoScreen compilation because CloudPeerPhotoSizeMediaResource.datacenterId is Int, while the new formatter expected Int32. The formatter now accepts Int directly. The native DC fixture also passes explicitly typed Int values, so preflight catches this API-boundary type mismatch. Regenerated profile metadata stage hashes. Other feature behavior and build number remain unchanged; full IPA compilation must be rerun.

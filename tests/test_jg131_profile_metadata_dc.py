@@ -14,6 +14,7 @@ OWNER = 'submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerIn
 class AvatarDataCenterTests(unittest.TestCase):
     def test_avatar_dc_row_uses_country_formatter_and_explicit_avatar_label(self):
         source = (SOURCE / OWNER).read_text()
+        self.assertTrue('static func avatarDataCenterText(_ id: Int, isRussian: Bool)' in source, 'formatter must accept the resource DC Int without narrowing')
         row = source.split('if ghostBaseMetricsSettings.showDCs,', 1)[1].split('if ghostBaseMetricsSettings.showRegistration,', 1)[0]
         self.assertIn('JerkgramProfileMetadataPolicy.avatarDataCenterText(resource.datacenterId, isRussian: isRussian)', row)
         self.assertIn('label: isRussian ? "DC аватара" : "Avatar DC"', row)
@@ -24,7 +25,8 @@ class AvatarDataCenterTests(unittest.TestCase):
         source = (SOURCE / OWNER).read_text()
         policy = source.split('// JG170 metadata policy begin\n',1)[1].split('// JG170 metadata policy end',1)[0]
         fixture = '''
-let examples: [(Int32, String, String)] = [
+// The production photo resource exposes Int; literals alone hid the old Int32 mismatch.
+let examples: [(Int, String, String)] = [
     (1, "1 · USA", "1 · США"), (2, "2 · Netherlands", "2 · Нидерланды"),
     (3, "3 · USA", "3 · США"), (4, "4 · Netherlands", "4 · Нидерланды"),
     (5, "5 · Singapore", "5 · Сингапур"), (0, "0", "0"), (6, "6", "6"), (-1, "-1", "-1")
