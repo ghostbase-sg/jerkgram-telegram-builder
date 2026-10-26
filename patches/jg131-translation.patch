@@ -457,7 +457,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
-@@ -280,12 +280,118 @@
+@@ -280,12 +280,145 @@
      }
  }
  
@@ -487,7 +487,12 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
 +}
 +
 +public func jerkgramLocalTranslationIsCurrent(_ translation: TranslationMessageAttribute, message: Message, toLang: String) -> Bool {
-+    return translation.toLang == toLang && translation.jerkgramSourceFingerprint != nil && translation.isValidForMessage(message)
++    return translation.toLang == toLang && !translation.jerkgramUnavailable && translation.jerkgramSourceFingerprint != nil && translation.isValidForMessage(message)
++}
++public func jerkgramLocalTranslationUnavailable(_ message: Message, toLang: String?) -> Bool {
++    guard let toLang,
++          let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute else { return false }
++    return translation.jerkgramUnavailable && translation.toLang == toLang && translation.isValidForMessage(message)
 +}
 +// JG174 source fingerprint end
 +
@@ -517,20 +522,42 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
 +    return jerkgramTranslationSourceFingerprint(original) == jerkgramTranslationSourceFingerprint(current)
 +}
 +
++private func jerkgramStoreLocalTranslationFailure(account: Account, original: Message, toLang: String, cancelled: Atomic<Bool>) -> Signal<Bool, NoError> {
++    return account.postbox.transaction { transaction -> Bool in
++        guard !cancelled.with({ $0 }) else { return false }
++        transaction.updateMessage(original.id, update: { current in
++            guard jerkgramTranslationSourceMatches(original, current) else { return .skip }
++            let fingerprint = jerkgramTranslationSourceFingerprint(original)
++            if let previous = current.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute,
++               previous.jerkgramUnavailable, previous.toLang == toLang, previous.jerkgramSourceFingerprint == fingerprint { return .skip }
++            var attributes = current.attributes.filter { !($0 is TranslationMessageAttribute) }
++            // Explicit failure state, never an untranslated original posing as a result.
++            attributes.append(TranslationMessageAttribute(text: "", entities: [], toLang: toLang, jerkgramSourceFingerprint: fingerprint, jerkgramUnavailable: true))
++            return .update(StoreMessage(id: current.id, customStableId: nil, globallyUniqueId: current.globallyUniqueId, groupingKey: current.groupingKey, threadId: current.threadId, timestamp: current.timestamp, flags: StoreMessageFlags(current.flags), tags: current.tags, globalTags: current.globalTags, localTags: current.localTags, forwardInfo: current.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: current.author?.id, text: current.text, attributes: attributes, media: current.media))
++        })
++        return false
++    }
++}
++
 +private func jerkgramTranslateLocalMessages(account: Account, messages: [Message], toLang: String) -> Signal<Void, TranslationError> {
 +    guard let service = engineExperimentalInternalTranslationService else { return .fail(.generic) }
 +    guard messages.count <= 64 else { return .fail(.textTooLong) }
 +    let signals: [Signal<Bool, NoError>] = messages.map { original in
++        let cancelled = Atomic(value: false)
 +        guard let texts = jerkgramLocalMessageTexts(original), !texts.isEmpty,
-+              texts.count <= 16, texts.allSatisfy({ !$0.isEmpty }) else { return .single(false) }
++              texts.count <= 16, texts.allSatisfy({ !$0.isEmpty }) else {
++            return jerkgramStoreLocalTranslationFailure(account: account, original: original, toLang: toLang, cancelled: cancelled)
++            |> afterDisposed { _ = cancelled.swap(true) }
++        }
 +        var mapped: [AnyHashable: String] = [:]
 +        let keys = texts.indices.map { AnyHashable("jg-local:\(account.peerId.toInt64()):\(original.id.peerId.toInt64()):\(original.id.namespace):\(original.id.id):\($0)") }
 +        for (index, key) in keys.enumerated() { mapped[key] = texts[index] }
 +        // Empty source requests local per-message recognition, not chat-majority language.
-+        let cancelled = Atomic(value: false)
 +        return service.translate(texts: mapped, fromLang: "", toLang: toLang)
 +        |> mapToSignal { result -> Signal<Bool, NoError> in
-+            guard let result, keys.allSatisfy({ result[$0]?.isEmpty == false }) else { return .single(false) }
++            guard let result, keys.allSatisfy({ result[$0]?.isEmpty == false }) else {
++                return jerkgramStoreLocalTranslationFailure(account: account, original: original, toLang: toLang, cancelled: cancelled)
++            }
 +            let translated = keys.map { result[$0]! }
 +            return account.postbox.transaction { transaction -> Bool in
 +                guard !cancelled.with({ $0 }) else { return false }
@@ -901,7 +928,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
  import ChatHistoryEntry
  import ChatOverscrollControl
  import ChatBotInfoItem
-@@ -845,7 +846,20 @@
+@@ -845,7 +846,21 @@
      
      private let clientId: Atomic<Int32>
      
@@ -912,6 +939,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
 +    private var jerkgramTranslationCooldown: [MessageId: Double] = [:]
 +    private var jerkgramTranslationGeneration = 0
 +    private var jerkgramTranslationFailureShown = false
++    private var jerkgramTranslationNeedsImmediateRefresh = false
 +    private var jerkgramTranslationObservers: [NSObjectProtocol] = []
 +    private var translationLang: (fromLang: String?, toLang: String)? {
 +        didSet {
@@ -923,7 +951,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
      
      private var allowDustEffect: Bool = true
      private var dustEffectLayer: DustEffectLayer?
-@@ -1111,9 +1125,43 @@
+@@ -1111,9 +1126,43 @@
              context?.account.viewTracker.refreshStoriesForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
          }
          self.translationProcessingManager.process = { [weak self, weak context] messageIds in
@@ -964,19 +992,20 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
 +                guard let self else { return }
 +                if name == UIApplication.willResignActiveNotification { self.cancelJerkgramTranslations() }
 +                else if self.isInHierarchy {
-+                    self.translationProcessingManager.add(self.jerkgramVisibleTranslationIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
++                    self.translationProcessingManager.process?(Set(self.jerkgramVisibleTranslationIds.map { MessageAndThreadId(messageId: $0, threadId: nil) }))
 +                }
 +            }))
          }
          self.factCheckProcessingManager.process = { [weak context] messageIds in
              if let context {
-@@ -1434,7 +1482,27 @@
+@@ -1434,7 +1483,28 @@
          self.loadNextGenericReactionEffect(context: context)
      }
      
 +    private func cancelJerkgramTranslations() {
 +        self.jerkgramTranslationGeneration += 1
 +        self.jerkgramTranslationFailureShown = false
++        self.jerkgramTranslationNeedsImmediateRefresh = true
 +        for request in self.jerkgramTranslationRequests.values { request.dispose() }
 +        self.jerkgramTranslationRequests.removeAll()
 +        self.jerkgramTranslationCooldown.removeAll()
@@ -989,7 +1018,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
 +
 +    override public func didEnterHierarchy() {
 +        super.didEnterHierarchy()
-+        self.translationProcessingManager.add(self.jerkgramVisibleTranslationIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
++        self.translationProcessingManager.process?(Set(self.jerkgramVisibleTranslationIds.map { MessageAndThreadId(messageId: $0, threadId: nil) }))
 +    }
 +
      deinit {
@@ -998,7 +1027,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
          self.historyDisposable.dispose()
          self.readHistoryDisposable.dispose()
          self.interactiveReadActionDisposable?.dispose()
-@@ -2336,7 +2404,7 @@
+@@ -2336,7 +2406,7 @@
                  )
                  
                  var translateToLanguage: (fromLang: String, toLang: String)?
@@ -1007,7 +1036,34 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
                      var languageCode = translationState.toLang ?? chatPresentationData.strings.baseLanguageCode
                      let rawSuffix = "-raw"
                      if languageCode.hasSuffix(rawSuffix) {
-@@ -3147,6 +3215,11 @@
+@@ -2492,11 +2562,6 @@
+                 
+                 var scrollAnimationCurve: ListViewAnimationCurve? = nil
+                 if let strongSelf = self, case .default = source {
+-                    if let translateToLanguage {
+-                        strongSelf.translationLang = (fromLang: translateToLanguage.fromLang, toLang: translateToLanguage.toLang)
+-                    } else {
+-                        strongSelf.translationLang = nil
+-                    }
+                     if strongSelf.appliedScrollToMessageId == nil, let scrollToMessageId = scrollToMessageId {
+                         updatedScrollPosition = .index(subject: MessageHistoryScrollToSubject(index: .message(scrollToMessageId), quote: nil), position: .center(.top), directionHint: .Up, animated: true, highlight: false, displayLink: true, setupReply: false)
+                         scrollAnimationCurve = .Spring(duration: 0.4)
+@@ -2699,6 +2764,14 @@
+                     if strongSelf.appliedScrollToMessageId != scrollToMessageId {
+                         strongSelf.appliedScrollToMessageId = scrollToMessageId
+                     }
++                    // JG174 main-queue translation generation ownership
++                    if case .default = source {
++                        if let translateToLanguage {
++                            strongSelf.translationLang = (fromLang: translateToLanguage.fromLang, toLang: translateToLanguage.toLang)
++                        } else {
++                            strongSelf.translationLang = nil
++                        }
++                    }
+                     strongSelf.enqueueHistoryViewTransition(mappedTransition)
+                 }
+             }
+@@ -3147,6 +3220,11 @@
          let isLoading = historyView.originalView.isLoading
          let translateToLanguage = transactionState.historyView.associatedData.translateToLanguage
          
@@ -1019,7 +1075,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
          if let visible = displayedRange.visibleRange {
              let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
              if indexRange.0 > indexRange.1 {
-@@ -3155,6 +3228,7 @@
+@@ -3155,6 +3233,7 @@
              }
              
              var messageIdsToTranslate: [MessageId] = []
@@ -1027,7 +1083,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
              var messageIdsToFactCheck: [MessageId] = []
              if let translateToLanguage {
                  let extendedRange: Int = 2
-@@ -3175,15 +3249,18 @@
+@@ -3175,15 +3254,18 @@
                              guard message.author?.id != self.context.account.peerId else {
                                  continue
                              }
@@ -1047,7 +1103,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
                              }
                          case let .MessageGroupEntry(_, messages, _):
                              for (message, _, _, _, _) in messages {
-@@ -3193,11 +3270,12 @@
+@@ -3193,11 +3275,12 @@
                                  guard message.author?.id != self.context.account.peerId else {
                                      continue
                                  }
@@ -1061,21 +1117,32 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
                                  }
                              }
                          default:
-@@ -3589,6 +3667,18 @@
+@@ -3589,6 +3672,29 @@
              if !messageIdsWithInactiveExtendedMedia.isEmpty {
                  self.extendedMediaProcessingManager.update(Set(messageIdsWithInactiveExtendedMedia.map { MessageAndThreadId(messageId: $0, threadId: nil) }))
              }
++            var changedTranslationSources = Set<MessageId>()
 +            for (id, previous) in self.jerkgramVisibleTranslationSources {
 +                if let updated = translationSources[id], !jerkgramTranslationSourceMatches(previous, updated) {
 +                    self.jerkgramTranslationRequests.removeValue(forKey: id)?.dispose()
 +                    self.jerkgramTranslationCooldown.removeValue(forKey: id)
++                    changedTranslationSources.insert(id)
 +                }
++            }
++            if self.jerkgramTranslationNeedsImmediateRefresh {
++                changedTranslationSources.formUnion(messageIdsToTranslate)
++                self.jerkgramTranslationNeedsImmediateRefresh = false
 +            }
 +            self.jerkgramVisibleTranslationSources = translationSources
 +            self.jerkgramVisibleTranslationIds = Set(messageIdsToTranslate)
 +            self.jerkgramTranslationCooldown = self.jerkgramTranslationCooldown.filter { self.jerkgramVisibleTranslationIds.contains($0.key) }
 +            for id in Array(self.jerkgramTranslationRequests.keys) where !self.jerkgramVisibleTranslationIds.contains(id) {
 +                self.jerkgramTranslationRequests.removeValue(forKey: id)?.dispose()
++            }
++            // A same-id edit/new generation must not be lost to the old source's
++            // one-second throttle. Ordinary scroll batching remains throttled.
++            if !changedTranslationSources.isEmpty {
++                self.translationProcessingManager.process?(Set(changedTranslationSources.map { MessageAndThreadId(messageId: $0, threadId: nil) }))
 +            }
              if !messageIdsToTranslate.isEmpty {
                  self.translationProcessingManager.add(messageIdsToTranslate.map { MessageAndThreadId(messageId: $0, threadId: nil) })
@@ -1100,10 +1167,11 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
  import Postbox
  
  public class TranslationMessageAttribute: MessageAttribute, Equatable {
-@@ -24,6 +25,28 @@
+@@ -24,6 +25,29 @@
      public let text: String
      public let entities: [MessageTextEntity]
      public let toLang: String
++    public let jerkgramUnavailable: Bool
 +    public let jerkgramSourceFingerprint: String?
 +    private let jerkgramSourceLock = NSLock()
 +    private weak var jerkgramCachedMessage: Message?
@@ -1129,42 +1197,47 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
  
      public let additional: [Additional]
      public let pollSolution: Additional?
-@@ -41,11 +64,13 @@
+@@ -41,11 +65,15 @@
          additional:[Additional] = [],
          pollSolution: Additional? = nil,
          toLang: String,
 -        instantPage: InstantPage? = nil
 +        instantPage: InstantPage? = nil,
-+        jerkgramSourceFingerprint: String? = nil
++        jerkgramSourceFingerprint: String? = nil,
++        jerkgramUnavailable: Bool = false
      ) {
          self.text = text
          self.entities = entities
          self.toLang = toLang
 +        self.jerkgramSourceFingerprint = jerkgramSourceFingerprint
++        self.jerkgramUnavailable = jerkgramUnavailable
          self.additional = additional
          self.pollSolution = pollSolution
          self.instantPage = instantPage
-@@ -56,6 +81,7 @@
+@@ -56,6 +84,8 @@
          self.entities = decoder.decodeObjectArrayWithDecoderForKey("entities")
          self.additional = decoder.decodeObjectArrayWithDecoderForKey("additional")
          self.toLang = decoder.decodeStringForKey("toLang", orElse: "")
 +        self.jerkgramSourceFingerprint = decoder.decodeOptionalStringForKey("jg174source")
++        self.jerkgramUnavailable = decoder.decodeBoolForKey("jg174unavailable", orElse: false)
          self.pollSolution = decoder.decodeObjectForKey("pollSolution") as? Additional
          self.instantPage = decoder.decodeObjectForKey("ipage", decoder: { InstantPage(decoder: $0) }) as? InstantPage
      }
-@@ -64,6 +90,8 @@
+@@ -64,6 +94,9 @@
          encoder.encodeString(self.text, forKey: "text")
          encoder.encodeObjectArray(self.entities, forKey: "entities")
          encoder.encodeString(self.toLang, forKey: "toLang")
++        encoder.encodeBool(self.jerkgramUnavailable, forKey: "jg174unavailable")
 +        if let fingerprint = self.jerkgramSourceFingerprint { encoder.encodeString(fingerprint, forKey: "jg174source") }
 +        else { encoder.encodeNil(forKey: "jg174source") }
          encoder.encodeObjectArray(self.additional, forKey: "additional")
  
          if let pollSolution {
-@@ -79,6 +107,7 @@
+@@ -79,6 +112,8 @@
      }
  
      public static func ==(lhs: TranslationMessageAttribute, rhs: TranslationMessageAttribute) -> Bool {
++        if lhs.jerkgramUnavailable != rhs.jerkgramUnavailable { return false }
 +        if lhs.jerkgramSourceFingerprint != rhs.jerkgramSourceFingerprint { return false }
          if lhs.text != rhs.text {
              return false
@@ -1181,6 +1254,15 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentN
                                  rawText = attribute.text
                                  messageEntities = attribute.entities
                                  if !isSummarized {
+@@ -1284,6 +1284,8 @@
+         guard let item = self.item else {
+             return
+         }
++        let preservesOtherLoading = showTextAsPlaceholder || item.controllerInteraction.summarizedMessageIds.contains(item.message.id)
++        let isTranslating = isTranslating && (preservesOtherLoading || !jerkgramLocalTranslationUnavailable(item.message, toLang: item.associatedData.translateToLanguage))
+         var rects = self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []
+         if isTranslating, !rects.isEmpty {
+             if showTextAsPlaceholder {
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
 --- a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
@@ -1193,6 +1275,14 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentN
                              pollTitleText = attribute.text
                              pollTitleEntities = attribute.entities
                              pollOptions = attribute.additional
+@@ -3504,6 +3504,7 @@
+         guard let item = self.item else {
+             return
+         }
++        let isTranslating = isTranslating && !jerkgramLocalTranslationUnavailable(item.message, toLang: item.associatedData.translateToLanguage)
+         var rects: [[CGRect]] = []
+         let titleRects = (self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []).map { self.textNode.textNode.view.convert($0, to: self.view) }
+         rects.append(titleRects)
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
 --- a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
@@ -1205,6 +1295,14 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNod
                                          textString = NSAttributedString(string: attribute.text, font: textFont, textColor: messageTheme.primaryTextColor)
                                          isTranslating = false
                                          break
+@@ -1500,6 +1500,7 @@
+         guard let arguments = self.arguments else {
+             return
+         }
++        let isTranslating = isTranslating && !jerkgramLocalTranslationUnavailable(arguments.message, toLang: arguments.associatedData.translateToLanguage)
+         var rects: [[CGRect]] = []
+         let titleRects = (self.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []).map { self.textNode.view.convert($0, to: self.textClippingNode.view) }
+         rects.append(titleRects)
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
 --- a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
@@ -1225,7 +1323,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
          
          if currentTranslateToLanguageUpdated || messageUpdated, let message = interfaceState.pinnedMessage?.message {
 -            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage?.toLang {
-+            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage?.toLang, translation.isValidForMessage(message) {
++            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage?.toLang, !translation.jerkgramUnavailable, translation.isValidForMessage(message) {
              } else if let translateToLanguage {
                  self.translationDisposable.set(translateMessageIds(context: self.context, messageIds: [message.id], fromLang: translateToLanguage.fromLang, toLang: translateToLanguage.toLang).startStrict())
              }
@@ -1238,3 +1336,96 @@ diff --git a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
                          text = attribute.text
                          messageEntities = attribute.entities
                          break
+diff --git a/submodules/GalleryUI/Sources/GalleryController.swift b/submodules/GalleryUI/Sources/GalleryController.swift
+--- a/submodules/GalleryUI/Sources/GalleryController.swift
++++ b/submodules/GalleryUI/Sources/GalleryController.swift
+@@ -316,7 +316,7 @@
+             if entry.mediaSubject == nil {
+                 if let translateToLanguage, !text.isEmpty {
+                     for attribute in message.attributes {
+-                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(message) {
+                             text = attribute.text
+                             entities = attribute.entities
+                             break
+@@ -392,7 +392,7 @@
+             if entry.mediaSubject == nil {
+                 if let translateToLanguage, !text.isEmpty {
+                     for attribute in message.attributes {
+-                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(message) {
+                             text = attribute.text
+                             entities = attribute.entities
+                             break
+diff --git a/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift b/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
+--- a/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
++++ b/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
+@@ -1005,7 +1005,7 @@
+             }
+             if let translateToLanguage, mediaSubject == nil && !text.isEmpty {
+                 for attribute in message.attributes {
+-                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(message) {
+                         text = attribute.text
+                         entities = attribute.entities
+                         break
+diff --git a/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift b/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
+--- a/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
++++ b/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
+@@ -465,7 +465,7 @@
+                                         
+                                         if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
+                                             var messageText = message.text
+-                                            if !messageText.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang {
++                                            if !messageText.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang, translation.isValidForMessage(message) {
+                                                 messageText = translation.text
+                                             }
+                                             
+@@ -501,7 +501,7 @@
+                                 case let .TextUrl(url):
+                                     var messageText = message.text
+                                     var entity = entity
+-                                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang {
++                                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang, translation.isValidForMessage(message) {
+                                         messageText = translation.text
+                                         if entities.count == translation.entities.count, let index = entities.firstIndex(of: entity), index < translation.entities.count {
+                                             entity = translation.entities[index]
+diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+--- a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+@@ -678,7 +678,7 @@
+                         }
+                         if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                             storeMessageTextInPasteboard(summary.text, entities: summary.entities)
+-                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
++                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty, translation.isValidForMessage(message) {
+                             storeMessageTextInPasteboard(translation.text, entities: translation.entities)
+                         } else {
+                             storeMessageTextInPasteboard(message.text, entities: messageEntities)
+@@ -1473,7 +1473,7 @@
+                                         }
+                                         if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                                             storeMessageTextInPasteboard(summary.text, entities: summary.entities)
+-                                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
++                                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty, translation.isValidForMessage(message) {
+                                             storeMessageTextInPasteboard(translation.text, entities: translation.entities)
+                                         } else {
+                                             storeMessageTextInPasteboard(messageText, entities: messageEntities)
+@@ -1571,7 +1571,7 @@
+                         }
+                         if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                             text = summary.text
+-                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
++                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty, translation.isValidForMessage(message) {
+                             text = translation.text
+                         }
+                         
+@@ -2468,7 +2468,7 @@
+                             }
+                             if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                                 storeMessageTextInPasteboard(summary.text, entities: summary.entities)
+-                            } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
++                            } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty, translation.isValidForMessage(message) {
+                                 storeMessageTextInPasteboard(translation.text, entities: translation.entities)
+                             } else {
+                                 storeMessageTextInPasteboard(message.text, entities: messageEntities)
