@@ -1,10 +1,10 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "9fbfe48e3143847124a7b48ad63750e2a08ccf9d3920f80b8645e62d9bab3fe7",
+  "patch_sha256": "8ee2317a961b5ff68c24dad3b80c5bbb6880ef09d374a55ad16f3068cbcccc46",
   "owners": {
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift": {
       "before_sha256": "83c3693a0e0fb59d14f9321a11224166cd6a5cbd14f80f4985d3766e6e198ce0",
-      "after_sha256": "7681d728da8082cea0478a71445cbc9dc2ae24fae7ede90a2f4212fd7894eb88"
+      "after_sha256": "10eb640ac348c3ca2054e78580dabef0e0ade5303781d8ca2bdf4889a8da3b7d"
     }
   }
 }

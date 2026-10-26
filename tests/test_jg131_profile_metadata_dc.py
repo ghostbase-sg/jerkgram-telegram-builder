@@ -12,12 +12,12 @@ SOURCE = Path(os.environ.get('JG_METADATA_SOURCE', BASE / 'work/swiftgram-src'))
 OWNER = 'submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift'
 
 class AvatarDataCenterTests(unittest.TestCase):
-    def test_avatar_dc_row_uses_country_formatter_and_explicit_avatar_label(self):
+    def test_avatar_dc_row_uses_country_formatter_and_dc_label(self):
         source = (SOURCE / OWNER).read_text()
         self.assertTrue('static func avatarDataCenterText(_ id: Int, isRussian: Bool)' in source, 'formatter must accept the resource DC Int without narrowing')
         row = source.split('if ghostBaseMetricsSettings.showDCs,', 1)[1].split('if ghostBaseMetricsSettings.showRegistration,', 1)[0]
         self.assertIn('JerkgramProfileMetadataPolicy.avatarDataCenterText(resource.datacenterId, isRussian: isRussian)', row)
-        self.assertIn('label: isRussian ? "DC аватара" : "Avatar DC"', row)
+        self.assertIn('label: "DC"', row)
         self.assertEqual(row.count('UIPasteboard.general.string = dcText'), 2)
 
     @unittest.skipUnless(shutil.which('swiftc'), 'Swift compiler unavailable; native DC behavior unverified')

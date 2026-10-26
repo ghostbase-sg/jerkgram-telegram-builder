@@ -103,7 +103,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
          if ghostBaseMetricsSettings.showIds {
              let idText: String
              if case let .channel(channel) = peer {
-@@ -154,11 +242,11 @@
+@@ -154,7 +242,7 @@
             let representation = peer.smallProfileImage,
             let resource = representation.resource
                  as? CloudPeerPhotoSizeMediaResource {
@@ -112,11 +112,6 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
  
              metricItems.append(PeerInfoScreenLabeledValueItem(
                      id: itemId,
--                    label: "DC",
-+                    label: isRussian ? "DC аватара" : "Avatar DC",
-                     text: dcText,
-                     textColor: .primary,
-                     action: { _, _ in
 @@ -175,40 +263,32 @@
              itemId += 1
          }
