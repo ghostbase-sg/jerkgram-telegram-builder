@@ -1,6 +1,6 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "ae6eaad112302da3c409eb3e3f2aeffb49085f61780d2d87fa536c2df3b6e6e6",
+  "patch_sha256": "d66590ac8571d590e9ec59f802a18b2addaf3c922e4c47f109cb58b90f189a94",
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
       "before_sha256": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
@@ -32,15 +32,15 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
       "before_sha256": "7f434c7dfd888a08793426833af5fefb40c23b6ac33f3bad801861424e7632f0",
-      "after_sha256": "4197ddf63e8a673370df63843990fc84b63398959bd285659f9a73ecb61f80dc"
+      "after_sha256": "3f91dcb1801926d6352710ee32a2463c3f3c6700fb681512b050e813a815a927"
     },
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
       "before_sha256": "5f19a50e24c2ba3347419dbb68d07de100e6391f968785b75e9e3489bdad369f",
-      "after_sha256": "20863661f164c725162abcb656598307e3985d0bd1eadb029e7c08037c6659aa"
+      "after_sha256": "9d6321f7fbb266da8a6dc661eb1587f0ef05cc9b7dc683d4436342a4ca2d9f1a"
     },
     "submodules/TelegramUI/Sources/ChatController.swift": {
       "before_sha256": "9c8ee8652379ebff12ff78ba323b3326e867fc8c831bd84d338448a2bf72d022",
-      "after_sha256": "a6a8fd925abc7385d09359e63ec9102157f44d5fadca26cd970d16aa43b099b4"
+      "after_sha256": "64a50ca0022a82d9bf928a74e35e2173dae815ac706d24d4f999d158636bb830"
     },
     "submodules/SettingsUI/Sources/Notifications/Exceptions/NotificationExceptions.swift": {
       "before_sha256": "e74cd54f81d72cfeea7f65e5e8bb0b5d70f1d80d276a08a76c3e8007cfcd5c9e",
@@ -56,7 +56,7 @@
     },
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": {
       "before_sha256": "8ed660ebeeb5c004414edd30a9009c0c419ac0ef7a554c19b40381681bdb5ba4",
-      "after_sha256": "fcfc1db96ddc39bd30ba777866cee558dec2f54b806a371010d95ab9b5d22c8e"
+      "after_sha256": "b7ae323070e4a5eafddf19adb6c63d67507fed9a3f5b437f2577a9393cb2c6d3"
     },
     "submodules/TelegramUI/Sources/SharedAccountContext.swift": {
       "before_sha256": "5fb6afb2aebf2910a252b22f938f3806ca4383adac759b3119e53af453e74d1b",
@@ -80,7 +80,11 @@
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
       "before_sha256": "edb079507cb49747116db246c8deb7a2684ad677ef98ff8c43b04cc8a9195380",
-      "after_sha256": "deced7c711a47cf0cab641f86865792332c64f76ffc27af3414d94ee3a939315"
+      "after_sha256": "fc4a38b6d59decdc66d9e5781655132f341b2c2c96ce492bfa9a2134b83f1892"
+    },
+    "submodules/AccountContext/Sources/UniversalVideoNode.swift": {
+      "before_sha256": "21f886810814450d55efd01f681fff13645879504dae703a1f2fa48b0bcf6075",
+      "after_sha256": "c9b65b46f36eba3c61f371da037ef969c3d01c7cd74a10adc005fad5f2848912"
     }
   }
 }

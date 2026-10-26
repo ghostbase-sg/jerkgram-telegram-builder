@@ -12,6 +12,7 @@ import materialize_jg131_profile_metadata as metadata
 import materialize_jg131_excluded_history as excluded
 import materialize_jg131_settings_transparency as settings
 import materialize_jg131_performance_followup as performance
+import materialize_jg131_translation as translation
 
 STAGES = (
     (polish, polish.apply_profile_polish, polish.verify_profile_polish),
@@ -19,6 +20,7 @@ STAGES = (
     (excluded, excluded.apply_excluded_history, excluded.verify_excluded_history),
     (settings, settings.apply_settings_transparency, settings.verify_settings_transparency),
     (performance, performance.apply_performance_followup, performance.verify_performance_followup),
+    (translation, translation.apply_translation, translation.verify_translation),
 )
 
 def _check_pins():

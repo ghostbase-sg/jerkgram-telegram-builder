@@ -1,10 +1,22 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "8ee2317a961b5ff68c24dad3b80c5bbb6880ef09d374a55ad16f3068cbcccc46",
+  "patch_sha256": "09fc9ec14f860c018379d520b0f7291b40b3579a0d40e58004a657fe346b4013",
   "owners": {
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift": {
       "before_sha256": "83c3693a0e0fb59d14f9321a11224166cd6a5cbd14f80f4985d3766e6e198ce0",
-      "after_sha256": "10eb640ac348c3ca2054e78580dabef0e0ade5303781d8ca2bdf4889a8da3b7d"
+      "after_sha256": "7d125f8e3c372324693c726364ead0fc1f3d22ca3046761161e31c4b6ac62c93"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenOpenPeerInfoContextMenu.swift": {
+      "before_sha256": "261b05c8e77f8e26a042cae0c5c6d8132f497546a581be87f020f90ad583fd56",
+      "after_sha256": "772b38670b3479076bc8835f8e438b222933fd5b8ae7fbe8ef23fc7dc22e7eb4"
+    },
+    "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
+      "before_sha256": "e5c6624cbf697bfb37f214a1b0622183da957c0026102aecdd240b4faeef5283",
+      "after_sha256": "ea91760591694cc8e667a8ad49e3a7db1a20fdc65b9d11036a6b206b32067a10"
+    },
+    "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift": {
+      "before_sha256": "074d1991e7358149c0412096cb028390fafe30f2613b4c0d5d6f950b40ad2146",
+      "after_sha256": "21bfd31d49bf71985fd9a6371219c0379c169ec5ffc0c465f7280a328043d59c"
     }
   }
 }

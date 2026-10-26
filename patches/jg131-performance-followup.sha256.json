@@ -1,6 +1,6 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "78cf78067f54ed8c4bbccd46dc91aa46bb0c28c71ebdbe979c0a8316e7e49e56",
+  "patch_sha256": "7d3a4ab1b164bb1bdea04b061879ad282ae176bcc265561e798236b5fa3816ed",
   "owners": {
     "submodules/TelegramCore/Sources/Account/Account.swift": {
       "before_sha256": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
@@ -17,6 +17,10 @@
     "submodules/JerkgramCore/Sources/JerkgramStore.swift": {
       "before_sha256": "d500ce51139466e96ead9846d8239ca29ab70ff236f28121550f9295989b067e",
       "after_sha256": "92fc4318bc5b060a21a0d12ce88bc387905c2754602e302fcc67b2cb8b6a03f1"
+    },
+    "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift": {
+      "before_sha256": "b024bb02f020dd0a63e45838212d7219e466f0ffb773ab2199751238c2bddb2c",
+      "after_sha256": "59c6c220e05e52d8a4bfbe139896fc3cda8b84c1840f25c9d36e641a1200ef25"
     }
   }
 }

@@ -18,7 +18,8 @@ class AvatarDataCenterTests(unittest.TestCase):
         row = source.split('if ghostBaseMetricsSettings.showDCs,', 1)[1].split('if ghostBaseMetricsSettings.showRegistration,', 1)[0]
         self.assertIn('JerkgramProfileMetadataPolicy.avatarDataCenterText(resource.datacenterId, isRussian: isRussian)', row)
         self.assertIn('label: "DC"', row)
-        self.assertEqual(row.count('UIPasteboard.general.string = dcText'), 2)
+        self.assertNotIn('UIPasteboard.general.string', row)
+        self.assertIn('interaction.openPeerInfoContextMenu(.copyValue(dcText), sourceNode, nil)', row)
 
     @unittest.skipUnless(shutil.which('swiftc'), 'Swift compiler unavailable; native DC behavior unverified')
     def test_documented_countries_both_languages_and_unknown_ids(self):

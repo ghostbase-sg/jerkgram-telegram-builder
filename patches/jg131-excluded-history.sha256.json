@@ -1,10 +1,10 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "a9d3b1e7220d6c186e68be8349324ea96868ff51454dc3e34ac869f1771b23cd",
+  "patch_sha256": "e16933559d669fc543b486f20423c5d322ca551b3475aebf0fab1fd43199b387",
   "owners": {
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift": {
       "before_sha256": "9212154bdbfc42def582e61c940135e462686388541a88c6c0bdf02625adeb2c",
-      "after_sha256": "17328c564ac0242132998501d417d95b4be87a639e7d384a587c41430c7da9d7"
+      "after_sha256": "176e0fde77815eee31aadb6c5af586085b156cf6e2e03ed32c68916462259c38"
     },
     "submodules/TelegramCore/Sources/UpdatePeers.swift": {
       "before_sha256": "12ea1969e3b99b5c54d44e67b28b3e1de7e12338bd35418984e07f255e36967e",
@@ -12,7 +12,7 @@
     },
     "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift": {
       "before_sha256": "41fedef61e0d33d040762385b4c2fcb7984eb735077e77b9cbc6320162c73cdd",
-      "after_sha256": "2a2279ee61e452faf2791024b3b697c73b7136eed06f0d1f75d677d7749ac1a9"
+      "after_sha256": "92ff02f0b0bc76fca785b3b509cde3389b243313eb4d3617909556c3dbe584e0"
     },
     "submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramChannel.swift": {
       "before_sha256": "d314d6da12aa9400f7a36bcdc1552f7a7660b629a655673e02caa8a936750ce2",
@@ -44,7 +44,7 @@
     },
     "submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.swift": {
       "before_sha256": null,
-      "after_sha256": "6c0b12e21467b9ac1e10e9d9490cc05384cee3d2afc6d912376fdc59df040531"
+      "after_sha256": "076b7bbd2ceafde2d4c058aa34cd0d5a4c7a2178f67a9adfd201a47aebd3e5d2"
     },
     "submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift": {
       "before_sha256": "a39a138ef98fb41dafcd2dd3cbd3b4d88d5e9943d424fb641234e6526bdcb67d",
@@ -85,6 +85,18 @@
     "submodules/TelegramCore/Sources/Utils/CanSendMessagesToPeer.swift": {
       "before_sha256": "dc07ad190042091be0af676e639d6a17df164f13ee2603db632dc42a366155a0",
       "after_sha256": "91452f40b7c86a4546e8b98cb8928de34cc7812277bcfd20dd23d8367172f6d2"
+    },
+    "submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift": {
+      "before_sha256": "02a742dcfa4067c627b776c0036e3cb97a5d3e28408f7acd9fc29d511def449e",
+      "after_sha256": "b54be7bfc2c9467a810af355af73a5013cfa2734cd3f820249453bed5a056553"
+    },
+    "submodules/TelegramCore/Sources/State/Holes.swift": {
+      "before_sha256": "09ae0863272add8e599d6c3e2a204007399906c22c9248c287a4bd2e90d5cdf2",
+      "after_sha256": "8cbb7e8b6724aa99a22f2c39d89958d58a9f1f37d8a96543cb4d81a356879f47"
+    },
+    "submodules/TelegramCore/Sources/State/ChatHistoryPreloadManager.swift": {
+      "before_sha256": "624764ecc148ae4ac8a75996a69e324d3fc96f7a123980cebaea02bdb01b0bcf",
+      "after_sha256": "478e394cd087bb093b45489da9d8bd485698001f1943904631cef45f22d17711"
     }
   }
 }

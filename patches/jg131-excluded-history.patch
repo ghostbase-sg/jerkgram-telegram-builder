@@ -1,7 +1,7 @@
 diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
 --- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
 +++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
-@@ -117,8 +117,10 @@
+@@ -117,17 +117,20 @@
          .action(1, 1, strings.historyDuration, jerkgramDurationTitle(policy.historyDuration, strings: strings), "duration"),
          .action(1, 2, strings.recoveredMediaLimit, jerkgramMediaLimitTitle(policy.mediaByteLimit, strings: strings), "media"),
          .toggle(1, 3, strings.archiveSecretChats, "secretChats", policy.archiveSecretChats),
@@ -11,10 +11,15 @@ diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupControl
 +        .toggle(1, 6, strings.languageCode == "ru" ? "Оставлять чаты после исключения" : "Keep Chats After Removal", "excludedHistory", policy.retainExcludedChats),
      ]
      if policy.historyDuration == .forever && policy.mediaByteLimit == .unlimited {
-         entries.append(.info(1, strings.foreverUnlimitedWarning + " (Forever + Unlimited)"))
-@@ -128,6 +130,7 @@
-         .action(2, 1, strings.exportArchive, "Archive v2", "export"),
-         .action(2, 2, strings.importArchive, "Archive v2", "import"),
+-        entries.append(.info(1, strings.foreverUnlimitedWarning + " (Forever + Unlimited)"))
++        entries.append(.info(1, strings.foreverUnlimitedWarning))
+     }
+     entries.append(contentsOf: [
+         .header(2, strings.backup),
+-        .action(2, 1, strings.exportArchive, "Archive v2", "export"),
+-        .action(2, 2, strings.importArchive, "Archive v2", "import"),
++        .action(2, 1, strings.exportArchive, strings.archiveFormat, "export"),
++        .action(2, 2, strings.importArchive, strings.archiveFormat, "import"),
          .info(2, strings.backupAccountHint(state.configuration.accountPeerId)),
 +        .info(3, strings.languageCode == "ru" ? "После исключения чат остаётся в списке с уже загруженной перепиской и сведениями. Доступен только просмотр. Включите до исключения." : "After removal, keep the chat in the list with locally loaded history and information. Read-only. Enable before removal."),
      ])
@@ -85,7 +90,63 @@ diff --git a/submodules/TelegramCore/Sources/UpdatePeers.swift b/submodules/Tele
 diff --git a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
 --- a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
 +++ b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
-@@ -5434,7 +5434,7 @@
+@@ -3115,7 +3115,37 @@
+     }
+ }
+ 
++// JG174 bot persistence begin
++// Actual account peer wins over the legacy login marker when it is available.
++private func jerkgramIsBotAccount(accountPeerId: PeerId, peer: Peer?) -> Bool {
++    if let user = peer as? TelegramUser { return user.botInfo != nil }
++    return ghostBaseIsBotAccount(accountPeerId)
++}
++
++private func jerkgramIncludeBotMessagePeers(transaction: Transaction, accountPeerId: PeerId, messages: [StoreMessage]) {
++    guard jerkgramIsBotAccount(accountPeerId: accountPeerId, peer: transaction.getPeer(accountPeerId)) else { return }
++    var visited = Set<PeerId>()
++    for message in messages {
++        guard case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud,
++              transaction.messageExists(id: id),
++              let peer = transaction.getPeer(id.peerId),
++              !shouldExcludePeerFromChatList(transaction: transaction, peerId: id.peerId, peer: peer),
++              visited.insert(id.peerId).inserted else { continue }
++        // Existing archive, pins and history boundary must remain byte-for-byte
++        // unchanged. Never advance a minTimestamp on each delivered message.
++        if case .notIncluded = transaction.getPeerChatListInclusion(id.peerId) {
++            transaction.updatePeerChatListInclusion(id.peerId, inclusion: .ifHasMessagesOrOneOf(groupId: .root, pinningIndex: nil, minTimestamp: nil))
++        }
++    }
++}
++// JG174 bot persistence end
++
+ private func resolveMissingPeerChatInfos(accountPeerId: PeerId, network: Network, state: AccountMutableState) -> Signal<(AccountMutableState, Bool), NoError> {
++    // getPeerDialogs is a user-account method. Bot visibility is established
++    // locally only after delivered messages have actually been stored below.
++    if jerkgramIsBotAccount(accountPeerId: accountPeerId, peer: state.peers[accountPeerId]) {
++        return .single((state, false))
++    }
+     var missingPeers: [PeerId: Api.InputDialogPeer] = [:]
+     var hadError = false
+     
+@@ -3370,6 +3400,7 @@
+ }
+ 
+ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
++    if jerkgramIsBotAccount(accountPeerId: accountPeerId, peer: state.peers[accountPeerId]) { return .single(state) }
+     var inputPeers: [Api.InputDialogPeer] = []
+     for peer in peers {
+         if let inputDialogPeer = apiInputDialogPeer(peer) {
+@@ -4541,6 +4572,9 @@
+             
+                 let _ = transaction.addMessages(messages, location: location)
+                 if case .UpperHistoryBlock = location {
++                    jerkgramIncludeBotMessagePeers(transaction: transaction, accountPeerId: accountPeerId, messages: messages)
++                }
++                if case .UpperHistoryBlock = location {
+                     for message in messages {
+                         let chatPeerId = message.id.peerId
+                         if let authorId = message.authorId {
+@@ -5434,7 +5468,7 @@
                          }
                      }
                      
@@ -361,13 +422,14 @@ diff --git a/submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.sw
 new file mode 100644
 --- /dev/null
 +++ b/submodules/TelegramUI/Sources/JerkgramExcludedChatInputPanelNode.swift
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,28 @@
 +import Foundation
 +import UIKit
 +import AsyncDisplayKit
 +import Display
 +import ChatPresentationInterfaceState
 +import ChatInputPanelNode
++import TelegramPresentationData
 +
 +final class JerkgramExcludedChatInputPanelNode: ChatInputPanelNode {
 +    private let label = ASTextNode()
@@ -378,7 +440,7 @@ new file mode 100644
 +        self.addSubnode(self.label)
 +    }
 +    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isMediaInputExpanded: Bool) -> CGFloat {
-+        let text = interfaceState.strings.baseLanguageCode == "ru" ? "Вы были исключены из этого чата" : "You were removed from this chat"
++        let text = JerkgramStrings(baseLanguageCode: interfaceState.strings.baseLanguageCode).removedFromChat
 +        self.label.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.panelControlColor)
 +        let size = self.label.measure(CGSize(width: max(0.0, width - leftInset - rightInset - 24.0), height: 100.0))
 +        let height = max(defaultHeight(metrics: metrics), size.height + 20.0)
@@ -645,3 +707,45 @@ diff --git a/submodules/TelegramCore/Sources/Utils/CanSendMessagesToPeer.swift b
      switch peer {
      case .user:
          return !peer.isDeleted
+diff --git a/submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift b/submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift
+--- a/submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift
++++ b/submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift
+@@ -121,7 +121,10 @@
+     
+     func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocationInput?) {
+         assert(self.queue.isCurrent())
+-        
++        if ghostBaseIsBotAccount(self.accountPeerId) {
++            self.contexts.removeValue(forKey: id)
++            return
++        }
+         guard let view else {
+             if self.contexts[id] != nil {
+                 self.contexts.removeValue(forKey: id)
+diff --git a/submodules/TelegramCore/Sources/State/Holes.swift b/submodules/TelegramCore/Sources/State/Holes.swift
+--- a/submodules/TelegramCore/Sources/State/Holes.swift
++++ b/submodules/TelegramCore/Sources/State/Holes.swift
+@@ -421,6 +421,9 @@
+ }
+ 
+ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleOperationSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
++    // Bot accounts keep locally delivered history; user-only history rejection
++    // must never be interpreted as an empty history or clear cached messages.
++    if ghostBaseIsBotAccount(accountPeerId) { return .single(nil) }
+     let count = min(100, rawCount)
+     
+     return postbox.stateView()
+diff --git a/submodules/TelegramCore/Sources/State/ChatHistoryPreloadManager.swift b/submodules/TelegramCore/Sources/State/ChatHistoryPreloadManager.swift
+--- a/submodules/TelegramCore/Sources/State/ChatHistoryPreloadManager.swift
++++ b/submodules/TelegramCore/Sources/State/ChatHistoryPreloadManager.swift
+@@ -96,6 +96,10 @@
+     }
+     
+     func startIfNeeded(postbox: Postbox, accountPeerId: PeerId, download: Signal<Download, NoError>, queue: Queue) {
++        if ghostBaseIsBotAccount(accountPeerId) {
++            self.isStarted = true
++            return
++        }
+         if !self.isStarted {
+             self.isStarted = true
+             

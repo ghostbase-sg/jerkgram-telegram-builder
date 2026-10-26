@@ -356,7 +356,15 @@ diff --git a/submodules/Components/ViewControllerComponent/Sources/ViewControlle
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -215,6 +215,14 @@
+@@ -152,6 +152,7 @@
+ }
+ 
+ enum PeerInfoContextSubject {
++    case copyValue(String)
+     case bio
+     case phone(String)
+     case link(customLink: String?)
+@@ -215,6 +216,14 @@
      func setGhostBaseProfileBackgroundActive(_ active: Bool) {
          self.ghostBaseProfileBackgroundView?.setSceneActive(active)
      }
@@ -371,7 +379,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
      weak var controller: PeerInfoScreenImpl?
      
      let context: AccountContext
-@@ -249,7 +257,7 @@
+@@ -249,7 +258,7 @@
      var regularSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
      var editingSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
      let paneContainerNode: PeerInfoPaneContainerNode
@@ -380,7 +388,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
      private let ghostBaseProfileMetricsSettings: GhostBaseProfileMetricsSettings
      var ignoreScrolling: Bool = false
      lazy var hapticFeedback = { HapticFeedback() }()
-@@ -6660,6 +6668,8 @@
+@@ -6660,6 +6669,8 @@
  }
  
  public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
@@ -389,7 +397,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
      let context: AccountContext
      let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
      public let peerId: EnginePeer.Id
-@@ -6835,8 +6845,13 @@
+@@ -6835,8 +6846,13 @@
          ))
          
          self._hasGlassStyle = true
@@ -405,7 +413,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
          if isSettings || isMyProfile {
              let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError> in
                  let activeSessionsContext = context.engine.privacy.activeSessions()
-@@ -7065,6 +7080,12 @@
+@@ -7065,6 +7081,12 @@
                  
                  if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                      strongSelf.controllerNode.updatePresentationData(strongSelf.presentationData)
@@ -477,7 +485,44 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
              glassEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.glassEnabled, defaultValue: true),
              profileAvatarBlur: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAvatarBlur, defaultValue: true),
              profileAnimatedBackground: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAnimatedBackground, defaultValue: true),
-@@ -2092,7 +2099,7 @@
+@@ -1874,10 +1881,13 @@
+     state: GhostBaseSettingsState,
+     context: AccountContext,
+     page: GhostBaseSettingsPage,
++    isBotAccount: Bool,
+     strings: JerkgramStrings,
+     aboutChannelState: JerkgramAboutChannelState,
+     aboutCommunityState: JerkgramAboutChannelState
+ ) -> [GhostBaseSettingsEntry] {
++    // A direct route must honor the same capability as the root destination.
++    if isBotAccount && page == .ghostMode { return [] }
+     var entries: [GhostBaseSettingsEntry] = []
+ 
+     let ghost = GhostBaseSettingsSection.ghostMode.rawValue
+@@ -2069,10 +2079,9 @@
+     if page == .root {
+         // Keep the agreed Telegram-native destination list. Presentation work
+         // belongs inside destinations, not in a new root hero card.
+-        return [
++        var rootEntries: [GhostBaseSettingsEntry] = [
+             .header(0, strings.features),
+             .disclosure(0, 1, strings.basicFunctions, "Jerkgram/Settings/Airplane", .home),
+-            .disclosure(0, 2, strings.ghostMode, "Chat/Context Menu/Eye", .ghostMode),
+             .disclosure(0, 3, strings.messages, "Chat/Context Menu/MessageBubble", .messages),
+             .disclosure(0, 4, strings.protectedContent, "Premium/CopyProtection/NoForward", .protectedContent),
+             .disclosure(0, 5, strings.mediaAndStories, "Item List/Icons/Stories", .mediaStories),
+@@ -2081,6 +2090,10 @@
+             .disclosure(0, 8, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup),
+             .disclosure(0, 9, strings.about, "Chat/Context Menu/Info", .about)
+         ]
++        if !isBotAccount {
++            rootEntries.insert(.disclosure(0, 2, strings.ghostMode, "Chat/Context Menu/Eye", .ghostMode), at: 2)
++        }
++        return rootEntries
+     }
+ 
+     if page == .home {
+@@ -2092,7 +2105,7 @@
              .header(0, strings.profileInformation),
              .toggle(0, 1, GhostBaseKey.profileEnabled, strings.showProfileInformation, state.profileEnabled),
              .toggle(0, 2, GhostBaseKey.showIds, strings.telegramId, state.showIds),
@@ -486,15 +531,15 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
              .toggle(0, 4, GhostBaseKey.showRegistration, strings.registrationDate, state.showRegistration),
              .header(1, strings.basicFunctions),
              .valueDisclosure(1, 50, strings.starsBalance, strings.starsOverrideSummary(state.localStarsEnabled, balance), nil, .stars),
-@@ -2229,6 +2236,7 @@
+@@ -2229,6 +2242,7 @@
              .toggle(0, 4, GhostBaseKey.profileBlurTint, strings.colorTint, state.profileBlurTint),
              .toggle(0, 5, GhostBaseKey.profileBlurReduced, strings.reducedBlur, state.profileBlurReduced),
              .header(1, strings.interface),
-+            .toggle(1, 4, GhostBaseKey.settingsTranslucency, strings.languageCode == "ru" ? "Полупрозрачность всех настроек" : "Translucent Settings and Sections", state.settingsTranslucency),
++            .toggle(1, 4, GhostBaseKey.settingsTranslucency, strings.translucentSettings, state.settingsTranslucency),
              .toggle(1, 5, GhostBaseKey.messageSeconds, strings.messageSeconds, state.messageSeconds),
              .toggle(1, 6, GhostBaseKey.hideOwnPhone, strings.hideMyPhone, state.hideOwnPhone),
              .toggle(
-@@ -3794,6 +3802,8 @@
+@@ -3794,6 +3808,8 @@
              case GhostBaseKey.hideBlockedReactions:
                  updated.hideBlockedReactions = value
  
@@ -503,6 +548,35 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
              case GhostBaseKey.glassEnabled:
                  updated.glassEnabled = value
                  GhostBaseGlassStyle.setEnabled(value)
+@@ -3966,11 +3982,18 @@
+         jerkgramImportRefreshStateSignal,
+         aboutChannelSignal,
+         aboutCommunitySignal,
+-        performanceChanges
++        performanceChanges,
++        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+     )
+     |> deliverOnMainQueue
+-    |> map { presentationData, state, aboutChannelState, aboutCommunityState, _
++    |> map { presentationData, state, aboutChannelState, aboutCommunityState, _, ownPeer
+         -> (ItemListControllerState, (ItemListNodeState, Any)) in
++        let isBotAccount: Bool
++        if case let .user(user)? = ownPeer {
++            isBotAccount = user.botInfo != nil
++        } else {
++            isBotAccount = UserDefaults.standard.bool(forKey: "jerkgram.BotAccount.\(context.account.peerId.toInt64())")
++        }
+         let controllerState = ItemListControllerState(
+             presentationData: ItemListPresentationData(presentationData),
+             title: .text(page.localizedTitle(presentationData.strings.jerkgram)),
+@@ -3985,6 +4008,7 @@
+                 state: state,
+                 context: context,
+                 page: page,
++                isBotAccount: isBotAccount,
+                 strings: presentationData.strings.jerkgram,
+                 aboutChannelState: aboutChannelState,
+                 aboutCommunityState: aboutCommunityState
 diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/TelegramUI/Sources/ChatController.swift
 --- a/submodules/TelegramUI/Sources/ChatController.swift
 +++ b/submodules/TelegramUI/Sources/ChatController.swift
@@ -542,6 +616,15 @@ diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/Tel
  
              guard strongSelf.presentationInterfaceState.subject != .scheduledMessages else {
                  strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_PollUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+@@ -4521,7 +4527,7 @@
+                             break
+                         }
+                         
+-                        if useSystemTranslation {
++                        if useSystemTranslation && !jerkgramLocalTranslationAvailable {
+                             presentTranslateScreen(
+                                 context: context,
+                                 text: text.string,
 @@ -7085,6 +7091,7 @@
      }
  
@@ -664,8 +747,21 @@ diff --git a/submodules/TelegramUI/Components/Settings/WallpaperGridScreen/Sourc
 diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
 --- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
 +++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
-@@ -12,7 +12,7 @@
+@@ -10,9 +10,20 @@
+ import JerkgramCore
+ import ZipArchive
  
++private func jerkgramLocalizedArchiveError(_ error: Error, context: AccountContext) -> String {
++    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings.jerkgram
++    guard let error = error as? JerkgramArchiveValidationError else { return strings.archiveErrorGeneric }
++    switch error {
++    case .unavailableAccount: return strings.archiveErrorAccount
++    case .settingsConfirmationRequired: return strings.archiveErrorConfirmation
++    case .conflictsPresent: return strings.archiveErrorConflicts
++    default: return strings.archiveErrorInvalid
++    }
++}
++
  private let jerkgramPortableBooleanKeys: [String] = [
      "jerkgram.Profile.Enabled", "jerkgram.Profile.ShowIds", "jerkgram.Profile.ShowDCs",
 -    "jerkgram.Profile.ShowRegistration", "jerkgram.Glass.Enabled",
@@ -673,6 +769,51 @@ diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowControlle
      "jerkgram.ProfileBlur.Avatar", "jerkgram.ProfileBlur.Animated",
      "jerkgram.ProfileBlur.Tint", "jerkgram.ProfileBlur.Reduced",
      "jerkgram.GhostMode.ReadMessages", "jerkgram.GhostMode.TypingActions",
+@@ -229,7 +240,7 @@
+             jerkgramPresentArchiveExportError(
+                 context: context,
+                 controller: controller,
+-                text: String(describing: error)
++                text: jerkgramLocalizedArchiveError(error, context: context)
+             )
+         }
+     }
+@@ -452,7 +463,7 @@
+                                                     context: context,
+                                                     controller: controller,
+                                                     presentationData: presentationData,
+-                                                    text: String(describing: error)
++                                                    text: jerkgramLocalizedArchiveError(error, context: context)
+                                                 )
+                                             }
+                                         }
+@@ -467,7 +478,7 @@
+                         context: context,
+                         controller: controller,
+                         presentationData: presentationData,
+-                        text: String(describing: error)
++                        text: jerkgramLocalizedArchiveError(error, context: context)
+                     )
+                 }
+             }
+@@ -586,7 +597,7 @@
+                                 let result = textAlertController(
+                                     context: context,
+                                     title: strings.importArchive,
+-                                    text: String(describing: error),
++                                    text: jerkgramLocalizedArchiveError(error, context: context),
+                                     actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
+                                 )
+                                 controller.present(result, in: .window(.root), with: nil)
+@@ -599,7 +610,7 @@
+                 let alert = textAlertController(
+                     context: context,
+                     title: presentationData.strings.jerkgram.importArchive,
+-                    text: String(describing: error),
++                    text: jerkgramLocalizedArchiveError(error, context: context),
+                     actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
+                 )
+                 controller.present(alert, in: .window(.root), with: nil)
 diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
 --- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
 +++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
@@ -849,14 +990,110 @@ diff --git a/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swif
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
-@@ -207,6 +207,33 @@
+@@ -207,6 +207,161 @@
      case telegramTheme
  }
  
++// JG174 playback session begin
++// One native decoder/timeline; visible descendants only own secondary outputs.
++private final class JerkgramSettingsPlaybackSession {
++    private final class WeakLayer {
++        weak var value: AVSampleBufferDisplayLayer?
++        init(_ value: AVSampleBufferDisplayLayer) { self.value = value }
++    }
++    private weak var candidate: UniversalVideoNode?
++    private var retainedSource: UniversalVideoNode?
++    private var layers: [UUID: WeakLayer] = [:]
++    private var outputs: [UUID: Disposable] = [:]
++    private var active = UIApplication.shared.applicationState == .active
++    private var observers: [NSObjectProtocol] = []
++
++    init() {
++        for name in [UIApplication.willResignActiveNotification, UIApplication.didBecomeActiveNotification] {
++            self.observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main, using: { [weak self] _ in
++                guard let self else { return }
++                self.active = name == UIApplication.didBecomeActiveNotification
++                self.reconcile()
++            }))
++        }
++    }
++
++    deinit {
++        for observer in self.observers { NotificationCenter.default.removeObserver(observer) }
++        self.detach()
++    }
++
++    func updateSource(_ source: UniversalVideoNode?) {
++        // A disappearing avatar briefly reports nil. A visible child still owns
++        // its original native player; only explicit invalidation may clear it.
++        guard let source else { return }
++        if self.candidate !== source {
++            self.detach()
++            self.candidate = source
++        }
++        self.reconcile()
++    }
++
++    func invalidate() {
++        self.detach()
++        self.candidate = nil
++    }
++
++    func attach(_ layer: AVSampleBufferDisplayLayer) -> Disposable {
++        let id = UUID()
++        self.layers[id] = WeakLayer(layer)
++        self.reconcile()
++        return ActionDisposable { [weak self] in
++            guard let self else { return }
++            self.outputs.removeValue(forKey: id)?.dispose()
++            self.layers.removeValue(forKey: id)
++            self.reconcile()
++        }
++    }
++
++    private func detach(releaseSource: Bool = true) {
++        for output in self.outputs.values { output.dispose() }
++        self.outputs.removeAll()
++        self.retainedSource?.setCanPlaybackWithoutHierarchy(false)
++        if releaseSource { self.retainedSource = nil }
++    }
++
++    private func reconcile() {
++        self.layers = self.layers.filter { $0.value.value != nil }
++        for id in Array(self.outputs.keys) where self.layers[id] == nil {
++            self.outputs.removeValue(forKey: id)?.dispose()
++        }
++        guard !self.layers.isEmpty, let source = self.candidate else {
++            self.detach()
++            return
++        }
++        // Keep the visible page's lease through app suspension so it can resume
++        // after its original avatar node has left the hierarchy. No decoding.
++        guard self.active else {
++            self.detach(releaseSource: false)
++            return
++        }
++        if self.retainedSource == nil { self.retainedSource = source }
++        if self.outputs.isEmpty {
++            source.setCanPlaybackWithoutHierarchy(true)
++            source.play()
++        }
++        for (id, layer) in self.layers where self.outputs[id] == nil {
++            if let layer = layer.value {
++                self.outputs[id] = source.registerSecondaryVideoLayer(layer)
++            }
++        }
++    }
++}
++// JG174 playback session end
++
 +private final class JerkgramSettingsBackdropView: UIView {
 +    let imageView = UIImageView()
++    let mirrorVideoView = GhostBaseProfileMirrorVideoView(frame: .zero)
 +    let blurView = UIVisualEffectView(effect: nil)
 +    let tintView = UIView()
++    private var playbackSession: JerkgramSettingsPlaybackSession?
++    private var playbackDisposable: Disposable?
 +
 +    override init(frame: CGRect) {
 +        super.init(frame: frame)
@@ -866,15 +1103,47 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Gh
 +        self.imageView.contentMode = .scaleAspectFill
 +        self.imageView.clipsToBounds = true
 +        self.addSubview(self.imageView)
++        self.addSubview(self.mirrorVideoView)
 +        self.addSubview(self.blurView)
 +        self.addSubview(self.tintView)
 +    }
 +
 +    required init?(coder: NSCoder) { preconditionFailure("init(coder:) has not been implemented") }
 +
++    deinit { self.playbackDisposable?.dispose() }
++
++    func setPlaybackSession(_ session: JerkgramSettingsPlaybackSession?) {
++        guard self.playbackSession !== session else { return }
++        self.playbackDisposable?.dispose()
++        self.playbackDisposable = nil
++        self.playbackSession = session
++        self.mirrorVideoView.videoLayer.flushAndRemoveImage()
++        self.updatePlaybackVisibility()
++    }
++
++    override func didMoveToWindow() {
++        super.didMoveToWindow()
++        self.updatePlaybackVisibility()
++    }
++
++    private func updatePlaybackVisibility() {
++        if self.window != nil, let session = self.playbackSession {
++            if self.playbackDisposable == nil {
++                self.playbackDisposable = session.attach(self.mirrorVideoView.videoLayer)
++            }
++            self.mirrorVideoView.isHidden = false
++        } else {
++            self.playbackDisposable?.dispose()
++            self.playbackDisposable = nil
++            self.mirrorVideoView.isHidden = true
++            self.mirrorVideoView.videoLayer.flushAndRemoveImage()
++        }
++    }
++
 +    override func layoutSubviews() {
 +        super.layoutSubviews()
 +        self.imageView.frame = self.bounds
++        self.mirrorVideoView.frame = self.bounds
 +        self.blurView.frame = self.bounds
 +        self.tintView.frame = self.bounds
 +    }
@@ -883,11 +1152,12 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Gh
  final class GhostBaseProfileBackgroundView: UIView {
      private static let visualSettingsDidChange =
          Notification.Name(
-@@ -502,6 +529,29 @@
+@@ -502,6 +657,39 @@
  
      // Exactly one reusable image view, one persistent visual-effect view and
      // one independent tint/dimming view. They are created once in init().
 +    private let settingsBackdrops = NSHashTable<JerkgramSettingsBackdropView>.weakObjects()
++    private weak var settingsPlaybackSession: JerkgramSettingsPlaybackSession?
 +
 +    func makeSettingsBackdropView() -> UIView? {
 +        guard self.usesCustomBackground, !self.bounds.isEmpty else { return nil }
@@ -904,6 +1174,15 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Gh
 +        backdrop.blurView.alpha = self.blurView.alpha
 +        backdrop.tintView.backgroundColor = self.tintView.backgroundColor
 +        backdrop.tintView.alpha = self.tintView.alpha
++        let session: JerkgramSettingsPlaybackSession?
++        if self.settings.animatedBackgroundEnabled, self.desiredVideoIdentity != nil {
++            session = self.settingsPlaybackSession ?? JerkgramSettingsPlaybackSession()
++            self.settingsPlaybackSession = session
++            session?.updateSource(self.lastAvatarVideoNode)
++        } else {
++            session = nil
++        }
++        backdrop.setPlaybackSession(session)
 +    }
 +
 +    private func updateSettingsBackdrops() {
@@ -913,7 +1192,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Gh
      private let imageView: UIImageView
      private let blurView: UIVisualEffectView
      private let tintView: UIView
-@@ -727,12 +777,13 @@
+@@ -727,12 +915,13 @@
          cachedData: EngineCachedPeerData?,
          presentationData: PresentationData,
          isSettings: Bool,
@@ -929,7 +1208,35 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Gh
              return
          }
          let preferencesTiming = self.beginPerformanceSpan(.bgPreferences)
-@@ -1165,6 +1216,7 @@
+@@ -1111,6 +1300,9 @@
+     }
+ 
+     private func clearAnimatedMedia() {
++        self.settingsPlaybackSession?.invalidate()
++        self.settingsPlaybackSession = nil
++        for backdrop in self.settingsBackdrops.allObjects { backdrop.setPlaybackSession(nil) }
+         self.secondaryVideoDisposable?.dispose()
+         self.secondaryVideoDisposable = nil
+         self.lastAvatarVideoNode = nil
+@@ -1123,6 +1315,9 @@
+         let updatedIdentity = source?.identity
+ 
+         if self.desiredVideoIdentity != updatedIdentity {
++            self.settingsPlaybackSession?.invalidate()
++            self.settingsPlaybackSession = nil
++            for backdrop in self.settingsBackdrops.allObjects { backdrop.setPlaybackSession(nil) }
+             self.secondaryVideoDisposable?.dispose()
+             self.secondaryVideoDisposable = nil
+             self.lastAvatarVideoNode = nil
+@@ -1137,6 +1332,7 @@
+ 
+     func refreshAnimatedVideoOwner(_ videoNode: UniversalVideoNode?) {
+         self.lastAvatarVideoNode = videoNode
++        self.settingsPlaybackSession?.updateSource(videoNode)
+ 
+         guard
+             self.isSceneActive,
+@@ -1165,6 +1361,7 @@
          stateKey: GhostBaseProfileBackgroundStateKey,
          presentationData: PresentationData
      ) {
@@ -937,7 +1244,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Gh
          self.setSourceSubscription(nil)
          self.currentLoadKey = nil
  
-@@ -1476,6 +1528,7 @@
+@@ -1476,6 +1673,7 @@
          isDark: Bool,
          reduced: Bool
      ) {
@@ -945,3 +1252,26 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Gh
          //
          // The fullscreen background stays visible, but the single existing
          // tint layer now also provides adaptive contrast. This is deliberately
+diff --git a/submodules/AccountContext/Sources/UniversalVideoNode.swift b/submodules/AccountContext/Sources/UniversalVideoNode.swift
+--- a/submodules/AccountContext/Sources/UniversalVideoNode.swift
++++ b/submodules/AccountContext/Sources/UniversalVideoNode.swift
+@@ -372,7 +372,7 @@
+         })
+ 
+         return ActionDisposable {
+-            Queue.mainQueue().async {
++            let removeOutput = {
+                 GhostBaseUniversalVideoSecondaryOutputRegistry.unregister(
+                     manager: manager as AnyObject,
+                     contentId: contentId,
+@@ -385,6 +385,10 @@
+ 
+                 layer.flushAndRemoveImage()
+             }
++            // Main-thread rebinding must not leave a queued old unregister
++            // that removes the same layer after its new registration.
++            if Queue.mainQueue().isCurrent() { removeOutput() }
++            else { Queue.mainQueue().async { removeOutput() } }
+         }
+     }
+ 

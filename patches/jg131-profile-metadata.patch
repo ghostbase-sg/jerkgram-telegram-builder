@@ -80,20 +80,21 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
  private let enabledPublicBioEntities: EnabledEntityTypes = [.allUrl, .mention, .hashtag]
  private let enabledPrivateBioEntities: EnabledEntityTypes = [.internalUrl, .mention, .hashtag]
  
-@@ -118,6 +190,22 @@
+@@ -118,6 +190,23 @@
          var itemId = 990000
          var metricItems: [PeerInfoScreenItem] = []
  
-+        let isRussian = JerkgramStrings(baseLanguageCode: presentationData.strings.baseLanguageCode).languageCode == "ru"
++        let localized = JerkgramStrings(baseLanguageCode: presentationData.strings.baseLanguageCode)
++        let isRussian = localized.languageCode == "ru"
 +        if case let .user(user) = peer,
 +           JerkgramProfileMetadataPolicy.showMutualContact(
 +               isMutual: user.flags.contains(.mutualContact),
 +               isSelf: user.id == context.account.peerId,
 +               isBot: user.botInfo != nil
 +           ) {
-+            let value = isRussian ? "Взаимный контакт" : "Mutual Contact"
++            let value = localized.mutualContact
 +            metricItems.append(PeerInfoScreenLabeledValueItem(
-+                id: itemId, label: isRussian ? "Контакт" : "Contact", text: value,
++                id: itemId, label: localized.profileContact, text: value,
 +                textColor: .primary, action: nil, longTapAction: nil,
 +                requestLayout: { _ in interaction.requestLayout(false) }
 +            ))
@@ -103,7 +104,22 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
          if ghostBaseMetricsSettings.showIds {
              let idText: String
              if case let .channel(channel) = peer {
-@@ -154,7 +242,7 @@
+@@ -136,11 +225,9 @@
+                     label: "Telegram ID",
+                     text: idText,
+                     textColor: .primary,
+-                    action: { _, _ in
+-                        UIPasteboard.general.string = idText
+-                    },
+-                    longTapAction: { _ in
+-                        UIPasteboard.general.string = idText
++                    action: nil,
++                    longTapAction: { sourceNode in
++                        interaction.openPeerInfoContextMenu(.copyValue(idText), sourceNode, nil)
+                     },
+                     requestLayout: { _ in
+                         interaction.requestLayout(false)
+@@ -154,18 +241,16 @@
             let representation = peer.smallProfileImage,
             let resource = representation.resource
                  as? CloudPeerPhotoSizeMediaResource {
@@ -112,7 +128,21 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
  
              metricItems.append(PeerInfoScreenLabeledValueItem(
                      id: itemId,
-@@ -175,40 +263,32 @@
+                     label: "DC",
+                     text: dcText,
+                     textColor: .primary,
+-                    action: { _, _ in
+-                        UIPasteboard.general.string = dcText
+-                    },
+-                    longTapAction: { _ in
+-                        UIPasteboard.general.string = dcText
++                    action: nil,
++                    longTapAction: { sourceNode in
++                        interaction.openPeerInfoContextMenu(.copyValue(dcText), sourceNode, nil)
+                     },
+                     requestLayout: { _ in
+                         interaction.requestLayout(false)
+@@ -175,40 +260,32 @@
              itemId += 1
          }
  
@@ -157,25 +187,118 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
 +            let label: String
 +            let dateText: String?
 +            if let reported {
-+                label = isRussian ? "Дата регистрации" : "Registration Date"
++                label = localized.registrationDate
 +                dateText = stringForMonth(strings: presentationData.strings, month: Int32(reported.month - 1), ofYear: Int32(reported.year - 1900))
 +            } else if let range = JerkgramProfileMetadataPolicy.estimatedYears(userId: user.id.id._internalGetInt64Value()) {
-+                label = isRussian ? "Регистрация (оценка по ID)" : "Registration (ID estimate)"
++                label = localized.registrationEstimate
 +                dateText = range.lowerBound == range.upperBound
 +                    ? "≈ \(range.lowerBound)"
 +                    : "≈ \(range.lowerBound)–\(range.upperBound)"
 +            } else {
-+                label = isRussian ? "Дата регистрации" : "Registration Date"
++                label = localized.registrationDate
 +                dateText = nil
 +            }
 +            if let dateText {
 +                metricItems.append(PeerInfoScreenLabeledValueItem(
 +                    id: itemId, label: label, text: dateText, textColor: .primary,
-+                    action: { _, _ in UIPasteboard.general.string = dateText },
-+                    longTapAction: { _ in UIPasteboard.general.string = dateText },
++                    action: nil,
++                    longTapAction: { sourceNode in interaction.openPeerInfoContextMenu(.copyValue(dateText), sourceNode, nil) },
 +                    requestLayout: { _ in interaction.requestLayout(false) }
 +                ))
 +                itemId += 1
              }
          }
  
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenOpenPeerInfoContextMenu.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenOpenPeerInfoContextMenu.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenOpenPeerInfoContextMenu.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenOpenPeerInfoContextMenu.swift
+@@ -20,6 +20,25 @@
+         }
+         let context = self.context
+         switch subject {
++        case let .copyValue(text):
++            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
++                let actions: [ContextMenuAction] = [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
++                    UIPasteboard.general.string = text
++                    
++                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
++                })]
++                let contextMenuController = makeContextMenuController(actions: actions)
++                controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
++                    if let controller = self?.controller, let sourceNode = sourceNode {
++                        var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
++                        if let sourceRect = sourceRect {
++                            rect = sourceRect.insetBy(dx: 0.0, dy: 2.0)
++                        }
++                        return (sourceNode, rect, controller.displayNode, controller.view.bounds)
++                    } else {
++                        return nil
++                    }
++                }))
+         case .birthday:
+             if let cachedData = data.cachedData as? CachedUserData, let birthday = cachedData.birthday {
+                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -584,7 +584,7 @@
+         .deletedReplies: "Удалённые ответы",
+         .portableReply: "Переносимый ответ",
+         .saveDeletedMedia: "Сохранять удалённые медиа",
+-        .portableReplyHint: "Ответ материализуется только после Send. Медиа хранится только во внутреннем кэше Jerkgram: до 1 ГБ, 30 дней; если bytes недоступны, используется текстовый fallback.",
++        .portableReplyHint: "Ответ создаётся после отправки. Медиа хранится во внутреннем кэше Jerkgram до 30 дней, не более 1 ГБ. Если файл недоступен, отправляется текст.",
+ 
+         .protectionEnabled: "Включить обход защиты",
+         .shareFromGallery: "Поделиться из галереи",
+@@ -690,7 +690,7 @@
+     var retentionRules: String { self.languageCode == "ru" ? "Правила хранения" : "Retention Rules" }
+     var historyDuration: String { self.languageCode == "ru" ? "Хранить историю" : "Keep History" }
+     var recoveredMediaLimit: String { self.languageCode == "ru" ? "Лимит восстановленных медиа" : "Recovered Media Limit" }
+-    var archiveSecretChats: String { self.languageCode == "ru" ? "Архивировать Secret Chats" : "Archive Secret Chats" }
++    var archiveSecretChats: String { self.languageCode == "ru" ? "Архивировать секретные чаты" : "Archive Secret Chats" }
+     var perChatRules: String { self.languageCode == "ru" ? "Правила по чатам" : "Per-Chat Rules" }
+     var cleanupExpired: String { self.languageCode == "ru" ? "Очистить истёкшие данные" : "Clean Up Expired Data" }
+     var backup: String { self.languageCode == "ru" ? "Резервная копия" : "Backup" }
+@@ -1001,3 +1001,30 @@
+         return self.languageCode == "ru" ? "Переслать без автора" : "Forward without author"
+     }
+ }
++
++// Build174: recent features follow Telegram's selected language, including ru-* packs.
++public extension JerkgramStrings {
++    var mutualContact: String { self.languageCode == "ru" ? "Взаимный контакт" : "Mutual Contact" }
++    var profileContact: String { self.languageCode == "ru" ? "Контакт" : "Contact" }
++    var registrationEstimate: String { self.languageCode == "ru" ? "Регистрация (оценка по ID)" : "Registration (ID estimate)" }
++    var translucentSettings: String { self.languageCode == "ru" ? "Полупрозрачность всех настроек" : "Translucent Settings and Sections" }
++    var removedFromChat: String { self.languageCode == "ru" ? "Вы были исключены из этого чата" : "You were removed from this chat" }
++}
++
++public extension JerkgramStrings {
++    var localTranslationUnavailable: String {
++        self.languageCode == "ru"
++            ? "Не удалось перевести на устройстве. Проверьте доступность языка и загрузку языкового пакета. Этот формат сообщения может не поддерживаться."
++            : "On-device translation failed. Check language availability and language downloads. This message format may be unsupported."
++    }
++    var localTranslationRetry: String { self.languageCode == "ru" ? "Повторить перевод" : "Retry Translation" }
++}
++
++public extension JerkgramStrings {
++    var archiveFormat: String { self.languageCode == "ru" ? "Архив v2" : "Archive v2" }
++    var archiveErrorInvalid: String { self.languageCode == "ru" ? "Архив повреждён, имеет неподдерживаемый формат или не прошёл проверку. Выберите другой файл." : "The archive is damaged, unsupported, or failed validation. Choose another file." }
++    var archiveErrorAccount: String { self.languageCode == "ru" ? "Аккаунт из архива не добавлен в Jerkgram. Войдите в него и повторите импорт." : "An account from the archive is not added to Jerkgram. Log in to that account and retry the import." }
++    var archiveErrorConfirmation: String { self.languageCode == "ru" ? "Подтвердите импорт настроек и повторите попытку." : "Confirm settings import and try again." }
++    var archiveErrorConflicts: String { self.languageCode == "ru" ? "В архиве найдены конфликты. Выберите способ объединения и повторите импорт." : "The archive contains conflicts. Choose how to merge them and retry the import." }
++    var archiveErrorGeneric: String { self.languageCode == "ru" ? "Не удалось обработать архив. Проверьте файл, пароль и свободное место, затем повторите попытку." : "Couldn't process the archive. Check the file, password and free storage, then try again." }
++}
+diff --git a/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift b/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift
+@@ -291,7 +291,7 @@
+             .header(2, strings.timeMachineResults),
+         ]
+         let dateFormatter = DateFormatter()
+-        dateFormatter.locale = Locale.current
++        dateFormatter.locale = Locale(identifier: presentationData.strings.baseLanguageCode.replacingOccurrences(of: "-raw", with: ""))
+         dateFormatter.dateStyle = .medium
+         dateFormatter.timeStyle = .short
+         for (index, event) in results.enumerated() {

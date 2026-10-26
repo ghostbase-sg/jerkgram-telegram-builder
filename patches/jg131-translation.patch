@@ -1,0 +1,1234 @@
+diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/TranslateUI/Sources/Translate.swift
+--- a/submodules/TranslateUI/Sources/Translate.swift
++++ b/submodules/TranslateUI/Sources/Translate.swift
+@@ -139,8 +139,7 @@
+     "uk"
+ ]
+ 
+-@available(iOS 12.0, *)
+-private let languageRecognizer = NLLanguageRecognizer()
++
+ 
+ public func effectiveIgnoredTranslationLanguages(context: AccountContext, ignoredLanguages: [String]?) -> Set<String> {
+     var baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
+@@ -173,6 +172,7 @@
+ }
+ 
+ public func canTranslateChats(context: AccountContext) -> Bool {
++    if jerkgramLocalTranslationAvailable { return true }
+     let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+     var chatTranslationAvailable = true
+     switch translationConfiguration.auto {
+@@ -207,7 +207,7 @@
+         break
+     }
+     
+-    let showTranslate = showTranslate && translateButtonAvailable
++    let showTranslate = showTranslate && (translateButtonAvailable || jerkgramLocalTranslationAvailable)
+         
+     if #available(iOS 12.0, *) {
+         if context.sharedContext.immediateExperimentalUISettings.disableLanguageRecognition {
+@@ -217,6 +217,7 @@
+         let dontTranslateLanguages = effectiveIgnoredTranslationLanguages(context: context, ignoredLanguages: ignoredLanguages)
+         
+         let text = String(text.prefix(64))
++        let languageRecognizer = NLLanguageRecognizer()
+         languageRecognizer.processString(text)
+         let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
+         languageRecognizer.reset()
+@@ -255,185 +256,264 @@
+     @Published var shouldInvalidate: Int = 0
+ }
+ 
++// JG174 translation queue begin
++// Main-queue coordinator. Physical work remains active until the framework returns,
++// even when all subscribers cancel. Keys stay in-process; Apple sees opaque indices.
++private final class JerkgramTranslationQueue {
++    final class Job {
++        let id: Int
++        let texts: [AnyHashable: String]
++        let fromLang: String
++        let toLang: String
++        let byteCount: Int
++        var subscribers: [Int: ([AnyHashable: String]?) -> Void] = [:]
++        init(id: Int, texts: [AnyHashable: String], fromLang: String, toLang: String) {
++            self.id = id; self.texts = texts; self.fromLang = fromLang; self.toLang = toLang
++            self.byteCount = texts.values.reduce(0) { $0 + $1.utf8.count }
++        }
++        func matches(_ texts: [AnyHashable: String], _ from: String, _ to: String) -> Bool {
++            return self.texts == texts && self.fromLang == from && self.toLang == to
++        }
++    }
++    private struct Cached {
++        let texts: [AnyHashable: String]
++        let from: String
++        let to: String
++        let result: [AnyHashable: String]
++        let bytes: Int
++    }
++    private var nextId = 0
++    private(set) var pending: [Job] = []
++    private(set) var active: Job?
++    private var cache: [Cached] = []
++    private(set) var cacheBytes = 0
++    private(set) var cacheItems = 0
++    private(set) var workBytes = 0
++    private(set) var workItems = 0
++
++    // nil callback payload is an explicit failure, never original-as-success.
++    func enqueue(texts: [AnyHashable: String], from: String, to: String, completion: @escaping ([AnyHashable: String]?) -> Void) -> (Int, Int)? {
++        guard !texts.isEmpty, texts.count <= 16, !to.isEmpty,
++              texts.values.allSatisfy({ !$0.isEmpty }),
++              texts.values.reduce(0, { $0 + $1.utf8.count }) <= 16 * 1024 else {
++            completion(nil); return nil
++        }
++        self.nextId += 1
++        let subscriber = self.nextId
++        if let index = self.cache.firstIndex(where: { $0.texts == texts && $0.from == from && $0.to == to }) {
++            let cached = self.cache.remove(at: index)
++            self.cache.append(cached)
++            completion(cached.result)
++            return nil
++        }
++        if let job = ([self.active].compactMap { $0 } + self.pending).first(where: { $0.matches(texts, from, to) && !$0.subscribers.isEmpty }) {
++            job.subscribers[subscriber] = completion
++            return (job.id, subscriber)
++        }
++        let bytes = texts.values.reduce(0) { $0 + $1.utf8.count }
++        guard self.workItems + texts.count <= 64, self.workBytes + bytes <= 128 * 1024 else {
++            completion(nil); return nil
++        }
++        let job = Job(id: subscriber, texts: texts, fromLang: from, toLang: to)
++        job.subscribers[subscriber] = completion
++        self.pending.append(job)
++        self.workItems += texts.count; self.workBytes += bytes
++        return (job.id, subscriber)
++    }
++
++    var nextLanguagePair: (String, String)? {
++        guard self.active == nil, let job = self.pending.first else { return nil }
++        return (job.fromLang, job.toLang)
++    }
++
++    func begin() -> Job? {
++        guard self.active == nil, !self.pending.isEmpty else { return nil }
++        let job = self.pending.removeFirst()
++        self.active = job
++        return job
++    }
++
++    func cancel(jobId: Int, subscriberId: Int) {
++        if let job = self.active, job.id == jobId {
++            job.subscribers.removeValue(forKey: subscriberId)
++            // Do not release the physical slot while TranslationSession is running.
++            return
++        }
++        guard let index = self.pending.firstIndex(where: { $0.id == jobId }) else { return }
++        let job = self.pending[index]
++        job.subscribers.removeValue(forKey: subscriberId)
++        if job.subscribers.isEmpty {
++            self.pending.remove(at: index)
++            self.workItems -= job.texts.count; self.workBytes -= job.byteCount
++        }
++    }
++
++    func expire(jobId: Int) -> [() -> Void] {
++        guard let job = self.active, job.id == jobId else { return [] }
++        let callbacks = job.subscribers.values.map { callback in { callback(nil) } }
++        job.subscribers.removeAll()
++        // A user-visible timeout is logical cancellation. Keep the physical
++        // slot until the framework finishes; never start concurrent sessions.
++        return callbacks
++    }
++
++    func finish(jobId: Int, result: [AnyHashable: String]?) -> [() -> Void] {
++        guard let job = self.active, job.id == jobId else { return [] }
++        self.active = nil
++        self.workItems -= job.texts.count; self.workBytes -= job.byteCount
++        let validated: [AnyHashable: String]?
++        if let result, result.count == job.texts.count,
++           job.texts.keys.allSatisfy({ result[$0]?.isEmpty == false }) {
++            validated = result
++        } else { validated = nil }
++        if let validated, !job.subscribers.isEmpty {
++            let bytes = job.byteCount + validated.values.reduce(0) { $0 + $1.utf8.count }
++            if bytes <= 1024 * 1024 {
++                self.cache.append(Cached(texts: job.texts, from: job.fromLang, to: job.toLang, result: validated, bytes: bytes))
++                self.cacheBytes += bytes; self.cacheItems += job.texts.count
++                while self.cacheItems > 256 || self.cacheBytes > 1024 * 1024 {
++                    let evicted = self.cache.removeFirst()
++                    self.cacheBytes -= evicted.bytes; self.cacheItems -= evicted.texts.count
++                }
++            }
++        }
++        let callbacks = job.subscribers.values.map { callback in { callback(validated) } }
++        job.subscribers.removeAll()
++        return callbacks
++    }
++}
++// JG174 translation queue end
++
+ @available(iOS 18.0, *)
+ private struct TranslationViewImpl: View {
+     @State private var configuration: TranslationSession.Configuration?
+     @ObservedObject var externalCondition: ExternalTranslationTrigger
+-    private let taskContainer: Atomic<ExperimentalInternalTranslationServiceImpl.TranslationTaskContainer>
+-    
+-    init(externalCondition: ExternalTranslationTrigger, taskContainer: Atomic<ExperimentalInternalTranslationServiceImpl.TranslationTaskContainer>) {
+-        self.externalCondition = externalCondition
+-        self.taskContainer = taskContainer
+-    }
+-    
++    private let taskContainer: Atomic<JerkgramTranslationQueue>
++
++    init(externalCondition: ExternalTranslationTrigger, taskContainer: Atomic<JerkgramTranslationQueue>) {
++        self.externalCondition = externalCondition; self.taskContainer = taskContainer
++    }
++
++    private func scheduleNext() {
++        guard let pair = self.taskContainer.with({ $0.nextLanguagePair }) else { return }
++        if let configuration = self.configuration,
++           configuration.source?.languageCode?.identifier == (pair.0.isEmpty ? nil : pair.0),
++           configuration.target?.languageCode?.identifier == pair.1 {
++            self.configuration?.invalidate()
++        } else {
++            self.configuration = .init(source: pair.0.isEmpty ? nil : Locale.Language(identifier: pair.0), target: Locale.Language(identifier: pair.1))
++        }
++    }
++
+     var body: some View {
+-        Text("ABC")
+-        .onChange(of: self.externalCondition.shouldInvalidate) { _ in
+-            let firstTaskLanguagePair = self.taskContainer.with { taskContainer -> (String, String)? in
+-                if let firstTask = taskContainer.tasks.first {
+-                    return (firstTask.fromLang, firstTask.toLang)
+-                } else {
+-                    return nil
+-                }
+-            }
+-            
+-            if let firstTaskLanguagePair {
+-                if let configuration = self.configuration, configuration.source?.languageCode?.identifier == firstTaskLanguagePair.0, configuration.target?.languageCode?.identifier == firstTaskLanguagePair.1 {
+-                    self.configuration?.invalidate()
+-                } else {
+-                    self.configuration = .init(
+-                        source: Locale.Language(identifier: firstTaskLanguagePair.0),
+-                        target: Locale.Language(identifier: firstTaskLanguagePair.1)
+-                    )
+-                }
+-            }
+-        }
++        Text("").hidden()
++        .onChange(of: self.externalCondition.shouldInvalidate) { _ in self.scheduleNext() }
+         .translationTask(self.configuration, action: { session in
+-            var task: ExperimentalInternalTranslationServiceImpl.TranslationTask?
+-            task = self.taskContainer.with { taskContainer -> ExperimentalInternalTranslationServiceImpl.TranslationTask? in
+-                if !taskContainer.tasks.isEmpty {
+-                    return taskContainer.tasks.removeFirst()
+-                } else {
+-                    return nil
+-                }
+-            }
+-            
+-            guard let task else {
+-                return
+-            }
+-            
++            guard let job = self.taskContainer.with({ $0.begin() }) else { return }
++            let jobId = job.id
++            // A generous bound includes possible system language downloads.
++            // Closing the native screen cancels its subscriber immediately.
++            let timeout = SwiftSignalKit.Timer(timeout: 300.0, repeat: false, completion: {
++                let callbacks = self.taskContainer.with { $0.expire(jobId: jobId) }
++                for callback in callbacks { callback() }
++            }, queue: .mainQueue())
++            timeout.start()
++            defer { timeout.invalidate() }
++            var result: [AnyHashable: String]?
+             do {
+-                var nextClientIdentifier: Int = 0
+-                var clientIdentifierMap: [String: AnyHashable] = [:]
+-                let translationRequests = task.texts.map { key, value in
+-                    let id = nextClientIdentifier
+-                    nextClientIdentifier += 1
+-                    clientIdentifierMap["\(id)"] = key
+-                    return TranslationSession.Request(sourceText: value, clientIdentifier: "\(id)")
+-                }
+-                
+-                let responses = try await session.translations(from: translationRequests)
+-                var resultMap: [AnyHashable: String] = [:]
+-                for response in responses {
+-                    if let clientIdentifier = response.clientIdentifier, let originalKey = clientIdentifierMap[clientIdentifier] {
+-                        resultMap[originalKey] = "\(response.targetText)"
++                let ordered = Array(job.texts)
++                let requests = ordered.enumerated().map { index, entry in
++                    TranslationSession.Request(sourceText: entry.value, clientIdentifier: String(index))
++                }
++                let responses = try await session.translations(from: requests)
++                if !Task.isCancelled {
++                    var values: [AnyHashable: String] = [:]
++                    for response in responses {
++                        if let identifier = response.clientIdentifier, let index = Int(identifier), ordered.indices.contains(index) {
++                            values[ordered[index].key] = response.targetText
++                        }
+                     }
+-                }
+-                
+-                task.completion(resultMap)
+-            } catch let e {
+-                print("Translation error: \(e)")
+-                task.completion(nil)
+-            }
+-            
+-            let firstTaskLanguagePair = self.taskContainer.with { taskContainer -> (String, String)? in
+-                if let firstTask = taskContainer.tasks.first {
+-                    return (firstTask.fromLang, firstTask.toLang)
+-                } else {
+-                    return nil
+-                }
+-            }
+-            
+-            if let firstTaskLanguagePair {
+-                if let configuration = self.configuration, configuration.source?.languageCode?.identifier == firstTaskLanguagePair.0, configuration.target?.languageCode?.identifier == firstTaskLanguagePair.1 {
+-                    self.configuration?.invalidate()
+-                } else {
+-                    self.configuration = .init(
+-                        source: Locale.Language(identifier: firstTaskLanguagePair.0),
+-                        target: Locale.Language(identifier: firstTaskLanguagePair.1)
+-                    )
+-                }
+-            }
++                    result = values
++                }
++            } catch { result = nil }
++            let callbacks = self.taskContainer.with { $0.finish(jobId: job.id, result: result) }
++            for callback in callbacks { callback() }
++            // Configuration changes only after the physical request has returned.
++            self.scheduleNext()
+         })
+     }
+ }
+ 
+ @available(iOS 18.0, *)
+ public final class ExperimentalInternalTranslationServiceImpl: ExperimentalInternalTranslationService {
+-    fileprivate final class TranslationTask {
+-        let id: Int
+-        let texts: [AnyHashable: String]
+-        let fromLang: String
+-        let toLang: String
+-        let completion: ([AnyHashable: String]?) -> Void
+-        
+-        init(id: Int, texts: [AnyHashable: String], fromLang: String, toLang: String, completion: @escaping ([AnyHashable: String]?) -> Void) {
+-            self.id = id
+-            self.texts = texts
+-            self.fromLang = fromLang
+-            self.toLang = toLang
+-            self.completion = completion
+-        }
+-    }
+-    
+-    fileprivate final class TranslationTaskContainer {
+-        var tasks: [TranslationTask] = []
+-        
+-        init() {
+-        }
+-    }
+-    
+     private final class Impl {
+         private let hostingController: UIViewController
+-        
+-        private let taskContainer = Atomic(value: TranslationTaskContainer())
++        private let taskContainer = Atomic(value: JerkgramTranslationQueue())
+         private let taskTrigger = ExternalTranslationTrigger()
+-        
+-        private var nextId: Int = 0
+-        
++
+         init(view: UIView) {
+-            self.hostingController = UIHostingController(rootView: TranslationViewImpl(
+-                externalCondition: self.taskTrigger,
+-                taskContainer: self.taskContainer
+-            ))
+-            
++            self.hostingController = UIHostingController(rootView: TranslationViewImpl(externalCondition: self.taskTrigger, taskContainer: self.taskContainer))
++            self.hostingController.view.isUserInteractionEnabled = false
++            self.hostingController.view.backgroundColor = .clear
++            self.hostingController.view.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+             view.addSubview(self.hostingController.view)
+         }
+-        
++
+         func translate(texts: [AnyHashable: String], fromLang: String, toLang: String, onResult: @escaping ([AnyHashable: String]?) -> Void) -> Disposable {
+-            let id = self.nextId
+-            self.nextId += 1
+-            self.taskContainer.with { taskContainer in
+-                taskContainer.tasks.append(TranslationTask(
+-                    id: id,
+-                    texts: texts,
+-                    fromLang: fromLang,
+-                    toLang: toLang,
+-                    completion: { result in
+-                        onResult(result)
+-                    }
+-                ))
++            let source: String
++            if fromLang.isEmpty {
++                let recognizer = NLLanguageRecognizer()
++                recognizer.processString(String(texts.values.joined(separator: " ").prefix(512)))
++                source = recognizer.dominantLanguage?.rawValue ?? ""
++            } else { source = fromLang }
++            let identity = self.taskContainer.with { queue in
++                queue.enqueue(texts: texts, from: source, to: toLang, completion: { result in
++                    Queue.mainQueue().async { onResult(result) }
++                })
+             }
+-            self.taskTrigger.shouldInvalidate += 1
+-            
++            if identity != nil { self.taskTrigger.shouldInvalidate += 1 }
+             return ActionDisposable { [weak self] in
+                 Queue.mainQueue().async {
+-                    guard let self else {
+-                        return
+-                    }
+-                    self.taskContainer.with { taskContainer in
+-                        taskContainer.tasks.removeAll(where: { $0.id == id })
+-                    }
++                    guard let self, let identity else { return }
++                    self.taskContainer.with { $0.cancel(jobId: identity.0, subscriberId: identity.1) }
+                 }
+             }
+         }
+     }
+-    
+     private let impl: QueueLocalObject<Impl>
+-    
+     public init(view: UIView) {
+-        self.impl = QueueLocalObject(queue: .mainQueue(), generate: {
+-            return Impl(view: view)
+-        })
+-    }
+-    
++        self.impl = QueueLocalObject(queue: .mainQueue(), generate: { Impl(view: view) })
++    }
+     public func translate(texts: [AnyHashable: String], fromLang: String, toLang: String) -> Signal<[AnyHashable: String]?, NoError> {
+         return self.impl.signalWith { impl, subscriber in
+-            return impl.translate(texts: texts, fromLang: fromLang, toLang: toLang, onResult: { result in
+-                subscriber.putNext(result)
+-                subscriber.putCompletion()
++            impl.translate(texts: texts, fromLang: fromLang, toLang: toLang, onResult: { result in
++                subscriber.putNext(result); subscriber.putCompletion()
+             })
+         }
++    }
++}
++
++public var jerkgramLocalTranslationAvailable: Bool {
++    if #available(iOS 18.0, *) { return true }
++    return false
++}
++
++// Native Translate uses this adapter only; unrelated cloud AI actions stay unchanged.
++public func jerkgramTranslateText(context: AccountContext, text: String, fromLang: String?, toLang: String) -> Signal<(String, [MessageTextEntity])?, TelegramCore.TranslationError> {
++    guard #available(iOS 18.0, *), !text.isEmpty else { return .fail(.textIsEmpty) }
++    if engineExperimentalInternalTranslationService == nil, let hostView = context.sharedContext.mainWindow?.hostView {
++        engineExperimentalInternalTranslationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
++    }
++    guard let service = engineExperimentalInternalTranslationService else { return .fail(.generic) }
++    let recognizer = NLLanguageRecognizer()
++    recognizer.processString(String(text.prefix(512)))
++    let source = recognizer.dominantLanguage?.rawValue ?? fromLang ?? ""
++    let key = AnyHashable("jg-local:\(context.account.peerId.toInt64()):selection")
++    return service.translate(texts: [key: text], fromLang: source, toLang: normalizeTranslationLanguage(toLang))
++    |> castError(TelegramCore.TranslationError.self)
++    |> mapToSignal { result -> Signal<(String, [MessageTextEntity])?, TelegramCore.TranslationError> in
++        guard let translated = result?[key], !translated.isEmpty else { return .fail(.generic) }
++        return .single((translated, []))
+     }
+ }
+ 
+@@ -445,6 +525,7 @@
+             if let fromLang {
+                 effectiveFromLang = fromLang
+             } else {
++                let languageRecognizer = NLLanguageRecognizer()
+                 languageRecognizer.processString(text)
+                 let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
+                 languageRecognizer.reset()
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
+@@ -280,12 +280,112 @@
+     }
+ }
+ 
++// JG174 source fingerprint begin
++// Content-only identity; poll vote counters and unrelated message statistics do
++// not invalidate a translation. The same key is checked after edits and reloads.
++public func jerkgramTranslationSourceFingerprint(_ message: Message) -> String {
++    let encoder = PostboxEncoder()
++    encoder.encodeString(message.text, forKey: "text")
++    encoder.encodeObjectArray(message.textEntitiesAttribute?.entities ?? [], forKey: "entities")
++    encoder.encodeBool(message.attributes.contains(where: { $0 is RichTextMessageAttribute }), forKey: "rich")
++    if let poll = message.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {
++        encoder.encodeString(poll.text, forKey: "poll")
++        encoder.encodeObjectArray(poll.textEntities, forKey: "pollEntities")
++        encoder.encodeObjectArray(poll.options, forKey: "options")
++        if let solution = poll.results.solution {
++            encoder.encodeString(solution.text, forKey: "solution")
++            encoder.encodeObjectArray(solution.entities, forKey: "solutionEntities")
++        }
++    }
++    if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute {
++        encoder.encodeString(audio.text, forKey: "audio")
++        encoder.encodeBool(audio.isPending, forKey: "pending")
++    }
++    encoder.encodeBool((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted ?? false, forKey: "deleted")
++    return "apple-v1:" + sha256Digest(encoder.makeData()).map { String(format: "%02x", $0) }.joined()
++}
++
++public func jerkgramLocalTranslationIsCurrent(_ translation: TranslationMessageAttribute, message: Message, toLang: String) -> Bool {
++    return translation.toLang == toLang && translation.jerkgramSourceFingerprint != nil && translation.isValidForMessage(message)
++}
++// JG174 source fingerprint end
++
++// JG174 local message translation begin
++private func jerkgramLocalMessageTexts(_ message: Message) -> [String]? {
++    if message.attributes.contains(where: { $0 is RichTextMessageAttribute }) { return nil }
++    if let poll = message.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {
++        var texts = [poll.text] + poll.options.map { $0.text }
++        if let solution = poll.results.solution { texts.append(solution.text) }
++        return texts
++    }
++    if !message.text.isEmpty { return [message.text] }
++    if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute,
++       !audio.isPending, !audio.text.isEmpty { return [audio.text] }
++    return nil
++}
++
++public func jerkgramTranslationSourceMatches(_ original: Message, _ current: Message) -> Bool {
++    if original === current { return true }
++    guard original.id == current.id, original.threadId == current.threadId else { return false }
++    return jerkgramTranslationSourceFingerprint(original) == jerkgramTranslationSourceFingerprint(current)
++}
++
++private func jerkgramTranslateLocalMessages(account: Account, messages: [Message], toLang: String) -> Signal<Void, TranslationError> {
++    guard let service = engineExperimentalInternalTranslationService else { return .fail(.generic) }
++    guard messages.count <= 64 else { return .fail(.textTooLong) }
++    let signals: [Signal<Bool, NoError>] = messages.map { original in
++        guard let texts = jerkgramLocalMessageTexts(original), !texts.isEmpty,
++              texts.count <= 16, texts.allSatisfy({ !$0.isEmpty }) else { return .single(false) }
++        var mapped: [AnyHashable: String] = [:]
++        let keys = texts.indices.map { AnyHashable("jg-local:\(account.peerId.toInt64()):\(original.id.peerId.toInt64()):\(original.id.namespace):\(original.id.id):\($0)") }
++        for (index, key) in keys.enumerated() { mapped[key] = texts[index] }
++        // Empty source requests local per-message recognition, not chat-majority language.
++        let cancelled = Atomic(value: false)
++        return service.translate(texts: mapped, fromLang: "", toLang: toLang)
++        |> mapToSignal { result -> Signal<Bool, NoError> in
++            guard let result, keys.allSatisfy({ result[$0]?.isEmpty == false }) else { return .single(false) }
++            let translated = keys.map { result[$0]! }
++            return account.postbox.transaction { transaction -> Bool in
++                guard !cancelled.with({ $0 }) else { return false }
++                var stored = false
++                transaction.updateMessage(original.id, update: { current in
++                    // Compare and store atomically. Late edit/delete/recovery results cannot win.
++                    guard jerkgramTranslationSourceMatches(original, current) else { return .skip }
++                    stored = true
++                    var additional: [TranslationMessageAttribute.Additional] = []
++                    var solution: TranslationMessageAttribute.Additional?
++                    if let poll = original.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {
++                        for index in poll.options.indices { additional.append(.init(text: translated[index + 1], entities: [])) }
++                        if poll.results.solution != nil { solution = .init(text: translated[translated.count - 1], entities: []) }
++                    }
++                    var attributes = current.attributes.filter { !($0 is TranslationMessageAttribute) }
++                    attributes.append(TranslationMessageAttribute(text: translated[0], entities: [], additional: additional, pollSolution: solution, toLang: toLang, jerkgramSourceFingerprint: jerkgramTranslationSourceFingerprint(original)))
++                    return .update(StoreMessage(id: current.id, customStableId: nil, globallyUniqueId: current.globallyUniqueId, groupingKey: current.groupingKey, threadId: current.threadId, timestamp: current.timestamp, flags: StoreMessageFlags(current.flags), tags: current.tags, globalTags: current.globalTags, localTags: current.localTags, forwardInfo: current.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: current.author?.id, text: current.text, attributes: attributes, media: current.media))
++                })
++                return stored
++            }
++        }
++        |> afterDisposed { _ = cancelled.swap(true) }
++    }
++    if signals.isEmpty { return .single(Void()) }
++    return combineLatest(signals)
++    |> castError(TranslationError.self)
++    |> mapToSignal { outcomes -> Signal<Void, TranslationError> in
++        // Finish independent successes first; one unavailable item cannot cancel others.
++        outcomes.allSatisfy({ $0 }) ? .single(Void()) : .fail(.generic)
++    }
++}
++// JG174 local message translation end
++
+ private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool, tone: TranslationTone = .neutral) -> Signal<Void, TranslationError> {
+     return account.postbox.transaction { transaction -> (Api.InputPeer?, [Message]) in
+         return (transaction.getPeer(peerId).flatMap(apiInputPeer), messageIds.compactMap({ transaction.getMessage($0) }))
+     }
+     |> castError(TranslationError.self)
+     |> mapToSignal { (inputPeer, messages) -> Signal<Void, TranslationError> in
++        if enableLocalIfPossible {
++            return jerkgramTranslateLocalMessages(account: account, messages: messages, toLang: toLang)
++        }
+         guard let inputPeer = inputPeer else {
+             return .never()
+         }
+diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/TranslateUI/Sources/ChatTranslation.swift
+--- a/submodules/TranslateUI/Sources/ChatTranslation.swift
++++ b/submodules/TranslateUI/Sources/ChatTranslation.swift
+@@ -138,7 +138,7 @@
+ @available(iOS 12.0, *)
+ private let languageRecognizer = NLLanguageRecognizer()
+ 
+-public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String) -> Signal<Never, NoError> {
++public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, onLocalFailure: (() -> Void)? = nil) -> Signal<Never, NoError> {
+     return context.account.postbox.transaction { transaction -> Signal<Never, NoError> in
+         var messageIdsToTranslate: [EngineMessage.Id] = []
+         var messageIdsSet = Set<EngineMessage.Id>()
+@@ -146,7 +146,7 @@
+             if let message = transaction.getMessage(messageId) {
+                 if let replyAttribute = message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute, let replyMessage = message.associatedMessages[replyAttribute.messageId] {
+                     if !replyMessage.text.isEmpty {
+-                        if let translation = replyMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
++                        if let translation = replyMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang, (!jerkgramLocalTranslationAvailable || jerkgramLocalTranslationIsCurrent(translation, message: replyMessage, toLang: toLang)) {
+                         } else {
+                             if !messageIdsSet.contains(replyMessage.id) {
+                                 messageIdsToTranslate.append(replyMessage.id)
+@@ -158,7 +158,7 @@
+                 guard message.author?.id != context.account.peerId else {
+                     continue
+                 }
+-                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
++                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang, (!jerkgramLocalTranslationAvailable || jerkgramLocalTranslationIsCurrent(translation, message: message, toLang: toLang)) {
+                     continue
+                 }
+                 
+@@ -192,7 +192,7 @@
+         }
+         
+         let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+-        var enableLocalIfPossible = false
++        var enableLocalIfPossible = jerkgramLocalTranslationAvailable
+         switch translationConfiguration.auto {
+         case .system:
+             if #available(iOS 18.0, *) {
+@@ -203,6 +203,7 @@
+         }
+         return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: enableLocalIfPossible)
+         |> `catch` { _ -> Signal<Never, NoError> in
++            if enableLocalIfPossible { Queue.mainQueue().async { onLocalFailure?() } }
+             return .complete()
+         }
+     } |> switchToLatest
+diff --git a/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift b/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift
+--- a/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift
++++ b/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift
+@@ -436,8 +436,8 @@
+         }
+         
+         let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+-        var translateButtonAvailable = false
+-        var chatTranslationAvailable = false
++        var translateButtonAvailable = jerkgramLocalTranslationAvailable
++        var chatTranslationAvailable = jerkgramLocalTranslationAvailable
+         
+         switch translationConfiguration.manual {
+         case .enabled, .alternative:
+@@ -478,6 +478,7 @@
+             }
+             
+             let isPremium = peer?.isPremium ?? false
++            let canTranslateEntireChat = isPremium || jerkgramLocalTranslationAvailable
+                         
+             var entries: [LanguageListEntry] = []
+             var activeLanguageCode: String?
+@@ -491,7 +492,7 @@
+             var ignoredLanguages: [String] = []
+             if let translationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                 showTranslate = translationSettings.showTranslate
+-                translateChats = isPremium ? translationSettings.translateChats : false
++                translateChats = canTranslateEntireChat ? translationSettings.translateChats : false
+                 if let languages = translationSettings.ignoredLanguages {
+                     ignoredLanguages = languages
+                 } else {
+@@ -512,7 +513,7 @@
+                     }
+                 }
+             } else {
+-                translateChats = isPremium
++                translateChats = canTranslateEntireChat
+                 if let activeLanguage = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguage) {
+                     ignoredLanguages = [activeLanguage]
+                 }
+@@ -533,7 +534,7 @@
+                         entries.append(.translate(text: presentationData.strings.Localization_ShowTranslate, value: showTranslate))
+                     }
+                     if chatTranslationAvailable {
+-                        entries.append(.translateEntire(text: presentationData.strings.Localization_TranslateEntireChat, value: translateChats, locked: !isPremium))
++                        entries.append(.translateEntire(text: presentationData.strings.Localization_TranslateEntireChat, value: translateChats, locked: !canTranslateEntireChat))
+                     }
+                     
+                     var value = ""
+diff --git a/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift b/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift
+--- a/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift
++++ b/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift
+@@ -179,7 +179,7 @@
+         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
+         self.closeButton.frame = CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize)
+         
+-        if info.isPremium {
++        if info.isPremium || jerkgramLocalTranslationAvailable {
+             self.moreButton.isHidden = false
+             self.closeButton.isHidden = true
+         } else {
+@@ -213,7 +213,7 @@
+         }
+         let isPremium = info.isPremium
+         
+-        var translationAvailable = isPremium
++        var translationAvailable = isPremium || jerkgramLocalTranslationAvailable
+         if case let .channel(channel) = info.peer, channel.flags.contains(.autoTranslateEnabled) {
+             translationAvailable = true
+         }
+@@ -232,7 +232,7 @@
+         
+         let isPremium = info.isPremium
+         
+-        var translationAvailable = isPremium
++        var translationAvailable = isPremium || jerkgramLocalTranslationAvailable
+         if case let .channel(channel) = info.peer, channel.flags.contains(.autoTranslateEnabled) {
+             translationAvailable = true
+         }
+diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift
+--- a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift
++++ b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift
+@@ -90,6 +90,7 @@
+         }
+         var isProcessingUpdated: ((Bool) -> Void)?
+         
++        fileprivate(set) var localTranslationError = false
+         fileprivate(set) var nonPremiumFloodTriggered: Bool = false {
+             didSet {
+                 if self.nonPremiumFloodTriggered != oldValue {
+@@ -201,6 +202,7 @@
+         private var isUpdating: Bool = false
+         
+         private var processDisposable: Disposable?
++        private var localTranslationGeneration = 0
+         
+         override init(frame: CGRect) {
+             self.separatorLayer = SimpleLayer()
+@@ -220,6 +222,19 @@
+         deinit {
+             self.processDisposable?.dispose()
+         }
++
++        override func didMoveToWindow() {
++            super.didMoveToWindow()
++            guard let component = self.component, case .translate = component.mode, jerkgramLocalTranslationAvailable else { return }
++            if self.window == nil {
++                self.localTranslationGeneration += 1
++                self.processDisposable?.dispose()
++                self.processDisposable = nil
++                component.externalState.isProcessing = false
++            } else if component.externalState.result?.text == nil && !component.externalState.localTranslationError {
++                self.beginTranslationIfNecessary(reset: true, force: false)
++            }
++        }
+         
+         private func beginTranslationIfNecessary(reset: Bool, force: Bool) {
+             guard let component = self.component else {
+@@ -227,6 +242,8 @@
+             }
+             
+             if reset {
++                self.localTranslationGeneration += 1
++                component.externalState.localTranslationError = false
+                 self.processDisposable?.dispose()
+                 self.processDisposable = nil
+                 if let result = component.externalState.result {
+@@ -235,6 +252,39 @@
+             }
+             
+             if let result = component.externalState.result, (result.text == nil || force), self.processDisposable == nil {
++                if case .translate = component.mode, jerkgramLocalTranslationAvailable {
++                    self.localTranslationGeneration += 1
++                    let generation = self.localTranslationGeneration
++                    let source = component.inputText
++                    let target = result.language
++                    component.externalState.localTranslationError = false
++                    component.externalState.isProcessing = true
++                    let signal: Signal<(String, [MessageTextEntity])?, TelegramCore.TranslationError>
++                    if case let .plain(text, _) = source {
++                        signal = jerkgramTranslateText(context: component.context, text: text, fromLang: component.externalState.sourceLanguage, toLang: target)
++                    } else {
++                        // Preserve rich originals; do not send unsupported content to cloud AI.
++                        signal = .fail(.generic)
++                    }
++                    self.processDisposable = (signal |> deliverOnMainQueue).start(next: { [weak self] translated in
++                        guard let self, self.localTranslationGeneration == generation,
++                              let component = self.component, component.inputText == source,
++                              component.externalState.result?.language == target else { return }
++                        component.externalState.isProcessing = false
++                        if let translated {
++                            component.externalState.result = (target, .plain(text: translated.0, entities: translated.1), [])
++                        } else { component.externalState.localTranslationError = true }
++                        if !self.isUpdating { self.state?.updated(transition: .spring(duration: 0.4)) }
++                    }, error: { [weak self] _ in
++                        guard let self, self.localTranslationGeneration == generation,
++                              let component = self.component, component.inputText == source,
++                              component.externalState.result?.language == target else { return }
++                        component.externalState.isProcessing = false
++                        component.externalState.localTranslationError = true
++                        if !self.isUpdating { self.state?.updated(transition: .spring(duration: 0.4)) }
++                    })
++                    return
++                }
+                 let mappedMode: TelegramComposeAIMessageMode?
+                 
+                 switch component.mode {
+@@ -353,6 +403,10 @@
+             
+             self.component = component
+             self.state = state
++            if let previousComponent, previousComponent.inputText != component.inputText,
++               case .translate = component.mode, jerkgramLocalTranslationAvailable {
++                self.beginTranslationIfNecessary(reset: true, force: true)
++            }
+             
+             if component.externalState.result == nil {
+                 switch component.mode {
+@@ -473,6 +527,9 @@
+             var fromTextMeasurementString: ComposedRichMessage?
+             var toTextMeasurementString: ComposedRichMessage?
+             var toText: ComposedRichMessage? = component.externalState.result?.text
++            if component.externalState.localTranslationError {
++                toText = .plain(text: component.strings.jerkgram.localTranslationUnavailable, entities: [])
++            }
+             var isPreview = false
+             if case let .preview(from, to, _, _, isRequesting) = component.mode {
+                 isPreview = true
+@@ -599,6 +656,26 @@
+                 )))
+             }
+             
++            if case .translate = component.mode, jerkgramLocalTranslationAvailable {
++                if component.externalState.localTranslationError {
++                    let retry = "[\(component.strings.jerkgram.localTranslationRetry)](retry)"
++                    component.externalState.sectionFooter = AnyComponentWithIdentity(id: "local_translation_retry", component: AnyComponent(MultilineTextComponent(
++                        text: .markdown(text: retry, attributes: MarkdownAttributes(
++                            body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: component.theme.list.freeTextColor),
++                            bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: component.theme.list.freeTextColor),
++                            link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: component.theme.list.itemAccentColor),
++                            linkAttribute: { url in ("URL", url) }
++                        )),
++                        highlightColor: component.theme.list.itemAccentColor.withAlphaComponent(0.1),
++                        highlightAction: { attributes in attributes[NSAttributedString.Key("URL")] == nil ? nil : NSAttributedString.Key("URL") },
++                        tapAction: { [weak self] _, _ in
++                            self?.beginTranslationIfNecessary(reset: true, force: true)
++                            self?.state?.updated(transition: .spring(duration: 0.4))
++                        }
++                    )))
++                } else { component.externalState.sectionFooter = nil }
++            }
++
+             if case let .stylize(isComposeWithAI) = component.mode {
+                 let styleSelectionSize = self.styleSelection.update(
+                     transition: transition,
+@@ -714,7 +791,7 @@
+             
+             var displayEmojify = false
+             if isTranslate {
+-                displayEmojify = true
++                displayEmojify = !jerkgramLocalTranslationAvailable
+             } else if case let .stylize(isComposeWithAI) = component.mode, !isComposeWithAI {
+                 displayEmojify = true
+             }
+@@ -731,7 +808,7 @@
+                         guard let self, let component = self.component, let result = component.externalState.result else {
+                             return
+                         }
+-                        component.displayLanguageSelectionMenu(sourceView, result.language, component.externalState.style.id, true, { [weak self] language, style in
++                        component.displayLanguageSelectionMenu(sourceView, result.language, component.externalState.style.id, !jerkgramLocalTranslationAvailable, { [weak self] language, style in
+                             guard let self, let component = self.component else {
+                                 return
+                             }
+@@ -748,7 +825,7 @@
+                         })
+                     } : nil,
+                     isExpanded: nil,
+-                    copyAction: component.copyAction != nil ? { [weak self] in
++                    copyAction: component.copyAction != nil && !component.externalState.localTranslationError ? { [weak self] in
+                         guard let self, let component = self.component else {
+                             return
+                         }
+diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift
+--- a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift
++++ b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift
+@@ -2299,7 +2299,9 @@
+     ) async {
+         self.context = context
+         
+-        let rawStyles = await context.engine.messages.composeAIMessageStyles().get()
++        let localTranslation: Bool
++        if case .translate = mode { localTranslation = jerkgramLocalTranslationAvailable } else { localTranslation = false }
++        let rawStyles = await (localTranslation ? .single([]) : context.engine.messages.composeAIMessageStyles()).get()
+         var styles: [Style] = []
+         let resolvedEmojiFiles: [Int64: TelegramMediaFile] = await context.engine.stickers.resolveInlineStickersLocal(fileIds: Array(Set(rawStyles.compactMap({ style in
+             switch style.content {
+@@ -2344,7 +2346,9 @@
+         
+         var shouldDisplayStyleNotice = false
+         var previewIconFile: TelegramMediaFile?
+-        if case let .preview(style, _, _, _, _) = mode {
++        if localTranslation {
++            shouldDisplayStyleNotice = false
++        } else if case let .preview(style, _, _, _, _) = mode {
+             if let emojiFileId = style.emojiFileId {
+                 previewIconFile = await context.engine.stickers.resolveInlineStickersLocal(fileIds: [emojiFileId]).get().first?.value
+             }
+diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+--- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+@@ -22,6 +22,7 @@
+ import TelegramNotices
+ import ChatControllerInteraction
+ import TranslateUI
++import UndoUI
+ import ChatHistoryEntry
+ import ChatOverscrollControl
+ import ChatBotInfoItem
+@@ -845,7 +846,20 @@
+     
+     private let clientId: Atomic<Int32>
+     
+-    private var translationLang: (fromLang: String?, toLang: String)?
++    private var jerkgramTranslationRequests: [MessageId: MetaDisposable] = [:]
++    private var jerkgramVisibleTranslationIds = Set<MessageId>()
++    private var jerkgramVisibleTranslationSources: [MessageId: Message] = [:]
++    private var jerkgramTranslationCooldown: [MessageId: Double] = [:]
++    private var jerkgramTranslationGeneration = 0
++    private var jerkgramTranslationFailureShown = false
++    private var jerkgramTranslationObservers: [NSObjectProtocol] = []
++    private var translationLang: (fromLang: String?, toLang: String)? {
++        didSet {
++            if oldValue?.fromLang != self.translationLang?.fromLang || oldValue?.toLang != self.translationLang?.toLang {
++                self.cancelJerkgramTranslations()
++            }
++        }
++    }
+     
+     private var allowDustEffect: Bool = true
+     private var dustEffectLayer: DustEffectLayer?
+@@ -1111,9 +1125,43 @@
+             context?.account.viewTracker.refreshStoriesForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
+         }
+         self.translationProcessingManager.process = { [weak self, weak context] messageIds in
+-            if let context, let translationLang = self?.translationLang {
+-                let _ = translateMessageIds(context: context, messageIds: Array(messageIds.map(\.messageId)), fromLang: translationLang.fromLang, toLang: translationLang.toLang).startStandalone()
+-            }
++            guard let self, let context, let translationLang = self.translationLang,
++                  self.isInHierarchy, UIApplication.shared.applicationState == .active else { return }
++            let generation = self.jerkgramTranslationGeneration
++            let now = CFAbsoluteTimeGetCurrent()
++            for message in messageIds {
++                let id = message.messageId
++                guard self.jerkgramVisibleTranslationIds.contains(id), self.jerkgramTranslationRequests[id] == nil,
++                      (self.jerkgramTranslationCooldown[id] ?? 0) <= now else { continue }
++                guard let source = self.jerkgramVisibleTranslationSources[id] else { continue }
++                let request = MetaDisposable()
++                self.jerkgramTranslationRequests[id] = request
++                request.set((translateMessageIds(context: context, messageIds: [id], fromLang: translationLang.fromLang, toLang: translationLang.toLang, onLocalFailure: { [weak self] in
++                    guard let self, self.jerkgramTranslationGeneration == generation, self.isInHierarchy,
++                          let currentSource = self.jerkgramVisibleTranslationSources[id],
++                          jerkgramTranslationSourceMatches(source, currentSource), !self.jerkgramTranslationFailureShown else { return }
++                    self.jerkgramTranslationFailureShown = true
++                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
++                    self.controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData,
++                        content: .info(title: nil, text: presentationData.strings.jerkgram.localTranslationUnavailable, timeout: nil, customUndoText: nil),
++                        action: { _ in false }), nil)
++                })
++                |> deliverOnMainQueue).start(completed: { [weak self, weak request] in
++                    guard let self, self.jerkgramTranslationGeneration == generation,
++                          self.jerkgramTranslationRequests[id] === request else { return }
++                    self.jerkgramTranslationRequests.removeValue(forKey: id)
++                    self.jerkgramTranslationCooldown[id] = CFAbsoluteTimeGetCurrent() + 15.0
++                }))
++            }
++        }
++        for name in [UIApplication.willResignActiveNotification, UIApplication.didBecomeActiveNotification] {
++            self.jerkgramTranslationObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main, using: { [weak self] _ in
++                guard let self else { return }
++                if name == UIApplication.willResignActiveNotification { self.cancelJerkgramTranslations() }
++                else if self.isInHierarchy {
++                    self.translationProcessingManager.add(self.jerkgramVisibleTranslationIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
++                }
++            }))
+         }
+         self.factCheckProcessingManager.process = { [weak context] messageIds in
+             if let context {
+@@ -1434,7 +1482,27 @@
+         self.loadNextGenericReactionEffect(context: context)
+     }
+     
++    private func cancelJerkgramTranslations() {
++        self.jerkgramTranslationGeneration += 1
++        self.jerkgramTranslationFailureShown = false
++        for request in self.jerkgramTranslationRequests.values { request.dispose() }
++        self.jerkgramTranslationRequests.removeAll()
++        self.jerkgramTranslationCooldown.removeAll()
++    }
++
++    override public func didExitHierarchy() {
++        super.didExitHierarchy()
++        self.cancelJerkgramTranslations()
++    }
++
++    override public func didEnterHierarchy() {
++        super.didEnterHierarchy()
++        self.translationProcessingManager.add(self.jerkgramVisibleTranslationIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
++    }
++
+     deinit {
++        self.cancelJerkgramTranslations()
++        for observer in self.jerkgramTranslationObservers { NotificationCenter.default.removeObserver(observer) }
+         self.historyDisposable.dispose()
+         self.readHistoryDisposable.dispose()
+         self.interactiveReadActionDisposable?.dispose()
+@@ -2336,7 +2404,7 @@
+                 )
+                 
+                 var translateToLanguage: (fromLang: String, toLang: String)?
+-                if let translationState, (isPremium || autoTranslate)  && translationState.isEnabled {
++                if let translationState, (isPremium || autoTranslate || jerkgramLocalTranslationAvailable) && translationState.isEnabled {
+                     var languageCode = translationState.toLang ?? chatPresentationData.strings.baseLanguageCode
+                     let rawSuffix = "-raw"
+                     if languageCode.hasSuffix(rawSuffix) {
+@@ -3147,6 +3215,11 @@
+         let isLoading = historyView.originalView.isLoading
+         let translateToLanguage = transactionState.historyView.associatedData.translateToLanguage
+         
++        if displayedRange.visibleRange == nil {
++            self.cancelJerkgramTranslations()
++            self.jerkgramVisibleTranslationIds.removeAll()
++            self.jerkgramVisibleTranslationSources.removeAll()
++        }
+         if let visible = displayedRange.visibleRange {
+             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
+             if indexRange.0 > indexRange.1 {
+@@ -3155,6 +3228,7 @@
+             }
+             
+             var messageIdsToTranslate: [MessageId] = []
++            var translationSources: [MessageId: Message] = [:]
+             var messageIdsToFactCheck: [MessageId] = []
+             if let translateToLanguage {
+                 let extendedRange: Int = 2
+@@ -3175,15 +3249,18 @@
+                             guard message.author?.id != self.context.account.peerId else {
+                                 continue
+                             }
+-                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
++                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage, (!jerkgramLocalTranslationAvailable || jerkgramLocalTranslationIsCurrent(translation, message: message, toLang: translateToLanguage)) {
+                                 continue
+                             }
+                             if !message.text.isEmpty || message.richText != nil {
+                                 messageIdsToTranslate.append(message.id)
++                                translationSources[message.id] = message
+                             } else if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                                 messageIdsToTranslate.append(message.id)
++                                translationSources[message.id] = message
+                             } else if let audioTranscription = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute, !audioTranscription.text.isEmpty && !audioTranscription.isPending {
+                                 messageIdsToTranslate.append(message.id)
++                                translationSources[message.id] = message
+                             }
+                         case let .MessageGroupEntry(_, messages, _):
+                             for (message, _, _, _, _) in messages {
+@@ -3193,11 +3270,12 @@
+                                 guard message.author?.id != self.context.account.peerId else {
+                                     continue
+                                 }
+-                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
++                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage, (!jerkgramLocalTranslationAvailable || jerkgramLocalTranslationIsCurrent(translation, message: message, toLang: translateToLanguage)) {
+                                     continue
+                                 }
+                                 if !message.text.isEmpty || message.richText != nil {
+                                     messageIdsToTranslate.append(message.id)
++                                translationSources[message.id] = message
+                                 }
+                             }
+                         default:
+@@ -3589,6 +3667,18 @@
+             if !messageIdsWithInactiveExtendedMedia.isEmpty {
+                 self.extendedMediaProcessingManager.update(Set(messageIdsWithInactiveExtendedMedia.map { MessageAndThreadId(messageId: $0, threadId: nil) }))
+             }
++            for (id, previous) in self.jerkgramVisibleTranslationSources {
++                if let updated = translationSources[id], !jerkgramTranslationSourceMatches(previous, updated) {
++                    self.jerkgramTranslationRequests.removeValue(forKey: id)?.dispose()
++                    self.jerkgramTranslationCooldown.removeValue(forKey: id)
++                }
++            }
++            self.jerkgramVisibleTranslationSources = translationSources
++            self.jerkgramVisibleTranslationIds = Set(messageIdsToTranslate)
++            self.jerkgramTranslationCooldown = self.jerkgramTranslationCooldown.filter { self.jerkgramVisibleTranslationIds.contains($0.key) }
++            for id in Array(self.jerkgramTranslationRequests.keys) where !self.jerkgramVisibleTranslationIds.contains(id) {
++                self.jerkgramTranslationRequests.removeValue(forKey: id)?.dispose()
++            }
+             if !messageIdsToTranslate.isEmpty {
+                 self.translationProcessingManager.add(messageIdsToTranslate.map { MessageAndThreadId(messageId: $0, threadId: nil) })
+             }
+diff --git a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift b/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+--- a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
++++ b/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+@@ -4621,7 +4621,7 @@
+                 break
+             }
+ 
+-            if useSystemTranslation {
++            if useSystemTranslation && !jerkgramLocalTranslationAvailable {
+                 presentTranslateScreen(
+                     context: self.context,
+                     text: text.string,
+diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift
+--- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift
++++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift
+@@ -1,3 +1,4 @@
++import Foundation
+ import Postbox
+ 
+ public class TranslationMessageAttribute: MessageAttribute, Equatable {
+@@ -24,6 +25,28 @@
+     public let text: String
+     public let entities: [MessageTextEntity]
+     public let toLang: String
++    public let jerkgramSourceFingerprint: String?
++    private let jerkgramSourceLock = NSLock()
++    private weak var jerkgramCachedMessage: Message?
++    private var jerkgramCachedValidity = false
++
++    // One weak immutable-message cache avoids hashing on every bubble layout.
++    public func isValidForMessage(_ message: Message) -> Bool {
++        guard let fingerprint = self.jerkgramSourceFingerprint else { return true }
++        self.jerkgramSourceLock.lock()
++        if self.jerkgramCachedMessage === message {
++            let value = self.jerkgramCachedValidity
++            self.jerkgramSourceLock.unlock()
++            return value
++        }
++        self.jerkgramSourceLock.unlock()
++        let value = fingerprint == jerkgramTranslationSourceFingerprint(message)
++        self.jerkgramSourceLock.lock()
++        self.jerkgramCachedMessage = message
++        self.jerkgramCachedValidity = value
++        self.jerkgramSourceLock.unlock()
++        return value
++    }
+ 
+     public let additional: [Additional]
+     public let pollSolution: Additional?
+@@ -41,11 +64,13 @@
+         additional:[Additional] = [],
+         pollSolution: Additional? = nil,
+         toLang: String,
+-        instantPage: InstantPage? = nil
++        instantPage: InstantPage? = nil,
++        jerkgramSourceFingerprint: String? = nil
+     ) {
+         self.text = text
+         self.entities = entities
+         self.toLang = toLang
++        self.jerkgramSourceFingerprint = jerkgramSourceFingerprint
+         self.additional = additional
+         self.pollSolution = pollSolution
+         self.instantPage = instantPage
+@@ -56,6 +81,7 @@
+         self.entities = decoder.decodeObjectArrayWithDecoderForKey("entities")
+         self.additional = decoder.decodeObjectArrayWithDecoderForKey("additional")
+         self.toLang = decoder.decodeStringForKey("toLang", orElse: "")
++        self.jerkgramSourceFingerprint = decoder.decodeOptionalStringForKey("jg174source")
+         self.pollSolution = decoder.decodeObjectForKey("pollSolution") as? Additional
+         self.instantPage = decoder.decodeObjectForKey("ipage", decoder: { InstantPage(decoder: $0) }) as? InstantPage
+     }
+@@ -64,6 +90,8 @@
+         encoder.encodeString(self.text, forKey: "text")
+         encoder.encodeObjectArray(self.entities, forKey: "entities")
+         encoder.encodeString(self.toLang, forKey: "toLang")
++        if let fingerprint = self.jerkgramSourceFingerprint { encoder.encodeString(fingerprint, forKey: "jg174source") }
++        else { encoder.encodeNil(forKey: "jg174source") }
+         encoder.encodeObjectArray(self.additional, forKey: "additional")
+ 
+         if let pollSolution {
+@@ -79,6 +107,7 @@
+     }
+ 
+     public static func ==(lhs: TranslationMessageAttribute, rhs: TranslationMessageAttribute) -> Bool {
++        if lhs.jerkgramSourceFingerprint != rhs.jerkgramSourceFingerprint { return false }
+         if lhs.text != rhs.text {
+             return false
+         }
+diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift
+@@ -429,7 +429,7 @@
+                                 messageEntities = summary.entities
+                                 isTranslating = false
+                                 isSummaryApplied = true
+-                            } else if let attribute = item.message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                            } else if let attribute = item.message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(item.message) {
+                                 rawText = attribute.text
+                                 messageEntities = attribute.entities
+                                 if !isSummarized {
+diff --git a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
+@@ -2794,7 +2794,7 @@
+                 if let poll, let translateToLanguage = item.associatedData.translateToLanguage, !poll.text.isEmpty && incoming {
+                     isTranslating = true
+                     for attribute in item.message.attributes {
+-                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(item.message) {
+                             pollTitleText = attribute.text
+                             pollTitleEntities = attribute.entities
+                             pollOptions = attribute.additional
+diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
+@@ -768,7 +768,7 @@
+                             if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty && arguments.incoming {
+                                 isTranslating = true
+                                 for attribute in arguments.message.attributes {
+-                                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(arguments.message) {
+                                         textString = NSAttributedString(string: attribute.text, font: textFont, textColor: messageTheme.primaryTextColor)
+                                         isTranslating = false
+                                         break
+diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
+@@ -475,7 +475,7 @@
+                 // A rich message's translation is a page, not text to show in place of the quote.
+                 if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty, arguments.quote?.quote.richText == nil {
+                     for attribute in message.attributes {
+-                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(message) {
+                             text = attribute.text
+                             messageEntities = attribute.entities
+                             break
+diff --git a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift b/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
+--- a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
++++ b/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
+@@ -522,7 +522,7 @@
+         }
+         
+         if currentTranslateToLanguageUpdated || messageUpdated, let message = interfaceState.pinnedMessage?.message {
+-            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage?.toLang {
++            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage?.toLang, translation.isValidForMessage(message) {
+             } else if let translateToLanguage {
+                 self.translationDisposable.set(translateMessageIds(context: self.context, messageIds: [message.id], fromLang: translateToLanguage.fromLang, toLang: translateToLanguage.toLang).startStrict())
+             }
+@@ -856,7 +856,7 @@
+             
+             if let translateToLanguage = translateToLanguage, !text.isEmpty {
+                 for attribute in message.attributes {
+-                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
++                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage, attribute.isValidForMessage(message) {
+                         text = attribute.text
+                         messageEntities = attribute.entities
+                         break

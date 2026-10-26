@@ -129,3 +129,231 @@ diff --git a/submodules/JerkgramCore/Sources/JerkgramStore.swift b/submodules/Je
      public static func record(
          accountPeerId: Int64,
          chatPeerId: Int64,
+diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+@@ -66,6 +66,50 @@
+ /// module importing both) to keep `EmojiTextAttachmentView` free of a rich-text-editor dependency.
+ extension EmojiTextAttachmentView: @retroactive RichTextEmojiView {}
+ 
++// BEGIN JerkgramSynchronousInputEchoPolicy
++/// A one-use observation of the same editor, valid only inside the emitting synchronous call.
++/// Identity alone is insufficient: reentrant changes must also match the live semantic value.
++private struct JerkgramSynchronousInputEcho<Content: Equatable, Configuration: Equatable> {
++    private let node: ObjectIdentifier
++    private let content: Content
++    private let selection: NSRange
++    private let configuration: Configuration
++    let literalText: String
++    private let displayText: NSAttributedString
++    private var available = true
++
++    init(node: AnyObject, content: Content, selection: NSRange, configuration: Configuration, literalText: String, displayText: NSAttributedString) {
++        self.node = ObjectIdentifier(node)
++        self.content = content
++        self.selection = selection
++        self.configuration = configuration
++        self.literalText = literalText
++        self.displayText = NSAttributedString(attributedString: displayText)
++    }
++
++    mutating func consume(node: AnyObject, content: Content, selection: NSRange, configuration: Configuration, literalText: () -> String, currentDisplayText: () -> NSAttributedString, currentContent: () -> Content) -> Bool {
++        let wasAvailable = self.available
++        self.available = false
++        guard wasAvailable, self.node == ObjectIdentifier(node), self.content == content,
++            self.selection == selection, self.configuration == configuration else {
++            return false
++        }
++        // Swift String equality accepts canonical equivalence; an echo may still need to apply
++        // a literal normalization. Compare UTF-16 through NSString before bypassing that set.
++        return (self.literalText as NSString).isEqual(to: literalText())
++            && self.displayText.isEqual(to: currentDisplayText()) && currentContent() == content
++    }
++}
++// END JerkgramSynchronousInputEchoPolicy
++
++private struct JerkgramInputEchoConfiguration: Equatable {
++    let theme: ObjectIdentifier
++    let baseFontSize: CGFloat
++    let spoilersRevealed: Bool
++    let fullTranslucency: Bool
++    let availableEmojis: Set<String>
++}
++
+ private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
+ 
+ public let chatTextInputMinFontSize: CGFloat = 5.0
+@@ -201,6 +245,7 @@
+     public let textInputNodeClippingContainer: UIView
+     public let textInputSeparator: GlassBackgroundView.ContentColorView
+     public private(set) var richTextInputNode: ChatRichTextInputNode?
++    private var jerkgramSynchronousInputEcho: JerkgramSynchronousInputEcho<ChatInputContent, JerkgramInputEchoConfiguration>?
+     private var textInputNodeLayout: (frame: CGRect, insets: UIEdgeInsets)?
+     
+     public let textInputBackgroundNode: ASImageNode
+@@ -464,6 +509,32 @@
+         }
+     }
+             
++    private func consumeJerkgramSynchronousInputEcho(_ state: ChatTextInputState, node: ChatRichTextInputNode) -> Bool {
++        guard var echo = self.jerkgramSynchronousInputEcho else {
++            return false
++        }
++        // A mismatch also consumes the event. Never carry provenance across a nested/external set.
++        self.jerkgramSynchronousInputEcho = nil
++        guard !node.usesNativeRichTextEngine, let interfaceState = self.presentationInterfaceState,
++            let textView = node.inputView as? UITextView, textView.markedTextRange == nil,
++            (echo.literalText as NSString).isEqual(to: node.text),
++            node.selectedRange == NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count) else {
++            return false
++        }
++        let configuration = JerkgramInputEchoConfiguration(
++            theme: ObjectIdentifier(interfaceState.theme),
++            baseFontSize: chatTextInputBaseFontSize(for: interfaceState.fontSize),
++            spoilersRevealed: node.spoilersRevealed,
++            fullTranslucency: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true,
++            availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set()
++        )
++        return echo.consume(node: node, content: state.content,
++            selection: NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count),
++            configuration: configuration, literalText: { attributedString(from: state.content).string },
++            currentDisplayText: { node.attributedText ?? NSAttributedString() },
++            currentContent: { node.currentInputContent().content })
++    }
++
+     public func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, accessoryItems: [ChatTextInputAccessoryItem], animated: Bool) {
+         if self.ignoreInputStateUpdates {
+             return
+@@ -530,25 +601,29 @@
+                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
+                 baseFontSize = chatTextInputBaseFontSize(for: presentationInterfaceState.fontSize)
+             }
+-            if richTextInputNode.usesNativeRichTextEngine {
+-                // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
+-                // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
+-                let content = state.content
+-                richTextInputNode.setInputContent(
+-                    content,
+-                    selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
+-                )
+-            } else {
++            if !richTextInputNode.usesNativeRichTextEngine {
+                 richTextInputNode.applyRenderingConfig(context: context, baseFontSize: baseFontSize, textColor: textColor, primaryTextColor: primaryTextColor, accentTextColor: accentTextColor, spoilersRevealed: richTextInputNode.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
+-                // The node runs the in-place fix-up (`refreshTextInputAttributes`) inside `setInputContent` now,
+-                // using the config supplied by `applyRenderingConfig` above — so the panel no longer drives it.
+-                // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
+-                // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
+-                let content = state.content
+-                richTextInputNode.setInputContent(
+-                    content,
+-                    selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
+-                )
++            }
++            if !self.consumeJerkgramSynchronousInputEcho(state, node: richTextInputNode) {
++                if richTextInputNode.usesNativeRichTextEngine {
++                    // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
++                    // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
++                    let content = state.content
++                    richTextInputNode.setInputContent(
++                        content,
++                        selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
++                    )
++                } else {
++                    // The node runs the in-place fix-up (`refreshTextInputAttributes`) inside `setInputContent` now,
++                    // using the config supplied by `applyRenderingConfig` above — so the panel no longer drives it.
++                    // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
++                    // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
++                    let content = state.content
++                    richTextInputNode.setInputContent(
++                        content,
++                        selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
++                    )
++                }
+             }
+ 
+             self.updatingInputState = false
+@@ -580,25 +655,29 @@
+                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
+                 baseFontSize = chatTextInputBaseFontSize(for: presentationInterfaceState.fontSize)
+             }
+-            if richTextInputNode.usesNativeRichTextEngine {
+-                // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
+-                // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
+-                let content = state.content
+-                richTextInputNode.setInputContent(
+-                    content,
+-                    selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
+-                )
+-            } else {
++            if !richTextInputNode.usesNativeRichTextEngine {
+                 richTextInputNode.applyRenderingConfig(context: context, baseFontSize: baseFontSize, textColor: textColor, primaryTextColor: primaryTextColor, accentTextColor: accentTextColor, spoilersRevealed: richTextInputNode.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
+-                // The node runs the in-place fix-up (`refreshTextInputAttributes`) inside `setInputContent` now,
+-                // using the config supplied by `applyRenderingConfig` above — so the panel no longer drives it.
+-                // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
+-                // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
+-                let content = state.content
+-                richTextInputNode.setInputContent(
+-                    content,
+-                    selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
+-                )
++            }
++            if !self.consumeJerkgramSynchronousInputEcho(state, node: richTextInputNode) {
++                if richTextInputNode.usesNativeRichTextEngine {
++                    // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
++                    // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
++                    let content = state.content
++                    richTextInputNode.setInputContent(
++                        content,
++                        selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
++                    )
++                } else {
++                    // The node runs the in-place fix-up (`refreshTextInputAttributes`) inside `setInputContent` now,
++                    // using the config supplied by `applyRenderingConfig` above — so the panel no longer drives it.
++                    // Pass the model content DIRECTLY (not via `state.inputText`, which flattens structural blocks through
++                    // `NSAttributedString`) — see `inputTextState`. Flat for the legacy node, lossless for native.
++                    let content = state.content
++                    richTextInputNode.setInputContent(
++                        content,
++                        selection: ChatInputSelection(nsRange: NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count), in: content)
++                    )
++                }
+             }
+ 
+             self.updatingInputState = false
+@@ -4041,13 +4120,34 @@
+         if let richTextInputNode = self.richTextInputNode, let presentationInterfaceState = self.presentationInterfaceState, let context = self.context {
+             let baseFontSize = chatTextInputBaseFontSize(for: presentationInterfaceState.fontSize)
+             let fullTranslucency = self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true
++            let availableEmojis = (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set()
++            let spoilersRevealed = richTextInputNode.spoilersRevealed
+             // The node owns the per-keystroke decoration (in-place fix-up + caret typing attrs + spoiler/emoji
+             // overlays) now; the panel hands it the current theme/energy inputs and then reads interface state back.
+-            richTextInputNode.decorateAfterTextChange(context: context, baseFontSize: baseFontSize, textColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor, primaryTextColor: presentationInterfaceState.theme.chat.inputPanel.primaryTextColor, accentTextColor: presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor, spoilersRevealed: richTextInputNode.spoilersRevealed, fullTranslucency: fullTranslucency, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
++            richTextInputNode.decorateAfterTextChange(context: context, baseFontSize: baseFontSize, textColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor, primaryTextColor: presentationInterfaceState.theme.chat.inputPanel.primaryTextColor, accentTextColor: presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor, spoilersRevealed: spoilersRevealed, fullTranslucency: fullTranslucency, availableEmojis: availableEmojis, emojiViewProvider: self.emojiViewProvider)
+ 
+             let inputTextState = self.inputTextState
+             
+-            self.interfaceInteraction?.updateTextInputStateAndMode({ _, inputMode in return (inputTextState, inputMode) })
++            do {
++                // The live field was just decorated. Only its immediate, unchanged legacy echo can
++                // skip the second model-to-display conversion and full maintenance pass. A live read
++                // in the consumer rejects reentrant edits; native editors keep their own echo guard.
++                if !richTextInputNode.usesNativeRichTextEngine {
++                    self.jerkgramSynchronousInputEcho = JerkgramSynchronousInputEcho(
++                        node: richTextInputNode, content: inputTextState.content,
++                        selection: NSRange(location: inputTextState.selectionRange.lowerBound, length: inputTextState.selectionRange.count),
++                        configuration: JerkgramInputEchoConfiguration(
++                            theme: ObjectIdentifier(presentationInterfaceState.theme), baseFontSize: baseFontSize,
++                            spoilersRevealed: spoilersRevealed, fullTranslucency: fullTranslucency,
++                            availableEmojis: availableEmojis),
++                        literalText: richTextInputNode.text,
++                        displayText: richTextInputNode.attributedText ?? NSAttributedString()
++                    )
++                }
++                defer { self.jerkgramSynchronousInputEcho = nil }
++                self.interfaceInteraction?.updateTextInputStateAndMode({ _, inputMode in return (inputTextState, inputMode) })
++                self.jerkgramSynchronousInputEcho = nil
++            }
+             self.interfaceInteraction?.updateInputLanguage({ _ in return self.richTextInputNode?.primaryLanguage })
+             self.updateTextNodeText(animated: true)
+         }

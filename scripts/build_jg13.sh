@@ -58,6 +58,13 @@ python3 -m unittest discover -s tests -p test_jg131_chat_visit.py
 python3 -m unittest discover -s tests -p test_jg131_profile_metadata_dc.py
 python3 -m unittest discover -s tests -p test_jg131_settings_visual_followup.py
 python3 -m unittest discover -s tests -p test_jg131_excluded_chat_interactions.py
+python3 -m unittest discover -s tests -p test_jg131_typing_echo.py
+python3 -m unittest discover -s tests -p test_jg131_profile_metadata_copy.py
+python3 -m unittest discover -s tests -p test_jg131_settings_animation.py
+python3 -m unittest discover -s tests -p test_jg131_bot_persistence.py
+python3 -m unittest discover -s tests -p test_jg131_translation.py
+python3 -m unittest discover -s tests -p test_jg131_translation_stage.py
+python3 -m unittest discover -s tests -p test_jg131_localization.py
 python3 tests/run_jg131_final_syntax.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
@@ -72,7 +79,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=173 \
+  --define=buildNumber=174 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 cd ../..
