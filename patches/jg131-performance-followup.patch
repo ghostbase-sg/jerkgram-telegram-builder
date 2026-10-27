@@ -12,7 +12,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/
 diff --git a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
 --- a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
 +++ b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
-@@ -140,6 +140,11 @@
+@@ -140,6 +140,16 @@
          }
      }
      
@@ -21,10 +21,28 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift b/sub
 +    let ghostBaseProtectedContentEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
 +    let ghostBaseOneTimeSaveEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
 +
++    let blockedMessageFilter = JerkgramBlockedReactionPolicy.messageFilterSnapshot(
++        accountPeerId: context.account.peerId,
++        chatPeer: chatPeer
++    )
++
      var count = 0
      loop: for entry in view.entries {
          var message = entry.message.withAppliedEphemeralReplacementMessage()
-@@ -224,18 +229,14 @@
+@@ -156,11 +166,7 @@
+         
+         // Presentation-only filtering: Postbox contents stay untouched, so
+         // switching the option off restores the messages immediately.
+-        if JerkgramBlockedReactionPolicy.isMessageHidden(
+-            accountPeerId: context.account.peerId,
+-            chatPeer: chatPeer,
+-            message: message
+-        ) {
++        if blockedMessageFilter?.isHidden(authorId: message.author?.id) ?? false {
+             continue loop
+         }
+         
+@@ -224,18 +230,14 @@
          }
          
          if skipViewOnceMedia, let minAutoremoveOrClearTimeout = message.minAutoremoveOrClearTimeout {
@@ -357,3 +375,40 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
              self.interfaceInteraction?.updateInputLanguage({ _ in return self.richTextInputNode?.primaryLanguage })
              self.updateTextNodeText(animated: true)
          }
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift b/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
+@@ -126,6 +126,33 @@
+ 
+     public static func hideBlockedMessages(accountPeerId: PeerId) -> Bool {
+         return self.settings(accountPeerId: accountPeerId).hideMessages
++    }
++
++    // A history transformation takes one immutable account-scoped value snapshot.
++    // It retains no controller, subscription, or cross-mapping cache.
++    public struct MessageFilterSnapshot {
++        public let accountPeerId: PeerId
++        public let blockedPeerIds: Set<PeerId>
++
++        public init(accountPeerId: PeerId, blockedPeerIds: Set<PeerId>) {
++            self.accountPeerId = accountPeerId
++            self.blockedPeerIds = blockedPeerIds
++        }
++
++        public func isHidden(authorId: PeerId?) -> Bool {
++            guard let authorId, authorId != self.accountPeerId else {
++                return false
++            }
++            return self.blockedPeerIds.contains(authorId)
++        }
++    }
++    // Build175 snapshot end
++
++    public static func messageFilterSnapshot(accountPeerId: PeerId, chatPeer: Peer?) -> MessageFilterSnapshot? {
++        guard self.isGroupChat(chatPeer), self.hideBlockedMessages(accountPeerId: accountPeerId) else {
++            return nil
++        }
++        return MessageFilterSnapshot(accountPeerId: accountPeerId, blockedPeerIds: self.blockedPeerIds(accountPeerId: accountPeerId))
+     }
+ 
+     public static func isMessageHidden(accountPeerId: PeerId, message: Message) -> Bool {

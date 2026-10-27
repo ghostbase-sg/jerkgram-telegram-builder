@@ -36,7 +36,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
          languageRecognizer.processString(text)
          let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
          languageRecognizer.reset()
-@@ -255,185 +256,264 @@
+@@ -255,185 +256,293 @@
      @Published var shouldInvalidate: Int = 0
  }
  
@@ -50,13 +50,15 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +        let fromLang: String
 +        let toLang: String
 +        let byteCount: Int
++        let allowDownloads: Bool
 +        var subscribers: [Int: ([AnyHashable: String]?) -> Void] = [:]
-+        init(id: Int, texts: [AnyHashable: String], fromLang: String, toLang: String) {
++        init(id: Int, texts: [AnyHashable: String], fromLang: String, toLang: String, allowDownloads: Bool) {
 +            self.id = id; self.texts = texts; self.fromLang = fromLang; self.toLang = toLang
 +            self.byteCount = texts.values.reduce(0) { $0 + $1.utf8.count }
++            self.allowDownloads = allowDownloads
 +        }
-+        func matches(_ texts: [AnyHashable: String], _ from: String, _ to: String) -> Bool {
-+            return self.texts == texts && self.fromLang == from && self.toLang == to
++        func matches(_ texts: [AnyHashable: String], _ from: String, _ to: String, _ allowDownloads: Bool) -> Bool {
++            return self.texts == texts && self.fromLang == from && self.toLang == to && self.allowDownloads == allowDownloads
 +        }
 +    }
 +    private struct Cached {
@@ -76,7 +78,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +    private(set) var workItems = 0
 +
 +    // nil callback payload is an explicit failure, never original-as-success.
-+    func enqueue(texts: [AnyHashable: String], from: String, to: String, completion: @escaping ([AnyHashable: String]?) -> Void) -> (Int, Int)? {
++    func enqueue(texts: [AnyHashable: String], from: String, to: String, allowDownloads: Bool = false, completion: @escaping ([AnyHashable: String]?) -> Void) -> (Int, Int)? {
 +        guard !texts.isEmpty, texts.count <= 16, !to.isEmpty,
 +              texts.values.allSatisfy({ !$0.isEmpty }),
 +              texts.values.reduce(0, { $0 + $1.utf8.count }) <= 16 * 1024 else {
@@ -90,7 +92,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +            completion(cached.result)
 +            return nil
 +        }
-+        if let job = ([self.active].compactMap { $0 } + self.pending).first(where: { $0.matches(texts, from, to) && !$0.subscribers.isEmpty }) {
++        if let job = ([self.active].compactMap { $0 } + self.pending).first(where: { $0.matches(texts, from, to, allowDownloads) && !$0.subscribers.isEmpty }) {
 +            job.subscribers[subscriber] = completion
 +            return (job.id, subscriber)
 +        }
@@ -98,7 +100,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +        guard self.workItems + texts.count <= 64, self.workBytes + bytes <= 128 * 1024 else {
 +            completion(nil); return nil
 +        }
-+        let job = Job(id: subscriber, texts: texts, fromLang: from, toLang: to)
++        let job = Job(id: subscriber, texts: texts, fromLang: from, toLang: to, allowDownloads: allowDownloads)
 +        job.subscribers[subscriber] = completion
 +        self.pending.append(job)
 +        self.workItems += texts.count; self.workBytes += bytes
@@ -115,6 +117,13 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +        let job = self.pending.removeFirst()
 +        self.active = job
 +        return job
++    }
++
++    // Rechecked after async availability: cancelled/expired work cannot open UI.
++    func canTranslate(jobId: Int, installed: Bool) -> Bool {
++        guard let job = self.active, job.id == jobId, !job.subscribers.isEmpty,
++              !job.fromLang.isEmpty else { return false }
++        return installed || job.allowDownloads
 +    }
 +
 +    func cancel(jobId: Int, subscriberId: Int) {
@@ -202,7 +211,40 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 -            let firstTaskLanguagePair = self.taskContainer.with { taskContainer -> (String, String)? in
 -                if let firstTask = taskContainer.tasks.first {
 -                    return (firstTask.fromLang, firstTask.toLang)
--                } else {
++        Text("").hidden()
++        .onChange(of: self.externalCondition.shouldInvalidate) { _ in self.scheduleNext() }
++        .translationTask(self.configuration, action: { session in
++            guard let job = self.taskContainer.with({ $0.begin() }) else { return }
++            let jobId = job.id
++            // A generous bound includes possible system language downloads.
++            // Closing the native screen cancels its subscriber immediately.
++            let timeout = SwiftSignalKit.Timer(timeout: 300.0, repeat: false, completion: {
++                let callbacks = self.taskContainer.with { $0.expire(jobId: jobId) }
++                for callback in callbacks { callback() }
++            }, queue: .mainQueue())
++            timeout.start()
++            defer { timeout.invalidate() }
++            var result: [AnyHashable: String]?
++            do {
++                let ordered = Array(job.texts)
++                let requests = ordered.enumerated().map { index, entry in
++                    TranslationSession.Request(sourceText: entry.value, clientIdentifier: String(index))
++                }
++                let source = Locale.Language(identifier: job.fromLang)
++                let target = Locale.Language(identifier: job.toLang)
++                let status = await LanguageAvailability().status(from: source, to: target)
++                guard !Task.isCancelled, self.taskContainer.with({ $0.canTranslate(jobId: job.id, installed: status == .installed) }) else {
++                    let callbacks = self.taskContainer.with { $0.finish(jobId: job.id, result: nil) }
++                    for callback in callbacks { callback() }
++                    self.scheduleNext()
++                    return
++                }
++                let translationSession: TranslationSession
++                if #available(iOS 26.0, *), !job.allowDownloads {
++                    // This session cannot request downloads even if models disappear
++                    // between availability and translation. Automatic work stays silent.
++                    translationSession = TranslationSession(installedSource: source, target: target)
+                 } else {
 -                    return nil
 -                }
 -            }
@@ -218,9 +260,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 -                }
 -            }
 -        }
-+        Text("").hidden()
-+        .onChange(of: self.externalCondition.shouldInvalidate) { _ in self.scheduleNext() }
-         .translationTask(self.configuration, action: { session in
+-        .translationTask(self.configuration, action: { session in
 -            var task: ExperimentalInternalTranslationServiceImpl.TranslationTask?
 -            task = self.taskContainer.with { taskContainer -> ExperimentalInternalTranslationServiceImpl.TranslationTask? in
 -                if !taskContainer.tasks.isEmpty {
@@ -234,18 +274,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 -                return
 -            }
 -            
-+            guard let job = self.taskContainer.with({ $0.begin() }) else { return }
-+            let jobId = job.id
-+            // A generous bound includes possible system language downloads.
-+            // Closing the native screen cancels its subscriber immediately.
-+            let timeout = SwiftSignalKit.Timer(timeout: 300.0, repeat: false, completion: {
-+                let callbacks = self.taskContainer.with { $0.expire(jobId: jobId) }
-+                for callback in callbacks { callback() }
-+            }, queue: .mainQueue())
-+            timeout.start()
-+            defer { timeout.invalidate() }
-+            var result: [AnyHashable: String]?
-             do {
+-            do {
 -                var nextClientIdentifier: Int = 0
 -                var clientIdentifierMap: [String: AnyHashable] = [:]
 -                let translationRequests = task.texts.map { key, value in
@@ -260,11 +289,9 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 -                for response in responses {
 -                    if let clientIdentifier = response.clientIdentifier, let originalKey = clientIdentifierMap[clientIdentifier] {
 -                        resultMap[originalKey] = "\(response.targetText)"
-+                let ordered = Array(job.texts)
-+                let requests = ordered.enumerated().map { index, entry in
-+                    TranslationSession.Request(sourceText: entry.value, clientIdentifier: String(index))
++                    translationSession = session
 +                }
-+                let responses = try await session.translations(from: requests)
++                let responses = try await translationSession.translations(from: requests)
 +                if !Task.isCancelled {
 +                    var values: [AnyHashable: String] = [:]
 +                    for response in responses {
@@ -357,8 +384,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
              view.addSubview(self.hostingController.view)
          }
 -        
-+
-         func translate(texts: [AnyHashable: String], fromLang: String, toLang: String, onResult: @escaping ([AnyHashable: String]?) -> Void) -> Disposable {
+-        func translate(texts: [AnyHashable: String], fromLang: String, toLang: String, onResult: @escaping ([AnyHashable: String]?) -> Void) -> Disposable {
 -            let id = self.nextId
 -            self.nextId += 1
 -            self.taskContainer.with { taskContainer in
@@ -371,6 +397,8 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 -                        onResult(result)
 -                    }
 -                ))
++
++        func translate(texts: [AnyHashable: String], fromLang: String, toLang: String, allowDownloads: Bool, onResult: @escaping ([AnyHashable: String]?) -> Void) -> Disposable {
 +            let source: String
 +            if fromLang.isEmpty {
 +                let recognizer = NLLanguageRecognizer()
@@ -378,7 +406,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +                source = recognizer.dominantLanguage?.rawValue ?? ""
 +            } else { source = fromLang }
 +            let identity = self.taskContainer.with { queue in
-+                queue.enqueue(texts: texts, from: source, to: toLang, completion: { result in
++                queue.enqueue(texts: texts, from: source, to: toLang, allowDownloads: allowDownloads, completion: { result in
 +                    Queue.mainQueue().async { onResult(result) }
 +                })
              }
@@ -411,11 +439,14 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +        self.impl = QueueLocalObject(queue: .mainQueue(), generate: { Impl(view: view) })
 +    }
      public func translate(texts: [AnyHashable: String], fromLang: String, toLang: String) -> Signal<[AnyHashable: String]?, NoError> {
++        return self.translate(texts: texts, fromLang: fromLang, toLang: toLang, allowDownloads: false)
++    }
++    public func translate(texts: [AnyHashable: String], fromLang: String, toLang: String, allowDownloads: Bool) -> Signal<[AnyHashable: String]?, NoError> {
          return self.impl.signalWith { impl, subscriber in
 -            return impl.translate(texts: texts, fromLang: fromLang, toLang: toLang, onResult: { result in
 -                subscriber.putNext(result)
 -                subscriber.putCompletion()
-+            impl.translate(texts: texts, fromLang: fromLang, toLang: toLang, onResult: { result in
++            impl.translate(texts: texts, fromLang: fromLang, toLang: toLang, allowDownloads: allowDownloads, onResult: { result in
 +                subscriber.putNext(result); subscriber.putCompletion()
              })
          }
@@ -433,12 +464,12 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +    if engineExperimentalInternalTranslationService == nil, let hostView = context.sharedContext.mainWindow?.hostView {
 +        engineExperimentalInternalTranslationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
 +    }
-+    guard let service = engineExperimentalInternalTranslationService else { return .fail(.generic) }
++    guard let service = engineExperimentalInternalTranslationService as? ExperimentalInternalTranslationServiceImpl else { return .fail(.generic) }
 +    let recognizer = NLLanguageRecognizer()
 +    recognizer.processString(String(text.prefix(512)))
 +    let source = recognizer.dominantLanguage?.rawValue ?? fromLang ?? ""
 +    let key = AnyHashable("jg-local:\(context.account.peerId.toInt64()):selection")
-+    return service.translate(texts: [key: text], fromLang: source, toLang: normalizeTranslationLanguage(toLang))
++    return service.translate(texts: [key: text], fromLang: source, toLang: normalizeTranslationLanguage(toLang), allowDownloads: true)
 +    |> castError(TelegramCore.TranslationError.self)
 +    |> mapToSignal { result -> Signal<(String, [MessageTextEntity])?, TelegramCore.TranslationError> in
 +        guard let translated = result?[key], !translated.isEmpty else { return .fail(.generic) }
@@ -446,7 +477,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
      }
  }
  
-@@ -445,6 +525,7 @@
+@@ -445,6 +554,7 @@
              if let fromLang {
                  effectiveFromLang = fromLang
              } else {

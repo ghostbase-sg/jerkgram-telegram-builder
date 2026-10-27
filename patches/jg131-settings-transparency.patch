@@ -548,7 +548,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
              case GhostBaseKey.glassEnabled:
                  updated.glassEnabled = value
                  GhostBaseGlassStyle.setEnabled(value)
-@@ -3966,11 +3982,18 @@
+@@ -3966,11 +3982,19 @@
          jerkgramImportRefreshStateSignal,
          aboutChannelSignal,
          aboutCommunitySignal,
@@ -560,16 +560,17 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
 -    |> map { presentationData, state, aboutChannelState, aboutCommunityState, _
 +    |> map { presentationData, state, aboutChannelState, aboutCommunityState, _, ownPeer
          -> (ItemListControllerState, (ItemListNodeState, Any)) in
++        let persistentBotAccount = UserDefaults.standard.bool(forKey: "jerkgram.BotAccount.\(context.account.peerId.toInt64())")
 +        let isBotAccount: Bool
 +        if case let .user(user)? = ownPeer {
-+            isBotAccount = user.botInfo != nil
++            isBotAccount = user.botInfo != nil || persistentBotAccount
 +        } else {
-+            isBotAccount = UserDefaults.standard.bool(forKey: "jerkgram.BotAccount.\(context.account.peerId.toInt64())")
++            isBotAccount = persistentBotAccount
 +        }
          let controllerState = ItemListControllerState(
              presentationData: ItemListPresentationData(presentationData),
              title: .text(page.localizedTitle(presentationData.strings.jerkgram)),
-@@ -3985,6 +4008,7 @@
+@@ -3985,6 +4009,7 @@
                  state: state,
                  context: context,
                  page: page,
@@ -1275,3 +1276,275 @@ diff --git a/submodules/AccountContext/Sources/UniversalVideoNode.swift b/submod
          }
      }
  
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
+@@ -13,6 +13,11 @@
+ import TelegramStringFormatting
+ import PeerNameColorItem
+ import WalletContext
++
++// Login persists bot identity before account activation; ownPeer can lack botInfo.
++private func jerkgramSettingsIsBotAccount(hasBotInfo: Bool, persistentMarker: Bool) -> Bool {
++    return hasBotInfo || persistentMarker
++}
+ 
+ private func jerkgramMainSettingsIcon(
+     _ name: String
+@@ -73,6 +78,16 @@
+         return []
+     }
+     
++    let hasBotInfo: Bool
++    if case let .user(user) = data.peer {
++        hasBotInfo = user.botInfo != nil
++    } else {
++        hasBotInfo = false
++    }
++    let isBotAccount = jerkgramSettingsIsBotAccount(
++        hasBotInfo: hasBotInfo,
++        persistentMarker: UserDefaults.standard.bool(forKey: "jerkgram.BotAccount.\(context.account.peerId.toInt64())")
++    )
+     var items: [SettingsSection: [PeerInfoScreenItem]] = [:]
+     for section in SettingsSection.allCases {
+         items[section] = []
+@@ -206,20 +221,22 @@
+         }
+     )
+ )
+-    items[.ghostbase]!.append(
+-    PeerInfoScreenDisclosureItem(
+-        id: 1,
+-        text: presentationData.strings.jerkgram.ghostMode,
+-        icon: jerkgramMainSettingsIcon("Chat/Context Menu/Eye"),
+-        action: {
+-            UserDefaults.standard.set(
+-                "ghostMode",
+-                forKey: "jerkgram.Settings.InitialPage"
+-            )
+-            interaction.openSettings(.ghostbase)
+-        }
+-    )
+-)
++    if !isBotAccount {
++        items[.ghostbase]!.append(
++        PeerInfoScreenDisclosureItem(
++            id: 1,
++            text: presentationData.strings.jerkgram.ghostMode,
++            icon: jerkgramMainSettingsIcon("Chat/Context Menu/Eye"),
++            action: {
++                UserDefaults.standard.set(
++                    "ghostMode",
++                    forKey: "jerkgram.Settings.InitialPage"
++                )
++                interaction.openSettings(.ghostbase)
++            }
++        )
++    )
++    }
+     items[.ghostbase]!.append(
+     PeerInfoScreenDisclosureItem(
+         id: 2,
+@@ -377,9 +394,11 @@
+     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
+         interaction.openSettings(.savedMessages)
+     }))
+-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.CallSettings_RecentCalls, icon: PresentationResourcesSettings.recentCalls, action: {
+-        interaction.openSettings(.recentCalls)
+-    }))
++    if !isBotAccount {
++        items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.CallSettings_RecentCalls, icon: PresentationResourcesSettings.recentCalls, action: {
++            interaction.openSettings(.recentCalls)
++        }))
++    }
+     
+     let devicesLabel: String
+     if let settings = data.globalSettings, let otherSessionsCount = settings.otherSessionsCount {
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+@@ -44,6 +44,11 @@
+ import BundleIconComponent
+ import MarqueeComponent
+ import EdgeEffect
++
++private func jerkgramSettingsSubtitle(phone: String, username: String?) -> String {
++    let usernameText = username.flatMap { $0.isEmpty ? nil : "@\($0)" } ?? ""
++    return [phone, usernameText].filter { !$0.isEmpty }.joined(separator: " • ")
++}
+ 
+ final class PeerInfoHeaderRegularContentNode: SparseNode {
+ }
+@@ -1333,21 +1338,8 @@
+ 
+                 if let phonePreferenceTiming { self.ghostBasePerformanceProbe?.end(.headerPhonePreference, phonePreferenceTiming) }
+ 
+-                var subtitle =
+-                    hideOwnPhone
+-                    ? ""
+-                    : formatPhoneNumber(
+-                        context: self.context,
+-                        number: user.phone ?? ""
+-                    )
+-                
+-                if let mainUsername = user.addressName, !mainUsername.isEmpty {
+-                    subtitle =
+-                        hideOwnPhone
+-                        ? "@\(mainUsername)"
+-                        : "\(subtitle) • @\(mainUsername)"
+-                }
+-                subtitleStringText = subtitle
++                let phone = hideOwnPhone || (user.phone ?? "").isEmpty ? "" : formatPhoneNumber(context: self.context, number: user.phone ?? "")
++                subtitleStringText = jerkgramSettingsSubtitle(phone: phone, username: user.addressName)
+                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white)
+                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
+                 
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenMemberItem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenMemberItem.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenMemberItem.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenMemberItem.swift
+@@ -8,6 +8,10 @@
+ import AccountContext
+ import TelegramCore
+ import ItemListUI
++
++private func jerkgramBotAccountBadge(languageCode: String) -> String {
++    return languageCode.lowercased().hasPrefix("ru") ? "БОТ" : "BOT"
++}
+ 
+ enum PeerInfoScreenMemberItemAction {
+     case open
+@@ -131,7 +135,7 @@
+         let ghostBaseIsBotAccountRow: Bool
+         if item.isAccount,
+            case let .user(user) = item.member.peer,
+-           user.botInfo != nil {
++           (user.botInfo != nil || UserDefaults.standard.bool(forKey: "jerkgram.BotAccount.\(user.id.toInt64())")) {
+             ghostBaseIsBotAccountRow = true
+         } else {
+             ghostBaseIsBotAccountRow = false
+@@ -274,7 +278,7 @@
+             let badgeFont = Font.semibold(10.0)
+ 
+             self.ghostBaseBotBadgeTextNode.attributedText = NSAttributedString(
+-                string: "BOT",
++                string: jerkgramBotAccountBadge(languageCode: presentationData.strings.baseLanguageCode),
+                 font: badgeFont,
+                 textColor: badgeTextColor
+             )
+diff --git a/submodules/TelegramUI/Sources/TelegramRootController.swift b/submodules/TelegramUI/Sources/TelegramRootController.swift
+--- a/submodules/TelegramUI/Sources/TelegramRootController.swift
++++ b/submodules/TelegramUI/Sources/TelegramRootController.swift
+@@ -357,7 +357,7 @@
+         }
+         controllers.append(contactsController)
+         
+-        if showCallsTab {
++        if showCallsTab && !UserDefaults.standard.bool(forKey: "jerkgram.BotAccount.\(self.context.account.peerId.toInt64())") {
+             controllers.append(callListController)
+         }
+         controllers.append(chatListController)
+@@ -402,7 +402,7 @@
+         }
+         var controllers: [ViewController] = []
+         controllers.append(self.contactsController!)
+-        if showCallsTab {
++        if showCallsTab && !UserDefaults.standard.bool(forKey: "jerkgram.BotAccount.\(self.context.account.peerId.toInt64())") {
+             controllers.append(self.callListController!)
+         }
+         controllers.append(self.chatListController!)
+diff --git a/submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift b/submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
+--- a/submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
++++ b/submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
+@@ -319,9 +319,9 @@
+         let arguments = arguments as! ThemeSettingsControllerArguments
+         switch self {
+             case let .chatPreview(theme, wallpaper, fontSize, chatBubbleCorners, strings, dateTimeFormat, nameDisplayOrder, items):
+-                return ThemeSettingsChatPreviewItem(context: arguments.context, systemStyle: .glass, theme: theme, componentTheme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, messageItems: items)
+-            case let .themes(theme, strings, chatThemes, currentTheme, nightMode, animatedEmojiStickers, themeSpecificAccentColors, themeSpecificChatWallpapers):
+-                return ThemeCarouselThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: chatThemes, hasNoTheme: false, animatedEmojiStickers: animatedEmojiStickers, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, nightMode: nightMode, currentTheme: currentTheme, updatedTheme: { theme in
++                return ThemeSettingsChatPreviewItem(context: arguments.context, systemStyle: .glass, theme: presentationData.theme, componentTheme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, messageItems: items)
++            case let .themes(_, strings, chatThemes, currentTheme, nightMode, animatedEmojiStickers, themeSpecificAccentColors, themeSpecificChatWallpapers):
++                return ThemeCarouselThemeItem(context: arguments.context, theme: presentationData.theme, strings: strings, sectionId: self.section, themes: chatThemes, hasNoTheme: false, animatedEmojiStickers: animatedEmojiStickers, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, nightMode: nightMode, currentTheme: currentTheme, updatedTheme: { theme in
+                     if let theme {
+                         arguments.selectTheme(theme)
+                     }
+@@ -370,8 +370,8 @@
+                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+             case let .iconHeader(_, text):
+                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+-            case let .iconItem(theme, strings, icons, isPremium, value):
+-                return ThemeSettingsAppIconItem(theme: theme, strings: strings, systemStyle: .glass, sectionId: self.section, icons: icons, isPremium: isPremium, currentIconName: value, updated: { icon in
++            case let .iconItem(_, strings, icons, isPremium, value):
++                return ThemeSettingsAppIconItem(theme: presentationData.theme, strings: strings, systemStyle: .glass, sectionId: self.section, icons: icons, isPremium: isPremium, currentIconName: value, updated: { icon in
+                     arguments.selectAppIcon(icon)
+                 }, tag: ThemeSettingsEntryTag.icon)
+             case .powerSaving:
+diff --git a/submodules/SettingsUI/Sources/Themes/ThemeSettingsChatPreviewItem.swift b/submodules/SettingsUI/Sources/Themes/ThemeSettingsChatPreviewItem.swift
+--- a/submodules/SettingsUI/Sources/Themes/ThemeSettingsChatPreviewItem.swift
++++ b/submodules/SettingsUI/Sources/Themes/ThemeSettingsChatPreviewItem.swift
+@@ -265,7 +265,7 @@
+                             strongSelf.bottomStripeNode.isHidden = hasCorners
+                     }
+                     
+-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
++                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
+                     
+                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                     
+diff --git a/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift b/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift
+--- a/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift
++++ b/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift
+@@ -424,7 +424,7 @@
+                         } else {
+                             transition.updateFrame(node: currentDisabledOverlayNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight)))
+                         }
+-                        currentDisabledOverlayNode.backgroundColor = itemBackgroundColor.withAlphaComponent(0.6)
++                        currentDisabledOverlayNode.backgroundColor = itemBackgroundColor.withMultipliedAlpha(0.6)
+                     } else if let disabledOverlayNode = strongSelf.disabledOverlayNode {
+                         transition.updateAlpha(node: disabledOverlayNode, alpha: 0.0, completion: { [weak disabledOverlayNode] _ in
+                             disabledOverlayNode?.removeFromSupernode()
+diff --git a/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift b/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
+--- a/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
++++ b/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
+@@ -909,11 +909,13 @@
+                     component: AnyComponent(ListSectionComponent(
+                         theme: environment.theme,
+                         style: .glass,
++                        // The native ItemList row owns the section fill.
++                        backgroundColor: .clear,
+                         header: nil,
+                         footer: nil,
+                         items: [
+                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
+-                                itemGenerator: ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), icon: PresentationResourcesSettings.earnStars, title: environment.strings.Monetization_EarnStarsInfo_Title, titleBadge: nil, label: environment.strings.Monetization_EarnStarsInfo_Text, labelStyle: .multilineDetailText, sectionId: 0, style: .blocks, action: {
++                                itemGenerator: ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData.withUpdated(theme: environment.theme)), icon: PresentationResourcesSettings.earnStars, title: environment.strings.Monetization_EarnStarsInfo_Title, titleBadge: nil, label: environment.strings.Monetization_EarnStarsInfo_Text, labelStyle: .multilineDetailText, sectionId: 0, style: .blocks, action: {
+                                 }),
+                                 params: ListViewItemLayoutParams(width: availableSize.width - sideInsets, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true),
+                                 action: { [weak self] in
+diff --git a/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift b/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift
+--- a/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift
++++ b/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift
+@@ -291,6 +291,9 @@
+ }
+ 
+ public final class EmojiStatusSelectionController: ViewController {
++    // This anchored popup keeps the presenting settings screen visible.
++    override public var jerkgramAcceptsSettingsSurface: Bool { return false }
++
+     private final class Node: ViewControllerTracingNode {
+         private struct EmojiSearchResult {
+             var groups: [EmojiPagerContentComponent.ItemGroup]
+diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift b/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
+--- a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
++++ b/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
+@@ -1177,6 +1177,10 @@
+ }
+ 
+ public class RecentSessionScreen: ViewControllerComponentContainer {
++    // ResizableSheetComponent owns its sheet fill, rounded boundary and outer dim.
++    // A full-window settings backdrop would clear and cover that native boundary.
++    override public var jerkgramAcceptsSettingsSurface: Bool { return false }
++
+     public enum Subject {
+         case session(RecentAccountSession)
+         case website(WebAuthorization, EnginePeer?)

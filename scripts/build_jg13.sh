@@ -58,7 +58,7 @@ python3 -m unittest discover -s tests -p test_jg131_chat_visit.py
 python3 -m unittest discover -s tests -p test_jg131_profile_metadata_dc.py
 python3 -m unittest discover -s tests -p test_jg131_settings_visual_followup.py
 python3 -m unittest discover -s tests -p test_jg131_excluded_chat_interactions.py
-python3 tests/run_jg131_build174_regressions.py
+python3 tests/run_jg131_build175_regressions.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive
@@ -72,8 +72,20 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=174 \
+  --define=buildNumber=175 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
+# Inspect retained build actions without a second build or target analysis.
+# Only optimization tokens are printed; complete command lines stay temporary.
+optimization_query=$(mktemp)
+if "${BAZEL_BIN:-bazelisk}" aquery --skyframe_state --output=textproto \
+  --include_commandline --include_param_files --include_artifacts=false \
+  'inputs(".*ChatTextInputPanelNode[.]swift", mnemonic("SwiftCompile"))' \
+  > "$optimization_query" 2>/dev/null; then
+  python3 ../../scripts/report_jg13_swift_optimization.py "$optimization_query" || true
+else
+  printf '%s\n' 'Swift optimization action query unavailable; no conclusion.'
+fi
+rm -f "$optimization_query"
 cd ../..
 python3 scripts/package_jg13.py work/swiftgram-src/bazel-bin/Telegram/Telegram.ipa

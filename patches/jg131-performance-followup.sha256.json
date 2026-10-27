@@ -1,6 +1,6 @@
 {
   "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "7d3a4ab1b164bb1bdea04b061879ad282ae176bcc265561e798236b5fa3816ed",
+  "patch_sha256": "2599bd6bac50e44d4215e159a4c55bc75fcc894fa00dfeef1fec22727a09fbd5",
   "owners": {
     "submodules/TelegramCore/Sources/Account/Account.swift": {
       "before_sha256": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
@@ -8,7 +8,7 @@
     },
     "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift": {
       "before_sha256": "a30f76a86de22b16fc22214cfdee98f10fd1943a8c93bc33e87f113fe7b5b7f9",
-      "after_sha256": "a44acb4ee67598516387a1385655940648b3128ea28cd4035c8e1f12e4df835e"
+      "after_sha256": "e56c50a196ed433893ed1c0c60b805195dbda0ac45532cdc3dcb75221851294e"
     },
     "submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift": {
       "before_sha256": "c2f977f1c17cffe123a174128cba0d80480792b9b94d28aa9af83251e752f8bf",
@@ -21,6 +21,10 @@
     "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift": {
       "before_sha256": "b024bb02f020dd0a63e45838212d7219e466f0ffb773ab2199751238c2bddb2c",
       "after_sha256": "59c6c220e05e52d8a4bfbe139896fc3cda8b84c1840f25c9d36e641a1200ef25"
+    },
+    "submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift": {
+      "before_sha256": "2b596292cdcb6ceec5c4fbd4fed259844220be9313d67fd8cc1d7aef887829a9",
+      "after_sha256": "054cad9f9079efba204b7e152bd7862583c2157f0d4684e0a6785ffba9a7dd66"
     }
   }
 }
