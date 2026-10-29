@@ -1,6 +1,7 @@
 """Supplemental source contracts; device/Apple/NL runtime is not exercised here."""
 import os
 import re
+import json
 import unittest
 from pathlib import Path
 BUILDER = Path(__file__).resolve().parents[1]
@@ -8,14 +9,19 @@ ROOT = Path(os.environ.get('JERKGRAM_TRANSLATION_REPAIR_SOURCE', str(BUILDER / '
 if not ROOT.exists():
     ROOT = BUILDER.parent / 'jerkgram-next/task-a/source'
 
+def owned_swift_files():
+    # Explicit owners also work through later stages' symlinked reverse views.
+    owners = json.loads((BUILDER / 'patches/jg131-translation-repair.sha256.json').read_text())['owners']
+    return [ROOT / name for name in owners if name.endswith('.swift')]
+
 def source(suffix):
     if suffix == 'Translate.swift':
         return (ROOT / 'submodules/TranslateUI/Sources/Translate.swift').read_text()
-    return next(ROOT.rglob(suffix)).read_text()
+    return next(path for path in owned_swift_files() if path.name == suffix).read_text()
 
 class TranslationUIRepair(unittest.TestCase):
     def test_account_scoped_availability(self):
-        for file in ROOT.rglob('*.swift'):
+        for file in owned_swift_files():
             if 'TelegramCore' not in str(file):
                 self.assertNotIn('jerkgramLocalTranslationAvailable', file.read_text(), str(file))
         self.assertIn('JerkgramTranslationSettings.enabled(accountPeerId: context.account.peerId.toInt64())', source('Translate.swift'))
@@ -29,7 +35,7 @@ class TranslationUIRepair(unittest.TestCase):
         self.assertIn('Enhanced Translation', text)
 
     def test_renderer_requires_account(self):
-        for file in ROOT.rglob('*.swift'):
+        for file in owned_swift_files():
             if 'TelegramCore' not in str(file):
                 for call in re.findall(r'isValidForMessage\(([^)]*)\)', file.read_text()):
                     self.assertIn('accountPeerId:', call, str(file))

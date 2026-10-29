@@ -1,0 +1,658 @@
+diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules/ChatListUI/Sources/ChatListController.swift
+--- a/submodules/ChatListUI/Sources/ChatListController.swift
++++ b/submodules/ChatListUI/Sources/ChatListController.swift
+@@ -1289,6 +1289,7 @@
+                             return
+                         }
+                         
++                        self.jerkgramReorderProposal = self.jerkgramFilterSnapshot?.proposal
+                         self.chatListDisplayNode.isReorderingFilters = true
+                         self.isReorderingTabsValue.set(true)
+                         
+@@ -3656,6 +3657,8 @@
+         }
+     }
+     
++    private var jerkgramFilterSnapshot: JerkgramChatListFilterSnapshot?
++    private var jerkgramReorderProposal: JerkgramChatListFilterProposal?
+     private var skipTabContainerUpdate = false
+     fileprivate func reorderingDonePressed() -> Bool {
+         guard let defaultFilters = self.tabContainerData else {
+@@ -3685,6 +3688,9 @@
+             }
+         }
+         
++        if let snapshot = self.jerkgramFilterSnapshot, self.jerkgramReorderProposal != nil, let ids = reorderedFilterIdsValue {
++            reorderedFilterIdsValue = snapshot.normalizedOrder(ids)
++        }
+         if let reorderedFilterIdsValue, let tabContainerData = self.tabContainerData {
+             var entries: [ChatListFilterTabEntry] = []
+             for id in reorderedFilterIdsValue {
+@@ -3705,6 +3711,7 @@
+             guard let strongSelf = self else {
+                 return
+             }
++            strongSelf.jerkgramReorderProposal = nil
+             strongSelf.skipTabContainerUpdate = false
+             strongSelf.chatListDisplayNode.isReorderingFilters = false
+             strongSelf.isReorderingTabsValue.set(false)
+@@ -3717,7 +3724,12 @@
+                 strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+             }
+         }
+-        if let reorderedFilterIds = reorderedFilterIdsValue {
++        if let reorderedFilterIds = reorderedFilterIdsValue, let proposal = self.jerkgramReorderProposal {
++            let _ = (self.context.engine.peers.updateJerkgramChatListFilterOrder(ids: reorderedFilterIds, proposal: proposal)
++            |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
++                self?.reloadFilters(firstUpdate: completion)
++            })
++        } else if let reorderedFilterIds = reorderedFilterIdsValue {
+             let _ = (self.context.engine.peers.updateChatListFiltersInteractively { stateFilters in
+                 var updatedFilters: [ChatListFilter] = []
+                 for id in reorderedFilterIds {
+@@ -4046,19 +4058,17 @@
+     
+     private var initializedFilters = false
+     private func reloadFilters(firstUpdate: (() -> Void)? = nil) {
+-        let filterItems = chatListFilterItems(context: self.context)
++        let filterItems = jerkgramChatListFilterItems(context: self.context)
+         var notifiedFirstUpdate = false
+-        self.filterDisposable.set((combineLatest(queue: .mainQueue(),
+-            filterItems,
+-            self.context.account.postbox.peerView(id: self.context.account.peerId),
+-            self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false))
+-        )
+-        |> deliverOnMainQueue).startStrict(next: { [weak self] countAndFilterItems, peerView, limits in
++        self.filterDisposable.set((filterItems
++        |> deliverOnMainQueue).startStrict(next: { [weak self] snapshot, countAndFilterItems in
+             guard let strongSelf = self else {
+                 return
+             }
+             
+-            let isPremium = peerView.peers[peerView.peerId]?.isPremium
++            strongSelf.jerkgramFilterSnapshot = snapshot
++            let isPremium = snapshot.isPremium
++            let limits = snapshot.limits
+             strongSelf.isPremium = isPremium ?? false
+             
+             let (_, items) = countAndFilterItems
+@@ -4067,7 +4077,7 @@
+             for (filter, unreadCount, hasUnmutedUnread) in items {
+                 switch filter {
+                     case .allChats:
+-                        if let isPremium = isPremium, !isPremium && filterItems.count > 0 {
++                        if let isPremium = isPremium, !isPremium && !snapshot.localActive && filterItems.count > 0 {
+                             filterItems.insert(.all(unreadCount: 0), at: 0)
+                         } else {
+                             filterItems.append(.all(unreadCount: 0))
+@@ -4094,9 +4104,15 @@
+             
+             var selectedEntryId = !strongSelf.initializedFilters ? firstItemEntryId : strongSelf.chatListDisplayNode.mainContainerNode.currentItemFilter
+             var resetCurrentEntry = false
++            if snapshot.localActive, case let .filter(id) = selectedEntryId, !snapshot.allowedIds.contains(id) {
++                selectedEntryId = .all
++                resetCurrentEntry = true
++            }
+             if !resolvedItems.contains(where: { $0.id == selectedEntryId }) {
+                 resetCurrentEntry = true
+-                if let tabContainerData = strongSelf.tabContainerData {
++                if snapshot.localActive {
++                    selectedEntryId = .all
++                } else if let tabContainerData = strongSelf.tabContainerData {
+                     var found = false
+                     if let index = tabContainerData.0.firstIndex(where: { $0.id == selectedEntryId }) {
+                         for i in (0 ..< index - 1).reversed() {
+@@ -4122,7 +4138,7 @@
+                 switch item.0 {
+                     case .allChats:
+                         hasAllChats = true
+-                        if let isPremium = isPremium, !isPremium && availableFilters.count > 0 {
++                        if let isPremium = isPremium, !isPremium && !snapshot.localActive && availableFilters.count > 0 {
+                             availableFilters.insert(.all, at: 0)
+                         } else {
+                             availableFilters.append(.all)
+@@ -4138,7 +4154,7 @@
+             
+             if isPremium == nil && items.isEmpty {
+                 strongSelf.mainReady.set(strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.ready)
+-            } else if !strongSelf.initializedFilters {
++            } else if !strongSelf.initializedFilters && snapshot.startupReady {
+                 if selectedEntryId != strongSelf.chatListDisplayNode.mainContainerNode.currentItemFilter {
+                     strongSelf.chatListDisplayNode.mainContainerNode.switchToFilter(id: selectedEntryId, animated: false, completion: { [weak self] in
+                         if let strongSelf = self {
+diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift b/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift
+--- a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift
++++ b/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift
+@@ -340,7 +340,13 @@
+     var pushControllerImpl: ((ViewController) -> Void)?
+     var presentControllerImpl: ((ViewController) -> Void)?
+     
+-    let filtersWithCountsSignal = context.engine.peers.updatedChatListFilters()
++    let presentationSnapshot = Promise<JerkgramChatListFilterSnapshot>()
++    presentationSnapshot.set(context.engine.peers.updatedJerkgramChatListFilters())
++    var latestSnapshot: JerkgramChatListFilterSnapshot?
++    var reorderProposal: JerkgramChatListFilterProposal?
++    var reorderSessionStarted = false
++    let filtersWithCountsSignal = presentationSnapshot.get()
++    |> map { $0.filters }
+     |> distinctUntilChanged
+     |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
+         return .single(filters.map { filter -> (ChatListFilter, Int) in
+@@ -592,7 +598,7 @@
+     let signal = combineLatest(queue: .mainQueue(),
+         context.sharedContext.presentationData,
+         statePromise.get(),
+-        filtersWithCounts.get(),
++        presentationSnapshot.get(),
+         preferences,
+         updatedFilterOrder.get(),
+         featuredFilters,
+@@ -602,14 +608,16 @@
+             TelegramEngine.EngineData.Item.ChatList.FiltersDisplayTags()
+         )
+     )
+-    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters, peer, allLimits, displayTags -> (ItemListControllerState, (ItemListNodeState, Any)) in
++    |> map { presentationData, state, snapshot, preferences, updatedFilterOrderValue, suggestedFilters, peer, allLimits, displayTags -> (ItemListControllerState, (ItemListNodeState, Any)) in
+         var presentationData = presentationData
+ 
+         let updatedTheme = presentationData.theme.withModalBlocksBackground()
+         presentationData = presentationData.withUpdated(theme: updatedTheme)
+         
+-        let isPremium = peer?.isPremium ?? false
+-        let limits = allLimits.0
++        latestSnapshot = snapshot
++        let filtersWithCountsValue = snapshot.filters.map { ($0, 0) }
++        let isPremium = snapshot.isPremium ?? false
++        let limits = snapshot.limits
+         let premiumLimits = allLimits.1
+         
+         let leftNavigationButton: ItemListNavigationButton?
+@@ -627,7 +635,20 @@
+                 let _ = (updatedFilterOrder.get()
+                 |> take(1)
+                 |> deliverOnMainQueue).startStandalone(next: { [weak updatedFilterOrder] updatedFilterOrderValue in
+-                    if let updatedFilterOrderValue = updatedFilterOrderValue {
++                    if let updatedFilterOrderValue = updatedFilterOrderValue, let proposal = reorderProposal {
++                        let _ = (context.engine.peers.updateJerkgramChatListFilterOrder(ids: updatedFilterOrderValue, proposal: proposal)
++                        |> deliverOnMainQueue).start(next: { _ in
++                            updatedFilterOrder?.set(.single(nil))
++                            reorderProposal = nil
++                            reorderSessionStarted = false
++                            filtersWithCounts.set(filtersWithCountsSignal)
++                            updateState { state in
++                                var state = state
++                                state.isEditing = false
++                                return state
++                            }
++                        })
++                    } else if let updatedFilterOrderValue = updatedFilterOrderValue {
+                         let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
+                             var updatedFilters: [ChatListFilter] = []
+                             for id in updatedFilterOrderValue {
+@@ -653,11 +674,14 @@
+                                 updateState { state in
+                                     var state = state
+                                     state.isEditing = false
++                                    reorderSessionStarted = false
+                                     return state
+                                 }
+                             })
+                         })
+                     } else {
++                        reorderProposal = nil
++                        reorderSessionStarted = false
+                         updateState { state in
+                             var state = state
+                             state.isEditing = false
+@@ -684,7 +708,9 @@
+         }
+         
+         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+-        let entries = chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, displayTags: displayTags, isPremium: isPremium, limits: limits, premiumLimits: premiumLimits)
++        // Revalidate tentative state on policy/hidden/count changes before native ordinal gates see it.
++        let effectiveUpdatedOrder = reorderProposal != nil ? updatedFilterOrderValue.map(snapshot.normalizedOrder) : updatedFilterOrderValue
++        let entries = chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: effectiveUpdatedOrder, suggestedFilters: suggestedFilters, displayTags: displayTags, isPremium: isPremium, limits: limits, premiumLimits: premiumLimits)
+         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: focusOnItemTag, initialScrollToItem: scrollToTags ? ListViewScrollToItem(index: entries.count - 1, position: .center(.bottom), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down) : nil, animateChanges: true)
+         
+         return (controllerState, (listState, arguments))
+@@ -716,6 +742,10 @@
+         controller?.dismiss()
+     }
+     controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [ChatListFilterPresetListEntry]) -> Signal<Bool, NoError> in
++        if !reorderSessionStarted {
++            reorderSessionStarted = true
++            reorderProposal = latestSnapshot?.proposal
++        }
+         let fromEntry = entries[fromIndex]
+         guard case let .preset(_, _, _, fromPreset, _, _, _, _, _, _) = fromEntry else {
+             return .single(false)
+@@ -771,7 +801,13 @@
+                 filters.append(fromPreset)
+             }
+             
+-            let updatedOrder = filters.map { $0.id }
++            let proposedOrder = filters.map { $0.id }
++            let updatedOrder: [Int32]
++            if reorderProposal != nil, let snapshot = latestSnapshot {
++                updatedOrder = snapshot.normalizedOrder(proposedOrder)
++            } else {
++                updatedOrder = proposedOrder
++            }
+             if initialOrder != updatedOrder {
+                 updatedFilterOrder.set(.single(updatedOrder))
+                 return .single(true)
+@@ -787,7 +823,7 @@
+         )
+         |> deliverOnMainQueue).start(next: { order, peer in
+             let isPremium = peer?.isPremium ?? false
+-            if !isPremium, let order = order, order.first != 0 {
++            if !isPremium, reorderProposal == nil, let order = order, order.first != 0 {
+                 updatedFilterOrder.set(.single(previousOrder))
+ 
+                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+diff --git a/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift b/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift
+--- a/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift
++++ b/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift
+@@ -8,7 +8,7 @@
+ import TelegramUIPreferences
+ import TelegramCore
+ 
+-public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
++public func chatListFilterItems(context: AccountContext, filters: Signal<[ChatListFilter], NoError>? = nil) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
+     // A folder never names a secret chat. ChatListFilterPredicate resolves a secret chat's identity
+     // to its associated cloud user, so including or excluding the user silently does the same to the
+     // secret chat; and a folder can pin one, which ChatListFilterIncludePeers deliberately keeps out
+@@ -17,7 +17,7 @@
+     //
+     // The association is sampled once per filter change rather than observed: a secret chat created
+     // afterwards is not reflected in the badge until the filters change again or the app restarts.
+-    return context.engine.peers.updatedChatListFilters()
++    return (filters ?? context.engine.peers.updatedChatListFilters())
+     |> distinctUntilChanged
+     |> mapToSignal { filters -> Signal<([ChatListFilter], [EnginePeer.Id: [EnginePeer.Id]], [EnginePeer.Id: EnginePeer.Id]), NoError> in
+         var folderPeerIds = Set<EnginePeer.Id>()
+@@ -314,3 +314,12 @@
+         }
+     }
+ }
++
++// Metadata and unread tuples are emitted from the same presentation snapshot.
++func jerkgramChatListFilterItems(context: AccountContext) -> Signal<(JerkgramChatListFilterSnapshot, (Int, [(ChatListFilter, Int, Bool)])), NoError> {
++    return context.engine.peers.updatedJerkgramChatListFilters()
++    |> mapToSignal { snapshot in
++        return chatListFilterItems(context: context, filters: .single(snapshot.filters))
++        |> map { (snapshot, $0) }
++    }
++}
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -507,6 +507,7 @@
+     return [
+         JerkgramSponsoredContentPolicy.preferenceKey: .bool(state.removeSponsored),
+         JerkgramDownloadBoostSettings.preferenceKey: .string(state.downloadBoost),
++        JerkgramDefaultFolderSettings.preferenceKey: .bool(state.unlockDefaultChatFolder),
+         JerkgramTranslationSettings.preferenceKey: .bool(state.enhancedTranslation),
+         GhostBaseKey.profileEnabled: .bool(state.profileEnabled),
+         GhostBaseKey.showIds: .bool(state.showIds),
+@@ -587,6 +588,9 @@
+     if changes[JerkgramSponsoredContentPolicy.preferenceKey] != nil {
+         JerkgramSponsoredContentPolicy.update(accountPeerId: accountPeerId, enabled: current.removeSponsored)
+     }
++    if changes[JerkgramDefaultFolderSettings.preferenceKey] != nil {
++        JerkgramDefaultFolderSettings.update(accountPeerId: accountPeerId, enabled: current.unlockDefaultChatFolder)
++    }
+     if changes[JerkgramTranslationSettings.preferenceKey] != nil {
+         JerkgramTranslationSettings.update(accountPeerId: accountPeerId, enabled: current.enhancedTranslation)
+     }
+@@ -678,6 +682,7 @@
+     var hideBlockedReactions: Bool
+     var removeSponsored: Bool = false
+     var downloadBoost: String = "off"
++    var unlockDefaultChatFolder: Bool = false
+     var enhancedTranslation: Bool = true
+     var sendTextStyle: String
+ 
+@@ -738,6 +743,7 @@
+             hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
+             removeSponsored: JerkgramSponsoredContentPolicy.readStoredValue(accountPeerId: accountPeerId),
+             downloadBoost: JerkgramDownloadBoostSettings.readStoredMode(accountPeerId: accountPeerId).rawValue,
++            unlockDefaultChatFolder: UserDefaults.standard.object(forKey: JerkgramDefaultFolderSettings.scopedKey(accountPeerId: accountPeerId)) as? Bool ?? false,
+             enhancedTranslation: UserDefaults.standard.object(forKey: JerkgramTranslationSettings.scopedKey(accountPeerId: accountPeerId)) as? Bool ?? true,
+             sendTextStyle: jerkgramScopedString(accountPeerId: accountPeerId, key: 
+                 ghostBaseSendTextStyleKey,
+@@ -2252,6 +2258,7 @@
+     }
+ 
+     if page == .appearance {
++        let isRussian = strings.languageCode.hasPrefix("ru")
+         return [
+             .header(0, strings.profileBackground),
+             .toggle(0, 1, GhostBaseKey.glassEnabled, strings.profileBackgroundEffect, state.glassEnabled),
+@@ -2271,7 +2278,8 @@
+                 state.showRamUnderClock
+             ),
+             .toggle(1, 8, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
+-            .info(1, strings.hidePhoneHint)
++            .toggle(1, 9, JerkgramDefaultFolderSettings.preferenceKey, isRussian ? "Разблокировать папку по умолчанию" : "Unlock Default Chat Folder", state.unlockDefaultChatFolder),
++            .info(1, strings.hidePhoneHint + "\n\n" + (isRussian ? "Выберите первую папку обычным изменением порядка папок. Порядок сохраняется для этого аккаунта только на этом устройстве. Лимиты папок остаются прежними." : "Choose the first folder using the normal folder reorder. The order is saved for this account on this device only. Folder limits still apply."))
+         ]
+     }
+ 
+@@ -3778,6 +3786,8 @@
+             switch key {
+             case JerkgramAppIconAccess.preferenceKey:
+                 UserDefaults.standard.set(value, forKey: JerkgramAppIconAccess.preferenceKey)
++            case JerkgramDefaultFolderSettings.preferenceKey:
++                updated.unlockDefaultChatFolder = value
+             case JerkgramTranslationSettings.preferenceKey:
+                 updated.enhancedTranslation = value
+             case GhostBaseKey.profileEnabled:
+diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift b/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
+--- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
++++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
+@@ -369,6 +369,11 @@
+ }
+ 
+ public struct PreferencesKeys {
++    public static let jerkgramDefaultFolderOrder: ValueBoxKey = {
++        let key = ValueBoxKey(length: 4)
++        key.setInt32(0, value: 0x4A470001)
++        return key
++    }()
+     public static let globalNotifications: ValueBoxKey = {
+         let key = ValueBoxKey(length: 4)
+         key.setInt32(0, value: PreferencesKeyValues.globalNotifications.rawValue)
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
+@@ -3,6 +3,117 @@
+ import SwiftSignalKit
+ internal import TelegramApi
+ 
++
++// BEGIN JERKGRAM DEFAULT FOLDER FOUNDATION
++public enum JerkgramDefaultFolderSettings {
++    public static let preferenceKey = "jerkgram.UnlockDefaultChatFolder"
++    public static let changed = Notification.Name("JerkgramDefaultFolderPolicyChanged")
++    private static let lock = NSLock()
++    private static var values: [Int64: (Bool, UInt64)] = [:]
++    private static var order: [Int64] = []
++    private static var epoch: UInt64 = 0
++    public static func scopedKey(accountPeerId: Int64) -> String { return "jerkgram.account.\(accountPeerId).setting.\(preferenceKey)" }
++    private static func value(_ id: Int64) -> (Bool, UInt64) {
++        if let value = values[id] { return value }
++        epoch &+= 1
++        let value = (UserDefaults.standard.object(forKey: scopedKey(accountPeerId: id)) as? Bool ?? false, epoch)
++        values[id] = value
++        order.append(id)
++        while order.count > 16 { values.removeValue(forKey: order.removeFirst()) }
++        return value
++    }
++    public static func snapshot(accountPeerId: Int64) -> (enabled: Bool, generation: UInt64) {
++        lock.lock(); defer { lock.unlock() }
++        let current = value(accountPeerId)
++        return (current.0, current.1)
++    }
++    public static func enabled(accountPeerId: Int64) -> Bool { return snapshot(accountPeerId: accountPeerId).enabled }
++    public static func generation(accountPeerId: Int64) -> UInt64 { return snapshot(accountPeerId: accountPeerId).generation }
++    public static func update(accountPeerId: Int64, enabled: Bool) {
++        lock.lock()
++        guard value(accountPeerId).0 != enabled else { lock.unlock(); return }
++        epoch &+= 1
++        values[accountPeerId] = (enabled, epoch)
++        lock.unlock()
++        NotificationCenter.default.post(name: changed, object: accountPeerId)
++    }
++}
++
++// Pure policy is shared by presentation, both reorder surfaces and transaction cleanup.
++public enum JerkgramFolderOrder {
++    public static func startupReady(enabled: Bool, premium: Bool?, localRead: Bool) -> Bool {
++        return localRead && (!enabled || premium != nil)
++    }
++    public static func bounded(_ ids: [Int32]) -> [Int32] {
++        var result: [Int32] = []
++        var seen = Set<Int32>()
++        for id in ids.prefix(256) where id >= 0 {
++            if seen.insert(id).inserted { result.append(id) }
++        }
++        if !seen.contains(0) {
++            if result.count == 256 { result.removeLast() }
++            result.append(0)
++        }
++        return result
++    }
++    public static func effective(native: [Int32], saved: [Int32], allowed: Set<Int32>, active: Bool) -> [Int32] {
++        guard active else { return native }
++        let movable = [Int32(0)] + native.filter { $0 != 0 && allowed.contains($0) }
++        let movableSet = Set(movable)
++        var result = bounded(saved).filter { movableSet.contains($0) }
++        for id in movable where !result.contains(id) { result.append(id) }
++        if let first = saved.first, !movableSet.contains(first) {
++            result.removeAll(where: { $0 == 0 }); result.insert(0, at: 0)
++        }
++        // Locked folders retain their native suffix, so ordinal-based native gates stay valid.
++        result.append(contentsOf: native.filter { $0 != 0 && !allowed.contains($0) })
++        return result
++    }
++    public static func server(native: [Int32], accepted: [Int32]) -> [Int32] {
++        var result = accepted.filter { native.contains($0) }
++        for id in native where !result.contains(id) { result.append(id) }
++        if native.contains(0) { result.removeAll(where: { $0 == 0 }); result.insert(0, at: 0) }
++        return result
++    }
++    public static func pruned(saved: [Int32], old: [Int32], new: [Int32]) -> [Int32] {
++        let removed = Set(old).subtracting(new)
++        var result = bounded(saved).filter { !removed.contains($0) }
++        if let first = saved.first, first != 0, removed.contains(first) {
++            result.removeAll(where: { $0 == 0 }); result.insert(0, at: 0)
++        }
++        return result
++    }
++    public static func proposalIsCurrent(enabled: Bool, premium: Bool?, generation: UInt64, proposedGeneration: UInt64) -> Bool {
++        return enabled && premium == false && generation == proposedGeneration
++    }
++}
++
++struct JerkgramFolderProposalToken {
++    private let lifetime: ObjectIdentifier
++    let generation: UInt64
++    init(lifetime: AnyObject, generation: UInt64) {
++        self.lifetime = ObjectIdentifier(lifetime)
++        self.generation = generation
++    }
++    func matches(lifetime: AnyObject, generation: UInt64) -> Bool {
++        return self.lifetime == ObjectIdentifier(lifetime) && self.generation == generation
++    }
++}
++
++private struct JerkgramDefaultFolderOrder: Codable, Equatable {
++    let ids: [Int32]
++    init(ids: [Int32]) { self.ids = JerkgramFolderOrder.bounded(ids) }
++    private enum CodingKeys: String, CodingKey { case ids }
++    init(from decoder: Decoder) throws {
++        let container = try decoder.container(keyedBy: CodingKeys.self)
++        // Decode at most the storage bound, even for a corrupt oversized preference.
++        var values = try container.nestedUnkeyedContainer(forKey: .ids)
++        var ids: [Int32] = []
++        while !values.isAtEnd && ids.count < 256 { ids.append(try values.decode(Int32.self)) }
++        self.init(ids: ids)
++    }
++}
++// END JERKGRAM DEFAULT FOLDER FOUNDATION
+ 
+ public struct ChatListFilterPeerCategories: OptionSet, Hashable {
+     public var rawValue: Int32
+@@ -1108,6 +1219,105 @@
+     }
+ }
+ 
++public struct JerkgramChatListFilterProposal {
++    fileprivate let token: JerkgramFolderProposalToken
++    fileprivate let nativeIds: [Int32]
++    fileprivate let allowedIds: Set<Int32>
++}
++
++public struct JerkgramChatListFilterSnapshot {
++    public let filters: [ChatListFilter]
++    public let nativeFilters: [ChatListFilter]
++    public let isPremium: Bool?
++    public let limits: EngineConfiguration.UserLimits
++    public let allowedIds: Set<Int32>
++    public let localReady: Bool
++    public let policyEnabled: Bool
++    public let configuredDefaultId: Int32
++    public let generation: UInt64
++    public let localActive: Bool
++    public let defaultMissing: Bool
++    public let proposal: JerkgramChatListFilterProposal?
++    public var startupReady: Bool { return JerkgramFolderOrder.startupReady(enabled: self.policyEnabled, premium: self.isPremium, localRead: self.localReady) }
++    public func normalizedOrder(_ ids: [Int32]) -> [Int32] {
++        return JerkgramFolderOrder.effective(native: self.nativeFilters.map { $0.id }, saved: ids, allowed: self.allowedIds, active: self.localActive)
++    }
++}
++
++private func jerkgramFolderPolicy(accountPeerId: Int64) -> Signal<(enabled: Bool, generation: UInt64), NoError> {
++    return Signal { subscriber in
++        let observer = NotificationCenter.default.addObserver(forName: JerkgramDefaultFolderSettings.changed, object: nil, queue: nil) { notification in
++            guard let id = notification.object as? Int64, id == accountPeerId else { return }
++            subscriber.putNext(JerkgramDefaultFolderSettings.snapshot(accountPeerId: accountPeerId))
++        }
++        subscriber.putNext(JerkgramDefaultFolderSettings.snapshot(accountPeerId: accountPeerId))
++        return ActionDisposable { NotificationCenter.default.removeObserver(observer) }
++    }
++}
++
++func _internal_updatedJerkgramChatListFilters(account: Account) -> Signal<JerkgramChatListFilterSnapshot, NoError> {
++    let preferencesKey = PostboxViewKey.preferences(keys: Set([PreferencesKeys.chatListFilters, PreferencesKeys.jerkgramDefaultFolderOrder, PreferencesKeys.appConfiguration]))
++    let peerKey = PostboxViewKey.basicPeer(account.peerId)
++    return combineLatest(
++        account.postbox.combinedView(keys: [preferencesKey, peerKey]),
++        account.viewTracker.hiddenChatListFilterIds,
++        jerkgramFolderPolicy(accountPeerId: account.peerId.toInt64())
++    ) |> map { views, hiddenIds, policy -> JerkgramChatListFilterSnapshot in
++        guard let preferences = views.views[preferencesKey] as? PreferencesView,
++              let peerView = views.views[peerKey] as? BasicPeerView else { preconditionFailure() }
++        let state = preferences.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self) ?? .default
++        let saved = preferences.values[PreferencesKeys.jerkgramDefaultFolderOrder]?.get(JerkgramDefaultFolderOrder.self)?.ids ?? [0]
++        let premium = peerView.peer?.isPremium
++        let configuration = preferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
++        let limits = EngineConfiguration.UserLimits(UserLimitsConfiguration(appConfiguration: configuration, isPremium: false))
++        let limit = max(0, Int(limits.maxFoldersCount))
++        let native = state.filters.filter { !hiddenIds.contains($0.id) }
++        let allowed = Set(native.filter { $0.id != 0 }.prefix(limit).map { $0.id })
++        let active = policy.enabled && premium == false
++        let ids = JerkgramFolderOrder.effective(native: native.map { $0.id }, saved: saved, allowed: allowed, active: active)
++        let filters = ids.compactMap { id -> ChatListFilter? in
++            if id == 0 { return .allChats }
++            return native.first(where: { $0.id == id })
++        }
++        return JerkgramChatListFilterSnapshot(filters: filters, nativeFilters: native, isPremium: premium, limits: limits, allowedIds: allowed, localReady: true, policyEnabled: policy.enabled, configuredDefaultId: saved.first ?? 0, generation: policy.generation, localActive: active, defaultMissing: active && saved.first != 0 && !allowed.contains(saved.first ?? 0), proposal: active ? JerkgramChatListFilterProposal(token: JerkgramFolderProposalToken(lifetime: account.postbox, generation: policy.generation), nativeIds: native.map { $0.id }, allowedIds: allowed) : nil)
++    }
++}
++
++// Returns one value even when obsolete: both native Done handlers must finish editing.
++func _internal_updateJerkgramChatListFilterOrder(account: Account, ids: [Int32], proposal: JerkgramChatListFilterProposal) -> Signal<[ChatListFilter], NoError> {
++    return account.viewTracker.hiddenChatListFilterIds |> take(1) |> mapToSignal { hiddenIds in
++        return account.postbox.transaction { transaction -> [ChatListFilter] in
++            let state = _internal_currentChatListFiltersState(transaction: transaction)
++            let policy = JerkgramDefaultFolderSettings.snapshot(accountPeerId: account.peerId.toInt64())
++            let premium = transaction.getPeer(account.peerId)?.isPremium
++            let configuration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
++            let limit = max(0, Int(UserLimitsConfiguration(appConfiguration: configuration, isPremium: false).maxFoldersCount))
++            let native = state.filters.filter { !hiddenIds.contains($0.id) }
++            let allowed = Set(native.filter { $0.id != 0 }.prefix(limit).map { $0.id })
++            guard proposal.token.matches(lifetime: account.postbox, generation: policy.generation),
++                  JerkgramFolderOrder.proposalIsCurrent(enabled: policy.enabled, premium: premium, generation: policy.generation, proposedGeneration: proposal.token.generation),
++                  proposal.nativeIds == native.map({ $0.id }), proposal.allowedIds == allowed else { return state.filters }
++            let accepted = JerkgramFolderOrder.effective(native: native.map { $0.id }, saved: ids, allowed: allowed, active: true)
++            transaction.updatePreferencesEntry(key: PreferencesKeys.jerkgramDefaultFolderOrder, { _ in PreferencesEntry(JerkgramDefaultFolderOrder(ids: accepted)) })
++            // Preserve every synchronized member, including hidden filters; All is never synthesized into RPC state.
++            let serverIds = JerkgramFolderOrder.server(native: state.filters.map { $0.id }, accepted: accepted.filter { $0 == 0 || allowed.contains($0) })
++            _internal_updateChatListFiltersInteractively(transaction: transaction, { current in
++                return serverIds.compactMap { id in current.first(where: { $0.id == id }) }
++            })
++            return accepted.compactMap { id in id == 0 ? .allChats : native.first(where: { $0.id == id }) }
++        }
++    }
++}
++
++private func jerkgramPruneDefaultFolderOrder(transaction: Transaction, old: [ChatListFilter], new: [ChatListFilter]) {
++    guard !Set(old.map { $0.id }).subtracting(new.map { $0.id }).isEmpty,
++          let saved = transaction.getPreferencesEntry(key: PreferencesKeys.jerkgramDefaultFolderOrder)?.get(JerkgramDefaultFolderOrder.self) else { return }
++    let ids = JerkgramFolderOrder.pruned(saved: saved.ids, old: old.map { $0.id }, new: new.map { $0.id })
++    if ids != saved.ids {
++        transaction.updatePreferencesEntry(key: PreferencesKeys.jerkgramDefaultFolderOrder, { _ in PreferencesEntry(JerkgramDefaultFolderOrder(ids: ids)) })
++    }
++}
++
+ func _internal_generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
+     while true {
+         let id = Int32(2 + arc4random_uniform(255 - 2))
+@@ -1119,6 +1329,7 @@
+ 
+ func _internal_updateChatListFiltersInteractively(postbox: Postbox, _ f: @escaping ([ChatListFilter]) -> [ChatListFilter]) -> Signal<[ChatListFilter], NoError> {
+     return postbox.transaction { transaction -> [ChatListFilter] in
++        let oldFilters = _internal_currentChatListFilters(transaction: transaction)
+         var updated: [ChatListFilter] = []
+         var hasUpdates = false
+         transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
+@@ -1134,6 +1345,7 @@
+             
+             return PreferencesEntry(state)
+         })
++        jerkgramPruneDefaultFolderOrder(transaction: transaction, old: oldFilters, new: updated)
+         if hasUpdates {
+             requestChatListFiltersSync(transaction: transaction)
+         }
+@@ -1179,6 +1391,7 @@
+ }
+ 
+ func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f: ([ChatListFilter]) -> [ChatListFilter]) {
++    let oldFilters = _internal_currentChatListFilters(transaction: transaction)
+     var hasUpdates = false
+     transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
+         var state = entry?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
+@@ -1190,6 +1403,7 @@
+         state.normalize()
+         return PreferencesEntry(state)
+     })
++    jerkgramPruneDefaultFolderOrder(transaction: transaction, old: oldFilters, new: _internal_currentChatListFilters(transaction: transaction))
+     if hasUpdates {
+         requestChatListFiltersSync(transaction: transaction)
+     }
+@@ -1257,6 +1471,7 @@
+ }
+ 
+ func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersState) -> ChatListFiltersState) -> ChatListFiltersState {
++    let oldFilters = _internal_currentChatListFilters(transaction: transaction)
+     var result: ChatListFiltersState?
+     transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
+         let settings = entry?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
+@@ -1265,6 +1480,7 @@
+         result = updated
+         return PreferencesEntry(updated)
+     })
++    jerkgramPruneDefaultFolderOrder(transaction: transaction, old: oldFilters, new: (result ?? .default).filters)
+     return result ?? .default
+ }
+ 
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
+@@ -1168,6 +1168,14 @@
+             let _ = _internal_updateChatListFiltersDisplayTagsInteractively(postbox: self.account.postbox, displayTags: isEnabled).startStandalone()
+         }
+ 
++        public func updatedJerkgramChatListFilters() -> Signal<JerkgramChatListFilterSnapshot, NoError> {
++            return _internal_updatedJerkgramChatListFilters(account: self.account)
++        }
++
++        public func updateJerkgramChatListFilterOrder(ids: [Int32], proposal: JerkgramChatListFilterProposal) -> Signal<[ChatListFilter], NoError> {
++            return _internal_updateJerkgramChatListFilterOrder(account: self.account, ids: ids, proposal: proposal)
++        }
++
+         public func updatedChatListFilters() -> Signal<[ChatListFilter], NoError> {
+             return _internal_updatedChatListFilters(postbox: self.account.postbox, hiddenIds: self.account.viewTracker.hiddenChatListFilterIds)
+         }

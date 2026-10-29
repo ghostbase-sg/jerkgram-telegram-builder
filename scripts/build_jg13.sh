@@ -63,6 +63,8 @@ python3 scripts/materialize_jg131_performance_wave1.py
 python3 tests/run_jg131_build176_regressions.py
 python3 scripts/materialize_jg131_translation_repair.py
 python3 tests/run_jg131_translation_repair.py
+python3 scripts/materialize_jg131_default_folder.py
+python3 tests/run_jg131_default_folder.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive

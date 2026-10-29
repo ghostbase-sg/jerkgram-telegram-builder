@@ -1,0 +1,35 @@
+{
+  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "parent_task_a_commit": "65a6913995b5a6ee752072fde427dd6ac72c8019",
+  "patch_sha256": "d81e06557b4cf4a260512dc0733eeb0c04abd3505b77e13a1b533f72dbea2a5e",
+  "owners": {
+    "submodules/ChatListUI/Sources/ChatListController.swift": {
+      "before_sha256": "17f5a4999771296d8f4209ee12fe9082dd8632fd61500e990e47f090b0eba4bf",
+      "after_sha256": "fdd9d6fbe52f2511533133ae3ad63f1b6b3026b6b3f909ea1ccf68cf16513343"
+    },
+    "submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift": {
+      "before_sha256": "86f3057425c7a5d5b87fb05735ad6a56c3c79614f424cac051a1fbb72cfe03b0",
+      "after_sha256": "fc2876d762d3bf555f8db29b795ceec536bc2355e03f7b91dd3f1354f0f68959"
+    },
+    "submodules/ChatListUI/Sources/TabBarChatListFilterController.swift": {
+      "before_sha256": "14e7aee3d1ad800781842696f6889813428291bc02114f912a360f3d689e757b",
+      "after_sha256": "720c8b1e82940d4dbdc58a0e4ab29282bd37e79b539c7cbc4cd433e9644120b6"
+    },
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+      "before_sha256": "cf8569161271127ffc7023df5aedeee3dc80fe738a1c69939834d881f33314f6",
+      "after_sha256": "2afe952d9bc8b68090c71be8585e7344f79a2e2da2e9873866a0565f2eee6cff"
+    },
+    "submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift": {
+      "before_sha256": "399c80374233d2ac61503ce036fc67cef33851e184522b97dc2a5a84641319da",
+      "after_sha256": "bbb62b5936d3fda89a82eb11ca6e202073d1840c3b62cf41a972b605cb49f9a1"
+    },
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift": {
+      "before_sha256": "9eff606ea71671f44d826861f70143a98547755b431f9c4e7981e51bc9700a86",
+      "after_sha256": "abc02c2154576c70eee28bffae1a98d0b74624ab4b69153b40ed558d4d39b3a4"
+    },
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": {
+      "before_sha256": "41c58ca5e82006076928afe0506e01a5725da678d8c8ddbc3f07c12a9d5dc9fa",
+      "after_sha256": "7ff0af4559ac62cee23d9bcfd7264eb02235104deae1c8dc638d477a22814b03"
+    }
+  }
+}

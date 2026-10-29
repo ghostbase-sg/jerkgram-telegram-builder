@@ -1,0 +1,30 @@
+[
+  {
+    "file": "ChatListUI/Sources/ChatListController.swift",
+    "text": "self.context.engine.peers.updateChatListFiltersInteractively { stateFilters in\n                var updatedFilters: [ChatListFilter] = []\n                for id in reorderedFilterIds {\n                    if let index = stateFilters.firstIndex(where: { $0.id == id }) {\n                        updatedFilters.append(stateFilters[index])\n                    }\n                }\n                updatedFilters.append(contentsOf: stateFilters.compactMap { filter -> ChatListFilter? in\n                    if !updatedFilters.contains(where: { $0.id == filter.id }) {\n                        return filter\n                    } else {\n                        return nil\n                    }\n                })\n                return updatedFilters\n            }"
+  },
+  {
+    "file": "ChatListUI/Sources/ChatListFilterPresetListController.swift",
+    "text": "context.engine.peers.updateChatListFiltersInteractively { filters in\n                            var updatedFilters: [ChatListFilter] = []\n                            for id in updatedFilterOrderValue {\n                                if let index = filters.firstIndex(where: { $0.id == id }) {\n                                    updatedFilters.append(filters[index])\n                                }\n                            }\n                            for filter in filters {\n                                if !updatedFilters.contains(where: { $0.id == filter.id }) {\n                                    updatedFilters.append(filter)\n                                }\n                            }\n                            \n                            return updatedFilters\n                        }"
+  },
+  {
+    "file": "ChatListUI/Sources/ChatListFilterPresetListController.swift",
+    "text": "isDisabled: !isPremium && folderCount > limits.maxFoldersCount"
+  },
+  {
+    "file": "ChatListUI/Sources/ChatListFilterPresetListController.swift",
+    "text": "if filters.count >= premiumLimit {"
+  },
+  {
+    "file": "ChatListUI/Sources/ChatListFilterPresetListController.swift",
+    "text": "} else if filters.count >= limit && !isPremium {"
+  },
+  {
+    "file": "ChatListUI/Sources/ChatListController.swift",
+    "text": "let filtersLimit = isPremium == false ? limits.maxFoldersCount : nil"
+  },
+  {
+    "file": "ChatListUI/Sources/ChatListController.swift",
+    "text": "mainContainerNode.updateAvailableFilters(availableFilters, limit: filtersLimit)"
+  }
+]

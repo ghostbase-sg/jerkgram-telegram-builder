@@ -80,6 +80,17 @@ def main():
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()
         return
+    from materialize_jg131_default_folder import is_applied as folder_applied, verify_folder, parent_source_view as folder_parent
+    if folder_applied(final_source):
+        verify_folder(final_source)
+        try:
+            with folder_parent(final_source) as parent:
+                SOURCE = parent
+                main()
+        finally:
+            SOURCE = final_source
+        print("Default folder TASK B final owners VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
+        return
     from materialize_jg131_translation_repair import is_applied as repair_applied, verify_repair, parent_source_view
     if repair_applied(final_source):
         verify_repair(final_source)
