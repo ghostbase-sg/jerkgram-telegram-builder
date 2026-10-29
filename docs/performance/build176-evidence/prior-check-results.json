@@ -1,0 +1,14 @@
+{
+  "prior_final": {
+    "run": 77,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 17
+  },
+  "preceding": {
+    "run": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

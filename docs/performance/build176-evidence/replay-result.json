@@ -1,0 +1,9 @@
+{
+  "fresh_upstream": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "stage_count": 24,
+  "owners": 323,
+  "matching_current_composite": 323,
+  "mismatches": [],
+  "credential_configuration": "not invoked; no credential values read or written",
+  "full_build": false
+}

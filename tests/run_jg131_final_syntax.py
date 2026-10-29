@@ -7,6 +7,8 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from jg131_final_stages import STAGES
 owners=set()
 for stage, _, _ in STAGES: owners.update(stage.manifest()['owners'])
+from materialize_jg131_performance_wave1 import manifest
+owners.update(manifest()['owners'])
 for name in sorted(owners):
     if name.endswith('.swift'):
         subprocess.run(['xcrun','swiftc','-frontend','-parse',str(ROOT/'work/swiftgram-src'/name)],check=True)

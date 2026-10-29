@@ -85,3 +85,5 @@ jobs:
           python3 -m unittest discover -s tests -p test_jg131_settings_visual_followup.py
           python3 -m unittest discover -s tests -p test_jg131_excluded_chat_interactions.py
           python3 tests/run_jg131_build175_regressions.py
+          python3 scripts/materialize_jg131_performance_wave1.py
+          python3 tests/run_jg131_build176_regressions.py

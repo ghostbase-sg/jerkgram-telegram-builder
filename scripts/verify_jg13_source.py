@@ -80,6 +80,17 @@ def main():
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()
         return
+    from materialize_jg131_performance_wave1 import is_applied, verify_wave1, baseline_source_view
+    if is_applied(final_source):
+        verify_wave1(final_source)
+        try:
+            with baseline_source_view(final_source) as baseline:
+                SOURCE = baseline
+                main()
+        finally:
+            SOURCE = final_source
+        print("Build176 wave1 final owners VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
+        return
     verify_final_stages(final_source)
     try:
         with preceding_source_view(final_source) as preceding:

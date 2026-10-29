@@ -1,0 +1,94 @@
+{
+  "submodules/Display/Source/GhostBaseGlass.swift": {
+    "before_sha256": "e1fb6f4b17db0d27964ac2490241602ffecdb37c4b233b39f2e7b848db03c149",
+    "after_sha256": "b9dfae10712fb2a414c2f87f0f800e8df4a9600fb77bde0a6a4a67ace4f63914"
+  },
+  "submodules/Display/Source/ViewController.swift": {
+    "before_sha256": "af14f226b5438f2e18f62f13e4d556528dd1b653de308cd2663183b2ab8c16d8",
+    "after_sha256": "aefe303584e6da13e1d80fa12130054835cb87fe007a05f062ce7e523ff1a5e8"
+  },
+  "submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift": {
+    "before_sha256": "179a5ef9658377c372a75ad616c3cf1158f41f90499babcd0946b02cd936742c",
+    "after_sha256": "8b0be0243fb091abb4ad4422d910ad3f510466ce6307b97072f87ef1be449bd5"
+  },
+  "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+    "before_sha256": "c2b3147a5efe05fc8ba8c18fa2afa0da88f42044904906a73c92539a428e43c1",
+    "after_sha256": "6dacdf6352fbb2f6299e10411d402fd86f42704a2cd2c2ee96d7824cd49662d6"
+  },
+  "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": {
+    "before_sha256": "b7ae323070e4a5eafddf19adb6c63d67507fed9a3f5b437f2577a9393cb2c6d3",
+    "after_sha256": "215ab9b5f4aab7968ec894c7cd54bdfc9d129ca6d3421438b14cf69b38835430"
+  },
+  "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift": {
+    "before_sha256": "176e0fde77815eee31aadb6c5af586085b156cf6e2e03ed32c68916462259c38",
+    "after_sha256": "8475280ce7f9be1102b1ef516e31dc6f77df296a11144701c11bc11b81cabbdf"
+  },
+  "submodules/TelegramCore/Sources/Account/Account.swift": {
+    "before_sha256": "c942afebd59f356fc4a860051550d03fa94e57aa79ee9d979e2d89eaa8bb8d4c",
+    "after_sha256": "7dc12c6da60f55c7a8a0da6ce285fe220ac1cbb9bdc27b94468c8f24ebb477c2"
+  },
+  "submodules/TelegramPresentationData/Sources/PresentationTheme.swift": {
+    "before_sha256": "22dbe6fb85f94f9eeb18569aa66d4a481a9b05f7944beb16d5d5375b2098b72e",
+    "after_sha256": "29c692dbe5210d458084418f81db352633fc51bd8c55270bda82dfe6055911da"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode/Sources/PeerInfoPaneNode.swift": {
+    "before_sha256": "cc4861815f290f53e7b45dee20a114e59afa6b422995244bec52c77d27e2efed",
+    "after_sha256": "d6528590c3c24f7f20c65b0d47142028706778f24e2945a5e1f40d555095fad2"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
+    "before_sha256": "fc4a38b6d59decdc66d9e5781655132f341b2c2c96ce492bfa9a2134b83f1892",
+    "after_sha256": "0522623c2f3fe3603e0f45c49eeff332cb1e58bcd609369735ad3e7a251f2e94"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileReportPaneNode.swift": {
+    "before_sha256": "7831cd28412b0060311687cf9b705f6f834495fb92f03740c7a8e724a4a3e35d",
+    "after_sha256": "0e0bb39cba9ffc1e2c98e2436fb3fcd892cdec72783dc44d2af976ff0a003aef"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift": {
+    "before_sha256": "a2d48805d17234657c0f3bfd4f9473960af20d8e0047f19fb1d47ac11df8e34b",
+    "after_sha256": "a5ed6ad358aa815eb5e67400bb8fa2a744a6e2b9ebdbb75da2bd2949c6ba86cb"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoListPaneNode.swift": {
+    "before_sha256": "7aeb6f9af40b8d784a0e1704a00bbc6d51c59a320d638c980286447cedf629ce",
+    "after_sha256": "15925acae8a100ac14eb19781a102f4630970bb3435b24090fb0a4c7d0bc0684"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift": {
+    "before_sha256": "5260971fea6519d9fc58db05c3f8148ddf10dc8674aa748d5652a5d3a2123e8c",
+    "after_sha256": "127cca6903a7213057e793418b0029f21c334b66a0032522d4dfb4ecd085f70c"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift": {
+    "before_sha256": "b7e71a7995b8b2af3ad79cc9d3000230000740711a3b5a8f46585098862b0c08",
+    "after_sha256": "de7b29bc23ad4f1e41aaab5e767af104377cf6b4bc20fac31bf002b0f0a63f07"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift": {
+    "before_sha256": "b6e76d4fa7add8f9feca7676cf851b7de1b8b655e44decb16d90b07ad8634c92",
+    "after_sha256": "ba065cc3f401e05e1bc840dc7657c5421f99f0378d233407f8ab97395cafb862"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
+    "before_sha256": "3f91dcb1801926d6352710ee32a2463c3f3c6700fb681512b050e813a815a927",
+    "after_sha256": "83ff5227ad5cd722df529625c8771a9e1146f263bdcac23b17da46a8fee4b1a6"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": {
+    "before_sha256": "b8b264030e0f7591f75b69fbab3c76e3d8e4537af9b9938e7b030f95e8b8a714",
+    "after_sha256": "cb6a1ce5f6e4f5d88f4ac0a65a265c623f8e068084a4988e903b6185628ecf75"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift": {
+    "before_sha256": "3da8405c7e7167195a032c12ac5291050bb57837a69c1697157ab64af9881472",
+    "after_sha256": "34a49d302909214744edd58395e6f6d8bb8627debaa9fecacca3348ba1162941"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift": {
+    "before_sha256": "95cf9c068c9bd0ac28c16d1f9ab38f4deda1730d4b1b4d7eafce454420a462bc",
+    "after_sha256": "26338c69c997a68cb7cacb8796e1d6c23227bec4483c222e33255bdd00ef77de"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift": {
+    "before_sha256": "d039a5399944a33aab40ec8cc61658c4a944d703ae0ad8abf6d8459866b561c8",
+    "after_sha256": "eb734a0052f3d4b2c79c7d35991c9cdf40be6cd8875cb6a6847f15961679cb64"
+  },
+  "submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift": {
+    "before_sha256": "987e5bf9a44087a6bf52468917c4a9ada63b585d5cb66bdecbf731a322dfd301",
+    "after_sha256": "9c49fe99c2148d8a9e66cdee958ea65bfc6262e63d1ecf890bdb30644407ad0c"
+  },
+  "submodules/TelegramUI/Sources/SharedAccountContext.swift": {
+    "before_sha256": "9cb521a2a329fa7ca26c091208f51e93d8d7257154ce59f5cd49a84ff1511e7a",
+    "after_sha256": "272f236e7dde12ce5382d5611e2788506d72a986307ee21effadef7f50be75b9"
+  }
+}

@@ -49,6 +49,7 @@ class SettingsAnimationTests(unittest.TestCase):
    subprocess.run(['swiftc',str(p),'-o',d+'/check'],check=True)
    subprocess.run([d+'/check'],check=True)
 MOCKS = r'''
+enum JerkgramWave1Instrumentation { static func add(_ key: String, _ delta: Int = 1) {} }
 protocol Disposable { func dispose() }
 final class ActionDisposable: Disposable {
  var body: (() -> Void)?

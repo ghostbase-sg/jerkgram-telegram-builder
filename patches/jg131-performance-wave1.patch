@@ -1,0 +1,1965 @@
+diff --git a/submodules/Display/Source/GhostBaseGlass.swift b/submodules/Display/Source/GhostBaseGlass.swift
+index 99123e5..0141260 100644
+--- a/submodules/Display/Source/GhostBaseGlass.swift
++++ b/submodules/Display/Source/GhostBaseGlass.swift
+@@ -9,12 +9,47 @@ public enum JerkgramSettingsSurfacePolicy {
+ }
+ // JG170 settings policy end
+ 
++// JG176 pure policy begin
++public enum JerkgramVisualPolicy {
++    public static func allowsTransparency(reduceTransparency: Bool) -> Bool { return !reduceTransparency }
++    public static func allowsMotion(lowPower: Bool, reduceTransparency: Bool) -> Bool { return !lowPower && !reduceTransparency }
++    public static func shouldReconcile(visible: Bool, applied: UInt64?, current: UInt64, dirty: Bool) -> Bool {
++        return visible && (applied != current || dirty)
++    }
++}
++// JG176 pure policy end
++
+ public enum GhostBaseGlassStyle {
+     public static let settingsTranslucencyKey = "jerkgram.Settings.Translucency"
+     public static let settingsStyleDidChange = Notification.Name("jerkgram.SettingsSurfaceDidChange")
+     private static var settingsTranslucencyValue = UserDefaults.standard.object(forKey: settingsTranslucencyKey) as? Bool ?? false
+ 
++    private static var revision: UInt64 = 0
++    private static var environment = (UIAccessibility.isReduceTransparencyEnabled, ProcessInfo.processInfo.isLowPowerModeEnabled)
++    private static var themeIdentity: ObjectIdentifier?
++    public static func invalidateVisualEnvironment() {
++        let updated = (UIAccessibility.isReduceTransparencyEnabled, ProcessInfo.processInfo.isLowPowerModeEnabled)
++        self.enabledLock.lock()
++        let changed = self.environment.0 != updated.0 || self.environment.1 != updated.1
++        if changed { self.environment = updated; self.revision &+= 1 }
++        self.enabledLock.unlock()
++        if changed { self.notifySettingsStyleChanged() }
++    }
++    public static func publishThemeChange(identity: ObjectIdentifier) {
++        self.enabledLock.lock()
++        let previous = self.themeIdentity
++        self.themeIdentity = identity
++        let changed = previous != nil && previous != identity
++        if changed { self.revision &+= 1 }
++        self.enabledLock.unlock()
++        if changed { self.notifySettingsStyleChanged() }
++    }
++    public static var visualRevision: UInt64 {
++        self.enabledLock.lock(); defer { self.enabledLock.unlock() }
++        return self.revision
++    }
+     private static func notifySettingsStyleChanged() {
++        JerkgramWave1Instrumentation.add("visualPublications")
+         DispatchQueue.main.async { NotificationCenter.default.post(name: self.settingsStyleDidChange, object: nil) }
+     }
+     public static var settingsTranslucencyEnabled: Bool {
+@@ -24,11 +59,12 @@ public enum GhostBaseGlassStyle {
+     }
+     public static func setSettingsTranslucencyEnabled(_ value: Bool) {
+         self.enabledLock.lock()
+-        let changed = self.settingsTranslucencyValue != value
++        guard self.settingsTranslucencyValue != value else { self.enabledLock.unlock(); return }
+         self.settingsTranslucencyValue = value
+         self.preferenceGeneration &+= 1
++        self.revision &+= 1
+         self.enabledLock.unlock()
+-        if changed { self.notifySettingsStyleChanged() }
++        self.notifySettingsStyleChanged()
+     }
+ 
+     public static let enabledKey = "jerkgram.Glass.Enabled"
+@@ -67,6 +103,9 @@ public enum GhostBaseGlassStyle {
+         self.enabledLock.lock()
+         defer { self.enabledLock.unlock() }
+         guard self.preferenceGeneration == generation else { return }
++        let changed = self.enabledValue != enabled || self.settingsTranslucencyValue != settingsTranslucency || self.profileAnimatedValue != animated || self.profileAvatarValue != avatar || self.profileTintValue != tint || self.profileReducedValue != reduced || self.profileHideOwnPhoneValue != hideOwnPhone
++        guard changed else { return }
++        self.revision &+= 1
+         self.enabledValue = enabled
+         self.settingsTranslucencyValue = settingsTranslucency
+         self.profileAnimatedValue = animated
+@@ -101,9 +140,13 @@ public enum GhostBaseGlassStyle {
+         return self.profileHideOwnPhoneValue
+     }
+ 
+-    public static func setProfilePlaybackSettings(glassEnabled: Bool, animatedBackgroundEnabled: Bool, avatarBlurInProfile: Bool? = nil, tintEnabled: Bool? = nil, reducedBlur: Bool? = nil, hideOwnPhone: Bool? = nil) {
++    public static func setProfilePlaybackSettings(glassEnabled: Bool, animatedBackgroundEnabled: Bool, avatarBlurInProfile: Bool? = nil, tintEnabled: Bool? = nil, reducedBlur: Bool? = nil, hideOwnPhone: Bool? = nil, settingsTranslucencyEnabled: Bool? = nil, forceVisualChange: Bool = false) {
+         // Controller projects profile and phone keys before atomic publication.
+         self.enabledLock.lock()
++        let changed = forceVisualChange || self.enabledValue != glassEnabled || self.profileAnimatedValue != animatedBackgroundEnabled || avatarBlurInProfile.map { $0 != self.profileAvatarValue } == true || tintEnabled.map { $0 != self.profileTintValue } == true || reducedBlur.map { $0 != self.profileReducedValue } == true || hideOwnPhone.map { $0 != self.profileHideOwnPhoneValue } == true || settingsTranslucencyEnabled.map { $0 != self.settingsTranslucencyValue } == true
++        guard changed else { self.enabledLock.unlock(); return }
++        self.revision &+= 1
++        if let settingsTranslucencyEnabled { self.settingsTranslucencyValue = settingsTranslucencyEnabled }
+         self.enabledValue = glassEnabled
+         self.profileAnimatedValue = animatedBackgroundEnabled
+         if let avatarBlurInProfile { self.profileAvatarValue = avatarBlurInProfile }
+@@ -121,6 +164,10 @@ public enum GhostBaseGlassStyle {
+         return self.enabledValue
+     }
+ 
++    public static var allowsTransparentSurfaces: Bool { return JerkgramVisualPolicy.allowsTransparency(reduceTransparency: UIAccessibility.isReduceTransparencyEnabled) }
++    public static var allowsMaterial: Bool { return JerkgramVisualPolicy.allowsMotion(lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled, reduceTransparency: UIAccessibility.isReduceTransparencyEnabled) }
++    public static var allowsVideo: Bool { return self.allowsMaterial }
++
+     public static var usesReducedEffects: Bool {
+         return UIAccessibility.isReduceTransparencyEnabled || ProcessInfo.processInfo.isLowPowerModeEnabled
+     }
+@@ -128,8 +175,10 @@ public enum GhostBaseGlassStyle {
+     public static func setEnabled(_ value: Bool) {
+         UserDefaults.standard.set(value, forKey: self.enabledKey)
+         self.enabledLock.lock()
++        guard self.enabledValue != value else { self.enabledLock.unlock(); return }
+         self.enabledValue = value
+         self.preferenceGeneration &+= 1
++        self.revision &+= 1
+         self.enabledLock.unlock()
+         self.notifySettingsStyleChanged()
+     }
+@@ -206,3 +255,23 @@ public struct GhostBaseProfileBlurSettings: Equatable {
+         return GhostBaseGlassStyle.profileBlurSettings
+     }
+ }
++
++// Default OFF. No timers, observers, formatting or telemetry.
++public enum JerkgramWave1Instrumentation {
++#if JERKGRAM_PERF_AUDIT
++    private static let lock = NSLock()
++    private static var counters: [String: Int] = [:]
++#endif
++    @inline(__always) public static func add(_ counter: String, _ delta: Int = 1) {
++#if JERKGRAM_PERF_AUDIT
++        lock.lock(); counters[counter, default: 0] += delta; lock.unlock()
++#endif
++    }
++    public static func snapshot() -> [String: Int] {
++#if JERKGRAM_PERF_AUDIT
++        lock.lock(); defer { lock.unlock() }; return counters
++#else
++        return [:]
++#endif
++    }
++}
+diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display/Source/ViewController.swift
+index 2cf8838..df564a8 100644
+--- a/submodules/Display/Source/ViewController.swift
++++ b/submodules/Display/Source/ViewController.swift
+@@ -170,16 +170,21 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+     }
+     // The root Settings screen already owns its native backdrop.
+     public var jerkgramSettingsHasOwnBackdrop = false
+-    public var jerkgramSettingsBackdropProvider: (() -> UIView?)? {
++    public var jerkgramSettingsBackdropProvider: ((UIView?) -> UIView?)? {
+         didSet { self.jerkgramRefreshSettingsSurface(invalidateBackdrop: true) }
+     }
+     open var jerkgramAcceptsSettingsSurface: Bool { return true }
+-    public let jerkgramSettingsStyleRevision = ValuePromise<Int>(0, ignoreRepeated: false)
++    public let jerkgramSettingsStyleRevision = ValuePromise<Int>(0, ignoreRepeated: true)
++    public var jerkgramTracksVisualSettings = false { didSet { self.jerkgramRefreshSettingsSurface() } }
++    open func jerkgramSettingsVisualStateUpdated() {}
++    private var jerkgramSettingsAppearanceVisible = false
++    private var jerkgramSettingsAppliedRevision: UInt64?
++    private var jerkgramSettingsDirtyRevision: UInt64?
+     private var jerkgramSettingsBackdropView: UIView?
+     private var jerkgramSettingsObserver: NSObjectProtocol?
+ 
+     public var jerkgramSettingsSurfaceActive: Bool {
+-        return JerkgramSettingsSurfacePolicy.active(isSettings: self.jerkgramSettingsScope == true, accepts: self.jerkgramAcceptsSettingsSurface, master: GhostBaseGlassStyle.isEnabled, enabled: GhostBaseGlassStyle.settingsTranslucencyEnabled, hasBackdrop: self.jerkgramSettingsHasOwnBackdrop || self.jerkgramSettingsBackdropView != nil)
++        return JerkgramSettingsSurfacePolicy.active(isSettings: self.jerkgramSettingsScope == true, accepts: self.jerkgramAcceptsSettingsSurface, master: GhostBaseGlassStyle.isEnabled && GhostBaseGlassStyle.allowsTransparentSurfaces, enabled: GhostBaseGlassStyle.settingsTranslucencyEnabled, hasBackdrop: self.jerkgramSettingsHasOwnBackdrop || self.jerkgramSettingsBackdropView != nil)
+     }
+ 
+     public func jerkgramInheritSettingsSurface(from source: ViewController) {
+@@ -193,28 +198,44 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+             DispatchQueue.main.async { [weak self] in self?.jerkgramRefreshSettingsSurface(invalidateBackdrop: invalidateBackdrop) }
+             return
+         }
+-        guard self.jerkgramSettingsScope == true && self.jerkgramAcceptsSettingsSurface else {
++        guard self.jerkgramTracksVisualSettings || (self.jerkgramSettingsScope == true && self.jerkgramAcceptsSettingsSurface) else {
+             self.jerkgramSettingsBackdropView?.isHidden = true
+             return
+         }
+         if self.jerkgramSettingsObserver == nil {
+-            self.jerkgramSettingsObserver = NotificationCenter.default.addObserver(forName: GhostBaseGlassStyle.settingsStyleDidChange, object: nil, queue: .main) { [weak self] _ in self?.jerkgramRefreshSettingsSurface(invalidateBackdrop: true) }
++            self.jerkgramSettingsObserver = NotificationCenter.default.addObserver(forName: GhostBaseGlassStyle.settingsStyleDidChange, object: nil, queue: .main) { [weak self] _ in
++                JerkgramWave1Instrumentation.add("styleCallbacks")
++                self?.jerkgramRefreshSettingsSurface()
++            }
+         }
+-        if invalidateBackdrop || !GhostBaseGlassStyle.settingsTranslucencyEnabled || !GhostBaseGlassStyle.isEnabled {
+-            self.jerkgramSettingsBackdropView?.removeFromSuperview()
+-            self.jerkgramSettingsBackdropView = nil
++        let revision = GhostBaseGlassStyle.visualRevision
++        if invalidateBackdrop { self.jerkgramSettingsAppliedRevision = nil }
++        guard self.jerkgramSettingsAppearanceVisible else {
++            JerkgramWave1Instrumentation.add("deferredStyleCallbacks")
++            self.jerkgramSettingsDirtyRevision = revision
++            return
+         }
+-        if !self.jerkgramSettingsHasOwnBackdrop && GhostBaseGlassStyle.settingsTranslucencyEnabled && GhostBaseGlassStyle.isEnabled && self.jerkgramSettingsBackdropView == nil {
+-            // Each pushed controller retains its own native material. Appearance and
+-            // pop transitions must not recapture an inactive source controller.
+-            self.jerkgramSettingsBackdropView = self.jerkgramSettingsBackdropProvider?()
++        guard JerkgramVisualPolicy.shouldReconcile(visible: self.jerkgramSettingsAppearanceVisible, applied: self.jerkgramSettingsAppliedRevision, current: revision, dirty: self.jerkgramSettingsDirtyRevision != nil) else { return }
++        JerkgramWave1Instrumentation.add(self.jerkgramSettingsAppearanceVisible ? "visibleOwnerRefreshes" : "hiddenOwnerRefreshes")
++        self.jerkgramSettingsDirtyRevision = nil
++        self.jerkgramSettingsAppliedRevision = revision
++        let admitted = self.jerkgramSettingsScope == true && self.jerkgramAcceptsSettingsSurface && GhostBaseGlassStyle.settingsTranslucencyEnabled && GhostBaseGlassStyle.isEnabled && GhostBaseGlassStyle.allowsTransparentSurfaces
++        let predecessor = self.jerkgramSettingsBackdropView
++        if admitted && !self.jerkgramSettingsHasOwnBackdrop {
++            // Refresh or adopt the same material even when a hidden root had no
++            // background at construction or released it during a master change.
++            self.jerkgramSettingsBackdropView = self.jerkgramSettingsBackdropProvider?(self.jerkgramSettingsBackdropView) ?? self.jerkgramSettingsBackdropView
+         }
+         if self.isViewLoaded, let backdrop = self.jerkgramSettingsBackdropView {
+-            if backdrop.superview !== self.view { self.view.insertSubview(backdrop, at: 0) }
++            if admitted && backdrop.superview !== self.view { self.view.insertSubview(backdrop, at: 0) }
+             backdrop.frame = self.view.bounds
+-            backdrop.isHidden = !self.jerkgramSettingsSurfaceActive
++            backdrop.isHidden = !admitted
++            if !admitted { backdrop.removeFromSuperview() }
+         }
+-        self.jerkgramSettingsStyleRevision.set(0)
++        // Successor has entered its window and acquired the shared native lease.
++        if predecessor !== self.jerkgramSettingsBackdropView { predecessor?.removeFromSuperview() }
++        self.jerkgramSettingsVisualStateUpdated()
++        self.jerkgramSettingsStyleRevision.set(Int(truncatingIfNeeded: revision))
+         if let layout = self.validLayout, self.isViewLoaded { self.containerLayoutUpdated(layout, transition: .immediate) }
+     }
+ 
+@@ -748,6 +769,13 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+         self.window?.addGlobalPortalHostView(sourceView: sourceView)
+     }
+     
++    open override func viewWillAppear(_ animated: Bool) {
++        super.viewWillAppear(animated)
++        self.jerkgramSettingsAppearanceVisible = true
++        GhostBaseGlassStyle.invalidateVisualEnvironment()
++        self.jerkgramRefreshSettingsSurface()
++    }
++
+     open override func viewWillDisappear(_ animated: Bool) {
+         self.activeInputViewCandidate = findCurrentResponder(self.view)
+         
+@@ -755,6 +783,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+     }
+     
+     open override func viewDidDisappear(_ animated: Bool) {
++        self.jerkgramSettingsAppearanceVisible = false
++        self.jerkgramSettingsBackdropView?.removeFromSuperview()
++        self.jerkgramSettingsDirtyRevision = GhostBaseGlassStyle.visualRevision
+         self.activeInputView = self.activeInputViewCandidate
+         
+         super.viewDidDisappear(animated)
+@@ -764,6 +795,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+     }
+     
+     open override func viewDidAppear(_ animated: Bool) {
++        self.jerkgramSettingsAppearanceVisible = true
+         self.activeInputView = nil
+         self.jerkgramRefreshSettingsSurface()
+         
+diff --git a/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift b/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
+index c7ec28f..be0f212 100644
+--- a/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
++++ b/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
+@@ -346,7 +346,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
+                             strongSelf.bottomStripeNode.isHidden = hasCorners
+                     }
+                     
+-                    if item.noInsets && item.backgroundColor != nil && GhostBaseGlassStyle.isEnabled {
++                    if item.noInsets && item.backgroundColor != nil && (GhostBaseGlassStyle.isEnabled && GhostBaseGlassStyle.allowsTransparentSurfaces) {
+                         // The enclosing profile section owns clipping, including its footer boundary.
+                         strongSelf.maskNode.image = nil
+                     } else {
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index e0856c9..276ba10 100644
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -436,49 +436,72 @@ private func jerkgramScopedSettingsKey(accountPeerId: Int64, key: String) -> Str
+ private func jerkgramScopedBool(
+     accountPeerId: Int64,
+     key: String,
+-    defaultValue: Bool
++    defaultValue: Bool,
++    allowLegacyFallback: Bool = false
+ ) -> Bool {
+     let scopedKey = jerkgramScopedSettingsKey(accountPeerId: accountPeerId, key: key)
+     if let value = UserDefaults.standard.object(forKey: scopedKey) as? Bool {
+         return value
+     }
+-    let migrated = ghostBaseBool(key, defaultValue: defaultValue)
+-    UserDefaults.standard.set(migrated, forKey: scopedKey)
+-    return migrated
++    return allowLegacyFallback ? ghostBaseBool(key, defaultValue: defaultValue) : defaultValue
+ }
+ 
+ private func jerkgramScopedString(
+     accountPeerId: Int64,
+     key: String,
+-    defaultValue: String
++    defaultValue: String,
++    allowLegacyFallback: Bool = false
+ ) -> String {
+     let scopedKey = jerkgramScopedSettingsKey(accountPeerId: accountPeerId, key: key)
+     if let value = UserDefaults.standard.object(forKey: scopedKey) as? String {
+         return value
+     }
+-    let migrated = ghostBaseString(key, defaultValue: defaultValue)
+-    UserDefaults.standard.set(migrated, forKey: scopedKey)
+-    return migrated
++    return allowLegacyFallback ? ghostBaseString(key, defaultValue: defaultValue) : defaultValue
+ }
+ 
+ private enum JerkgramSettingValue: Equatable {
+     case bool(Bool)
+     case string(String)
+ 
++    var object: Any {
++        switch self {
++        case let .bool(value): return value
++        case let .string(value): return value
++        }
++    }
++
+     func write(to defaults: UserDefaults, key: String) {
+         switch self {
+-        case let .bool(value): defaults.set(value, forKey: key)
+-        case let .string(value): defaults.set(value, forKey: key)
++        case let .bool(value):
++            if JerkgramSettingsProjection.writeIfChanged(value, defaults: defaults, key: key) {
++                JerkgramWave1Instrumentation.add("projectionWrites")
++            }
++        case let .string(value):
++            if JerkgramSettingsProjection.writeIfChanged(value, defaults: defaults, key: key) {
++                JerkgramWave1Instrumentation.add("projectionWrites")
++            }
+         }
+     }
+ }
+ 
+-private enum JerkgramSettingsCommitQueue {
+-    private static let queue = Queue(name: "JerkgramSettingsCommitQueue", qos: .utility)
+-    static func enqueue(_ work: @escaping () -> Void) {
+-        self.queue.async(work)
++// Foundation-only delta helper; extracted verbatim by the macOS regression fixture.
++enum JerkgramSettingsProjection {
++    static func equal(_ lhs: Any?, _ rhs: Any?) -> Bool {
++        switch (lhs, rhs) {
++        case (nil, nil): return true
++        case let (lhs as NSObject, rhs as NSObject): return lhs.isEqual(rhs)
++        default: return false
++        }
++    }
++
++    @discardableResult
++    static func writeIfChanged(_ value: Any, defaults: UserDefaults, key: String) -> Bool {
++        guard !self.equal(defaults.object(forKey: key), value) else { return false }
++        defaults.set(value, forKey: key)
++        return true
+     }
+ }
++// End Foundation-only delta helper.
+ 
+ private func jerkgramStateValues(_ state: GhostBaseSettingsState) -> [String: JerkgramSettingValue] {
+     return [
+@@ -539,103 +562,82 @@ private func jerkgramPersistChangedSettings(
+     previous: GhostBaseSettingsState?,
+     current: GhostBaseSettingsState
+ ) {
+-    defer { JerkgramHotSettings.invalidate() }
+-    JerkgramSponsoredContentPolicy.update(accountPeerId: accountPeerId, enabled: current.removeSponsored)
+-    JerkgramDownloadBoostSettings.update(accountPeerId: accountPeerId, rawValue: current.downloadBoost)
+     let oldValues = previous.map(jerkgramStateValues) ?? [:]
+     let newValues = jerkgramStateValues(current)
+     let changes = newValues.filter { oldValues[$0.key] != $0.value }
+-    guard !changes.isEmpty else {
+-    GhostBaseGlassStyle.setSettingsTranslucencyEnabled(current.settingsTranslucency)
+-    GhostBaseGlassStyle.setProfilePlaybackSettings(
+-        glassEnabled: current.glassEnabled,
+-        animatedBackgroundEnabled: current.profileAnimatedBackground,
+-        avatarBlurInProfile: current.profileAvatarBlur,
+-        tintEnabled: current.profileBlurTint,
+-        reducedBlur: current.profileBlurReduced,
+-        hideOwnPhone: current.hideOwnPhone
+-    )
+-        return
+-    }
+-
+-    // These values are consumed synchronously outside Settings immediately
+-    // before user-visible side effects. Leaving them behind the utility queue
+-    // creates a real stale-state window: Scheduled Send can remain active after
+-    // OFF, and protected one-time media can be replaced with expired content
+-    // immediately after One-Time Save was switched ON.
+-    //
+-    // UserDefaults.set updates the in-process defaults domain; deliberately
+-    // avoid any forced defaults/filesystem synchronization here.
+-    let jerkgramSynchronousRuntimeSettingKeys: Set<String> = Set<String>([
+-        // Only preference changes project here, never avatar transition ticks.
+-        GhostBaseKey.settingsTranslucency,
+-        GhostBaseKey.glassEnabled,
+-        GhostBaseKey.profileAnimatedBackground,
+-        GhostBaseKey.profileAvatarBlur,
+-        GhostBaseKey.profileBlurTint,
+-        GhostBaseKey.profileBlurReduced,
+-        GhostBaseKey.hideOwnPhone,
+-        GhostBaseKey.scheduledSend,
+-        GhostBaseKey.protectedEnabled,
+-        GhostBaseKey.oneTimeSave,
+-        GhostBaseKey.hideBlockedMessages,
+-        GhostBaseKey.hideBlockedReactions,
+-        GhostBaseKey.typingActions,
+-        GhostBaseKey.recordingActions,
+-        GhostBaseKey.uploadingActions,
+-        GhostBaseKey.stickerActivity,
+-        GhostBaseKey.gameActivity,
+-        GhostBaseKey.emojiActivity,
+-        JerkgramSponsoredContentPolicy.preferenceKey,
+-        JerkgramDownloadBoostSettings.preferenceKey,
+-    ]).union(JerkgramHotSettings.keys)
++    guard !changes.isEmpty else { return }
+     let defaults = UserDefaults.standard
+-    for key in jerkgramSynchronousRuntimeSettingKeys {
+-        guard let value = changes[key] else { continue }
+-        value.write(
+-            to: defaults,
+-            key: jerkgramScopedSettingsKey(accountPeerId: accountPeerId, key: key)
+-        )
+-        // Legacy Telegram/Jerkgram runtime owners consume the active-account
+-        // projection directly from UserDefaults.standard.
+-        value.write(to: defaults, key: key)
++    var runtimeChangedKeys = Set<String>()
++    for (key, value) in changes {
++        // Compare each domain before its setter: migration can need only the
++        // scoped value, while an account switch can need only the runtime value.
++        value.write(to: defaults, key: jerkgramScopedSettingsKey(accountPeerId: accountPeerId, key: key))
++        if !JerkgramSettingsProjection.equal(defaults.object(forKey: key), value.object) {
++            runtimeChangedKeys.insert(key)
++            value.write(to: defaults, key: key)
++        }
+         if key == GhostBaseKey.scheduledSend {
+-            let sharedDefaults = UserDefaults(suiteName: "group.com.jerkgram.ios") ?? defaults
+-            value.write(to: sharedDefaults, key: key)
++            value.write(to: UserDefaults(suiteName: "group.com.jerkgram.ios") ?? defaults, key: key)
+         }
+     }
+-    GhostBaseGlassStyle.setSettingsTranslucencyEnabled(current.settingsTranslucency)
+-    GhostBaseGlassStyle.setProfilePlaybackSettings(
+-        glassEnabled: current.glassEnabled,
+-        animatedBackgroundEnabled: current.profileAnimatedBackground,
+-        avatarBlurInProfile: current.profileAvatarBlur,
+-        tintEnabled: current.profileBlurTint,
+-        reducedBlur: current.profileBlurReduced,
+-        hideOwnPhone: current.hideOwnPhone
+-    )
+-    JerkgramActivityGhostRuntime.invalidate()
+-
+-    if changes[GhostBaseKey.hideBlockedMessages] != nil
+-        || changes[GhostBaseKey.hideBlockedReactions] != nil {
++    // A committed snapshot is immediately ready for the next page. All 49
++    // compatibility values are committed before publication/account handoff;
++    // no queued write can later overwrite the next account's projection.
++    if changes[JerkgramSponsoredContentPolicy.preferenceKey] != nil {
++        JerkgramSponsoredContentPolicy.update(accountPeerId: accountPeerId, enabled: current.removeSponsored)
++    }
++    if changes[JerkgramDownloadBoostSettings.preferenceKey] != nil {
++        JerkgramDownloadBoostSettings.update(accountPeerId: accountPeerId, rawValue: current.downloadBoost)
++    }
++    if !runtimeChangedKeys.isDisjoint(with: JerkgramHotSettings.keys) {
++        JerkgramHotSettings.invalidate(changedKeys: runtimeChangedKeys)
++        JerkgramWave1Instrumentation.add("hotInvalidations")
++    }
++    let activityKeys: Set<String> = [GhostBaseKey.typingActions, GhostBaseKey.recordingActions,
++        GhostBaseKey.uploadingActions, GhostBaseKey.stickerActivity, GhostBaseKey.gameActivity, GhostBaseKey.emojiActivity]
++    if !runtimeChangedKeys.isDisjoint(with: activityKeys) {
++        JerkgramActivityGhostRuntime.invalidate()
++    }
++    if runtimeChangedKeys.contains(GhostBaseKey.hideBlockedMessages)
++        || runtimeChangedKeys.contains(GhostBaseKey.hideBlockedReactions) {
+         JerkgramBlockedReactionPolicy.notifySettingsChanged()
+     }
+-
+-    let deferredChanges = changes.filter {
+-        !jerkgramSynchronousRuntimeSettingKeys.contains($0.key)
++    let playbackKeys: Set<String> = [GhostBaseKey.settingsTranslucency, GhostBaseKey.glassEnabled,
++        GhostBaseKey.profileAnimatedBackground, GhostBaseKey.profileAvatarBlur,
++        GhostBaseKey.profileBlurTint, GhostBaseKey.profileBlurReduced, GhostBaseKey.hideOwnPhone]
++    let metadataKeys: Set<String> = [GhostBaseKey.profileEnabled, GhostBaseKey.showIds,
++        GhostBaseKey.showDCs, GhostBaseKey.showRegistration]
++    let metadataChanged = !runtimeChangedKeys.isDisjoint(with: metadataKeys)
++    if !runtimeChangedKeys.isDisjoint(with: playbackKeys) || metadataChanged {
++        GhostBaseGlassStyle.setProfilePlaybackSettings(
++            glassEnabled: current.glassEnabled,
++            animatedBackgroundEnabled: current.profileAnimatedBackground,
++            avatarBlurInProfile: current.profileAvatarBlur,
++            tintEnabled: current.profileBlurTint,
++            reducedBlur: current.profileBlurReduced,
++            hideOwnPhone: current.hideOwnPhone,
++            settingsTranslucencyEnabled: current.settingsTranslucency,
++            forceVisualChange: metadataChanged
++        )
+     }
+-    guard !deferredChanges.isEmpty else { return }
+-
+-    JerkgramSettingsCommitQueue.enqueue {
+-        let defaults = UserDefaults.standard
+-        for (key, value) in deferredChanges {
+-            value.write(to: defaults, key: jerkgramScopedSettingsKey(accountPeerId: accountPeerId, key: key))
+-            // Non-critical compatibility projections stay off the caller thread.
+-            value.write(to: defaults, key: key)
+-        }
++    if runtimeChangedKeys.contains(GhostBaseKey.showRamUnderClock) {
++        NotificationCenter.default.post(name: Notification.Name("GhostBaseRamOverlayPreferenceChanged"), object: nil)
+     }
+ }
+ 
+-private func jerkgramProjectActiveSettings(accountPeerId: Int64, state: GhostBaseSettingsState) {
++// Called by the existing account activation lifecycle, and after a committed
++// import. Initial migration preserves scoped > legacy > default precedence.
++// Once any account has projected, absent values on other accounts use defaults.
++public func jerkgramActivateAccountSettings(accountPeerId: Int64) {
++    let defaults = UserDefaults.standard
++    let markerKey = "jerkgram.Settings.ActiveProjectionAccount.V176"
++    let state = GhostBaseSettingsState.readStored(
++        accountPeerId: accountPeerId,
++        allowLegacyFallback: defaults.object(forKey: markerKey) == nil
++    )
++    if JerkgramSettingsProjection.writeIfChanged(NSNumber(value: accountPeerId), defaults: defaults, key: markerKey) {
++        JerkgramWave1Instrumentation.add("projectionWrites")
++    }
+     jerkgramPersistChangedSettings(accountPeerId: accountPeerId, previous: nil, current: state)
+ }
+ 
+@@ -698,43 +700,48 @@ struct GhostBaseSettingsState: Equatable {
+     var localStarsAmount: String
+     var localStarsBaseAmount: String
+     static func load(accountPeerId: Int64) -> GhostBaseSettingsState {
++        // Pure read, including when a controller is constructed before activation.
++        return self.readStored(accountPeerId: accountPeerId, allowLegacyFallback: false)
++    }
++
++    static func readStored(accountPeerId: Int64, allowLegacyFallback: Bool) -> GhostBaseSettingsState {
+         return GhostBaseSettingsState(
+-            profileEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileEnabled, defaultValue: true),
+-            showIds: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showIds, defaultValue: true),
+-            showDCs: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showDCs, defaultValue: true),
+-            showRegistration: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showRegistration, defaultValue: true),
++            profileEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileEnabled, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            showIds: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showIds, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            showDCs: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showDCs, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            showRegistration: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showRegistration, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
+             settingsTranslucency: UserDefaults.standard.object(forKey: jerkgramScopedSettingsKey(accountPeerId: accountPeerId, key: GhostBaseKey.settingsTranslucency)) as? Bool ?? false,
+-            glassEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.glassEnabled, defaultValue: true),
+-            profileAvatarBlur: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAvatarBlur, defaultValue: true),
+-            profileAnimatedBackground: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAnimatedBackground, defaultValue: true),
+-            profileBlurTint: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileBlurTint, defaultValue: true),
+-            profileBlurReduced: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileBlurReduced, defaultValue: false),
+-            readMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.readMessages, defaultValue: false),
+-            typingActions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.typingActions, defaultValue: false),
+-            recordingActions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.recordingActions, defaultValue: false),
+-            uploadingActions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.uploadingActions, defaultValue: false),
+-            stickerActivity: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.stickerActivity, defaultValue: false),
+-            gameActivity: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.gameActivity, defaultValue: false),
+-            emojiActivity: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.emojiActivity, defaultValue: false),
+-            presence: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.presence, defaultValue: false),
+-            scheduledSend: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.scheduledSend, defaultValue: false),
+-            saveDeleted: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.saveDeleted, defaultValue: true),
+-            showDeleted: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showDeleted, defaultValue: true),
+-            saveEditHistory: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.saveEditHistory, defaultValue: true),
+-            showEditHistory: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showEditHistory, defaultValue: true),
+-            hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: true),
+-            hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: true),
++            glassEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.glassEnabled, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            profileAvatarBlur: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAvatarBlur, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            profileAnimatedBackground: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileAnimatedBackground, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            profileBlurTint: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileBlurTint, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            profileBlurReduced: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.profileBlurReduced, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            readMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.readMessages, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            typingActions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.typingActions, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            recordingActions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.recordingActions, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            uploadingActions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.uploadingActions, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            stickerActivity: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.stickerActivity, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            gameActivity: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.gameActivity, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            emojiActivity: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.emojiActivity, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            presence: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.presence, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            scheduledSend: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.scheduledSend, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            saveDeleted: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.saveDeleted, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            showDeleted: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showDeleted, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            saveEditHistory: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.saveEditHistory, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            showEditHistory: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showEditHistory, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
+             removeSponsored: JerkgramSponsoredContentPolicy.readStoredValue(accountPeerId: accountPeerId),
+             downloadBoost: JerkgramDownloadBoostSettings.readStoredMode(accountPeerId: accountPeerId).rawValue,
+             sendTextStyle: jerkgramScopedString(accountPeerId: accountPeerId, key: 
+                 ghostBaseSendTextStyleKey,
+-                defaultValue: "normal"
++                defaultValue: "normal", allowLegacyFallback: allowLegacyFallback
+             ),
+             deletedPortableReplies: jerkgramScopedBool(accountPeerId: accountPeerId, key: 
+ 
+                 GhostBaseKey.deletedPortableReplies,
+ 
+-                defaultValue: true
++                defaultValue: true, allowLegacyFallback: allowLegacyFallback
+ 
+             ),
+ 
+@@ -742,7 +749,7 @@ struct GhostBaseSettingsState: Equatable {
+ 
+                 GhostBaseKey.preserveDeletedMedia,
+ 
+-                defaultValue: true
++                defaultValue: true, allowLegacyFallback: allowLegacyFallback
+ 
+             ),
+ 
+@@ -750,34 +757,34 @@ struct GhostBaseSettingsState: Equatable {
+ 
+                 GhostBaseKey.showRamUnderClock,
+ 
+-                defaultValue: false
++                defaultValue: false, allowLegacyFallback: allowLegacyFallback
+ 
+             ),
+ 
+             messageSeconds: jerkgramScopedBool(accountPeerId: accountPeerId, key: 
+                 GhostBaseKey.messageSeconds,
+-                defaultValue: false
++                defaultValue: false, allowLegacyFallback: allowLegacyFallback
+             ),
+             hideOwnPhone: jerkgramScopedBool(accountPeerId: accountPeerId, key: 
+                 GhostBaseKey.hideOwnPhone,
+-                defaultValue: false
++                defaultValue: false, allowLegacyFallback: allowLegacyFallback
+             ),
+-            protectedEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedEnabled, defaultValue: true),
+-            protectedGalleryShare: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedGalleryShare, defaultValue: true),
+-            protectedGallerySave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedGallerySave, defaultValue: true),
+-            protectedGalleryCopy: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedGalleryCopy, defaultValue: true),
+-            chatSave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.chatSave, defaultValue: true),
+-            chatCopy: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.chatCopy, defaultValue: true),
+-            chatForward: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.chatForward, defaultValue: true),
+-            allowScreenshots: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.allowScreenshots, defaultValue: true),
+-            allowScreenRecording: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.allowScreenRecording, defaultValue: true),
+-            oneTimeScreenshots: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeScreenshots, defaultValue: false),
+-            oneTimeScreenRecording: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeScreenRecording, defaultValue: false),
+-            oneTimeSave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeSave, defaultValue: false),
+-            storySave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.storySave, defaultValue: false),
+-            localStarsEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsEnabled, defaultValue: false),
+-            localStarsAmount: jerkgramScopedString(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsAmount, defaultValue: "0"),
+-            localStarsBaseAmount: jerkgramScopedString(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsBaseAmount, defaultValue: "0")
++            protectedEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedEnabled, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            protectedGalleryShare: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedGalleryShare, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            protectedGallerySave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedGallerySave, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            protectedGalleryCopy: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.protectedGalleryCopy, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            chatSave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.chatSave, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            chatCopy: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.chatCopy, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            chatForward: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.chatForward, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            allowScreenshots: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.allowScreenshots, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            allowScreenRecording: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.allowScreenRecording, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
++            oneTimeScreenshots: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeScreenshots, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            oneTimeScreenRecording: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeScreenRecording, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            oneTimeSave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeSave, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            storySave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.storySave, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            localStarsEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsEnabled, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            localStarsAmount: jerkgramScopedString(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsAmount, defaultValue: "0", allowLegacyFallback: allowLegacyFallback),
++            localStarsBaseAmount: jerkgramScopedString(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsBaseAmount, defaultValue: "0", allowLegacyFallback: allowLegacyFallback)
+         )
+     }
+ 
+@@ -2940,7 +2947,6 @@ private func ghostBaseSettingsPageController(
+ ) -> ViewController {
+     let initialState = GhostBaseSettingsState.load(accountPeerId: context.account.peerId.toInt64())
+ 
+-    jerkgramProjectActiveSettings(accountPeerId: context.account.peerId.toInt64(), state: initialState)
+     let statePromise = ValuePromise(initialState, ignoreRepeated: false)
+     let stateValue = Atomic(value: initialState)
+     let accountPeerId = context.account.peerId.toInt64()
+@@ -2965,28 +2971,12 @@ private func ghostBaseSettingsPageController(
+         let updated = stateValue.modify { current in
+             let next = f(current)
+ 
+-            let ghostBaseVisualSettingsChanged =
+-                current.glassEnabled != next.glassEnabled
+-                || current.profileAvatarBlur != next.profileAvatarBlur
+-                || current.profileAnimatedBackground != next.profileAnimatedBackground
+-                || current.profileBlurTint != next.profileBlurTint
+-                || current.profileBlurReduced != next.profileBlurReduced
+-
+             jerkgramPersistChangedSettings(
+                 accountPeerId: context.account.peerId.toInt64(),
+                 previous: current,
+                 current: next
+             )
+ 
+-            if ghostBaseVisualSettingsChanged {
+-                NotificationCenter.default.post(
+-                    name: Notification.Name(
+-                        "jerkgram.ProfileVisualSettingsDidChange.V11M"
+-                    ),
+-                    object: nil
+-                )
+-            }
+-
+             return next
+         }
+ 
+@@ -3812,57 +3802,32 @@ private func ghostBaseSettingsPageController(
+                 updated.settingsTranslucency = value
+             case GhostBaseKey.glassEnabled:
+                 updated.glassEnabled = value
+-                GhostBaseGlassStyle.setEnabled(value)
+ 
+             case GhostBaseKey.profileAvatarBlur:
+                 updated.profileAvatarBlur = value
+-                UserDefaults.standard.set(value, forKey: GhostBaseKey.profileAvatarBlur)
+ 
+             case GhostBaseKey.profileAnimatedBackground:
+                 updated.profileAnimatedBackground = value
+             case GhostBaseKey.profileBlurTint:
+                 updated.profileBlurTint = value
+-                UserDefaults.standard.set(value, forKey: GhostBaseKey.profileBlurTint)
+ 
+             case GhostBaseKey.profileBlurReduced:
+                 updated.profileBlurReduced = value
+-                UserDefaults.standard.set(value, forKey: GhostBaseKey.profileBlurReduced)
+ 
+             case GhostBaseKey.deletedPortableReplies:
+                 updated.deletedPortableReplies = value
+-                UserDefaults.standard.set(
+-                    value,
+-                    forKey: GhostBaseKey.deletedPortableReplies
+-                )
+ 
+             case GhostBaseKey.preserveDeletedMedia:
+                 updated.preserveDeletedMedia = value
+-                UserDefaults.standard.set(
+-                    value,
+-                    forKey: GhostBaseKey.preserveDeletedMedia
+-                )
+ 
+             case GhostBaseKey.showRamUnderClock:
+                 updated.showRamUnderClock = value
+-                UserDefaults.standard.set(
+-                    value,
+-                    forKey: GhostBaseKey.showRamUnderClock
+-                )
+-        NotificationCenter.default.post(name: Notification.Name("GhostBaseRamOverlayPreferenceChanged"), object: nil)
+ 
+             case GhostBaseKey.messageSeconds:
+                 updated.messageSeconds = value
+-                UserDefaults.standard.set(
+-                    value,
+-                    forKey: GhostBaseKey.messageSeconds
+-                )
+ 
+             case GhostBaseKey.hideOwnPhone:
+                 updated.hideOwnPhone = value
+-                UserDefaults.standard.set(
+-                    value,
+-                    forKey: GhostBaseKey.hideOwnPhone
+-                )
+ 
+             case JerkgramSponsoredContentPolicy.preferenceKey:
+                 updated.removeSponsored = value
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+index c6d26b9..b3dcbe9 100644
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+@@ -262,45 +262,31 @@ private final class JerkgramUserDefaultsSnapshotStore: JerkgramSettingsSnapshotS
+     }
+ 
+     func replace(_ snapshot: JerkgramSettingsSnapshot) throws {
+-        // Replacement is exact so a failed transaction can restore absence as
+-        // well as values; otherwise newly introduced keys would leak past rollback.
++        // Exact replacement preserves absence for rollback, without rewriting
++        // equal values or removing keys immediately before setting them again.
++        let defaults = UserDefaults.standard
++        var values: [String: Any] = [:]
++        snapshot.toggles.forEach { values[$0.key] = $0.value }
++        snapshot.stringValues.forEach { values[$0.key] = $0.value }
++        snapshot.integerValues.forEach { values[$0.key] = $0.value }
+         for key in jerkgramPortableBooleanKeys + jerkgramPortableStringKeys + jerkgramPortableIntegerKeys {
+             let scoped = "jerkgram.account.\(snapshot.accountPeerId).setting.\(key)"
+-            UserDefaults.standard.removeObject(forKey: scoped)
+-        }
+-        for (key, value) in snapshot.toggles {
+-            UserDefaults.standard.set(value, forKey: "jerkgram.account.\(snapshot.accountPeerId).setting.\(key)")
+-        }
+-        for (key, value) in snapshot.stringValues {
+-            UserDefaults.standard.set(value, forKey: "jerkgram.account.\(snapshot.accountPeerId).setting.\(key)")
++            if values[key] == nil, defaults.object(forKey: scoped) != nil {
++                defaults.removeObject(forKey: scoped)
++                JerkgramWave1Instrumentation.add("projectionWrites")
++            }
+         }
+-        for (key, value) in snapshot.integerValues {
+-            UserDefaults.standard.set(value, forKey: "jerkgram.account.\(snapshot.accountPeerId).setting.\(key)")
++        for (key, value) in values {
++            let scoped = "jerkgram.account.\(snapshot.accountPeerId).setting.\(key)"
++            if JerkgramSettingsProjection.writeIfChanged(value, defaults: defaults, key: scoped) {
++                JerkgramWave1Instrumentation.add("projectionWrites")
++            }
+         }
+     }
+ }
+ 
+ private func jerkgramProjectImportedSettingsToActiveDefaults(_ snapshot: JerkgramSettingsSnapshot) {
+-    defer {
+-        JerkgramHotSettings.invalidate()
+-        JerkgramActivityGhostRuntime.invalidate()
+-        JerkgramBlockedReactionPolicy.notifySettingsChanged()
+-        GhostBaseGlassStyle.reloadFromDefaults()
+-        Queue.mainQueue().async {
+-            NotificationCenter.default.post(name: Notification.Name("GhostBaseRamOverlayPreferenceChanged"), object: nil)
+-        }
+-    }
+-    let defaults = UserDefaults.standard
+-    for (key, value) in snapshot.toggles {
+-        defaults.set(value, forKey: key)
+-    }
+-    for (key, value) in snapshot.stringValues {
+-        defaults.set(value, forKey: key)
+-    }
+-    for (key, value) in snapshot.integerValues {
+-        defaults.set(value, forKey: key)
+-    }
+-
++    jerkgramActivateAccountSettings(accountPeerId: snapshot.accountPeerId)
+     // Archive v2 originally used Jerkgram-prefixed portable names while a few
+     // Project both spellings for the three synchronous side-effect settings.
+     let legacyRuntimeKeys: [String: String] = [
+@@ -308,11 +294,30 @@ private func jerkgramProjectImportedSettingsToActiveDefaults(_ snapshot: Jerkgra
+         "jerkgram.ProtectedContent.Enabled": "GhostBase.ProtectedContent.Enabled",
+         "jerkgram.ProtectedContent.OneTimeSave": "GhostBase.ProtectedContent.OneTimeSave",
+     ]
++    let defaults = UserDefaults.standard
++    // Preserve the full archive catalog, including portable values outside the
++    // Settings page's 49-key snapshot (retention limits and future archive keys).
++    var values: [String: Any] = [:]
++    snapshot.toggles.forEach { values[$0.key] = $0.value }
++    snapshot.stringValues.forEach { values[$0.key] = $0.value }
++    snapshot.integerValues.forEach { values[$0.key] = $0.value }
++    for (key, value) in values {
++        if JerkgramSettingsProjection.writeIfChanged(value, defaults: defaults, key: key) {
++            JerkgramWave1Instrumentation.add("projectionWrites")
++        }
++    }
+     for (portableKey, legacyKey) in legacyRuntimeKeys {
+         if let value = snapshot.toggles[portableKey] {
+-            defaults.set(value, forKey: legacyKey)
++            if defaults.object(forKey: legacyKey) as? Bool != value {
++                defaults.set(value, forKey: legacyKey)
++                JerkgramWave1Instrumentation.add("projectionWrites")
++            }
+             if legacyKey == "GhostBase.GhostMode.ScheduledSend" {
+-                (UserDefaults(suiteName: "group.com.jerkgram.ios") ?? defaults).set(value, forKey: legacyKey)
++                let shared = UserDefaults(suiteName: "group.com.jerkgram.ios") ?? defaults
++                if shared.object(forKey: legacyKey) as? Bool != value {
++                    shared.set(value, forKey: legacyKey)
++                    JerkgramWave1Instrumentation.add("projectionWrites")
++                }
+             }
+         }
+     }
+@@ -454,8 +459,8 @@ public func jerkgramPresentArchiveImport(
+                                                     settingsStore: settingsStore
+                                                 )
+                                                 try JerkgramRetentionRuntime.save(retention)
+-                                                jerkgramProjectImportedSettingsToActiveDefaults(settings)
+                                                 Queue.mainQueue().async {
++                                                    jerkgramProjectImportedSettingsToActiveDefaults(settings)
+                                                     jerkgramNotifySettingsImported(accountPeerId: accountPeerId)
+                                                 }
+                                             } catch {
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+index 676e142..f58bc51 100644
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+@@ -6,6 +6,12 @@ import ItemListUI
+ import AccountContext
+ import JerkgramCore
+ 
++private final class JerkgramDataAndBackupListController: ItemListController {
++    deinit {
++        JerkgramWave1Instrumentation.add("liveDataBackupControllers", -1)
++    }
++}
++
+ private struct JerkgramDataUIState: Equatable {
+     var configuration: JerkgramRetentionConfiguration
+ }
+@@ -142,7 +148,7 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
+     )
+     let stateValue = Atomic(value: initial)
+     let statePromise = ValuePromise(initial, ignoreRepeated: true)
+-    var controller: ItemListController?
++    weak var actionTarget: ItemListController?
+ 
+     func update(_ transform: (inout JerkgramRetentionConfiguration) -> Void) {
+         let value = stateValue.modify { current in
+@@ -169,9 +175,9 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
+                 configuration.accountPolicy.mediaByteLimit = mediaLimits[(mediaLimits.firstIndex(of: current)! + 1) % mediaLimits.count]
+             }
+         case "export":
+-            if let controller { jerkgramPresentArchiveExport(context: context, controller: controller) }
++            if let controller = actionTarget { jerkgramPresentArchiveExport(context: context, controller: controller) }
+         case "import":
+-            if let controller { jerkgramPresentArchiveImport(context: context, controller: controller) }
++            if let controller = actionTarget { jerkgramPresentArchiveImport(context: context, controller: controller) }
+         case "perChat":
+             let strings = context.sharedContext.currentPresentationData.with { $0.strings.jerkgram }
+             let picker = context.sharedContext.makePeerSelectionController(
+@@ -181,14 +187,14 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
+                     title: strings.perChatRules
+                 )
+             )
+-            picker.peerSelected = { [weak picker, weak controller = controller] peer, _ in
++            picker.peerSelected = { [weak picker, weak controller = actionTarget] peer, _ in
+                 picker?.dismiss()
+                 controller?.push(jerkgramChatRetentionController(
+                     context: context,
+                     chatPeerId: peer.id.toInt64()
+                 ))
+             }
+-            controller?.push(picker)
++            actionTarget?.push(picker)
+         case "cleanup":
+             Queue.concurrentDefaultQueue().async {
+                 let store = JerkgramJSONLEventStore(rootURL: jerkgramDataCoreRootURL())
+@@ -236,8 +242,10 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
+             ), arguments as Any)
+         )
+     }
+-    controller = ItemListController(context: context, state: signal)
+-    return controller!
++    let controller = JerkgramDataAndBackupListController(context: context, state: signal)
++    JerkgramWave1Instrumentation.add("liveDataBackupControllers")
++    actionTarget = controller
++    return controller
+ }
+ 
+ private func jerkgramDataCoreRootURL() -> URL {
+diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
+index cbfb1e9..65adbfd 100644
+--- a/submodules/TelegramCore/Sources/Account/Account.swift
++++ b/submodules/TelegramCore/Sources/Account/Account.swift
+@@ -1068,6 +1068,11 @@ public enum JerkgramHotSettings {
+         self.lock.unlock()
+     }
+ 
++    public static func invalidate(changedKeys: Set<String>) {
++        guard !changedKeys.isDisjoint(with: self.keys) else { return }
++        self.invalidate()
++    }
++
+     public static func object(forKey key: String) -> Any? {
+         precondition(self.keys.contains(key))
+         self.lock.lock()
+diff --git a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
+index ef01d2b..cf67b03 100644
+--- a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
++++ b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
+@@ -1681,12 +1681,12 @@ private enum JerkgramSettingsThemeCache {
+ 
+ extension PresentationTheme {
+     public func jerkgramSettingsSurfaceTheme(enabled: Bool) -> PresentationTheme {
+-        guard enabled else { return self }
++        guard enabled && GhostBaseGlassStyle.allowsTransparentSurfaces else { return self }
+         let reduced = GhostBaseGlassStyle.usesReducedEffects
+         JerkgramSettingsThemeCache.lock.lock()
+         defer { JerkgramSettingsThemeCache.lock.unlock() }
+         if JerkgramSettingsThemeCache.base === self, JerkgramSettingsThemeCache.reduced == reduced, let cached = JerkgramSettingsThemeCache.transformed { return cached }
+-        let alpha: CGFloat = reduced ? 0.90 : (self.overallDarkAppearance ? 0.26 : 0.18)
++        let alpha: CGFloat = self.overallDarkAppearance ? 0.26 : 0.18
+         let surfaceColor = self.overallDarkAppearance ? UIColor.black : UIColor.white
+         let list = self.list.withUpdated(
+             blocksBackgroundColor: .clear, modalBlocksBackgroundColor: .clear,
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode/Sources/PeerInfoPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode/Sources/PeerInfoPaneNode.swift
+index 0ce908b..ce40f61 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode/Sources/PeerInfoPaneNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode/Sources/PeerInfoPaneNode.swift
+@@ -112,6 +112,7 @@ public protocol PeerInfoPaneNode: ASDisplayNode {
+     var externalDataUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
+     
+     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
++    func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64)
+     func scrollToTop() -> Bool
+     func transferVelocity(_ velocity: CGFloat)
+     func cancelPreviewGestures()
+@@ -124,6 +125,9 @@ public protocol PeerInfoPaneNode: ASDisplayNode {
+ }
+ 
+ public extension PeerInfoPaneNode {
++    func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++    }
++
+     var navigationContentNode: PeerInfoPanelNodeNavigationContentNode? {
+         return nil
+     }
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+index ca5f993..284ac34 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
+@@ -233,6 +233,7 @@ private final class JerkgramSettingsPlaybackSession {
+ 
+     deinit {
+         for observer in self.observers { NotificationCenter.default.removeObserver(observer) }
++        JerkgramWave1Instrumentation.add("activeVideoOutputLeases", -self.layers.count)
+         self.detach()
+     }
+ 
+@@ -241,8 +242,10 @@ private final class JerkgramSettingsPlaybackSession {
+         // its original native player; only explicit invalidation may clear it.
+         guard let source else { return }
+         if self.candidate !== source {
++            // Strong successor local protects its native player during release.
++            let successor = source
+             self.detach()
+-            self.candidate = source
++            self.candidate = successor
+         }
+         self.reconcile()
+     }
+@@ -255,11 +258,12 @@ private final class JerkgramSettingsPlaybackSession {
+     func attach(_ layer: AVSampleBufferDisplayLayer) -> Disposable {
+         let id = UUID()
+         self.layers[id] = WeakLayer(layer)
++        JerkgramWave1Instrumentation.add("activeVideoOutputLeases")
+         self.reconcile()
+         return ActionDisposable { [weak self] in
+             guard let self else { return }
+             self.outputs.removeValue(forKey: id)?.dispose()
+-            self.layers.removeValue(forKey: id)
++            if self.layers.removeValue(forKey: id) != nil { JerkgramWave1Instrumentation.add("activeVideoOutputLeases", -1) }
+             self.reconcile()
+         }
+     }
+@@ -272,7 +276,9 @@ private final class JerkgramSettingsPlaybackSession {
+     }
+ 
+     private func reconcile() {
++        let previousLayerCount = self.layers.count
+         self.layers = self.layers.filter { $0.value.value != nil }
++        JerkgramWave1Instrumentation.add("activeVideoOutputLeases", self.layers.count - previousLayerCount)
+         for id in Array(self.outputs.keys) where self.layers[id] == nil {
+             self.outputs.removeValue(forKey: id)?.dispose()
+         }
+@@ -327,10 +333,14 @@ private final class JerkgramSettingsBackdropView: UIView {
+ 
+     func setPlaybackSession(_ session: JerkgramSettingsPlaybackSession?) {
+         guard self.playbackSession !== session else { return }
+-        self.playbackDisposable?.dispose()
+-        self.playbackDisposable = nil
++        // Register successor output before releasing predecessor. A shared native
++        // source therefore never loses its final lease during replacement.
++        let successor = self.window != nil ? session?.attach(self.mirrorVideoView.videoLayer) : nil
++        let predecessor = self.playbackDisposable
+         self.playbackSession = session
+-        self.mirrorVideoView.videoLayer.flushAndRemoveImage()
++        self.playbackDisposable = successor
++        predecessor?.dispose()
++        if session == nil { self.mirrorVideoView.videoLayer.flushAndRemoveImage() }
+         self.updatePlaybackVisibility()
+     }
+ 
+@@ -660,9 +670,11 @@ final class GhostBaseProfileBackgroundView: UIView {
+     private let settingsBackdrops = NSHashTable<JerkgramSettingsBackdropView>.weakObjects()
+     private weak var settingsPlaybackSession: JerkgramSettingsPlaybackSession?
+ 
+-    func makeSettingsBackdropView() -> UIView? {
+-        guard self.usesCustomBackground, !self.bounds.isEmpty else { return nil }
+-        let backdrop = JerkgramSettingsBackdropView(frame: self.bounds)
++    func makeSettingsBackdropView(existing: UIView? = nil) -> UIView? {
++        // Register the retained material before asynchronous source readiness.
++        // Source completion updates this weak-set member in place.
++        guard !self.bounds.isEmpty else { return nil }
++        let backdrop = (existing as? JerkgramSettingsBackdropView) ?? JerkgramSettingsBackdropView(frame: self.bounds)
+         self.settingsBackdrops.add(backdrop)
+         self.updateSettingsBackdrop(backdrop)
+         return backdrop
+@@ -676,7 +688,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+         backdrop.tintView.backgroundColor = self.tintView.backgroundColor
+         backdrop.tintView.alpha = self.tintView.alpha
+         let session: JerkgramSettingsPlaybackSession?
+-        if self.settings.animatedBackgroundEnabled, self.desiredVideoIdentity != nil {
++        if self.settings.animatedBackgroundEnabled, GhostBaseGlassStyle.allowsVideo, self.desiredVideoIdentity != nil {
+             session = self.settingsPlaybackSession ?? JerkgramSettingsPlaybackSession()
+             self.settingsPlaybackSession = session
+             session?.updateSource(self.lastAvatarVideoNode)
+@@ -692,6 +704,15 @@ final class GhostBaseProfileBackgroundView: UIView {
+ 
+     private let imageView: UIImageView
+     private let blurView: UIVisualEffectView
++    private var lastMaterialStyle: UIBlurEffect.Style?
++    private var preferredMaterialStyle: UIBlurEffect.Style?
++    private func reconcileMaterial() {
++        let admittedStyle = GhostBaseGlassStyle.allowsMaterial && !self.settings.reducedBlur ? self.preferredMaterialStyle : nil
++        guard self.lastMaterialStyle != admittedStyle else { return }
++        self.lastMaterialStyle = admittedStyle
++        self.blurView.effect = admittedStyle.map { UIBlurEffect(style: $0) }
++        if admittedStyle != nil { JerkgramWave1Instrumentation.add("materialEffectCreations") }
++    }
+     private let tintView: UIView
+ 
+     // One native Telegram decoder/timeline owns playback.
+@@ -710,6 +731,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+     private var isControllerVisible = false
+     private var isApplicationActive = UIApplication.shared.applicationState == .active
+     private var lifecycleObservers: [NSObjectProtocol] = []
++    private var replayVisibleSettingsSource: (() -> Void)?
+     private var currentStateKey: GhostBaseProfileBackgroundStateKey?
+     private var currentLoadKey: String?
+ 
+@@ -745,11 +767,15 @@ final class GhostBaseProfileBackgroundView: UIView {
+         self.visualSettingsObserver =
+             NotificationCenter.default.addObserver(
+                 forName:
+-                    Self.visualSettingsDidChange,
++                    GhostBaseGlassStyle.settingsStyleDidChange,
+                 object: nil,
+                 queue: .main,
+                 using: { [weak self] _ in
+-                    self?.refreshLiveSettings()
++                    guard let self else { return }
++                    self.currentStateKey = nil
++                    // Updating retained descendants is cheap; root layout remains
++                    // deferred while hidden, through refreshLiveSettings's gate.
++                    self.refreshLiveSettings()
+                 }
+             )
+         for name in [UIApplication.willResignActiveNotification, UIApplication.didBecomeActiveNotification] {
+@@ -758,6 +784,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+                 using: { [weak self] _ in
+                     guard let self else { return }
+                     self.isApplicationActive = name == UIApplication.didBecomeActiveNotification
++                    GhostBaseGlassStyle.invalidateVisualEnvironment()
+                     self.setSceneActive(self.isControllerVisible)
+                 }
+             ))
+@@ -827,6 +854,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+ 
+         self.imageView.image = nil
+         self.blurView.effect = nil
++        self.lastMaterialStyle = nil
+ 
+         self.tintView.backgroundColor =
+             .clear
+@@ -837,6 +865,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+             false
+ 
+         self.isHidden = true
++        self.updateSettingsBackdrops()
+     }
+ 
+     func setSceneActive(_ active: Bool) {
+@@ -846,6 +875,7 @@ final class GhostBaseProfileBackgroundView: UIView {
+             return
+         }
+         self.isSceneActive = active
++        if active { self.refreshLiveSettings() }
+         self.currentStateKey = nil
+         self.currentLoadKey = nil
+         if active {
+@@ -872,6 +902,10 @@ final class GhostBaseProfileBackgroundView: UIView {
+         }
+ 
+         self.settings = settings
++        guard GhostBaseGlassStyle.allowsTransparentSurfaces else {
++            self.tearDownForDisabledSettings()
++            return
++        }
+         self.isHidden = false
+ 
+         if !settings
+@@ -881,7 +915,15 @@ final class GhostBaseProfileBackgroundView: UIView {
+         }
+ 
+         self.currentStateKey = nil
++        // Admission can change while the root is hidden under a Settings child.
++        self.reconcileMaterial()
++        self.updateSettingsBackdrops()
+         guard self.isSceneActive else {
++            // A visible descendant can refresh its source without laying out the
++            // hidden root. No source work is admitted for a fully hidden stack.
++            if self.settingsBackdrops.allObjects.contains(where: { $0.window != nil }) {
++                self.replayVisibleSettingsSource?()
++            }
+             return
+         }
+         self.requestSceneUpdate()
+@@ -924,6 +966,9 @@ final class GhostBaseProfileBackgroundView: UIView {
+         guard self.isSceneActive || (isSettings && allowInactiveSettingsExport) else {
+             return
+         }
++        self.replayVisibleSettingsSource = { [weak self] in
++            self?.update(peer: peer, cachedData: cachedData, presentationData: presentationData, isSettings: isSettings, avatarItem: avatarItem, allowInactiveSettingsExport: true)
++        }
+         let preferencesTiming = self.beginPerformanceSpan(.bgPreferences)
+         let loadedSettings = GhostBaseProfileBlurSettings.loadEnabled()
+         self.endPerformanceSpan(.bgPreferences, preferencesTiming)
+@@ -933,6 +978,10 @@ final class GhostBaseProfileBackgroundView: UIView {
+         }
+ 
+         self.settings = liveSettings
++        guard GhostBaseGlassStyle.allowsTransparentSurfaces else {
++            self.tearDownForDisabledSettings()
++            return
++        }
+         self.isHidden = false
+ 
+         let resolveTiming = self.beginPerformanceSpan(.bgResolve)
+@@ -1374,7 +1423,8 @@ final class GhostBaseProfileBackgroundView: UIView {
+         let effectStyle: UIBlurEffect.Style = isDark
+             ? .systemUltraThinMaterialDark
+             : .systemUltraThinMaterialLight
+-        self.blurView.effect = UIBlurEffect(style: effectStyle)
++        self.preferredMaterialStyle = effectStyle
++        self.reconcileMaterial()
+         // Reset for every source; only static avatars lower intensity.
+         self.blurView.alpha = 1.0
+ 
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileReportPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileReportPaneNode.swift
+index 6c20544..231a5bd 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileReportPaneNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileReportPaneNode.swift
+@@ -710,10 +710,9 @@ private final class GhostBaseProfileReportCardNode: ASDisplayNode {
+         width: CGFloat
+     ) -> CGSize {
+         let isDark = presentationData.theme.overallDarkAppearance
+-        self.backgroundColor = UIColor(
+-            white: isDark ? 0.0 : 1.0,
+-            alpha: isDark ? 0.26 : 0.18
+-        )
++        self.backgroundColor = GhostBaseGlassStyle.isEnabled && GhostBaseGlassStyle.allowsTransparentSurfaces
++            ? UIColor(white: isDark ? 0.0 : 1.0, alpha: isDark ? 0.26 : 0.18)
++            : presentationData.theme.list.itemBlocksBackgroundColor
+         self.layer.borderWidth = 0.5
+         self.layer.borderColor = presentationData.theme.list.itemPlainSeparatorColor
+             .withAlphaComponent(isDark ? 0.30 : 0.20).cgColor
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift
+index b1401ff..3bb5888 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift
+@@ -25,13 +25,15 @@ private struct GroupsInCommonListTransaction {
+ private struct GroupsInCommonListEntry: Comparable, Identifiable {
+     var index: Int
+     var peer: EnginePeer
++    var visualRevision: UInt64
++    var glassEnabled: Bool
+ 
+     var stableId: EnginePeer.Id {
+         return self.peer.id
+     }
+ 
+     static func ==(lhs: GroupsInCommonListEntry, rhs: GroupsInCommonListEntry) -> Bool {
+-        return lhs.peer == rhs.peer
++        return lhs.peer == rhs.peer && lhs.visualRevision == rhs.visualRevision && lhs.glassEnabled == rhs.glassEnabled
+     }
+     
+     static func <(lhs: GroupsInCommonListEntry, rhs: GroupsInCommonListEntry) -> Bool {
+@@ -69,7 +71,9 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
+     
+     weak var parentController: ViewController?
+ 
+-    private let ghostBaseGlassEnabled: Bool
++    private var ghostBaseGlassEnabled: Bool
++    private var jerkgramVisualRevision: UInt64 = 0
++    private var jerkgramVisualStateDirty = true
+     private let listBackgroundView: UIImageView
+     private let listMaskView: UIImageView
+ 
+@@ -208,6 +212,15 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
+         }
+     }
+     
++    func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++        guard self.ghostBaseGlassEnabled != glassEnabled || self.jerkgramVisualRevision != revision else {
++            return
++        }
++        self.ghostBaseGlassEnabled = glassEnabled
++        self.jerkgramVisualRevision = revision
++        self.jerkgramVisualStateDirty = true
++    }
++
+     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+         let isFirstLayout = self.currentParams == nil
+         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
+@@ -278,7 +291,8 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
+         }
+ 
+ 
+-        if isFirstLayout, let state = self.state {
++        if isFirstLayout || self.jerkgramVisualStateDirty, let state = self.state {
++            self.jerkgramVisualStateDirty = false
+             self.updatePeers(state: state, presentationData: presentationData)
+         }
+     }
+@@ -287,7 +301,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
+         var entries: [GroupsInCommonListEntry] = []
+         for peer in state.peers {
+             if let peer = peer.peer {
+-                entries.append(GroupsInCommonListEntry(index: entries.count, peer: EnginePeer(peer)))
++                entries.append(GroupsInCommonListEntry(index: entries.count, peer: EnginePeer(peer), visualRevision: self.jerkgramVisualRevision, glassEnabled: self.ghostBaseGlassEnabled))
+             }
+         }
+         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, ghostBaseGlassEnabled: self.ghostBaseGlassEnabled, openPeer: { [weak self] peer in
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoListPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoListPaneNode.swift
+index 659a285..c609418 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoListPaneNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoListPaneNode.swift
+@@ -30,7 +30,9 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
+     
+     weak var parentController: ViewController?
+     
+-    private let ghostBaseGlassEnabled: Bool
++    private var ghostBaseGlassEnabled: Bool
++    private var jerkgramVisualRevision: UInt64 = 0
++    private var ghostBaseGlassMaterialIsDark: Bool?
+     private let glassBackgroundView: UIView
+     private let listNode: ChatHistoryListNode
+     
+@@ -210,6 +212,15 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
+         }
+     }
+     
++    func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++        guard self.ghostBaseGlassEnabled != glassEnabled || self.jerkgramVisualRevision != revision else {
++            return
++        }
++        self.ghostBaseGlassEnabled = glassEnabled
++        self.jerkgramVisualRevision = revision
++        self.ghostBaseGlassMaterialIsDark = nil
++    }
++
+     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+         self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
+         // Links already owns a luminance-aware row surface. Never place its
+@@ -236,8 +247,8 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
+         // layer darkens the whole profile; the material belongs only behind
+         // the loaded Links list, exactly like Groups in Common.
+         if self.jerkgramLinksReadabilityEnabled {
+-            self.backgroundColor = .clear
+-            self.listNode.backgroundColor = .clear
++            self.backgroundColor = self.ghostBaseGlassEnabled ? .clear : presentationData.theme.list.blocksBackgroundColor
++            self.listNode.backgroundColor = self.ghostBaseGlassEnabled ? .clear : presentationData.theme.list.blocksBackgroundColor
+             if self.ghostBaseGlassEnabled {
+                 let effectView: UIVisualEffectView
+                 if let current = self.glassBackgroundView.subviews.first as? UIVisualEffectView {
+@@ -248,7 +259,17 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
+                     self.glassBackgroundView.addSubview(created)
+                     effectView = created
+                 }
+-                effectView.effect = UIBlurEffect(style: presentationData.theme.overallDarkAppearance ? .systemMaterialDark : .systemMaterialLight)
++                if GhostBaseGlassStyle.allowsMaterial {
++                    let isDark = presentationData.theme.overallDarkAppearance
++                    if self.ghostBaseGlassMaterialIsDark != isDark || effectView.effect == nil {
++                        self.ghostBaseGlassMaterialIsDark = isDark
++                        JerkgramWave1Instrumentation.add("materialEffectCreations")
++                        effectView.effect = UIBlurEffect(style: isDark ? .systemMaterialDark : .systemMaterialLight)
++                    }
++                } else {
++                    self.ghostBaseGlassMaterialIsDark = nil
++                    effectView.effect = nil
++                }
+                 effectView.frame = self.glassBackgroundView.bounds
+ 
+                 var distanceToTop: CGFloat = -100.0
+@@ -272,6 +293,8 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
+                 self.glassBackgroundView.isHidden = false
+             } else {
+                 self.glassBackgroundView.isHidden = true
++                self.ghostBaseGlassMaterialIsDark = nil
++                (self.glassBackgroundView.subviews.first as? UIVisualEffectView)?.effect = nil
+             }
+         }
+         
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift
+index 1cb94a9..a75b80a 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift
+@@ -285,7 +285,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+     
+     weak var parentController: ViewController?
+     
+-    private let ghostBaseGlassEnabled: Bool
++    private var ghostBaseGlassEnabled: Bool
++    private var jerkgramVisualRevision: UInt64 = 0
+     private let listBackgroundView: UIImageView
+     private let listMaskView: UIImageView
+ 
+@@ -422,6 +423,15 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+         }
+     }
+     
++    func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++        guard self.ghostBaseGlassEnabled != glassEnabled || self.jerkgramVisualRevision != revision else {
++            return
++        }
++        self.ghostBaseGlassEnabled = glassEnabled
++        self.jerkgramVisualRevision = revision
++        self.ghostBaseGlassIsDark = nil
++    }
++
+     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+         let isFirstLayout = self.currentParams == nil
+         self.currentParams = (size, isScrollingLockedAtTop)
+@@ -453,11 +463,17 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+             self.backgroundColor = .clear
+             self.listNode.backgroundColor = .clear
+ 
+-            if self.ghostBaseGlassIsDark != isDark {
+-                self.ghostBaseGlassIsDark = isDark
+-                self.ghostBaseGlassEffectView.effect = UIBlurEffect(
+-                    style: isDark ? .systemUltraThinMaterialDark : .systemUltraThinMaterialLight
+-                )
++            if GhostBaseGlassStyle.allowsMaterial {
++                if self.ghostBaseGlassIsDark != isDark {
++                    self.ghostBaseGlassIsDark = isDark
++                    JerkgramWave1Instrumentation.add("materialEffectCreations")
++                    self.ghostBaseGlassEffectView.effect = UIBlurEffect(
++                        style: isDark ? .systemUltraThinMaterialDark : .systemUltraThinMaterialLight
++                    )
++                }
++            } else {
++                self.ghostBaseGlassIsDark = nil
++                self.ghostBaseGlassEffectView.effect = nil
+             }
+ 
+             self.ghostBaseGlassEffectView.isHidden = false
+@@ -469,6 +485,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+             self.listBackgroundView.isHidden = true
+             self.listMaskView.isHidden = true
+         } else {
++            self.ghostBaseGlassIsDark = nil
+             self.ghostBaseGlassEffectView.isHidden = true
+             self.ghostBaseGlassEffectView.effect = nil
+             self.ghostBaseGlassTintView.backgroundColor = .clear
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+index 24c1979..e4d800e 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+@@ -72,7 +72,7 @@ let TitleNodeStateExpanded = 1
+ final class PeerInfoHeaderNode: ASDisplayNode {
+     weak var ghostBasePerformanceProbe: JerkgramProfilePerformanceProbe?
+     private var context: AccountContext
+-    private let ghostBaseProfileGlassSettings: GhostBaseProfileBlurSettings?
++    private var ghostBaseProfileGlassSettings: GhostBaseProfileBlurSettings?
+     private let isPremiumDisabled: Bool
+     private weak var controller: PeerInfoScreenImpl?
+     private var presentationData: PresentationData?
+@@ -265,7 +265,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+     
+     init(context: AccountContext, controller: PeerInfoScreenImpl, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, isMyProfile: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
+         self.context = context
+-        self.ghostBaseProfileGlassSettings = GhostBaseProfileGlassRuntime.loadSettings()
++        self.ghostBaseProfileGlassSettings = GhostBaseGlassStyle.allowsTransparentSurfaces ? GhostBaseProfileGlassRuntime.loadSettings() : nil
+         self.controller = controller
+         self.isAvatarExpanded = avatarInitiallyExpanded
+         self.isOpenedFromChat = isOpenedFromChat
+@@ -526,6 +526,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+         }
+     }
+     
++    func updateJerkgramVisualState(settings: GhostBaseProfileBlurSettings?) {
++        self.ghostBaseProfileGlassSettings = settings
++    }
++
+     func updateAvatarIsHidden(entry: AvatarGalleryEntry?) {
+         if let entry = entry {
+             self.avatarListNode.avatarContainerNode.containerNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift
+index b7616a6..efae871 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift
+@@ -28,6 +28,8 @@ final class PeerInfoPaneWrapper {
+     let key: PeerInfoPaneKey
+     let node: PeerInfoPaneNode
+     var isAnimatingOut: Bool = false
++    private var jerkgramVisualRevision: UInt64?
++    private var jerkgramGlassEnabled: Bool?
+     private var appliedParams: (CGSize, CGFloat, CGFloat, CGFloat, DeviceMetrics, CGFloat, Bool, CGFloat, CGFloat, PresentationData)?
+     
+     init(key: PeerInfoPaneKey, node: PeerInfoPaneNode) {
+@@ -35,6 +37,16 @@ final class PeerInfoPaneWrapper {
+         self.node = node
+     }
+ 
++    func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++        if self.jerkgramVisualRevision == revision && self.jerkgramGlassEnabled == glassEnabled {
++            return
++        }
++        self.jerkgramVisualRevision = revision
++        self.jerkgramGlassEnabled = glassEnabled
++        self.appliedParams = nil
++        self.node.updateJerkgramVisualState(glassEnabled: glassEnabled, revision: revision)
++    }
++
+     func removeFromContainer() {
+         self.node.removeFromSupernode()
+         self.node.parentController = nil
+@@ -600,7 +612,8 @@ private final class PeerInfoPendingPane {
+ }
+ 
+ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegate {
+-    private let ghostBaseGlassEnabled: Bool
++    private var ghostBaseGlassEnabled: Bool
++    private var jerkgramVisualRevision: UInt64 = 0
+     private let context: AccountContext
+     private let peerId: EnginePeer.Id
+     private let chatLocation: ChatLocation
+@@ -677,6 +690,20 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+     
+     private let initialPaneKey: PeerInfoPaneKey?
+     
++    func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++        guard self.ghostBaseGlassEnabled != glassEnabled || self.jerkgramVisualRevision != revision else {
++            return
++        }
++        self.ghostBaseGlassEnabled = glassEnabled
++        self.jerkgramVisualRevision = revision
++        for pane in self.currentPanes.values {
++            pane.updateJerkgramVisualState(glassEnabled: glassEnabled, revision: revision)
++        }
++        for pane in self.pendingPanes.values {
++            pane.pane.updateJerkgramVisualState(glassEnabled: glassEnabled, revision: revision)
++        }
++    }
++
+     init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, chatLocation: ChatLocation, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, isMediaOnly: Bool, initialPaneKey: PeerInfoPaneKey?, initialStoryFolderId: Int64?, initialGiftCollectionId: Int64?, switchToMediaTarget: PeerInfoSwitchToMediaTarget?, ghostBaseGlassEnabled: Bool = false) {
+         self.ghostBaseGlassEnabled = ghostBaseGlassEnabled
+         self.context = context
+@@ -1160,6 +1187,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+                 )
+                 self.pendingPanes[key] = pane
+                 pane.pane.node.frame = paneFrame
++                pane.pane.updateJerkgramVisualState(glassEnabled: self.ghostBaseGlassEnabled, revision: self.jerkgramVisualRevision)
+                 pane.pane.update(size: paneFrame.size, topInset: topInset + effectiveTabsHeight, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: true, transition: .immediate)
+                 let paneNode = pane.pane.node
+                 pane.pane.node.tabBarOffsetUpdated = { [weak self, weak paneNode] transition in
+@@ -1176,6 +1204,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+         
+         for (key, pane) in self.pendingPanes {
+             pane.pane.node.frame = paneFrame
++            pane.pane.updateJerkgramVisualState(glassEnabled: self.ghostBaseGlassEnabled, revision: self.jerkgramVisualRevision)
+             pane.pane.update(size: paneFrame.size, topInset: effectiveTabsHeight + topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: self.currentPaneKey == nil, transition: .immediate)
+             
+             if pane.isReady {
+@@ -1272,6 +1301,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+                         paneCompletion()
+                     })
+                 }
++                pane.updateJerkgramVisualState(glassEnabled: self.ghostBaseGlassEnabled, revision: self.jerkgramVisualRevision)
+                 pane.update(size: paneFrame.size, topInset: effectiveTabsHeight + topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+             }
+         }
+@@ -1455,6 +1485,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+         for (_, pane) in self.pendingPanes {
+             let paneTransition: ContainedViewLayoutTransition = .immediate
+             paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
++            pane.pane.updateJerkgramVisualState(glassEnabled: self.ghostBaseGlassEnabled, revision: self.jerkgramVisualRevision)
+             pane.pane.update(size: paneFrame.size, topInset: effectiveTabsHeight + topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: true, transition: paneTransition)
+         }
+         
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+index 4fd8fad..afd7e5e 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -213,16 +213,74 @@ enum TopicsLimitedReason {
+ }
+ 
+ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
++    private func ensureJerkgramBackground(settings: GhostBaseProfileBlurSettings, attachToRoot: Bool) -> GhostBaseProfileBackgroundView {
++        let background: GhostBaseProfileBackgroundView
++        if let current = self.ghostBaseProfileBackgroundView {
++            background = current
++        } else {
++            background = GhostBaseProfileBackgroundView(context: self.context, settings: settings)
++            self.ghostBaseProfileBackgroundView = background
++            background.requestUpdate = { [weak self] in
++                guard let self, self.ghostBaseProfileSceneVisible, let (layout, navigationHeight) = self.validLayout else { return }
++                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
++            }
++        }
++        if attachToRoot {
++            if background.superview !== self.view { self.view.insertSubview(background, at: 0) }
++            self.headerNode.avatarListNode.avatarContainerNode.performanceProbe = background.performanceProbe
++            self.headerNode.ghostBasePerformanceProbe = background.performanceProbe
++            background.setSceneActive(true)
++        }
++        return background
++    }
++
++    // Reconcile once per coherent revision, before the normal native layout.
++    func reconcileJerkgramVisualState(revision: UInt64) {
++        self.ghostBaseProfileSceneVisible = true
++        let settings = GhostBaseGlassStyle.allowsTransparentSurfaces ? GhostBaseProfileGlassRuntime.loadSettings() : nil
++        let glassEnabled = settings != nil
++        if let settings {
++            _ = self.ensureJerkgramBackground(settings: settings, attachToRoot: true)
++        } else if let background = self.ghostBaseProfileBackgroundView {
++            background.setSceneActive(false)
++            background.removeFromSuperview()
++            self.ghostBaseProfileBackgroundView = nil
++            self.headerNode.avatarListNode.avatarContainerNode.performanceProbe = nil
++            self.headerNode.ghostBasePerformanceProbe = nil
++        }
++        self.ghostBaseProfileMetricsSettings = GhostBaseProfileMetricsSettings.load()
++        self.headerNode.updateJerkgramVisualState(settings: settings)
++        self.paneContainerNode.updateJerkgramVisualState(glassEnabled: glassEnabled, revision: revision)
++        for sectionNode in self.regularSections.values {
++            sectionNode.updateJerkgramVisualState(glassEnabled: glassEnabled)
++        }
++        for sectionNode in self.editingSections.values {
++            sectionNode.updateJerkgramVisualState(glassEnabled: glassEnabled)
++        }
++        let fill = glassEnabled ? UIColor.clear : self.presentationData.theme.list.blocksBackgroundColor
++        self.backgroundColor = fill
++        self.scrollNode.backgroundColor = fill
++        self.scrollNode.view.backgroundColor = fill
++    }
++
+     func setGhostBaseProfileBackgroundActive(_ active: Bool) {
++        self.ghostBaseProfileSceneVisible = active
+         self.ghostBaseProfileBackgroundView?.setSceneActive(active)
+     }
+-    func makeSettingsBackdropView() -> UIView? {
+-        guard self.isSettings, let background = self.ghostBaseProfileBackgroundView else { return nil }
++    func makeSettingsBackdropView(existing: UIView? = nil) -> UIView? {
++        guard self.isSettings, GhostBaseGlassStyle.allowsTransparentSurfaces,
++            let settings = GhostBaseProfileGlassRuntime.loadSettings() else { return nil }
++        // The source scene is admitted for a visible descendant; hidden root
++        // sections/header/layout remain dirty until the root appears.
++        let background = self.ensureJerkgramBackground(settings: settings, attachToRoot: false)
++        if background.bounds.isEmpty {
++            background.frame = CGRect(origin: .zero, size: self.validLayout?.0.size ?? self.view.bounds.size)
++        }
+         // Refresh static source/theme state while hidden without activating video.
+         background.update(peer: self.data?.peer, cachedData: self.data?.cachedData,
+             presentationData: self.presentationData, isSettings: true,
+             avatarItem: self.headerNode.avatarListNode.item, allowInactiveSettingsExport: true)
+-        return background.makeSettingsBackdropView()
++        return background.makeSettingsBackdropView(existing: existing)
+     }
+     weak var controller: PeerInfoScreenImpl?
+     
+@@ -258,8 +316,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+     var regularSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
+     var editingSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
+     let paneContainerNode: PeerInfoPaneContainerNode
+-    fileprivate let ghostBaseProfileBackgroundView: GhostBaseProfileBackgroundView?
+-    private let ghostBaseProfileMetricsSettings: GhostBaseProfileMetricsSettings
++    fileprivate var ghostBaseProfileBackgroundView: GhostBaseProfileBackgroundView?
++    private var ghostBaseProfileMetricsSettings: GhostBaseProfileMetricsSettings
++    private var ghostBaseProfileSceneVisible = false
+     var ignoreScrolling: Bool = false
+     lazy var hapticFeedback = { HapticFeedback() }()
+ 
+@@ -495,7 +554,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+         self.sharedMediaFromForumTopic = sharedMediaFromForumTopic
+         self.sharedMediaChatLocation = peerInfoSharedMediaChatLocation(peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
+         self.ghostBaseProfileMetricsSettings = GhostBaseProfileMetricsSettings.load()
+-        if let settings = GhostBaseProfileGlassRuntime.loadSettings() {
++        if GhostBaseGlassStyle.allowsTransparentSurfaces, let settings = GhostBaseProfileGlassRuntime.loadSettings() {
+             self.ghostBaseProfileBackgroundView = GhostBaseProfileBackgroundView(
+                 context: context,
+                 settings: settings
+@@ -539,7 +598,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+                 .requestUpdate = { [weak self] in
+ 
+                 guard
+-                    let self,
++                    let self, self.ghostBaseProfileSceneVisible,
+                     let (
+                         layout,
+                         navigationHeight
+@@ -5643,7 +5702,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+ 
+     func updatePresentationData(_ presentationData: PresentationData) {
+         self.presentationData = presentationData
+-        
++        // Keep the source current for a visible descendant, but defer the
++        // hidden root's header/panes/sections until its appearance revision.
++        guard self.ghostBaseProfileSceneVisible else { return }
+         self.updateBackgroundColor()
+     
+         
+@@ -6846,11 +6907,13 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+         ))
+         
+         self._hasGlassStyle = true
++        GhostBaseGlassStyle.publishThemeChange(identity: ObjectIdentifier(self.presentationData.theme))
++        self.jerkgramTracksVisualSettings = true
+         self.jerkgramSettingsHasOwnBackdrop = isSettings
+         self.jerkgramSettingsScope = isSettings
+-        self.jerkgramSettingsBackdropProvider = { [weak self] in
++        self.jerkgramSettingsBackdropProvider = { [weak self] existing in
+             guard let self, self.isNodeLoaded else { return nil }
+-            return self.controllerNode.makeSettingsBackdropView()
++            return self.controllerNode.makeSettingsBackdropView(existing: existing)
+         }
+ 
+         if isSettings || isMyProfile {
+@@ -7081,11 +7144,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+                 
+                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                     strongSelf.controllerNode.updatePresentationData(strongSelf.presentationData)
+-                    if strongSelf.isSettings {
+-                        // Recapture descendants after the root's new visual state is installed.
+-                        DispatchQueue.main.async {
+-                            NotificationCenter.default.post(name: GhostBaseGlassStyle.settingsStyleDidChange, object: nil)
+-                        }
++                    if previousTheme !== presentationData.theme {
++                        GhostBaseGlassStyle.publishThemeChange(identity: ObjectIdentifier(presentationData.theme))
+                     }
+                     
+                     if strongSelf.navigationItem.backBarButtonItem != nil {
+@@ -7219,6 +7279,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+         super.present(controller, in: context, with: arguments, blockInteraction: blockInteraction, completion: completion)
+     }
+     
++    override public func jerkgramSettingsVisualStateUpdated() {
++        guard self.isNodeLoaded else { return }
++        self.controllerNode.reconcileJerkgramVisualState(revision: GhostBaseGlassStyle.visualRevision)
++    }
++
+     override public func viewWillAppear(_ animated: Bool) {
+         super.viewWillAppear(animated)
+         JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.isSettings ? "settings" : "profile", owner: self)
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+index 74a3f86..e063a60 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+@@ -6,7 +6,7 @@ import AccountContext
+ import TelegramPresentationData
+ 
+ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
+-    private let ghostBaseGlassEnabled: Bool
++    private var ghostBaseGlassEnabled: Bool
+     private let backgroundNode: ASDisplayNode
+     private let topSeparatorNode: ASDisplayNode
+     private let bottomSeparatorNode: ASDisplayNode
+@@ -38,6 +38,10 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
+         self.addSubnode(self.bottomSeparatorNode)
+     }
+     
++    func updateJerkgramVisualState(glassEnabled: Bool) {
++        self.ghostBaseGlassEnabled = glassEnabled
++    }
++
+     func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
+         if self.ghostBaseGlassEnabled {
+             let isDark = presentationData.theme.overallDarkAppearance
+@@ -172,6 +176,15 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
+                 self.itemContainerNode.cornerRadius = radius
+             }
+             self.itemContainerNode.clipsToBounds = hasCorners
++        } else {
++            // Release only our own glass geometry when returning to native fill.
++            if self.itemContainerNode.layer.mask === self.bioContentMask {
++                self.itemContainerNode.layer.mask = nil
++            }
++            self.itemContainerNode.cornerRadius = 0.0
++            self.itemContainerNode.clipsToBounds = true
++            self.backgroundNode.cornerRadius = 0.0
++            self.backgroundNode.clipsToBounds = false
+         }
+         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundHeight), size: CGSize(width: width, height: UIScreenPixel)))
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
+index f8e81b7..36a5db5 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
+@@ -72,7 +72,7 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
+             // `systemStyle` only controls corners/insets. Supply an explicit
+             // tint for this one profile-bio field so the generic `.blocks`
+             // renderer cannot replace it with Telegram's opaque list card.
+-            backgroundColor: GhostBaseGlassStyle.isEnabled ? .clear : nil,
++            backgroundColor: (GhostBaseGlassStyle.isEnabled && GhostBaseGlassStyle.allowsTransparentSurfaces) ? .clear : nil,
+             text: item.text, placeholder: item.placeholder, maxLength: item.maxLength.flatMap { ItemListMultilineInputItemTextLimit(value: $0, display: true) }, sectionId: 0, style: .blocks, returnKeyType: .done, textUpdated: { updatedText in
+             item.textUpdated(updatedText)
+         }, action: {
+@@ -123,7 +123,7 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
+         // translucent bio editor its filler remains visible as lower-corner
+         // triangles. The section container already owns the rounded clipping,
+         // so glass must not draw a second corner layer here.
+-        if GhostBaseGlassStyle.isEnabled {
++        if (GhostBaseGlassStyle.isEnabled && GhostBaseGlassStyle.allowsTransparentSurfaces) {
+             self.maskNode.image = nil
+         } else {
+             self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift
+index 286c214..8d2d261 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift
+@@ -29,6 +29,7 @@ import ButtonComponent
+ import ContextUI
+ 
+ final class GiftsListView: UIView {
++    var jerkgramGlassEnabled: Bool?
+     private let context: AccountContext
+     private let peerId: EnginePeer.Id
+     let profileGifts: ProfileGiftsContext
+@@ -426,9 +427,9 @@ final class GiftsListView: UIView {
+             return 0.0
+         }
+         
+-        let ghostBaseGlassEnabled =
+-            GhostBaseProfileBlurSettings
+-                .loadEnabled() != nil
++        let ghostBaseGlassEnabled = self.jerkgramGlassEnabled ?? (
++            GhostBaseGlassStyle.allowsTransparentSurfaces && GhostBaseProfileBlurSettings.loadEnabled() != nil
++        )
+         
+         let optionSpacing: CGFloat = 10.0
+         let itemsSideInset = params.sideInset + 16.0
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift
+index 8a54fcc..0bbef0a 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift
+@@ -86,7 +86,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
+         }
+     }
+     
+-    private let ghostBaseGlassEnabled: Bool
++    private var ghostBaseGlassEnabled: Bool
++    private var jerkgramVisualRevision: UInt64 = 0
+     private let backgroundNode: ASDisplayNode
+     private let scrollNode: ASScrollNode
+     private var giftsListView: GiftsListView
+@@ -1456,6 +1457,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
+         self.parentController?.presentInGlobalOverlay(contextController)
+     }
+     
++    public func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++        guard self.ghostBaseGlassEnabled != glassEnabled || self.jerkgramVisualRevision != revision else {
++            return
++        }
++        self.ghostBaseGlassEnabled = glassEnabled
++        self.jerkgramVisualRevision = revision
++    }
++
+     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+         self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
+         self.presentationDataPromise.set(.single(presentationData))
+@@ -1486,6 +1495,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
+         
+         let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)
+         
++        self.giftsListView.jerkgramGlassEnabled = self.ghostBaseGlassEnabled
+         let contentHeight = self.giftsListView.update(size: size, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight - self.frame.minY, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: synchronous, visibleBounds: visibleBounds, transition: transition)
+         transition.updateFrame(view: self.giftsListView, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: max(size.height, contentHeight))))
+         
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift
+index 57953be..5545013 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift
+@@ -1133,7 +1133,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
+     private let contextGestureContainerNode: ContextControllerSourceNode
+     private let itemGrid: SparseItemGrid
+     private let itemGridBinding: SparseItemGridBindingImpl
+-    private let ghostBaseGlassEnabled: Bool
++    private var ghostBaseGlassEnabled: Bool
++    private var jerkgramVisualRevision: UInt64 = 0
+     private let listBackgroundView: UIView
+     private let listMaskView: UIImageView
+     private let directMediaImageCache: DirectMediaImageCache
+@@ -2213,6 +2214,14 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
+         }
+     }
+     
++    public func updateJerkgramVisualState(glassEnabled: Bool, revision: UInt64) {
++        guard self.ghostBaseGlassEnabled != glassEnabled || self.jerkgramVisualRevision != revision else {
++            return
++        }
++        self.ghostBaseGlassEnabled = glassEnabled
++        self.jerkgramVisualRevision = revision
++    }
++
+     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+         self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
+ 
+diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+index ef17916..aa10c43 100644
+--- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
++++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+@@ -160,82 +160,7 @@ private var testHasInstance = false
+ 
+ 
+ private func jerkgramBuild135ProjectAccountSettings(accountPeerId: Int64) {
+-    defer {
+-        JerkgramHotSettings.invalidate()
+-        JerkgramActivityGhostRuntime.invalidate()
+-        JerkgramBlockedReactionPolicy.notifySettingsChanged()
+-        GhostBaseGlassStyle.reloadFromDefaults()
+-        Queue.mainQueue().async {
+-            NotificationCenter.default.post(name: Notification.Name("GhostBaseRamOverlayPreferenceChanged"), object: nil)
+-        }
+-    }
+-    let defaults = UserDefaults.standard
+-    let targetPrefix = "jerkgram.account.\(accountPeerId).setting."
+-    let runtimeKeys: [String] = [
+-        "jerkgram.Profile.Enabled",
+-        "jerkgram.Profile.ShowIds",
+-        "jerkgram.Profile.ShowDCs",
+-        "jerkgram.Profile.ShowRegistration",
+-        "jerkgram.Glass.Enabled",
+-        "jerkgram.Settings.Translucency",
+-        "jerkgram.ProfileBlur.Avatar",
+-        "jerkgram.ProfileBlur.Animated",
+-        "jerkgram.ProfileBlur.Tint",
+-        "jerkgram.ProfileBlur.Reduced",
+-        "jerkgram.GhostMode.ReadMessages",
+-        "jerkgram.GhostMode.TypingActions",
+-        "jerkgram.GhostMode.HideRecording",
+-        "jerkgram.GhostMode.HideUploading",
+-        "jerkgram.GhostMode.HideStickerActivity",
+-        "jerkgram.GhostMode.HideGameActivity",
+-        "jerkgram.GhostMode.HideEmojiActivity",
+-        "jerkgram.GhostMode.Presence",
+-        "jerkgram.GhostMode.ScheduledSend",
+-        "jerkgram.Messages.SaveDeleted",
+-        "jerkgram.Messages.ShowDeleted",
+-        "jerkgram.Messages.SaveEditHistory",
+-        "jerkgram.Messages.ShowEditHistory",
+-        "jerkgram.Messages.HideBlockedMessages",
+-        "jerkgram.Messages.HideBlockedReactions",
+-        "jerkgram.Messages.SendTextStyle",
+-        "jerkgram.Messages.DeletedPortableReplies",
+-        "jerkgram.Messages.PreserveDeletedMedia",
+-        "jerkgram.Appearance.ShowRamUnderClock",
+-        "jerkgram.Appearance.MessageSeconds",
+-        "jerkgram.Appearance.HideOwnPhone",
+-        "jerkgram.ProtectedContent.Enabled",
+-        "jerkgram.ProtectedContent.GalleryShare",
+-        "jerkgram.ProtectedContent.GallerySave",
+-        "jerkgram.ProtectedContent.GalleryCopy",
+-        "jerkgram.ProtectedContent.ChatSave",
+-        "jerkgram.ProtectedContent.ChatCopy",
+-        "jerkgram.ProtectedContent.ChatForward",
+-        "jerkgram.ProtectedContent.AllowScreenshots",
+-        "jerkgram.ProtectedContent.AllowScreenRecording",
+-        "jerkgram.ProtectedContent.OneTimeScreenshots",
+-        "jerkgram.ProtectedContent.OneTimeScreenRecording",
+-        "jerkgram.ProtectedContent.OneTimeSave",
+-        "jerkgram.Stories.Save",
+-        "jerkgram.Stars.LocalBalance.Enabled",
+-        "jerkgram.Stars.LocalBalance.Amount",
+-        "jerkgram.Stars.LocalBalance.BaseAmount",
+-    ]
+-    for key in runtimeKeys {
+-        let scopedKey = targetPrefix + key
+-        if let value = defaults.object(forKey: scopedKey) {
+-            defaults.set(value, forKey: key)
+-        } else {
+-            defaults.removeObject(forKey: key)
+-        }
+-    }
+-
+-    let scheduledSendKey = "jerkgram.GhostMode.ScheduledSend"
+-    let sharedDefaults = UserDefaults(suiteName: "group.com.jerkgram.ios") ?? defaults
+-    if let value = defaults.object(forKey: targetPrefix + scheduledSendKey) {
+-        sharedDefaults.set(value, forKey: scheduledSendKey)
+-    } else {
+-        sharedDefaults.removeObject(forKey: scheduledSendKey)
+-    }
++    jerkgramActivateAccountSettings(accountPeerId: accountPeerId)
+ }
+ 
+ public final class SharedAccountContextImpl: SharedAccountContext {
