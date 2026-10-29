@@ -39,7 +39,9 @@ class TranslationUIRepair(unittest.TestCase):
         for bound in ['count: 32', 'count >= 16', 'prefix(256)', 'withMaximum: 4']:
             self.assertIn(bound, text)
         self.assertNotIn('private let languageRecognizer', text)
-        self.assertIn('Range(NSRange', text)
+        self.assertIn('0xD800 ... 0xDBFF', text)
+        self.assertIn('0xDC00 ... 0xDFFF', text)
+        self.assertIn('isBoundary(range.lowerBound), isBoundary(end)', text)
         self.assertIn('guard !fromLang.isEmpty', text)
 
     def test_single_delivery_policy_guard_and_native_route(self):
@@ -153,6 +155,17 @@ precondition(output.utf16.count == input.utf16.count)
 let overlap = jerkgramTranslationRecognitionSample("abcdefghij", maskedRanges: [2..<8, 4..<10])
 precondition(overlap == "ab        ")
 precondition(jerkgramTranslationRecognitionSample("😀abc", maskedRanges: [1..<2]) == "😀abc")
+precondition(jerkgramTranslationRecognitionSample("😀abc", maskedRanges: [0..<1]) == "😀abc")
+precondition(jerkgramTranslationRecognitionSample("😀abc", maskedRanges: [1..<3]) == "😀abc")
+precondition(jerkgramTranslationRecognitionSample("😀abc", maskedRanges: [0..<2]) == "  abc")
+precondition(jerkgramTranslationRecognitionSample("e\u{0301}x", maskedRanges: [0..<2]) == "  x")
+precondition(jerkgramTranslationRecognitionSample("e\u{0301}x", maskedRanges: [0..<1]) == " \u{0301}x")
+precondition(jerkgramTranslationRecognitionSample("e\u{0301}x", maskedRanges: [1..<2]) == "e x")
+let clippedEmoji = String(repeating: "x", count: 255) + "😀" + String(repeating: "t", count: 100)
+let clippedSample = String(repeating: "x", count: 255) + "😀"
+precondition(jerkgramTranslationRecognitionSample(clippedEmoji, maskedRanges: [255..<300]) == String(repeating: "x", count: 255) + "  ")
+precondition(jerkgramTranslationRecognitionSample(clippedEmoji, maskedRanges: [256..<300]) == clippedSample)
+precondition(jerkgramTranslationRecognitionSample(clippedEmoji, maskedRanges: [255..<256]) == clippedSample)
 precondition(jerkgramTranslationRecognitionSample("abc", maskedRanges: [-1..<2]) == "abc")
 precondition(jerkgramTranslationRecognitionSample(String(repeating: "x", count: 300), maskedRanges: [250..<300]).count == 256)
 precondition(jerkgramTranslationRecognitionSample("abc", maskedRanges: [0..<3]).trimmingCharacters(in: .whitespaces).isEmpty)

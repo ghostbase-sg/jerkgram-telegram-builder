@@ -1,0 +1,27 @@
+{
+  "run_id": 40889023877,
+  "job_id": 123500428958,
+  "commit": "2843fd010c223ec949de9fe46d4c099b14b4a332",
+  "conclusion": "failure",
+  "app_build": false,
+  "prior_build175_gates": "PASS",
+  "prior_build176_gates": "PASS",
+  "new_tests": {
+    "total": 24,
+    "passed": 22,
+    "failed": 2,
+    "skipped": 0
+  },
+  "failures": [
+    {
+      "test": "NativeProductionPolicyAdmission.test_actual_policy_and_admission_with_pinned_signal_lifetimes",
+      "message": "Fatal error: reject split surrogate"
+    },
+    {
+      "test": "NativeRecognitionMask.test_actual_production_mask",
+      "message": "Precondition failed: invalid surrogate offset must remain unchanged"
+    }
+  ],
+  "swift": "6.4 effective5.10 Xcode27.1",
+  "repair": "Explicit UTF16 surrogate-pair boundary validation in two production helpers; preserve failing assertions"
+}

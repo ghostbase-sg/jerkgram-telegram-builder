@@ -55,3 +55,9 @@ Required: OFF-after-ON cache, real Premium vs nonPremium, separate accounts, sin
 A broad historical unittest discovery performed during core implementation had29failures/37errors outside the designated new gate (old workflow literals, old stage contracts and unavailable fixtures). Every name is retained in evidence/core-implementation.md; no full686suite-green claim. Immutable earlier contracts are evaluated on the reversed source view or before the new stage in CI.
 
 Final independent review: no new actionable material defect. Reviewer independently verified all28output/parent hashes and designated24tests (21pass/3native skips). Native macOS source preflight remains the next gate; IPA build not started.
+
+## First macOS preflight and focused repair
+
+TASK A commit2843fd010c223ec949de9fe46d4c099b14b4a332; source-only run40889023877 FAILED two actual production fixture assertions. Previous175/176gates passed and all changed Swift owners parsed. Core entity range validation and UI language masking accepted an endpoint inside an emoji surrogate pair because Foundation Range(NSRange,in:) did not reject it on Swift6.4. The fixtures retained their expected outcomes. Both helpers now explicitly validate UTF16 code units at both endpoints; combining scalar boundaries remain permitted. Expanded native cases cover both invalid endpoints, complete emoji, combining sequences and sample clipping. Independent focused review found both addressed with no new actionable breakage.
+
+Updated28owner patch sha25688e382764a84292c1ef2471840f0bedd5c8fad2b9139ac9d2b00be8df1eeef93; rebuilt from exact176parents, apply/reapply/reverse/previousgates PASS. Local terminal24tests:21pass/3explicitnative skips. Native rerun must establish success, including queue cases not reached after the first assertion failure. No IPA build started.

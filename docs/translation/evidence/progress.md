@@ -27,3 +27,5 @@ Task2: fixround1/5 all3addressed; scopedrereviewclean, truthfulRUENerrorwording.
 Task3: final28ownerstagecleanreplay/reapply/reversePASS;24newtests21pass3Swiftnativeskips; previousrootcontractsPASS. Fullreviewfirstattemptfailedbeforeinspectionduemodelusage; retrywithavailabledefaultmodeltranslation_final_check. No productchangefromfailedreview.
 
 Task1/2 scoped reviews clean. Final independent whole28owner/pipeline reviewclean, independently24tests21pass3skip +28before/afterhashes. No parked findings. Task3 sourcegate PASS; publishingTASKAcommit fornativepreflight only; do notbeginBuntilnativegatepasses orsourcecompilerrepairdone.
+
+NativeCI40889023877RED: core+UIsurrogateboundary actualassertions. Focused2ownerfixusesexplicitNSStringUTF16endpointchecks; expandednativefixturesretainoriginalexpectations. ScopedBOUNDARY-REVIEWclean; localall24newtests21pass3skip;28ownerreplay/reapply/reversepriorgatesPASS. Preparingnextsource-onlynativeCI, noBimplementationyet.

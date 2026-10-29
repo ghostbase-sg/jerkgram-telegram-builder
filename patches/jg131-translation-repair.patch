@@ -273,7 +273,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEng
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
-@@ -3,6 +3,275 @@
+@@ -3,6 +3,282 @@
  import SwiftSignalKit
  internal import TelegramApi
  import MtProtoKit
@@ -352,9 +352,16 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
 +}
 +
 +private func jerkgramValidTranslatedEntities(_ text: String, _ entities: [MessageTextEntity]) -> Bool {
-+    let count = text.utf16.count
++    let utf16 = text as NSString
++    let count = utf16.length
++    func isBoundary(_ offset: Int) -> Bool {
++        if offset == 0 || offset == count { return true }
++        // Foundation range conversion can accept a UTF16-surrogate interior.
++        // Scalar boundaries are allowed even inside a combining grapheme.
++        return !((0xD800 ... 0xDBFF).contains(utf16.character(at: offset - 1)) && (0xDC00 ... 0xDFFF).contains(utf16.character(at: offset)))
++    }
 +    return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && entities.allSatisfy {
-+        $0.range.lowerBound >= 0 && $0.range.upperBound <= count && $0.range.lowerBound < $0.range.upperBound && Range(NSRange(location: $0.range.lowerBound, length: $0.range.count), in: text) != nil
++        $0.range.lowerBound >= 0 && $0.range.upperBound <= count && $0.range.lowerBound < $0.range.upperBound && isBoundary($0.range.lowerBound) && isBoundary($0.range.upperBound)
 +    }
 +}
 +
@@ -549,7 +556,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
  
  public enum ComposedRichMessage: Equatable {
      /// Structured content → a rich message (`RichTextMessageAttribute(instantPage:)`, sent with `text: ""`).
-@@ -216,10 +485,10 @@
+@@ -216,10 +492,10 @@
      }
  }
  
@@ -562,7 +569,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
      }
      return combineLatest(signals)
      |> ignoreValues
-@@ -227,6 +496,14 @@
+@@ -227,6 +503,14 @@
  
  public protocol ExperimentalInternalTranslationService: AnyObject {
      func translate(texts: [AnyHashable: String], fromLang: String, toLang: String) -> Signal<[AnyHashable: String]?, NoError>
@@ -577,7 +584,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
  }
  
  public var engineExperimentalInternalTranslationService: ExperimentalInternalTranslationService?
-@@ -302,37 +579,32 @@
+@@ -302,37 +586,32 @@
          encoder.encodeBool(audio.isPending, forKey: "pending")
      }
      encoder.encodeBool((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted ?? false, forKey: "deleted")
@@ -632,7 +639,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
  }
  
  public func jerkgramTranslationSourceMatches(_ original: Message, _ current: Message) -> Bool {
-@@ -341,58 +613,33 @@
+@@ -341,58 +620,33 @@
      return jerkgramTranslationSourceFingerprint(original) == jerkgramTranslationSourceFingerprint(current)
  }
  
@@ -708,7 +715,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
                      return .update(StoreMessage(id: current.id, customStableId: nil, globallyUniqueId: current.globallyUniqueId, groupingKey: current.groupingKey, threadId: current.threadId, timestamp: current.timestamp, flags: StoreMessageFlags(current.flags), tags: current.tags, globalTags: current.globalTags, localTags: current.localTags, forwardInfo: current.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: current.author?.id, text: current.text, attributes: attributes, media: current.media))
                  })
                  return stored
-@@ -404,20 +651,19 @@
+@@ -404,20 +658,19 @@
      return combineLatest(signals)
      |> castError(TranslationError.self)
      |> mapToSignal { outcomes -> Signal<Void, TranslationError> in
@@ -1310,7 +1317,7 @@ diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodul
 diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/TranslateUI/Sources/ChatTranslation.swift
 --- a/submodules/TranslateUI/Sources/ChatTranslation.swift
 +++ b/submodules/TranslateUI/Sources/ChatTranslation.swift
-@@ -134,9 +134,18 @@
+@@ -134,9 +134,26 @@
      }
  }
  
@@ -1320,11 +1327,19 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
 +// Foundation-only recognition sample: keep offsets stable for overlapping entities.
 +private func jerkgramTranslationRecognitionSample(_ text: String, maskedRanges: [Range<Int>]) -> String {
 +    let sample = String(text.prefix(256))
++    let utf16 = sample as NSString
++    let count = utf16.length
++    func isBoundary(_ offset: Int) -> Bool {
++        if offset == 0 || offset == count { return true }
++        // Validate code units explicitly; Foundation accepts some ranges that
++        // divide a surrogate pair. Combining-mark scalar boundaries stay valid.
++        return !((0xD800 ... 0xDBFF).contains(utf16.character(at: offset - 1)) && (0xDC00 ... 0xDFFF).contains(utf16.character(at: offset)))
++    }
 +    let masked = NSMutableString(string: sample)
 +    for range in maskedRanges {
-+        let end = min(range.upperBound, sample.utf16.count)
++        let end = min(range.upperBound, count)
 +        guard range.lowerBound >= 0, range.lowerBound < end,
-+              let _ = Range(NSRange(location: range.lowerBound, length: end - range.lowerBound), in: sample) else { continue }
++              isBoundary(range.lowerBound), isBoundary(end) else { continue }
 +        masked.replaceCharacters(in: NSRange(location: range.lowerBound, length: end - range.lowerBound), with: String(repeating: " ", count: end - range.lowerBound))
 +    }
 +    return masked as String
@@ -1332,7 +1347,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
  
  public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, onLocalFailure: (() -> Void)? = nil) -> Signal<Never, NoError> {
      return context.account.postbox.transaction { transaction -> Signal<Never, NoError> in
-@@ -146,7 +155,7 @@
+@@ -146,7 +163,7 @@
              if let message = transaction.getMessage(messageId) {
                  if let replyAttribute = message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute, let replyMessage = message.associatedMessages[replyAttribute.messageId] {
                      if !replyMessage.text.isEmpty {
@@ -1341,7 +1356,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                          } else {
                              if !messageIdsSet.contains(replyMessage.id) {
                                  messageIdsToTranslate.append(replyMessage.id)
-@@ -158,7 +167,7 @@
+@@ -158,7 +175,7 @@
                  guard message.author?.id != context.account.peerId else {
                      continue
                  }
@@ -1350,7 +1365,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                      continue
                  }
                  
-@@ -192,7 +201,8 @@
+@@ -192,7 +209,8 @@
          }
          
          let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
@@ -1360,7 +1375,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
          switch translationConfiguration.auto {
          case .system:
              if #available(iOS 18.0, *) {
-@@ -201,15 +211,15 @@
+@@ -201,15 +219,15 @@
          default:
              break
          }
@@ -1379,7 +1394,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
      if peerId.id == EnginePeer.Id.Id._internalFromInt64Value(777000) {
          return .single(nil)
      }
-@@ -235,7 +245,7 @@
+@@ -235,7 +253,7 @@
              context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AutoTranslateEnabled(id: peerId))
          )
          |> mapToSignal { settings, autoTranslateEnabled in
@@ -1388,7 +1403,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                  return .single(nil)
              }
              
-@@ -253,7 +263,7 @@
+@@ -253,7 +271,7 @@
              |> mapToSignal { cached in
                  let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                  if let cached, let timestamp = cached.timestamp, cached.baseLang == baseLang && currentTime - timestamp < 60 * 60 {
@@ -1397,7 +1412,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                          return .single(cached)
                      } else {
                          return .single(nil)
-@@ -283,34 +293,16 @@
+@@ -283,34 +301,16 @@
                                              count += 1
                                          }
                                      } else {
@@ -1440,7 +1455,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                                          languageRecognizer.processString(text)
                                          let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 4)
                                          languageRecognizer.reset()
-@@ -319,7 +311,6 @@
+@@ -319,7 +319,6 @@
                                          if let language = filteredLanguages.first {
                                              let fromLang = normalizeTranslationLanguage(language.key.rawValue)
                                              if loggingEnabled && !["en", "ru"].contains(fromLang) && !dontTranslateLanguages.contains(fromLang) {
@@ -1448,7 +1463,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                                                  Logger.shared.log("ChatTranslation", "Recognized as: \(fromLang), other hypotheses: \(hypotheses.map { $0.key.rawValue }.joined(separator: ",")) ")
                                              }
                                              fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + message.text.count
-@@ -343,6 +334,7 @@
+@@ -343,6 +342,7 @@
                                  }
                              }
                              let fromLang = mostFrequent?.0 ?? ""
