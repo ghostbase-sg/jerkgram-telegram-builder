@@ -1,0 +1,18 @@
+{
+  "commit": "2c3540a905d1e64fee668863eb0b65727dc5dfad",
+  "run": 40820248325,
+  "job": 123270788167,
+  "conclusion": "success",
+  "selected_lines": [
+    "2026-10-29T04:54:23.0493410Z native secondary output dispose/rebind ordering PASS",
+    "2026-10-29T04:54:23.5335290Z settings native shared playback session PASS",
+    "2026-10-29T04:54:34.5715690Z Changed Swift owners PARSED; not type-checked or fully compiled",
+    "2026-10-29T04:54:35.8533160Z production visual policy fixtures passed",
+    "2026-10-29T04:54:35.8555110Z Ran 45 tests in 1.045s",
+    "2026-10-29T04:54:36.7644000Z PASS: production Foundation projection/migration/account/import/cache fixtures",
+    "2026-10-29T04:54:37.1978660Z native secondary output dispose/rebind ordering PASS",
+    "2026-10-29T04:54:37.6514050Z settings native shared playback session PASS",
+    "2026-10-29T04:54:43.8032880Z Changed Swift owners PARSED; not type-checked or fully compiled",
+    "2026-10-29T04:54:46.8914630Z Build176 wave1 source gates PASS; runtime/device validation pending"
+  ]
+}

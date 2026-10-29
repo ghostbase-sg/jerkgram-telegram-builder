@@ -1,0 +1,67 @@
+{
+  "run": 40820248325,
+  "commit": "2c3540a905d1e64fee668863eb0b65727dc5dfad",
+  "source_preflight_job": 123270788167,
+  "build_job": 123271206223,
+  "conclusion": "success",
+  "artifacts": [
+    {
+      "id": 12876259298,
+      "name": "Jerkgram-1.2.0-Build176-diagnostics",
+      "size_in_bytes": 1303967,
+      "url": "https://api.github.com/repos/ghostbase-sg/jerkgram-telegram-builder/actions/artifacts/12876259298",
+      "archive_download_url": "https://api.github.com/repos/ghostbase-sg/jerkgram-telegram-builder/actions/artifacts/12876259298/zip",
+      "expired": false,
+      "created_at": "2026-10-29T05:56:38Z",
+      "expires_at": "2027-01-27T04:53:23Z",
+      "updated_at": "2026-10-29T05:56:38Z",
+      "digest": "sha256:7f9b9b76165bdc6f955e0a3b7dd049fe0d1f16a2d3509794c7f466e96a85b9e4",
+      "workflow_run": {
+        "id": 40820248325,
+        "repository_id": 1237883391,
+        "head_repository_id": 1237883391,
+        "head_branch": "codex/build176-wave1",
+        "head_sha": "2c3540a905d1e64fee668863eb0b65727dc5dfad"
+      }
+    },
+    {
+      "id": 12876229430,
+      "name": "Jerkgram-1.2.0-Build176",
+      "size_in_bytes": 95197521,
+      "url": "https://api.github.com/repos/ghostbase-sg/jerkgram-telegram-builder/actions/artifacts/12876229430",
+      "archive_download_url": "https://api.github.com/repos/ghostbase-sg/jerkgram-telegram-builder/actions/artifacts/12876229430/zip",
+      "expired": false,
+      "created_at": "2026-10-29T05:56:42Z",
+      "expires_at": "2027-01-27T04:53:23Z",
+      "updated_at": "2026-10-29T05:56:42Z",
+      "digest": "sha256:c62985f8a824fec4dca81e49a07cc25ee821d48ba95ed98c3bc2fc58b004c83e",
+      "workflow_run": {
+        "id": 40820248325,
+        "repository_id": 1237883391,
+        "head_repository_id": 1237883391,
+        "head_branch": "codex/build176-wave1",
+        "head_sha": "2c3540a905d1e64fee668863eb0b65727dc5dfad"
+      }
+    }
+  ],
+  "selected_build_lines": [
+    "2026-10-29T04:55:17.3959910Z Profile preferences memory snapshot PATCHED / VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:55:17.3960610Z Expanded diagnostics PATCHED / VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:55:17.3961320Z Deleted reply delta PATCHED / HASH VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:55:17.3961950Z Portable copy delta PATCHED / HASH VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:55:17.3964260Z PATCHED / VERIFIED: 266 Stable owners + 4 bounded follow-up owners + 7 cleanup owners + 8 profile diagnostic/compatibility owners + 4 preference snapshot owners + 11 expanded diagnostic owners + 3 deleted reply owners + 4 portable copy owners; NOT COMPILED",
+    "2026-10-29T04:55:19.7047480Z Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:55:57.1942570Z Deleted reply delta PATCHED / HASH VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:55:58.8704250Z Portable copy delta PATCHED / HASH VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:56:05.4828670Z Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:56:05.4829390Z Build175 final owners VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:56:45.4593370Z Source contracts VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:56:45.4593820Z Build175 final owners VERIFIED; NOT COMPILED / NOT RUNTIME TESTED",
+    "2026-10-29T04:56:45.4594360Z Build176 wave1 source gates PASS; runtime/device validation pending",
+    "2026-10-29T05:03:59.1180260Z [ 36%] Building CXX object tdutils/CMakeFiles/tdutils.dir/td/utils/port/IPAddress.cpp.o",
+    "2026-10-29T05:03:59.1260150Z [  0%] Building CXX object tdutils/CMakeFiles/tdutils.dir/td/utils/port/IPAddress.cpp.o",
+    "2026-10-29T05:56:06.7573520Z INFO: Build completed successfully, 9629 total actions",
+    "2026-10-29T05:56:14.9694230Z {\"owner\": \"ChatTextInputPanelNode.swift\", \"optimization_flags\": [], \"evidence\": \"unavailable; no conclusion\"}",
+    "2026-10-29T05:56:37.1045810Z IPA metadata VERIFIED; COMPILED, NOT RUNTIME TESTED"
+  ]
+}

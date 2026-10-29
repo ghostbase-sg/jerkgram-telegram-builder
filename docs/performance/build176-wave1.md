@@ -104,3 +104,15 @@ Commit59b8998 / run40819114434 stopped before IPA (`build-probe` skipped). Actua
 ### Second macOS preflight
 
 Commit9eb58912 / run40819680258: actual production Foundation projection/migration/account/import/cache fixtures PASS, as did native visual policy, shared playback/output fixtures and syntax parsing. Pane fixture still lacked `import CoreGraphics`, so the standalone macOS executable did not see the CGSize equality overlay that UIKit imports in the app. Added the missing fixture import; runtime sources unchanged. IPA job again skipped; heavy build count remains0.
+
+### Successful macOS source gate / active integration
+
+Candidate runtime commit `2c3540a905d1e64fee668863eb0b65727dc5dfad` (same runtime patch as59b8998; follow-ups only repair fixtures). [Actions40820248325](https://github.com/ghostbase-sg/jerkgram-telegram-builder/actions/runs/40820248325), preflight job123270788167 SUCCESS. All45wave tests passed with native policy/wrapper enabled; actual production Foundation projection/migration/account/import/cache fixture PASS, native shared playback/output fixtures PASS, Swift syntax parse PASS. See `build176-evidence/native-preflight-success.json`.
+
+**Performance Remediation Wave 1 source acceptance complete.** This denotes source/native-fragment gates, not iPhone ARC/rendering performance or Swiftgram parity. The single heavy `build-probe` job123271206223 has started; IPA artifact pending.
+
+### Integration complete
+
+Both jobs in run40820248325 SUCCESS. IPA artifact12876229430, `Jerkgram-1.2.0-Build176`, archive95,197,521bytes, digest `sha256:c62985f8a824fec4dca81e49a07cc25ee821d48ba95ed98c3bc2fc58b004c83e`. [Artifact](https://github.com/ghostbase-sg/jerkgram-telegram-builder/actions/runs/40820248325/artifacts/12876229430). Diagnostics artifact12876259298. Full compilation/packaging succeeded for runtime commit2c3540a9. Exactly one heavy IPA build ran; two earlier attempts stopped in native fixture preflight before IPA.
+
+**Performance Remediation Wave 1 complete at source/native/compilation gates.** Device latency, ARC counts, appearance, power/accessibility transitions and Swiftgram parity still require the matrix above. No phone runtime success is implied by GREEN CI. Latest user subsequently authorizes a separate future Devices glass scope, replacing the175native-only exclusion for that future patch;176exclusion itself remains unchanged.
