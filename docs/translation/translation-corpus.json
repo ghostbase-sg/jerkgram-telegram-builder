@@ -1,0 +1,387 @@
+{
+  "schema": 1,
+  "status": "INPUT_CORPUS_ONLY_NOT_RUNTIME_RESULTS",
+  "directions": [
+    "ru-en",
+    "en-ru",
+    "ru-de",
+    "de-ru"
+  ],
+  "rubric": [
+    "Meaning, negation, time and names preserved; no invented facts",
+    "Protected URL and mention destinations preserved and rendered entity ranges valid UTF16",
+    "Emoji/graphemes and paragraphs preserved meaningfully",
+    "No original-as-success; explicit offline/unsupported/flood behavior",
+    "Compare Apple baseline and enhanced on same device/target; do not infer quality from source gates"
+  ],
+  "cases": [
+    {
+      "id": "ru-en-ordinary",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "ordinary",
+      "text": "Завтра поезд отправляется в восемь утра. Не забудь паспорт.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-en-slang",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "slang",
+      "text": "Ну блин, опять всё зависло. Давай без спешки разберёмся.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-en-emoji",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "emoji",
+      "text": "Я уже дома 🏠🙂 Спасибо за помощь! 👨‍👩‍👧‍👦",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-en-url",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "url",
+      "text": "Документация здесь: https://example.org/guide?q=hello&lang=ru#intro — открой её завтра.",
+      "protected_tokens": [
+        "https://example.org/guide?q=hello&lang=ru#intro"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-en-mention",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "mention",
+      "text": "Напиши @example_user, что встречу перенесли на пятницу.",
+      "protected_tokens": [
+        "@example_user"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-en-newline",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "newline",
+      "text": "План на завтра:\n1. Купить билеты.\n2. Позвонить маме.\n\nВстретимся вечером.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-en-long",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "long",
+      "text": "Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-en-mixed",
+      "source_language": "ru",
+      "target_language": "en",
+      "kind": "mixed",
+      "text": "Завтра у нас deadline, but the meeting is cancelled. Остальное обсудим вечером.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-ordinary",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "ordinary",
+      "text": "The train leaves at eight tomorrow morning. Remember your passport.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-slang",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "slang",
+      "text": "Ugh, it froze again. Let’s figure it out without rushing.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-emoji",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "emoji",
+      "text": "I am home now 🏠🙂 Thanks for your help! 👨‍👩‍👧‍👦",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-url",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "url",
+      "text": "The documentation is here: https://example.org/guide?q=hello&lang=en#intro — open it tomorrow.",
+      "protected_tokens": [
+        "https://example.org/guide?q=hello&lang=en#intro"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-mention",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "mention",
+      "text": "Tell @example_user that the meeting has moved to Friday.",
+      "protected_tokens": [
+        "@example_user"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-newline",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "newline",
+      "text": "Tomorrow’s plan:\n1. Buy tickets.\n2. Call Mum.\n\nSee you in the evening.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-long",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "long",
+      "text": "This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening. This is a long message for translation testing. The meeting starts at nine tomorrow, and the report must be sent by evening.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "en-ru-mixed",
+      "source_language": "en",
+      "target_language": "ru",
+      "kind": "mixed",
+      "text": "Tomorrow is the deadline, но встреча отменена. We can discuss the rest later.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-ordinary",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "ordinary",
+      "text": "Завтра поезд отправляется в восемь утра. Не забудь паспорт.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-slang",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "slang",
+      "text": "Ну блин, опять всё зависло. Давай без спешки разберёмся.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-emoji",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "emoji",
+      "text": "Я уже дома 🏠🙂 Спасибо за помощь! 👨‍👩‍👧‍👦",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-url",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "url",
+      "text": "Документация здесь: https://example.org/guide?q=hello&lang=ru#intro — открой её завтра.",
+      "protected_tokens": [
+        "https://example.org/guide?q=hello&lang=ru#intro"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-mention",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "mention",
+      "text": "Напиши @example_user, что встречу перенесли на пятницу.",
+      "protected_tokens": [
+        "@example_user"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-newline",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "newline",
+      "text": "План на завтра:\n1. Купить билеты.\n2. Позвонить маме.\n\nВстретимся вечером.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-long",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "long",
+      "text": "Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера. Это длинное сообщение для проверки перевода. Встреча начнётся завтра в девять, а отчёт нужно отправить до вечера.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ru-de-mixed",
+      "source_language": "ru",
+      "target_language": "de",
+      "kind": "mixed",
+      "text": "Завтра у нас deadline, but the meeting is cancelled. Остальное обсудим вечером.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-ordinary",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "ordinary",
+      "text": "Der Zug fährt morgen um acht Uhr ab. Vergiss deinen Reisepass nicht.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-slang",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "slang",
+      "text": "Mist, schon wieder hängt alles. Lass uns das in Ruhe klären.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-emoji",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "emoji",
+      "text": "Ich bin jetzt zu Hause 🏠🙂 Danke für deine Hilfe! 👨‍👩‍👧‍👦",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-url",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "url",
+      "text": "Die Dokumentation steht hier: https://example.org/guide?q=hello&lang=de#intro — öffne sie morgen.",
+      "protected_tokens": [
+        "https://example.org/guide?q=hello&lang=de#intro"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-mention",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "mention",
+      "text": "Sag @example_user, dass das Treffen auf Freitag verschoben wurde.",
+      "protected_tokens": [
+        "@example_user"
+      ],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-newline",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "newline",
+      "text": "Plan für morgen:\n1. Fahrkarten kaufen.\n2. Mama anrufen.\n\nBis heute Abend.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-long",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "long",
+      "text": "Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden. Dies ist eine lange Nachricht zum Prüfen der Übersetzung. Das Treffen beginnt morgen um neun, und der Bericht muss bis zum Abend verschickt werden.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "de-ru-mixed",
+      "source_language": "de",
+      "target_language": "ru",
+      "kind": "mixed",
+      "text": "Morgen ist die Deadline, но встреча отменена. Den Rest besprechen wir später.",
+      "protected_tokens": [],
+      "apple_baseline_output": null,
+      "enhanced_output": null,
+      "result": "NOT_RUN"
+    }
+  ]
+}

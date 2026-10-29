@@ -1,0 +1,125 @@
+{
+  "repository": "Swiftgram/Telegram-iOS",
+  "branch": "master",
+  "commit": "e3a392272b182dbf975d4ac5fc33b40a5954d749",
+  "checked_at_utc": "2026-10-29",
+  "method": "Connected GitHub get_repo + fetch branches/master, then fetch_file pinned commit; no translation endpoint contacted",
+  "branch_evidence_url": "https://api.github.com/repos/Swiftgram/Telegram-iOS/branches/master",
+  "files": [
+    {
+      "path": "submodules/TranslateUI/Sources/ChatTranslation.swift",
+      "sha": "ccffbcc40a164b060e291a6ced3ea47ab2c6be94",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TranslateUI/Sources/ChatTranslation.swift"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift",
+      "sha": "33442f65999f8e317ec4b7dd898c9cada65dbed5",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift",
+      "sha": "06dbed43e3fdf8beabc8cfc3ed80835b7a4477a1",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift"
+    },
+    {
+      "path": "Swiftgram/SGSimpleSettings/Sources/SimpleSettings.swift",
+      "sha": "6dfc4ec9d839b2d27eed977ca32c940ab795ff6e",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/Swiftgram/SGSimpleSettings/Sources/SimpleSettings.swift"
+    },
+    {
+      "path": "Swiftgram/SGSimpleSettings/Sources/UserDefaultsWrapper.swift",
+      "sha": "63784ff3e6653324174bf70acf2ebfd6a937e5a4",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/Swiftgram/SGSimpleSettings/Sources/UserDefaultsWrapper.swift"
+    },
+    {
+      "path": "Swiftgram/SGGTranslate/Sources/SGGTranslate.swift",
+      "sha": "8119b42a2dddb65a44a58d70d3dcd84f7ea67c44",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/Swiftgram/SGGTranslate/Sources/SGGTranslate.swift"
+    },
+    {
+      "path": "Swiftgram/SGTranslate/Sources/SGTranslate.swift",
+      "sha": "7f253d65e2ba22ce549f2a5e97bce9ca56cae6a4",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/Swiftgram/SGTranslate/Sources/SGTranslate.swift"
+    },
+    {
+      "path": "Swiftgram/SGSettingsUI/Sources/SGSettingsController.swift",
+      "sha": "b5b41d9f4ac6b89c672c9ab9bf71217c51853500",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/Swiftgram/SGSettingsUI/Sources/SGSettingsController.swift"
+    },
+    {
+      "path": "Swiftgram/SGOutgoingTranslationLanguageSelection/Sources/SGOutgoingTranslationLanguageSelection.swift",
+      "sha": "00db0b6dcd3845ebd198f086b1ea52e1b7f77e83",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/Swiftgram/SGOutgoingTranslationLanguageSelection/Sources/SGOutgoingTranslationLanguageSelection.swift"
+    },
+    {
+      "path": "submodules/TranslateUI/Sources/Translate.swift",
+      "sha": "cd4c79b6bd8ade426f17a559236f4fd758a51e80",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TranslateUI/Sources/Translate.swift"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/ChatController.swift",
+      "sha": "a3487fbaeda21ece87e2ec839036006d2e9a3399",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUI/Sources/ChatController.swift"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift",
+      "sha": "94f007f06d4128afc3fc7fdd55a54555b5f56daf",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/ChatHistoryListNode.swift",
+      "sha": "d224b16b26643056b65a2538cfa5745ce2461e01",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift",
+      "sha": "951804eaac01d693aa09478c8ccaea336673c3f7",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift",
+      "sha": "9a80f316e2d421fe8018ba9be0a9511aa8846d6a",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/ChatControllerContentData.swift",
+      "sha": "2289781b2acf3808a66a0d4dda20ae843650a27a",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUI/Sources/ChatControllerContentData.swift"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/Chat/UpdateChatPresentationInterfaceState.swift",
+      "sha": "face5ae793b10a06acc371079946e3cb0c1d30ca",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUI/Sources/Chat/UpdateChatPresentationInterfaceState.swift"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift",
+      "sha": "3d99e59d34c32b44e03410836815207bab277747",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/AccountState.swift",
+      "sha": "13bdc24791f5e47b546f23860aa065167922792c",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramCore/Sources/State/AccountState.swift"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/ChatMessageThrottledProcessingManager.swift",
+      "sha": "932cdf5d005502ba20b5870b73e807bed9208fb8",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUI/Sources/ChatMessageThrottledProcessingManager.swift"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/ApplyUpdateMessage.swift",
+      "sha": "60ac9b11d61762bc2b625c709128d55ce051e9c8",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramCore/Sources/State/ApplyUpdateMessage.swift"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/ServerMessageMerge.swift",
+      "sha": "7c455601685b98e8d12877146acbc0309a29b014",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramCore/Sources/State/ServerMessageMerge.swift"
+    },
+    {
+      "path": "submodules/TelegramUIPreferences/Sources/TranslationSettings.swift",
+      "sha": "383c356645523a17044bd9ac31c8c0e74fb5abd8",
+      "url": "https://github.com/Swiftgram/Telegram-iOS/blob/e3a392272b182dbf975d4ac5fc33b40a5954d749/submodules/TelegramUIPreferences/Sources/TranslationSettings.swift"
+    }
+  ]
+}

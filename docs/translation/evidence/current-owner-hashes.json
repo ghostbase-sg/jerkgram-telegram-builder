@@ -1,0 +1,84 @@
+{
+  "checked_on": "2026-10-29",
+  "source": "build176-wave1/source",
+  "upstream": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "patch_sha256": "95a2966d61c2fc614840cec47c6718bc7d8626d0bd6c6a15be4278bd60bcf515",
+  "owners": {
+    "submodules/TranslateUI/Sources/Translate.swift": {
+      "sha256": "af47d004d99eda542ec9880f71e84667682a4cb1a6527d797e393d46032f293c",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift": {
+      "sha256": "032dbcdb6fd520a85c48772233c2d9e94a9b6d86205f8f2179f7b718e3796a14",
+      "matches_translation_after": true
+    },
+    "submodules/TranslateUI/Sources/ChatTranslation.swift": {
+      "sha256": "27a030f96873737ef186ce9b066f33ea5d54ddd9a50b9df94dda2147a398475e",
+      "matches_translation_after": true
+    },
+    "submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift": {
+      "sha256": "a465ba75e6fe0d73103ed04387a0fb8e3690c31e08d9d86404673f2fe4520905",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift": {
+      "sha256": "74e29295d4ea9fdc61e4654dd2216f950cb303a086a3f15d2617eaad77988157",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift": {
+      "sha256": "c53ce509aeab88bd4fc436552cefc273cba701b01b3d5c0fd2ddc14d70f87c2b",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift": {
+      "sha256": "65560b3dcc8d4b1a887146a8175e23170d30d35187b6d7574ab09d47f15d66a9",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Sources/ChatHistoryListNode.swift": {
+      "sha256": "20ffc261429ec2108c1ccd35e294e11e843c3310a9b9c71e92f1bfda189bc420",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift": {
+      "sha256": "fd0fde0fcbc5b20cba1ef1074cc47ac8889f9d2ecdf8081a8f8dd9a22e85cdc1",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift": {
+      "sha256": "f348eee280e127cf6bed08587c068eaab45e1ab9daea95dd10c06f698e9dcf8d",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift": {
+      "sha256": "fafa55099f9430d175b952142f13f58d2d4d31593f96088cef9cbd3fa949ebb2",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift": {
+      "sha256": "3af5ff753f562363fc068600c09b3c1778be0436ab67c56d88a762676d037bda",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift": {
+      "sha256": "e4c4ca6d19e5a251600abeb7f92f31bd658386e06bfbeb9ed1ac25b48856efa9",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift": {
+      "sha256": "ad903c6a4a0a27c2d45efe504c2683a06863f9d00e997a3803953887476371a3",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift": {
+      "sha256": "e6b364e4387f58a472072756e322a75c72469b4742d8691bc5722a77e4072bb9",
+      "matches_translation_after": true
+    },
+    "submodules/GalleryUI/Sources/GalleryController.swift": {
+      "sha256": "85e0eae97378474b4572a5e6864828a11188b2e59d2f0c22605d3bd770aa2c98",
+      "matches_translation_after": true
+    },
+    "submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift": {
+      "sha256": "a55ec8e55737c46d2046c79d90467384894038b6e9b1501893db64bbf9875939",
+      "matches_translation_after": true
+    },
+    "submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift": {
+      "sha256": "d48b557d280edc844e56d28c7df576ea31445e4003a096d3f957c39c6b253ab9",
+      "matches_translation_after": true
+    },
+    "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift": {
+      "sha256": "8266ea80291906a1ba1c0206a1802f6fa9b49e51d441a52d920dd21c0c56a23c",
+      "matches_translation_after": true
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "upstream": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "stage_count": 24,
+  "comparison_physical_owners": 230,
+  "mismatches": [],
+  "credential_configuration": "not invoked",
+  "full_build": false,
+  "previous_source_verifier": "PASS"
+}

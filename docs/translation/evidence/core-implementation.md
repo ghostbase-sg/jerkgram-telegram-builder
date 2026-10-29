@@ -1,0 +1,126 @@
+# TASK A core implementation report
+
+## Owners
+
+Edited only physical task-a/source core owners:
+
+- submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
+- submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift
+- submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift
+
+Policy lives in the existing Translate.swift owner. A new BUILD input was deliberately unnecessary; sparse task-a source did not contain a verifiable TelegramCore BUILD file. Baseline task-a/before is untouched. No commits, pushes, builds, or backend calls performed.
+
+## Interfaces and behavior
+
+Public JerkgramTranslationSettings: preferenceKey `jerkgram.EnhancedTranslation`; `scopedKey(accountPeerId:)` returns canonical `jerkgram.account.<id>.setting.<key>`; `enabled(accountPeerId:)`, `update(accountPeerId:enabled:)`, `generation(accountPeerId:)`; policyVersion 2. Cache has at most16 accounts. Unknown/evicted account reads canonical scoped defaults once; absent value defaults ON. Canonical SettingsUI remains the only persistence writer. An actual policy change posts JerkgramTranslationPolicyChanged once on the main queue with accountPeerId as object. Idempotent activation retains generation; changed preference and eviction invalidate/cancel work and cache for that account.
+
+Engine messages exposes `enhancedTranslate(text:entities:fromLang:toLang:allowLocalDownloads:localOnly:)`, with entities=[], allowLocalDownloads=false, localOnly=false. Existing translateMessages and internal wrapper add `enhanced: Bool = false`, distinct from stock enableLocalIfPossible. OFF core body equals exact Official13.1.1 body after removing this explicit branch and signature parameter; batched text API body also equals pristine.
+
+One serial admission handles all enhanced manual/chat jobs and local fallback: max2 active, total64 items/128KiB, perjob16 items/16KiB, real30s timeout including queued time. SHA256 source+entities/account/target/from/policygeneration/version/local/download flags identify requests. Up to64 observers per dedup job; cache LRU256/1MiB including entity estimate. Queue cancellation removes waiting jobs; last observer/timeout/policy cancel disposes transport and releases counters exactly once by identity-checked terminal function. Existing Apple queue still owns its physical framework lifetime independently.
+
+Native Telegram text API is primary, preserving returned valid entities. Fallback occurs once only on generic/tryAlternative errors. Flood/invalid/empty/toolong errors do not fall back. ExperimentalInternalTranslationService adds `translate(...allowDownloads:)` with a default installed-only implementation for conformer compatibility; current UI implementation already implements it. Automatic passes false; explicit manual action may pass true. Secret namespace chat requests set localOnly before admission; manual caller must pass localOnly for secret input. No Google route added.
+
+Poll question/options/solution use typed entity tuples; completed transcription uses native primary slot; caption+completed transcript and rich inputs explicitly fail. Empty output/count mismatch/out-of-range or split-surrogate entity ranges fail. Apple output rebuilds URL and @mention offsets from output text. Hidden TextUrl destinations survive only if original label occurs uniquely in output; changed/ambiguous labels fail explicitly. Other Apple-only formatting is not reconstructed.
+
+Source fingerprint `source-v2:` remains content-only. Separate persisted `jgPolicy` version distinguishes enhanced provenance. Old apple-v1 attributes have version0 and fail closed. `isValidForMessage(_:accountPeerId: = nil)` checks account/policy/version BEFORE immutable-message fingerprint cache. Untagged stock attributes remain valid. Both existing freshness helpers gain optional accountPeerId=nil; consumers must pass explicit account. Success and explicit-failure postbox update closures recheck policy generation, cancellation and edited-source identity inside the transaction/update closure. Manual delivery rechecks generation at route emission; UI must also retain its own exact-input/target/generation guard.
+
+## Verification and limitations
+
+Five source contract tests pass; one native production fixture explicitly skips because Swift is absent in this Linux environment. Four initial contract tests were observed failing before implementation. Native fixture uses extracted real production code, pinned actual SwiftSignalKit and minimal unrelated Telegram value types, not a copied admission model. It covers policy account/generation/default/OFF-eviction, immutable-cache OFF rejection/legacy provenance, UTF16 and link ranges, dedup last-subscriber physical cancellation, active/item/byte/perjob bounds, queued cancellation, LRU256, policy cancellation and real30s timeout. Those native cases have NOT executed here; macOS CI must compile/run them. No Swift syntax/type compilation or entitlement/semantic/device success is claimed.
+
+Bounded final test invocation: JERKGRAM_TRANSLATION_REPAIR_SOURCE=<task-a/source> python -m unittest discover -s tests -p test_jg131_translation_core.py: 6 tests,5 pass,1 explicit native skip.
+
+Generic full unittest discovery ran during this subtask:686 tests,29 failures,37 errors,20 skips. These are historical workflow/materialization/fixture tests outside edited owners; no green full-suite claim is made. Individual failures/errors are preserved below. Parent integration owns current-stage replay/verifiers and native build. Automatic Apple cancellation may keep its existing single physical framework slot occupied until callback; core does not pretend disposal kills TranslationSession. Sparse source cannot prove BUILD compilation. Fallback URL detection uses Foundation; semantic translation quality and real Premium/nonPremium backend entitlement require device tests.
+
+## Full-suite failures and errors
+
+```
+ERROR: test_ci_runs_phase_two_after_phase_one_and_before_music (test_jerkgram_build137_performance2.Performance2Tests.test_ci_runs_phase_two_after_phase_one_and_before_music)
+ERROR: test_glass_is_account_setting_gated_and_uses_reference_material (test_jerkgram_v12g_build118_glass1.Build118GlassTests.test_glass_is_account_setting_gated_and_uses_reference_material)
+ERROR: test_chat_list_activity_uses_raw_tagged_evidence_not_filtered_preview (test_jerkgram_v12u_build133_blocked_activity1.Build133BlockedActivityContracts.test_chat_list_activity_uses_raw_tagged_evidence_not_filtered_preview)
+ERROR: test_chat_list_filters_the_rendered_message_preview_with_explicit_chat_peer (test_jerkgram_v12u_build133_blocked_activity1.Build133BlockedActivityContracts.test_chat_list_filters_the_rendered_message_preview_with_explicit_chat_peer)
+ERROR: test_chat_list_rebuilds_when_blocked_visibility_changes (test_jerkgram_v12u_build133_blocked_activity1.Build133BlockedActivityContracts.test_chat_list_rebuilds_when_blocked_visibility_changes)
+ERROR: test_direct_block_api_updates_the_shared_policy_cache (test_jerkgram_v12u_build133_blocked_activity1.Build133BlockedActivityContracts.test_direct_block_api_updates_the_shared_policy_cache)
+ERROR: test_atomic_apply_restore_and_refuse_unknown_owners (test_jg131_excluded_history_stage.ExcludedHistoryStageTests.test_atomic_apply_restore_and_refuse_unknown_owners)
+ERROR: test_api_diagnostic_change_preserves_wire_function_implementation (test_jg131_migration.MigrationTests.test_api_diagnostic_change_preserves_wire_function_implementation)
+ERROR: test_only_reviewed_transformations_change_original_source (test_jg131_performance_followup.PerformanceFollowupTests.test_only_reviewed_transformations_change_original_source)
+ERROR: test_atomic_apply_restore_and_refuse_unknown_owners (test_jg131_performance_followup_stage.PerformanceFollowupStageTests.test_atomic_apply_restore_and_refuse_unknown_owners)
+ERROR: test_atomic_apply_restore_and_refuse_unknown_owners (test_jg131_profile_polish.ProfilePolishTests.test_atomic_apply_restore_and_refuse_unknown_owners)
+ERROR: test_atomic_apply_restore_and_refuse_unknown_owners (test_jg131_settings_transparency_stage.SettingsTransparencyStageTests.test_atomic_apply_restore_and_refuse_unknown_owners)
+ERROR: test_backdrop_preserves_native_material_and_transition_lifetime (test_jg131_settings_visual_followup.SettingsVisualSourceTests.test_backdrop_preserves_native_material_and_transition_lifetime)
+ERROR: test_restored_components_equal_official_source (test_jg131_ui_repair.UIRepairTests.test_restored_components_equal_official_source)
+ERROR: test_stage_rejects_repeat_and_tamper_without_partial_mutation (test_jg131_ui_repair.UIRepairTests.test_stage_rejects_repeat_and_tamper_without_partial_mutation)
+ERROR: test_product_ui_additions_do_not_reintroduce_unimported_postbox_types (test_jg131_ui_type_compat.UITypeCompatibilityTests.test_product_ui_additions_do_not_reintroduce_unimported_postbox_types)
+ERROR: test_each_protected_file_remains_locked (test_jg13_deleted_reply_stage.DeletedReplyStageTests.test_each_protected_file_remains_locked)
+ERROR: test_exact_application_and_repeat_refusal (test_jg13_deleted_reply_stage.DeletedReplyStageTests.test_exact_application_and_repeat_refusal)
+ERROR: test_existing_helper_is_not_overwritten (test_jg13_deleted_reply_stage.DeletedReplyStageTests.test_existing_helper_is_not_overwritten)
+ERROR: test_tampered_parent_leaves_all_files_unchanged (test_jg13_deleted_reply_stage.DeletedReplyStageTests.test_tampered_parent_leaves_all_files_unchanged)
+ERROR: test_bounded_stage_exists_and_verifies_real_source (test_jg13_download_boost.DownloadBoostTests.test_bounded_stage_exists_and_verifies_real_source)
+ERROR: test_repeat_and_tamper_are_rejected (test_jg13_download_boost.DownloadBoostTests.test_repeat_and_tamper_are_rejected)
+ERROR: test_full_hash_gate_rejects_tamper_in_every_new_owner (test_jg13_expanded_diagnostics.ExpandedDiagnosticsTests.test_full_hash_gate_rejects_tamper_in_every_new_owner)
+ERROR: test_real_owner_selects_existing_listview_and_restores_exactly (test_jg13_history_backend.BackendTests.test_real_owner_selects_existing_listview_and_restores_exactly)
+ERROR: test_five_locks_each_reject_modification (test_jg13_portable_copy_stage.PortableCopyStageTests.test_five_locks_each_reject_modification)
+ERROR: test_parent_apply_final_hashes_and_repeat_refusal (test_jg13_portable_copy_stage.PortableCopyStageTests.test_parent_apply_final_hashes_and_repeat_refusal)
+ERROR: test_tampered_owner_does_not_partly_apply (test_jg13_portable_copy_stage.PortableCopyStageTests.test_tampered_owner_does_not_partly_apply)
+ERROR: test_exact_roundtrip_repeat_and_tamper_refusal (test_jg13_premium_icons.PremiumIconsTests.test_exact_roundtrip_repeat_and_tamper_refusal)
+ERROR: test_three_gates_are_scoped_to_app_icons (test_jg13_premium_icons.PremiumIconsTests.test_three_gates_are_scoped_to_app_icons)
+ERROR: test_profile_capture_exact_delta (test_jg13_profile_capture.ProfileCaptureTests.test_profile_capture_exact_delta)
+ERROR: test_round_trip_and_all_owner_tampering (test_jg13_profile_capture.ProfileCaptureTests.test_round_trip_and_all_owner_tampering)
+ERROR: test_full_hash_gate_rejects_marker_preserving_tamper (test_jg13_profile_cleanup.ProfileCleanupTests.test_full_hash_gate_rejects_marker_preserving_tamper)
+ERROR: test_settings_publish_before_deferred_persistence (test_jg13_profile_preferences.ProfilePreferencesTests.test_settings_publish_before_deferred_persistence)
+ERROR: test_about_only_cleanup_is_exact_and_rejects_repeat (test_jg13_release_ui.ReleaseUiTests.test_about_only_cleanup_is_exact_and_rejects_repeat)
+ERROR: test_exact_sponsored_stage (test_jg13_sponsored.SponsoredStageTests.test_exact_sponsored_stage)
+ERROR: test_round_trip_repeat_tamper_and_atomic_parent_failure (test_jg13_sponsored.SponsoredStageTests.test_round_trip_repeat_tamper_and_atomic_parent_failure)
+ERROR: test_exact_stage_and_all_tampering (test_jg13_stars_gift.StarsGiftTests.test_exact_stage_and_all_tampering)
+FAIL: test_active_workflows_retain_build116_layer_under_build117 (test_build116_wiring.Build116WiringTests.test_active_workflows_retain_build116_layer_under_build117)
+FAIL: test_active_workflows_publish_one_build117_artifact (test_build117_wiring.Build117WiringTests.test_active_workflows_publish_one_build117_artifact)
+FAIL: test_release_verifier_protects_foundations_and_packaging (test_build117_wiring.Build117WiringTests.test_release_verifier_protects_foundations_and_packaging)
+FAIL: test_localization_gate_is_wired_before_the_build (test_ghostbase_v10zb_seasonal_gifts_localization.SeasonalGiftLocalizationContracts.test_localization_gate_is_wired_before_the_build)
+FAIL: test_workflow_publishes_build138_artifact (test_jerkgram_build134_release_contract.Build138ReleaseContract.test_workflow_publishes_build138_artifact)
+FAIL: test_workflow_preserves_build119_gates_under_successor_builds (test_jerkgram_v12h_build119_hybrid_ui1.Build119HybridUIContractTests.test_workflow_preserves_build119_gates_under_successor_builds)
+FAIL: test_workflow_retains_build120_contract_in_newer_builds (test_jerkgram_v12i_build120_profile_blur_lifecycle1.Build120ProfileBlurLifecycleTests.test_workflow_retains_build120_contract_in_newer_builds)
+FAIL: test_overlay_and_verifier_are_wired (test_jerkgram_v12k_build122_edit_caption_history1.Build122EditCaptionHistoryTests.test_overlay_and_verifier_are_wired)
+FAIL: test_build122_identity_and_artifact_are_wired_end_to_end (test_jerkgram_v12k_build122_settings_release1.Build122SettingsReleaseContractTests.test_build122_identity_and_artifact_are_wired_end_to_end)
+FAIL: test_overlay_is_wired_after_build121_before_bazel (test_jerkgram_v12k_build122_settings_release1.Build122SettingsReleaseContractTests.test_overlay_is_wired_after_build121_before_bazel)
+FAIL: test_build123_is_wired_after_build122_and_before_bazel (test_jerkgram_v12l_build123_release_recovery1.Build123ReleaseRecoveryTests.test_build123_is_wired_after_build122_and_before_bazel)
+FAIL: test_new_api_ipa_gates_are_part_of_ci (test_jerkgram_v12m_build124_canary_publication1.Build124CanaryPublicationTests.test_new_api_ipa_gates_are_part_of_ci)
+FAIL: test_workflow_uploads_private_actions_canary_artifact_only (test_jerkgram_v12m_build124_canary_publication1.Build124CanaryPublicationTests.test_workflow_uploads_private_actions_canary_artifact_only)
+FAIL: test_workflow_can_advance_past_build125_with_a_successor_artifact (test_jerkgram_v12n_build125_canary_publication1.Build125CanaryPublicationTests.test_workflow_can_advance_past_build125_with_a_successor_artifact)
+FAIL: test_workflow_uses_build125_installer_and_materialized_wiring_gate (test_jerkgram_v12n_build125_wiring1.Build125WiringTests.test_workflow_uses_build125_installer_and_materialized_wiring_gate)
+FAIL: test_workflow_publishes_only_current_successor_artifact (test_jerkgram_v12o_build126_release_contract1.Build126ReleaseContractTests.test_workflow_publishes_only_current_successor_artifact)
+FAIL: test_build_routes_apply_and_test_the_native_status_overlay_after_build126 (test_jerkgram_v12p_build127_onetime_native_status1.Build127OneTimeNativeStatusTests.test_build_routes_apply_and_test_the_native_status_overlay_after_build126)
+FAIL: test_materialized_verifier_and_build_chain_include_owner (test_jerkgram_v12z_build134_context_localization1.Build134ContextLocalizationTests.test_materialized_verifier_and_build_chain_include_owner)
+FAIL: test_workflow_stages_build137_scripts_and_runs_regression_contract (test_jerkgram_v12zd_build137_performance1.Build137PerformanceTests.test_workflow_stages_build137_scripts_and_runs_regression_contract)
+FAIL: test_bio_outer_section_is_the_single_background_and_corner_owner (test_jg131_settings_visual_followup.SettingsVisualSourceTests.test_bio_outer_section_is_the_single_background_and_corner_owner)
+FAIL: test_capture_uses_explicit_weak_snapshot_after_controller_creation (test_jg131_ui_repair.UIRepairTests.test_capture_uses_explicit_weak_snapshot_after_controller_creation)
+FAIL: test_exact_stage_refuses_tamper_and_repeat (test_jg131_ui_type_compat.UITypeCompatibilityTests.test_exact_stage_refuses_tamper_and_repeat)
+FAIL: test_client_hooks_preserve_every_original_source_byte (test_jg13_expanded_diagnostics.ExpandedDiagnosticsTests.test_client_hooks_preserve_every_original_source_byte)
+FAIL: test_bounded_session_and_shutdown (test_jg13_performance_capture.CaptureTests.test_bounded_session_and_shutdown)
+FAIL: test_internal_capture_actions_and_export_remain_available (test_jg13_performance_capture.CaptureTests.test_internal_capture_actions_and_export_remain_available)
+FAIL: test_timing_and_native_output_routed_into_capture (test_jg13_performance_capture.CaptureTests.test_timing_and_native_output_routed_into_capture)
+FAIL: test_persistent_stack_and_layout_no_processing (test_jg13_profile_cleanup.ProfileCleanupTests.test_persistent_stack_and_layout_no_processing)
+FAIL: test_scene_lifecycle (test_jg13_profile_cleanup.ProfileCleanupTests.test_scene_lifecycle)
+FAIL: test_header_phone_preference_is_memory_only_and_fresh (test_jg13_profile_preferences.ProfilePreferencesTests.test_header_phone_preference_is_memory_only_and_fresh)
+```
+
+## Core review round1 repair
+
+Read CORE-REVIEW.md and confirmed both findings. Before mutation copied all three current core owners to task-a/core-review-before for scoped review. This repair changes Translate.swift only among production core owners; the wrapper and attribute owners remain untouched by this repair. Parent integration separately discovered that the added physical TelegramEngineMessages.swift snapshot was pristine rather than the actual current Build176 wrapper. Parent is restoring task-a/before and rebasing the enhanced public wrapper delta onto its actual replayed Build176 bytes, preserving preexisting transcription/source changes. This supersedes the earlier broad statement that all task-a/before bytes were untouched.
+
+P1: the timeout DispatchWorkItem now captures both admission and Job weakly. The identity-guarded terminal handler cancels and clears job.timer before disposing transport. A canceled scheduled work item can remain on the dispatch queue until its deadline without retaining Job/start/source/account. Native regression cases capture a probe only through the production start/transport closure and assert weak deallocation after successful delivery, last-subscriber cancellation and the real30-second timeout. They also retain the existing exactly-once transport-disposal assertions.
+
+P2: jerkgramTranslationPayloadBytes uses Foundation JSONEncoder on the complete [MessageTextEntity], adds actual UTF8 text bytes and conservative structural overhead, and checks arithmetic overflow. This helper is used before source hashing/admission and while deciding cache retention. Therefore hidden TextUrl destinations, optional Pre languages and nested sticker-pack strings contribute their full encoded payload; fixed64/entity is now structural overhead rather than the sole entity cost. The bound is encoded-payload accounting, not an exact heap-allocation measurement. Oversized or unencodable input fails with textTooLong; oversized/unencodable output is delivered but never retained in the LRU. The existing total count/byte and cache count/byte bounds remain.
+
+Verified serialization prerequisite against the exact pinned public owner submodules/TelegramCore/Sources/SyncCore/SyncCore_TextEntitiesMessageAttribute.swift, TelegramMessenger/Telegram-iOS fb0e62ba8a147f0821da6aa63c09da7d79a10111, Git blob db354b607912ccc651030003d8dc5c0f692b1681. MessageTextEntity is Codable and its real encode(to:) explicitly encodes all current string-bearing variants and nested StickerPackReference. The native fixture supplies a minimal Encodable entity value shape; it executes the real production helper/JSONEncoder and admission, but does not independently compile or validate TelegramCore's actual MessageTextEntity encoder.
+
+Tests were added before changing production code. The native cases now assert a short label with a17KiB hidden URL exceeds input budget, its actual admission request never starts transport, and a short label with a>1MiB hidden URL never enters cache (two requests execute the transport twice). A supplemental source ownership/integration regression failed before the fix, then passed. Native execution remains explicitly skipped because Swift is unavailable here, so no native red/green or compilation result is claimed.
+
+Scoped verification command (workspace root):
+
+```
+JERKGRAM_TRANSLATION_REPAIR_SOURCE='/home/pixi/ChatGPT/iOS DEV/jerkgram-next/task-a/source' python -m unittest discover -s jerkgram-telegram-builder/tests -p test_jg131_translation_core.py
+```
+
+Before fix:7 tests,1 expected supplemental regression failure,1 explicit native skip. After fix:7 tests,6 pass,1 explicit native skip. No historical full-suite rerun, build, commit, or backend request was performed for round1. The prior full-suite outcome remains documented above.
+
+Scoped Translate.swift hashes: before 0215b713b3340c1ed873139093ace4762f75290a748f0c160fd4881034f03519, after dc28c6c4b0e10c471e3c1bc3e2c2bad54bc81361d1a22e27ab3a519072c48b19.

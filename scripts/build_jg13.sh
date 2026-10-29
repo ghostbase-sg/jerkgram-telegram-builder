@@ -61,6 +61,8 @@ python3 -m unittest discover -s tests -p test_jg131_excluded_chat_interactions.p
 python3 tests/run_jg131_build175_regressions.py
 python3 scripts/materialize_jg131_performance_wave1.py
 python3 tests/run_jg131_build176_regressions.py
+python3 scripts/materialize_jg131_translation_repair.py
+python3 tests/run_jg131_translation_repair.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive

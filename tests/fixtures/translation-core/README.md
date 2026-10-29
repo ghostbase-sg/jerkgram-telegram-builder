@@ -1,0 +1,11 @@
+# Production translation core fixture
+
+Atomic.swift, Disposable.swift, Subscriber.swift and Signal.swift are exact public upstream files from TelegramMessenger/Telegram-iOS, commit fb0e62ba8a147f0821da6aa63c09da7d79a10111, submodules/SSignalKit/SwiftSignalKit/Source/. They were fetched using the GitHub connector. The native test excludes only Signal.swift's unrelated async-get extension, whose `take` operator would pull additional dependencies.
+
+stock-translation-excerpts.swift contains exact pristine `_internal_translateTexts` and `_internal_translateMessagesByPeerId` owner bodies from the same commit's TelegramCore/Sources/TelegramEngine/Messages/Translate.swift; delimiter signatures are supplied for extraction only. It is a byte-comparison fixture, not compiled.
+
+cases.swift tests extracted actual production policy/admission/entity helpers and actual attribute validity method. Only unrelated Telegram Message/entity value shapes and a deterministic fingerprint dependency are supplied by the fixture; no admission/policy/caching behavior is reimplemented. Attribute method access visibility is reduced in the fixture to permit minimal private types; its body is unchanged. Signal cancellation/lifetime uses pinned real SwiftSignalKit.
+
+Run with `JERKGRAM_TRANSLATION_REPAIR_SOURCE=/absolute/materialized/source python -m unittest discover -s tests -p test_jg131_translation_core.py`. Without the environment override, CI uses builder/work/swiftgram-src. Native execution requires Swift and macOS Foundation (NSDataDetector); Linux without Swift reports an explicit skip. The 30-second deadline test intentionally tests the real production timeout.
+
+Round1 review additions execute production weak ownership and encoded-payload accounting: captured-probe weak release after success/cancel/real timeout; short display label with17KiB hidden TextUrl rejects before transport; >1MiB hidden TextUrl result is delivered but does not enter cache. The minimal MessageTextEntity shape is Encodable, so JSONEncoder production helper runs directly. This fixture does not validate the actual TelegramCore entity encoder; its Codable prerequisite was separately confirmed at pinned source blob db354b607912ccc651030003d8dc5c0f692b1681.

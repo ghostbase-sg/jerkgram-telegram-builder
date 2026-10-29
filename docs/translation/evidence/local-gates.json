@@ -1,0 +1,20 @@
+{
+  "upstream": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "source_parent": "Build176 24stage replay",
+  "repair_owners": 28,
+  "parent_hash_agreement": true,
+  "exact_apply": true,
+  "idempotent_reapply": true,
+  "parent_reverse_previous_verifiers": "PASS",
+  "local_new_tests": {
+    "run": 24,
+    "passed": 21,
+    "native_skipped": 3,
+    "failures": 0,
+    "errors": 0
+  },
+  "native_syntax": "NOT_RUN_xcrun_unavailable",
+  "app_compilation": "NOT_RUN",
+  "backend_device_quality": "NOT_RUN",
+  "full_build": false
+}

@@ -9,6 +9,9 @@ owners=set()
 for stage, _, _ in STAGES: owners.update(stage.manifest()['owners'])
 from materialize_jg131_performance_wave1 import manifest
 owners.update(manifest()['owners'])
+from materialize_jg131_translation_repair import MANIFEST as repair_manifest, manifest as translation_repair_manifest
+if repair_manifest.exists():
+    owners.update(translation_repair_manifest()['owners'])
 for name in sorted(owners):
     if name.endswith('.swift'):
         subprocess.run(['xcrun','swiftc','-frontend','-parse',str(ROOT/'work/swiftgram-src'/name)],check=True)

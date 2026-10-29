@@ -1,7 +1,10 @@
 name: Jerkgram 13.1.1 source and native regression gate
 on:
   push:
-    branches: [dev/no-ads-166]
+    branches: [dev/no-ads-166, codex/translation-folder-glass]
+    paths-ignore:
+      - docs/**
+      - .github/workflows/build.yml
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -87,3 +90,5 @@ jobs:
           python3 tests/run_jg131_build175_regressions.py
           python3 scripts/materialize_jg131_performance_wave1.py
           python3 tests/run_jg131_build176_regressions.py
+          python3 scripts/materialize_jg131_translation_repair.py
+          python3 tests/run_jg131_translation_repair.py

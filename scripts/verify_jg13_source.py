@@ -80,6 +80,17 @@ def main():
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()
         return
+    from materialize_jg131_translation_repair import is_applied as repair_applied, verify_repair, parent_source_view
+    if repair_applied(final_source):
+        verify_repair(final_source)
+        try:
+            with parent_source_view(final_source) as parent:
+                SOURCE = parent
+                main()
+        finally:
+            SOURCE = final_source
+        print("Translation TASK A final owners VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
+        return
     from materialize_jg131_performance_wave1 import is_applied, verify_wave1, baseline_source_view
     if is_applied(final_source):
         verify_wave1(final_source)
