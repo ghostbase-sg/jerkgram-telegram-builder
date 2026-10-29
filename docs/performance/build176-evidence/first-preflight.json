@@ -1,0 +1,20 @@
+{
+  "run": 40819114434,
+  "commit": "59b8998f63d9939c5968878a3d763e3ac8ad42d2",
+  "job": 123267137146,
+  "result": "source preflight failure; IPA job skipped",
+  "fixture_only_errors": [
+    "2026-10-29T04:42:34.9295640Z native secondary output dispose/rebind ordering PASS",
+    "2026-10-29T04:42:35.6835920Z settings native shared playback session PASS",
+    "2026-10-29T04:42:52.5289980Z Changed Swift owners PARSED; not type-checked or fully compiled",
+    "2026-10-29T04:42:53.5808540Z production visual policy fixtures passed",
+    "2026-10-29T04:42:53.6468540Z AttributeError: 'str' object has no attribute 'read_text'",
+    "2026-10-29T04:42:53.6470400Z Ran 45 tests in 0.743s",
+    "2026-10-29T04:42:53.6470860Z FAILED (errors=1)",
+    "2026-10-29T04:42:54.1228670Z /var/folders/5n/5t77mfb93jd7q8v9s6f0dn0m0000gn/T/jg176-b1-njugl760/fixture.swift:680:5: error: constant must be declared private or fileprivate because its type 'Set<Dictionary<String, JerkgramSettingValue>.Keys.Element>' (aka 'Set<String>') uses a private type",
+    "2026-10-29T04:42:54.1539180Z     |     `- error: constant must be declared private or fileprivate because its type 'Set<Dictionary<String, JerkgramSettingValue>.Keys.Element>' (aka 'Set<String>') uses a private type",
+    "2026-10-29T04:42:54.9370060Z native secondary output dispose/rebind ordering PASS",
+    "2026-10-29T04:42:55.7294690Z settings native shared playback session PASS",
+    "2026-10-29T04:43:05.2281670Z Changed Swift owners PARSED; not type-checked or fully compiled"
+  ]
+}

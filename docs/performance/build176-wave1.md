@@ -96,3 +96,7 @@ Patch D research request disposal/payment ownership; E residual typing/diagnosti
 - Existing `jg131-ui-repair.patch` emits its known trailing-whitespace warning during reverse-view setup. `git diff --check` also flags whitespace-only context lines inside the generated terminal `.patch` text; exact source bytes/context are preserved. No semantic/hash gate was weakened to hide these warnings.
 
 Actions run/IPA: pending single candidate push; native/compilation results will be recorded separately. Source wave acceptance is complete; runtime performance validation remains pending.
+
+### First macOS preflight
+
+Commit59b8998 / run40819114434 stopped before IPA (`build-probe` skipped). Actual native visual policy and shared playback/output fragments passed; Swift owner parse passed. Two fixture-only failures: missing parentheses around the pane fixture Path before `.read_text()`, and top-level inferred `Set<Dictionary<..., private JerkgramSettingValue>.Keys.Element>` requiring explicit private/type annotation in the Foundation fixture. Both corrected without changing runtime source/manifest. This is an additional source-preflight attempt, not an additional heavy IPA build. Candidate source acceptance is pending successful native fixture rerun.

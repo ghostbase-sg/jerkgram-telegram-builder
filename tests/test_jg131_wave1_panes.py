@@ -78,7 +78,7 @@ class PaneVisualRevisionTests(unittest.TestCase):
     def test_native_production_wrapper_reconciles_revision_with_same_layout(self):
         source = read("PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift")
         wrapper = "final class PeerInfoPaneWrapper" + source.split("final class PeerInfoPaneWrapper", 1)[1].split("private final class GiftsTabItemComponent", 1)[0]
-        fixture = Path(__file__).parent / "fixtures/build176/PaneWrapperRuntime.swift".read_text()
+        fixture = (Path(__file__).parent / "fixtures/build176/PaneWrapperRuntime.swift").read_text()
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "main.swift"
             path.write_text(fixture.replace("// INSERT_PRODUCTION_WRAPPER", wrapper))

@@ -1,5 +1,5 @@
 let defaults = UserDefaults.standard
-let allKeys = Set(jerkgramStateValues(GhostBaseSettingsState.readStored(accountPeerId: 1001, allowLegacyFallback: false)).keys)
+private let allKeys: Set<String> = Set(jerkgramStateValues(GhostBaseSettingsState.readStored(accountPeerId: 1001, allowLegacyFallback: false)).keys)
 assert(allKeys.count == 49)
 let marker = "jerkgram.Settings.ActiveProjectionAccount.V176"
 // Only fixture-owned executable-domain keys are touched.
