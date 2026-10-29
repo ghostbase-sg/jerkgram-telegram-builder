@@ -1,6 +1,7 @@
 // Boundary fixtures only. Python inserts the complete production wrapper class
 // unchanged; its cache, comparison and update methods are the code under test.
 import Foundation
+import CoreGraphics
 
 enum PeerInfoPaneKey { case test }
 struct DeviceMetrics {}

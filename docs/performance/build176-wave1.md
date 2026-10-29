@@ -100,3 +100,7 @@ Actions run/IPA: pending single candidate push; native/compilation results will 
 ### First macOS preflight
 
 Commit59b8998 / run40819114434 stopped before IPA (`build-probe` skipped). Actual native visual policy and shared playback/output fragments passed; Swift owner parse passed. Two fixture-only failures: missing parentheses around the pane fixture Path before `.read_text()`, and top-level inferred `Set<Dictionary<..., private JerkgramSettingValue>.Keys.Element>` requiring explicit private/type annotation in the Foundation fixture. Both corrected without changing runtime source/manifest. This is an additional source-preflight attempt, not an additional heavy IPA build. Candidate source acceptance is pending successful native fixture rerun.
+
+### Second macOS preflight
+
+Commit9eb58912 / run40819680258: actual production Foundation projection/migration/account/import/cache fixtures PASS, as did native visual policy, shared playback/output fixtures and syntax parsing. Pane fixture still lacked `import CoreGraphics`, so the standalone macOS executable did not see the CGSize equality overlay that UIKit imports in the app. Added the missing fixture import; runtime sources unchanged. IPA job again skipped; heavy build count remains0.
