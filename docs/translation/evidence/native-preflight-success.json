@@ -1,0 +1,20 @@
+{
+  "commit": "65a6913995b5a6ee752072fde427dd6ac72c8019",
+  "run_id": 40891009533,
+  "job_id": 123507491302,
+  "conclusion": "success",
+  "app_build": false,
+  "task_a_tests": {
+    "total": 24,
+    "passed": 24,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0
+  },
+  "core_native_fixture_seconds": 35.418,
+  "ui_native_suites_seconds": 4.509,
+  "previous_build175_gates": "PASS",
+  "previous_build176_gates": "PASS",
+  "changed_swift_owners_parsed": 28,
+  "backend_device_quality": "NOT_RUN"
+}
