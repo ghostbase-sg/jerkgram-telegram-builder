@@ -1,0 +1,208 @@
+diff --git a/submodules/Display/Source/GhostBaseGlass.swift b/submodules/Display/Source/GhostBaseGlass.swift
+--- a/submodules/Display/Source/GhostBaseGlass.swift
++++ b/submodules/Display/Source/GhostBaseGlass.swift
+@@ -8,6 +8,16 @@
+     }
+ }
+ // JG170 settings policy end
++
++// JGC material policy begin
++public enum JerkgramSettingsMaterialPolicy {
++    public static func active(optIn: Bool, master: Bool, enabled: Bool, reduceTransparency: Bool) -> Bool {
++        return optIn && master && enabled && !reduceTransparency
++    }
++    public static func itemAlpha(isDark: Bool) -> Double { return isDark ? 0.34 : 0.26 }
++    public static func cardAlpha(isDark: Bool) -> Double { return isDark ? 0.60 : 0.70 }
++}
++// JGC material policy end
+ 
+ // JG176 pure policy begin
+ public enum JerkgramVisualPolicy {
+diff --git a/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift b/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift
+--- a/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift
++++ b/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift
+@@ -847,20 +847,20 @@
+             removeSessionImpl(session.hash, {
+                 completion()
+             })
+-        })
++        }, settingsGlass: true)
+         pushControllerImpl?(controller)
+     }, openConnectedBotSession: { bot in
+         let controller = RecentSessionScreen(context: context, subject: .connectedBot(bot), updateAcceptSecretChats: { _ in
+         }, updateAcceptIncomingCalls: { _ in
+         }, remove: { completion in
+             completion()
+-        })
++        }, settingsGlass: true)
+         pushControllerImpl?(controller)
+     }, openWebSession: { session, peer in
+         let controller = RecentSessionScreen(context: context, subject: .website(session, peer), updateAcceptSecretChats: { _ in }, updateAcceptIncomingCalls: { _ in }, remove: { completion in
+             removeWebSessionImpl(session.hash)
+             completion()
+-        })
++        }, settingsGlass: true)
+         pushControllerImpl?(controller)
+     }, removeWebSession: { sessionId in
+         removeWebSessionImpl(sessionId)
+diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift b/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
+--- a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
++++ b/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
+@@ -56,24 +56,44 @@
+     })!.withRenderingMode(.alwaysTemplate)
+ }()
+ 
++// Captured on construction or the existing visibility/revision callback, never per layout.
++private struct RecentSessionMaterialState: Equatable {
++    let active: Bool
++    let revision: UInt64
++
++    init(optIn: Bool) {
++        self.active = JerkgramSettingsMaterialPolicy.active(
++            optIn: optIn,
++            master: GhostBaseGlassStyle.isEnabled,
++            enabled: GhostBaseGlassStyle.settingsTranslucencyEnabled,
++            reduceTransparency: !GhostBaseGlassStyle.allowsTransparentSurfaces
++        )
++        self.revision = GhostBaseGlassStyle.visualRevision
++    }
++}
++
+ private final class RecentSessionSheetContent: CombinedComponent {
+     typealias EnvironmentType = ViewControllerComponentContainer.Environment
+     
+     let context: AccountContext
+     let subject: RecentSessionScreen.Subject
++    let materialState: RecentSessionMaterialState
+     let cancel: (Bool) -> Void
+     
+     init(
+         context: AccountContext,
+         subject: RecentSessionScreen.Subject,
++        materialState: RecentSessionMaterialState,
+         cancel: @escaping  (Bool) -> Void
+     ) {
+         self.context = context
+         self.subject = subject
++        self.materialState = materialState
+         self.cancel = cancel
+     }
+     
+     static func ==(lhs: RecentSessionSheetContent, rhs: RecentSessionSheetContent) -> Bool {
++        if lhs.materialState != rhs.materialState { return false }
+         if lhs.context !== rhs.context {
+             return false
+         }
+@@ -293,7 +313,7 @@
+         return { context in
+             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
+             let component = context.component
+-            let theme = environment.theme.withModalBlocksBackground()
++            let theme = environment.theme.withModalBlocksBackground().jerkgramSettingsSurfaceTheme(enabled: component.materialState.active)
+             let strings = environment.strings
+             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+             let state = context.state
+@@ -1045,16 +1065,20 @@
+     
+     let context: AccountContext
+     let subject: RecentSessionScreen.Subject
++    let materialState: RecentSessionMaterialState
+     
+     init(
+         context: AccountContext,
+-        subject: RecentSessionScreen.Subject
++        subject: RecentSessionScreen.Subject,
++        materialState: RecentSessionMaterialState
+     ) {
+         self.context = context
+         self.subject = subject
++        self.materialState = materialState
+     }
+     
+     static func ==(lhs: RecentSessionSheetComponent, rhs: RecentSessionSheetComponent) -> Bool {
++        if lhs.materialState != rhs.materialState { return false }
+         if lhs.context !== rhs.context {
+             return false
+         }
+@@ -1096,6 +1120,7 @@
+                     content: AnyComponent<EnvironmentType>(RecentSessionSheetContent(
+                         context: context.component.context,
+                         subject: context.component.subject,
++                        materialState: context.component.materialState,
+                         cancel: { animate in
+                             dismiss(animate)
+                         }
+@@ -1141,7 +1166,9 @@
+                             )
+                         )
+                     },
+-                    backgroundColor: .color(environment.theme.list.modalBlocksBackgroundColor),
++                    backgroundColor: .color(context.component.materialState.active
++                        ? (environment.theme.overallDarkAppearance ? UIColor.black : UIColor.white).withAlphaComponent(CGFloat(JerkgramSettingsMaterialPolicy.cardAlpha(isDark: environment.theme.overallDarkAppearance)))
++                        : environment.theme.list.modalBlocksBackgroundColor),
+                     centeredSize: environment.metrics.widthClass == .regular ? CGSize(width: 414.0, height: 640.0) : nil,
+                     animateOut: animateOut
+                 ),
+@@ -1189,6 +1216,7 @@
+     
+     private let context: AccountContext
+     private let subject: Subject
++    private let settingsGlass: Bool
+     fileprivate let updateAcceptSecretChats: (Bool) -> Void
+     fileprivate let updateAcceptIncomingCalls: (Bool) -> Void
+     fileprivate let remove: (@escaping () -> Void) -> Void
+@@ -1198,10 +1226,12 @@
+         subject: RecentSessionScreen.Subject,
+         updateAcceptSecretChats: @escaping (Bool) -> Void,
+         updateAcceptIncomingCalls: @escaping (Bool) -> Void,
+-        remove: @escaping (@escaping () -> Void) -> Void
++        remove: @escaping (@escaping () -> Void) -> Void,
++        settingsGlass: Bool = false
+     ) {
+         self.context = context
+         self.subject = subject
++        self.settingsGlass = settingsGlass
+         self.updateAcceptSecretChats = updateAcceptSecretChats
+         self.updateAcceptIncomingCalls = updateAcceptIncomingCalls
+         self.remove = remove
+@@ -1210,16 +1240,27 @@
+             context: context,
+             component: RecentSessionSheetComponent(
+                 context: context,
+-                subject: subject
++                subject: subject,
++                materialState: RecentSessionMaterialState(optIn: settingsGlass)
+             ),
+             navigationBarAppearance: .none,
+             statusBarStyle: .ignore,
+             theme: .default
+         )
+         
++        self.jerkgramTracksVisualSettings = settingsGlass
+         self.navigationPresentation = .flatModal
+     }
+     
++    public override func jerkgramSettingsVisualStateUpdated() {
++        guard self.settingsGlass, self.isViewLoaded else { return }
++        self.updateComponent(component: AnyComponent(RecentSessionSheetComponent(
++            context: self.context,
++            subject: self.subject,
++            materialState: RecentSessionMaterialState(optIn: self.settingsGlass)
++        )), transition: .immediate)
++    }
++
+     required public init(coder aDecoder: NSCoder) {
+         fatalError("init(coder:) has not been implemented")
+     }
+diff --git a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
+--- a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
++++ b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
+@@ -1686,7 +1686,7 @@
+         JerkgramSettingsThemeCache.lock.lock()
+         defer { JerkgramSettingsThemeCache.lock.unlock() }
+         if JerkgramSettingsThemeCache.base === self, JerkgramSettingsThemeCache.reduced == reduced, let cached = JerkgramSettingsThemeCache.transformed { return cached }
+-        let alpha: CGFloat = self.overallDarkAppearance ? 0.26 : 0.18
++        let alpha = CGFloat(JerkgramSettingsMaterialPolicy.itemAlpha(isDark: self.overallDarkAppearance))
+         let surfaceColor = self.overallDarkAppearance ? UIColor.black : UIColor.white
+         let list = self.list.withUpdated(
+             blocksBackgroundColor: .clear, modalBlocksBackgroundColor: .clear,

@@ -80,6 +80,17 @@ def main():
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()
         return
+    from materialize_jg131_settings_glass_expansion import is_applied as glass_applied, verify_glass, parent_source_view as glass_parent
+    if glass_applied(final_source):
+        verify_glass(final_source)
+        try:
+            with glass_parent(final_source) as parent:
+                SOURCE = parent
+                main()
+        finally:
+            SOURCE = final_source
+        print("Settings glass TASK C final owners VERIFIED; NOT COMPILED / NOT RUNTIME TESTED")
+        return
     from materialize_jg131_default_folder import is_applied as folder_applied, verify_folder, parent_source_view as folder_parent
     if folder_applied(final_source):
         verify_folder(final_source)

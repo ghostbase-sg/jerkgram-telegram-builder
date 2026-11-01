@@ -52,7 +52,7 @@ views. The stage applied twice to a fresh TASK A replay without further
 changes; all seven parents matched that replay. Native Swift parsing is
 unavailable on this Linux host. These are source checks, not an app compile.
 
-Independent task review passed at source scope; its report is preserved beside this document. macOS native verification remains pending. No IPA
+Independent task review passed at source scope; its report is preserved beside this document. macOS source/native run [40898713432](https://github.com/ghostbase-sg/jerkgram-telegram-builder/actions/runs/40898713432) passed on commit `fd2f615fb5d93a92556cffce1a7c7ba297f071e5`. All 13 TASK B tests ran without skips (including production Foundation policy); all 24 TASK A tests passed on the restored parent. Seven B Swift owners parsed; this is not whole-app type checking. No IPA
 was built for this task. Device coverage still required: ON/OFF, both reorder
 screens, relaunch/offline, deletion/ID reuse, two accounts/logout-login,
 hidden/limited folders, notification/deep-link entry and subsequent navigation.

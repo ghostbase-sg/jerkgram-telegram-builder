@@ -1,0 +1,12 @@
+{
+  "run_id": 40898713432,
+  "job_id": 123534825402,
+  "commit": "fd2f615fb5d93a92556cffce1a7c7ba297f071e5",
+  "conclusion": "success",
+  "task_b_tests": 13,
+  "task_b_skips": 0,
+  "task_a_tests": 24,
+  "task_a_skips": 0,
+  "ipa_built": false,
+  "device_runtime_tested": false
+}

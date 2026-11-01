@@ -15,6 +15,9 @@ if repair_manifest.exists():
 from materialize_jg131_default_folder import MANIFEST as folder_manifest, manifest as default_folder_manifest
 if folder_manifest.exists():
     owners.update(default_folder_manifest()['owners'])
+from materialize_jg131_settings_glass_expansion import MANIFEST as glass_manifest, manifest as settings_glass_manifest
+if glass_manifest.exists():
+    owners.update(settings_glass_manifest()['owners'])
 for name in sorted(owners):
     if name.endswith('.swift'):
         subprocess.run(['xcrun','swiftc','-frontend','-parse',str(ROOT/'work/swiftgram-src'/name)],check=True)

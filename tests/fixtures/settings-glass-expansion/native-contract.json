@@ -1,0 +1,21 @@
+{
+  "sections": [
+    [
+      "    final class State:",
+      "    func makeState()",
+      "f8cbd8abbd86429bf36645196e1400d599c6aa59b5d804577cfac5111118bc9c"
+    ],
+    [
+      "    fileprivate func terminate()",
+      "    public func dismissAnimated()",
+      "e10c7ab8200a6fbb0abbce6b87be465b54cd0e9430b3f6fe331ee2b90ff71c90"
+    ]
+  ],
+  "geometry": [
+    "                    hasTopEdgeEffect: false,",
+    "                    centeredSize: environment.metrics.widthClass == .regular ? CGSize(width: 414.0, height: 640.0) : nil,",
+    "                        regularMetricsSize: CGSize(width: 430.0, height: 900.0),",
+    "        self.view.disablesInteractiveModalDismiss = true",
+    "            view.dismissAnimated()"
+  ]
+}
