@@ -1,0 +1,10 @@
+2026-11-01T19:57:20.8627580Z Ran 9 tests in 0.239s
+2026-11-01T19:57:48.3362170Z Changed Swift owners PARSED; not type-checked or fully compiled
+2026-11-01T19:57:57.9888690Z Changed Swift owners PARSED; not type-checked or fully compiled
+2026-11-01T19:58:41.7082160Z Translation TASK A source gates PASS; backend/device quality unverified
+2026-11-01T19:59:23.1750480Z Translation TASK A source gates PASS; backend/device quality unverified
+2026-11-01T19:59:23.2045320Z TASK B source gates PASS; app/device navigation still requires runtime
+2026-11-01T20:00:05.2017200Z Translation TASK A source gates PASS; backend/device quality unverified
+2026-11-01T20:00:05.2355430Z TASK B source gates PASS; app/device navigation still requires runtime
+2026-11-01T20:00:05.2643910Z TASK C source gates PASS; app/device navigation still requires runtime
+2026-11-01T20:00:05.3454190Z Ran 9 tests in 0.012s

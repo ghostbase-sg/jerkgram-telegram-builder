@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.2 / Build176 performance remediation wave 1
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.2 / Build177 modern base with translation repair, default folder and settings glass
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
       - docs/**
     branches:
       - codex/build176-wave1
+      - codex/translation-folder-glass
       - dev/jg-1.1.0-beta1-upstream13
       - dev/portable-reply-158
       - dev/portable-copy-159
@@ -64,7 +65,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build176-diagnostics
+          name: Jerkgram-1.2.0-Build177-diagnostics
           path: |
             patches/jg131-ui-type-compat.sha256.json
             scripts/materialize_jg131_ui_type_compat.py
@@ -193,9 +194,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build176
+          name: Jerkgram-1.2.0-Build177
           path: |
-            artifacts/Jerkgram-1.2.0-Build176.ipa
-            artifacts/Jerkgram-1.2.0-Build176.json
+            artifacts/Jerkgram-1.2.0-Build177.ipa
+            artifacts/Jerkgram-1.2.0-Build177.json
           if-no-files-found: error
           retention-days: 90

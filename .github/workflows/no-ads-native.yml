@@ -1,7 +1,7 @@
 name: Jerkgram 13.1.2 source and native regression gate
 on:
   push:
-    branches: [dev/no-ads-166, codex/translation-folder-glass]
+    branches: [dev/no-ads-166]
     paths-ignore:
       - docs/**
       - .github/workflows/build.yml

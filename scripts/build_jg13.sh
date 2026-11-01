@@ -81,7 +81,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=176 \
+  --define=buildNumber=177 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 # Inspect retained build actions without a second build or target analysis.

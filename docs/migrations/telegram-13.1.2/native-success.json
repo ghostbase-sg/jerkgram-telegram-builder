@@ -1,0 +1,10 @@
+{
+  "run_id": 41344280899,
+  "job_id": 124960655555,
+  "commit": "6a975f0122258e41a743174933e392232e83a5ad",
+  "upstream": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "conclusion": "success",
+  "full_upstream_checkout": true,
+  "app_built": false,
+  "device_tested": false
+}

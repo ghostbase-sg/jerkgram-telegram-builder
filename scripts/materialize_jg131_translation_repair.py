@@ -1,4 +1,4 @@
-"""Dependent, idempotent TASK A stage after the exact Build176 source.
+"""Dependent, idempotent TASK A stage after the exact Build177 source.
 
 All parents are checked before mutation. Previous immutable contracts use a
 disposable reversed view, including removal of owners introduced by this stage.
@@ -62,7 +62,7 @@ def apply_repair(source):
         return
     for n, v in owners.items():
         if actual[n] != v['before_sha256']:
-            raise RuntimeError('Translation repair requires exact Build176 parent: ' + n)
+            raise RuntimeError('Translation repair requires exact Build177 parent: ' + n)
     subprocess.run(['git', 'apply', '--check', str(PATCH)], cwd=source, check=True)
     subprocess.run(['git', 'apply', '--whitespace=nowarn', str(PATCH)], cwd=source, check=True)
     verify_repair(source)
