@@ -1,0 +1,25 @@
+# Task 1 independent migration review
+
+Reviewed the migration spec, IMPLEMENTATION.md, REVIEW-BUILDER.patch, new migration tests, actual final source delta, final source around the protocol/state/storage/media clusters, reconstruction/replay/proof scripts and evidence. Read-only review except this report; no build, network, or repeated test runs.
+
+## Finding
+
+**P2 — Forward upstream external video rotation to JG secondary outputs.**
+
+File: `candidate/new-chain/submodules/MediaPlayer/Sources/MediaPlayerNode.swift`, `externalVideoRotationAngle` / `updateLayout` (lines 124–129 and 527–533), also `addSecondaryVideoLayer` (185–197). The merged upstream rotation path transforms only `videoLayer`. JG secondary layers receive a transform only in `updateState`, using `state.rotationAngle`; ChunkMediaPlayerV2 instead supplies rotation exclusively through `externalVideoRotationAngle` (Chunk lines 1209–1224) and renders the same sample buffers to secondary targets (1284–1295). It never sets `playerNode.state`. Consequently a rotated chunk video gets corrected in the primary output while the profile background mirror retains identity/stale orientation. A secondary layer attached after rotation is known also receives no external rotation. This is a concrete integration gap between the new upstream fix and the retained JG output feature, not a missing upstream hunk.
+
+The secondary output is used by `GhostBaseProfileFullscreenBackground.swift` through `source.registerSecondaryVideoLayer` (line 302); its mirror view sets resizeAspectFill and layout bounds, with no independent rotation correction. Apply the effective external rotation to existing and newly attached secondary layers, accounting for their own dimensions and subsequent layout changes. Preserve the ordinary state/timebase path. Add a focused check for this interaction; the current preservation test only asserts the primary transform call and therefore cannot catch it. Device visual verification remains needed. No runtime execution was performed in this review.
+
+## Spec compliance verdict
+
+**Changes requested for the media integration finding; otherwise the bounded migration design is followed.** The official target pin, version and tlottie guard are coherent. Production preparation fetches the exact full target; the local sparse projection is explicitly limited and uses a commit serialization accepted only on exact official commit SHA and exact tree SHA. No invented HEAD or current archive hash is introduced. Historical stable bytes and snapshot provenance remain immutable. Sequential regeneration validates original parents/outputs, three-way merges old feature deltas onto target stage parents, and records the boundary hashes. The supplied reversal evidence distinguishes delta reapplication refusal from materializer idempotence. This is substantially stronger than accepting current bytes after failing checks.
+
+The actual old-final/new-final source delta preserves the factory protocol and conformer argument, the complete Account/standalone/manager/service short-message flag, and postbox storage forwarding. The official untouched factory call/harness and BotWebView transaction completion remain present. The media merge retains captured seek generation and guard, rotation stop/rearm, both reader checks, three-member tuple, diagnostic begin/defer, secondary enqueue, and both audio-normalization sites. The one gap is propagation of the new rotation mechanism to the retained secondary output.
+
+The supplied diff proof accounts for 40 changed text paths (33 byte-exact official outputs and seven feature overlaps) and the tlottie gitlink; the final feature-owner changes are bounded to those overlaps and version/product-base fields. The preparation and terminal materializer pins move together. The new source preservation gate is correctly placed after C in both native workflow and app build entrypoint; no compiler flag or guard bypass was found in the reviewed diff. Product identity and Build176 are preserved.
+
+## Code quality verdict
+
+**Changes requested for the same P2 finding.** No separate blocking builder-quality defect found. Active materializer changes are small and retain existing hash, parent and patch checks. The reconstruction scripts clearly distinguish sparse local evidence from a deployable checkout, and the original/target boundary record makes the rebased manifests reviewable. Focused textual tests offer regression protection but are not a semantic or native substitute; the missing secondary-rotation interaction demonstrates that limit.
+
+The reported two 403-file replays, 363-file historical preservation, 33 official-byte matches, focused/portable suite results and native skips were inspected as existing evidence, not rerun or represented as independently executed tests. Real macOS full-target source/native gate, whole-app/extension compatibility and device/media behavior remain unverified for this migration. The prior C macOS result is historical evidence only.

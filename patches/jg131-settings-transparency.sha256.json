@@ -1,6 +1,6 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "patch_sha256": "1571226d4df777f095fbb00f99785f265dc64602b26b2921dba22bd2af9dcc01",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "patch_sha256": "73d4f1bb16e277b12ae73b5c3dc35344829c035d2c4c780ba1b764f13280e23b",
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
       "before_sha256": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
@@ -59,8 +59,8 @@
       "after_sha256": "b7ae323070e4a5eafddf19adb6c63d67507fed9a3f5b437f2577a9393cb2c6d3"
     },
     "submodules/TelegramUI/Sources/SharedAccountContext.swift": {
-      "before_sha256": "5fb6afb2aebf2910a252b22f938f3806ca4383adac759b3119e53af453e74d1b",
-      "after_sha256": "9cb521a2a329fa7ca26c091208f51e93d8d7257154ce59f5cd49a84ff1511e7a"
+      "before_sha256": "930f4d461a8ae0a7b04ac4caf9836e6f6d5c742c894d8bc508b92f933adeebc2",
+      "after_sha256": "c22de43e3406449b644427efe4e2d9a00d269b4ba12de1f5990077599bfb9528"
     },
     "submodules/SettingsUI/Sources/Privacy and Security/PrivacyIntroController.swift": {
       "before_sha256": "bf92e147482abc962e42ba77d1ae732fe8f81918131b592152c04a72333b802c",
@@ -126,5 +126,6 @@
       "before_sha256": "c412b0cc5fa60c75f0e78b8d19d957d0a7810591dbb5ddc5e40a96362ffb0601",
       "after_sha256": "315662308a3a838f0099a4f551bf05378928287d2a5e980b92b76108ee714e05"
     }
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

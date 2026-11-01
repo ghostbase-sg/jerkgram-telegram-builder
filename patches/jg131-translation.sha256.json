@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "patch_sha256": "95a2966d61c2fc614840cec47c6718bc7d8626d0bd6c6a15be4278bd60bcf515",
   "owners": {
     "submodules/TranslateUI/Sources/Translate.swift": {
@@ -78,5 +78,6 @@
       "before_sha256": "83811f2e8ab91dd0b68a2c6caa467bf04bb4b0b2e62324b7b78e797fb8278a22",
       "after_sha256": "8266ea80291906a1ba1c0206a1802f6fa9b49e51d441a52d920dd21c0c56a23c"
     }
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

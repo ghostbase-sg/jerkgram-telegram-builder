@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "owners": {
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": {
       "before_sha256": "8d52d145d0bd5380ea8eb7b9a53fae88057630b3ad1e5b388db675bbf1b11560",
@@ -23,5 +23,6 @@
     "Telegram/Telegram-iOS/PremiumBlack.alticon/PremiumBlack@3x.png": "1ac18f2789b3969503486d81c4f3172bf94497d96dad1cf7a5c2c49bb2cf4ca3",
     "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@2x.png": "7f787d079af608e67c24465f5fa3a7b5f720b71dc0bb6e98c68a8b4d96fa63d9",
     "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@3x.png": "e9df62f7a4a0839bf2207a11a66cad388f1183d604f64aa17f5929555159d861"
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

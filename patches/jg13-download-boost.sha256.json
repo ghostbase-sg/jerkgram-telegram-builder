@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "owners": {
     "submodules/TelegramCore/Sources/Network/FetchV2.swift": {
       "before_sha256": "646986389132727dca045ddf1a2021089b487b8fce22f3888deb1d81549bac76",
@@ -25,10 +25,11 @@
     "submodules/TelegramCore/Sources/Network/MultiplexedRequestManager.swift": "7902231cf8f7291d5d24eb4e470540dbc1285b91259ded40946e754bc500ba75",
     "submodules/TelegramCore/Sources/Network/Download.swift": "7ebfd203084c270b818820ab511289c7d2925ccfacbbf093d37c9062b329d678",
     "submodules/TelegramCore/Sources/Network/FetchHttpResource.swift": "3a84b9486150e55f37940f6d0bbf7300ede4647fc8c953cbaf7b9e40099d1d50",
-    "submodules/TelegramCore/Sources/Account/Account.swift": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
+    "submodules/TelegramCore/Sources/Account/Account.swift": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4",
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6",
     "submodules/TelegramUI/Sources/AppDelegate.swift": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
     "submodules/TelegramCore/BUILD": "438ab68a306e012e79d6f5d1a397a56739b25c36dbc3b1085640b51ca0f7b2bc"
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

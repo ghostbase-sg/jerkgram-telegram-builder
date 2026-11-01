@@ -937,7 +937,7 @@ index 676e142..f58bc51 100644
  
  private func jerkgramDataCoreRootURL() -> URL {
 diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
-index cbfb1e9..65adbfd 100644
+index 08867b6..9c37dd1 100644
 --- a/submodules/TelegramCore/Sources/Account/Account.swift
 +++ b/submodules/TelegramCore/Sources/Account/Account.swift
 @@ -1068,6 +1068,11 @@ public enum JerkgramHotSettings {
@@ -1876,7 +1876,7 @@ index 57953be..5545013 100644
          self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
  
 diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
-index ef17916..aa10c43 100644
+index 7f469df..8596f88 100644
 --- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
 +++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
 @@ -160,82 +160,7 @@ private var testHasInstance = false

@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.1 / Build176 performance remediation wave 1
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.2 / Build176 performance remediation wave 1
 
 on:
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
             brew install bazelisk
           fi
           bazelisk --version
-      - name: Prepare clean pinned Official Telegram 13.1.1 source
+      - name: Prepare clean pinned Official Telegram 13.1.2 source
         run: bash scripts/prepare_source_official.sh
       - name: Build Jerkgram 1.2.0 Beta 1
         run: |

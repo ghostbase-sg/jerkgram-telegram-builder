@@ -40,10 +40,10 @@ index 5bdff8a..07429fe 100644
          
          let wasInVoiceOver = self.validLayout?.inVoiceOver ?? false
 diff --git a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-index 64000d5..5fcb28a 100644
+index 521954e..02162b6 100644
 --- a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
 +++ b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-@@ -424,6 +424,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -426,6 +426,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
  
      // and let normal seek/reset paths flush renderers only when required.
      private func updateInternalState() {
@@ -52,10 +52,10 @@ index 64000d5..5fcb28a 100644
          let started = self.ghostBaseHadSecondaryOutput ? ProcessInfo.processInfo.systemUptime : nil
          defer {
              self.updateTimerState()
-@@ -1276,6 +1278,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -1295,6 +1297,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      }
  
-     private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, secondaryVideoTargets: [AVQueuedSampleBufferRendering], loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool) {
+     private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, secondaryVideoTargets: [AVQueuedSampleBufferRendering], loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool, videoRotationAngle: Double?) {
 +        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.mediaFill)
 +        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
          var bufferIsReadyForMoreData = true

@@ -1,8 +1,8 @@
 diff --git a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-index c9ecfba..64000d5 100644
+index b816dcb..521954e 100644
 --- a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
 +++ b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-@@ -182,6 +182,13 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -183,6 +183,13 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      private let renderSynchronizer: AVSampleBufferRenderSynchronizer
      private var videoRenderer: AVSampleBufferDisplayLayer
      private var secondaryVideoRenderers: [ObjectIdentifier: AVSampleBufferDisplayLayer] = [:]
@@ -16,7 +16,7 @@ index c9ecfba..64000d5 100644
      private var audioRenderer: AVSampleBufferAudioRenderer?
      
      private var didNotifySentVideoFrames: Bool = false
-@@ -292,6 +299,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -294,6 +301,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
              self.source = ChunkMediaPlayerDirectFetchSourceImpl(resource: resource)
          }
          
@@ -24,7 +24,7 @@ index c9ecfba..64000d5 100644
          self.updateTimerState()
  
          self.partsStateDisposable = (self.source.partsState
-@@ -317,6 +325,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -319,6 +327,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      }
      
      deinit {
@@ -35,7 +35,7 @@ index c9ecfba..64000d5 100644
          self.partsStateDisposable?.dispose()
          self.updateTimer?.invalidate()
          self.audioSessionDisposable?.dispose()
-@@ -350,11 +362,36 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -352,11 +364,36 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                  return
              }
              self.updateInternalState()
@@ -72,7 +72,7 @@ index c9ecfba..64000d5 100644
  
          let updated = Dictionary(uniqueKeysWithValues: layers.map { (ObjectIdentifier($0), $0) })
          for (key, layer) in self.secondaryVideoRenderers where updated[key] == nil {
-@@ -387,8 +424,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -389,8 +426,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
  
      // and let normal seek/reset paths flush renderers only when required.
      private func updateInternalState() {
@@ -85,7 +85,7 @@ index c9ecfba..64000d5 100644
          }
  
          if self.isSoundEnabled && self.hasSound {
-@@ -896,6 +937,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -898,6 +939,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      }
      
      public func play() {
@@ -94,12 +94,12 @@ index c9ecfba..64000d5 100644
          self.resetMediaDataStarvation()
          self.updateInternalState()
 diff --git a/submodules/MediaPlayer/Sources/MediaPlayerNode.swift b/submodules/MediaPlayer/Sources/MediaPlayerNode.swift
-index 9df333c..ecbd8d3 100644
+index 5ee5453..6953a76 100644
 --- a/submodules/MediaPlayer/Sources/MediaPlayerNode.swift
 +++ b/submodules/MediaPlayer/Sources/MediaPlayerNode.swift
-@@ -70,6 +70,10 @@ public final class MediaPlayerNode: ASDisplayNode {
-     
+@@ -82,6 +82,10 @@ public final class MediaPlayerNode: ASDisplayNode {
      private var secondaryVideoLayers: [ObjectIdentifier: AVSampleBufferDisplayLayer] = [:]
+     private var secondaryVideoLayerBoundsObservers: [ObjectIdentifier: NSKeyValueObservation] = [:]
      var secondaryVideoLayersUpdated: (([AVSampleBufferDisplayLayer]) -> Void)?
 +    // V2's AVSampleBufferRenderSynchronizer owns its outputs' timebases.
 +    // This ownership lasts for the node; async renderer removal is not a
@@ -108,7 +108,7 @@ index 9df333c..ecbd8d3 100644
      private let captureProtected: Bool
  
      var currentSecondaryVideoLayers: [AVSampleBufferDisplayLayer] {
-@@ -136,10 +140,12 @@ public final class MediaPlayerNode: ASDisplayNode {
+@@ -157,10 +161,12 @@ public final class MediaPlayerNode: ASDisplayNode {
                  }
  
                  for secondaryLayer in self.secondaryVideoLayers.values {
@@ -125,9 +125,9 @@ index 9df333c..ecbd8d3 100644
                          }
                      }
                      if secondaryLayer.affineTransform() != transform {
-@@ -178,7 +184,9 @@ public final class MediaPlayerNode: ASDisplayNode {
-             return
+@@ -218,7 +224,9 @@ public final class MediaPlayerNode: ASDisplayNode {
          }
+         self.secondaryVideoLayerBoundsObservers.removeValue(forKey: key)?.invalidate()
          layer.flushAndRemoveImage()
 -        layer.controlTimebase = nil
 +        if !self.secondaryVideoLayersUseRenderSynchronizer {

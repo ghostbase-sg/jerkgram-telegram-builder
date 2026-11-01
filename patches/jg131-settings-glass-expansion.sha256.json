@@ -1,6 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "parent_task_b_commit": "fd2f615fb5d93a92556cffce1a7c7ba297f071e5",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "patch_sha256": "12360a65c13aa745a0760f312b193b1a3456b966b6d968ab94e273e115c4b628",
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
@@ -19,5 +18,7 @@
       "before_sha256": "29c692dbe5210d458084418f81db352633fc51bd8c55270bda82dfe6055911da",
       "after_sha256": "6c7a7f5268e349bd37dcba6094b08784a17e80bab3cdd2588cdbe6770a2dcc70"
     }
-  }
+  },
+  "historical_feature_parent_task_b_commit": "fd2f615fb5d93a92556cffce1a7c7ba297f071e5",
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "owners": {
     "submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift": {
       "before_sha256": "dc0138ea58e686c513262a884d00afbe940f2dd78230270e0da691d8cd05b07d",
@@ -18,5 +18,6 @@
       "after_sha256": "9212154bdbfc42def582e61c940135e462686388541a88c6c0bdf02625adeb2c"
     }
   },
-  "patch_sha256": "114de6dc0db4e86985df0a1352c31839e1f744c53cf80c1d9ee5474eb99e38bf"
+  "patch_sha256": "114de6dc0db4e86985df0a1352c31839e1f744c53cf80c1d9ee5474eb99e38bf",
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "regression_locks": {
     "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
     "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
@@ -423,8 +423,8 @@
       ]
     },
     "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift": {
-      "before_sha256": "b8fd6341b6323b6253e0562fc14ce01eff141d1497051bd4c6ccf51bc529405b",
-      "after_sha256": "286a68124a1623d9d6ee01f28fa519982a8cda30eef128578262f08f47ef6cc0",
+      "before_sha256": "b19e1a7722e45e31986c5489d53b7cb3d27f73b6f4eb58c65a594650560ccea7",
+      "after_sha256": "76908babac73191ec1ef87bfdd4f0c00ce92d19f8938f2753c36160484612c71",
       "survival_functions": [
         "continuePlayingWithoutSound",
         "continueWithOverridingAmbientMode",
@@ -793,5 +793,6 @@
         "updateNode"
       ]
     }
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

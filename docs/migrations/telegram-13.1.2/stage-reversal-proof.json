@@ -1,0 +1,254 @@
+[
+  {
+    "order": 1,
+    "stage": "jg13-stable.product",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 2,
+    "stage": "jg13-beta1-followup",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 3,
+    "stage": "jg13-profile-cleanup",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 4,
+    "stage": "jg13-profile-p0-diagnostics",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 5,
+    "stage": "jg13-profile-preferences",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 6,
+    "stage": "jg13-expanded-diagnostics",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 7,
+    "stage": "jg13-deleted-reply",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 8,
+    "stage": "jg13-portable-copy",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 9,
+    "stage": "jg13-release-ui",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 10,
+    "stage": "jg13-premium-icons",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 11,
+    "stage": "jg13-download-boost",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 12,
+    "stage": "jg13-sponsored",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 13,
+    "stage": "jg13-profile-capture",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 14,
+    "stage": "jg13-stars-gift",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 15,
+    "stage": "jg13-history-backend",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 16,
+    "stage": "jg131-ui-repair",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 17,
+    "stage": "jg131-ui-type-compat",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 18,
+    "stage": "identity",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 19,
+    "stage": "jg131-profile-polish",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 20,
+    "stage": "jg131-profile-metadata",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 21,
+    "stage": "jg131-excluded-history",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 22,
+    "stage": "jg131-settings-transparency",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 23,
+    "stage": "jg131-performance-followup",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 24,
+    "stage": "jg131-translation",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 25,
+    "stage": "jg131-performance-wave1",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 26,
+    "stage": "jg131-translation-repair",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 27,
+    "stage": "jg131-default-folder",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  },
+  {
+    "order": 28,
+    "stage": "jg131-settings-glass-expansion",
+    "dry_run": true,
+    "output_hashes": true,
+    "reverse_exact": true,
+    "reapply_delta_rejected": true,
+    "corrupt_parent_atomic_rejection": true
+  }
+]

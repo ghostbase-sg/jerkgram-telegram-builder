@@ -1,7 +1,6 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "parent_task_a_commit": "65a6913995b5a6ee752072fde427dd6ac72c8019",
-  "patch_sha256": "d81e06557b4cf4a260512dc0733eeb0c04abd3505b77e13a1b533f72dbea2a5e",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "patch_sha256": "ffeb31549f183c6987709c03bdd9b3a71751b820f1797e63efba2ffe26b48097",
   "owners": {
     "submodules/ChatListUI/Sources/ChatListController.swift": {
       "before_sha256": "17f5a4999771296d8f4209ee12fe9082dd8632fd61500e990e47f090b0eba4bf",
@@ -28,8 +27,10 @@
       "after_sha256": "abc02c2154576c70eee28bffae1a98d0b74624ab4b69153b40ed558d4d39b3a4"
     },
     "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": {
-      "before_sha256": "41c58ca5e82006076928afe0506e01a5725da678d8c8ddbc3f07c12a9d5dc9fa",
-      "after_sha256": "7ff0af4559ac62cee23d9bcfd7264eb02235104deae1c8dc638d477a22814b03"
+      "before_sha256": "1f4b4b3c69c529f949b059721c79a002b7fff0dd85df608e0f5f1ef0b82f7737",
+      "after_sha256": "7a7e39fcce525916916a5b51d2243f920b96785b315aedbd3773b10a67dfdaab"
     }
-  }
+  },
+  "historical_feature_parent_task_a_commit": "65a6913995b5a6ee752072fde427dd6ac72c8019",
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

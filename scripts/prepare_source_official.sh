@@ -2,7 +2,7 @@
 set -e
 
 TELEGRAM_REPO="https://github.com/TelegramMessenger/Telegram-iOS.git"
-EXPECTED_COMMIT="fb0e62ba8a147f0821da6aa63c09da7d79a10111"
+EXPECTED_COMMIT="279f89e4d4f63f17227bf877dc3d8990f22ecd58"
 TELEGRAM_REF="$EXPECTED_COMMIT"
 
 rm -rf work/swiftgram-src
@@ -30,10 +30,13 @@ git log --oneline --decorate -n 3
 cat versions.json 2>/dev/null || true
 python3 - <<'PY'
 import json
+import subprocess
 versions = json.load(open('versions.json'))
-assert versions['app'] == '13.1.1', versions
+assert versions['app'] == '13.1.2', versions
 assert versions['bazel'].split(':')[0] == '9.2.0', versions
 assert versions['xcode'] == '27.1', versions
+tlottie = subprocess.check_output(['git', 'ls-tree', 'HEAD', 'submodules/tlottie/tlottie'], text=True).split()
+assert tlottie[:3] == ['160000', 'commit', '92df98dc209bc39b1e567ec74a8c86a0af5239de'], tlottie
 PY
 
 echo "== Source prepared =="

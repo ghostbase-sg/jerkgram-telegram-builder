@@ -13,7 +13,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / 'patches/jg131-translation-repair.patch'
 MANIFEST = ROOT / 'patches/jg131-translation-repair.sha256.json'
-UPSTREAM = 'fb0e62ba8a147f0821da6aa63c09da7d79a10111'
+UPSTREAM = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
 
 
 def digest(data):

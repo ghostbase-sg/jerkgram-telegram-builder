@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "regression_locks": {
     "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
     "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
@@ -82,8 +82,8 @@
       "removed_functions": []
     },
     "submodules/TelegramCore/Sources/State/AccountStateManager.swift": {
-      "before_sha256": "2bcab16b1330ed9a02f93fb887c36a1588695bf9a273f9ca16c920af83dea418",
-      "after_sha256": "9b7faf226d585fb3aa9ba02bc005c30abc16d5371202ec77b31bc85860e66936",
+      "before_sha256": "4e4bff9ffb0978b41b70053145015dec1cd4448af93b444b89c2eaea29fe1911",
+      "after_sha256": "f5f92b12adb44f476a0805c1a7f7848b98221e2f36355d58d6ef4102f8d95a97",
       "survival_functions": [
         "addAsyncResetChannels",
         "addCustomOperation",
@@ -167,5 +167,6 @@
         "jerkgramRequiresPortableForward"
       ]
     }
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

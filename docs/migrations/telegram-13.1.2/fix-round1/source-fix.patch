@@ -1,0 +1,61 @@
+--- round1-before/submodules/MediaPlayer/Sources/MediaPlayerNode.swift
++++ round1-after/submodules/MediaPlayer/Sources/MediaPlayerNode.swift
+@@ -80,6 +80,7 @@
+     public var updateVideoInHierarchy: ((Bool) -> Void)?
+     
+     private var secondaryVideoLayers: [ObjectIdentifier: AVSampleBufferDisplayLayer] = [:]
++    private var secondaryVideoLayerBoundsObservers: [ObjectIdentifier: NSKeyValueObservation] = [:]
+     var secondaryVideoLayersUpdated: (([AVSampleBufferDisplayLayer]) -> Void)?
+     // V2's AVSampleBufferRenderSynchronizer owns its outputs' timebases.
+     // This ownership lasts for the node; async renderer removal is not a
+@@ -182,6 +183,17 @@
+         }
+     }
+     
++    private func updateSecondaryVideoLayerRotation(_ layer: AVSampleBufferDisplayLayer) {
++        assert(Queue.mainQueue().isCurrent())
++        guard self.secondaryVideoLayers[ObjectIdentifier(layer)] === layer,
++              let rotationAngle = self.externalVideoRotationAngle else {
++            return
++        }
++        // Mirrors can have a different aspect ratio and can be attached after
++        // Chunk has supplied rotation without ever setting the ordinary state.
++        layer.setAffineTransform(mediaPlayerVideoRotationTransform(size: layer.bounds.size, rotationAngle: rotationAngle))
++    }
++
+     public func addSecondaryVideoLayer(_ layer: AVSampleBufferDisplayLayer) {
+         assert(Queue.mainQueue().isCurrent())
+         let key = ObjectIdentifier(layer)
+@@ -193,7 +205,14 @@
+         // can synchronously deadlock AVFoundation during scene resume.
+         layer.videoGravity = .resizeAspectFill
+         self.secondaryVideoLayers[key] = layer
++        self.secondaryVideoLayerBoundsObservers[key] = layer.observe(\.bounds, options: [.new]) { [weak self, weak layer] _, _ in
++            guard let self, let layer else {
++                return
++            }
++            self.updateSecondaryVideoLayerRotation(layer)
++        }
+         self.updateState()
++        self.updateSecondaryVideoLayerRotation(layer)
+         self.secondaryVideoLayersUpdated?(self.currentSecondaryVideoLayers)
+     }
+ 
+@@ -203,6 +222,7 @@
+         guard self.secondaryVideoLayers.removeValue(forKey: key) != nil else {
+             return
+         }
++        self.secondaryVideoLayerBoundsObservers.removeValue(forKey: key)?.invalidate()
+         layer.flushAndRemoveImage()
+         if !self.secondaryVideoLayersUseRenderSynchronizer {
+             layer.controlTimebase = nil
+@@ -503,6 +523,9 @@
+     }
+     
+     public func updateLayout() {
++        for layer in self.secondaryVideoLayers.values {
++            self.updateSecondaryVideoLayerRotation(layer)
++        }
+         let bounds = self.bounds
+         if bounds.isEmpty {
+             return

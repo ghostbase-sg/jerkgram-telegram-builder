@@ -10,7 +10,7 @@ Low Power does not change opacity.
 Portable terminal gate passed: C9tests (1Swift skip), restoredB13 (1skip),
 restoredA24 (3skips), earlier source contracts. Fresh exact B parent replay
 accepted four-owner patch; second apply unchanged. Independent source+builder
-review passed both spec and quality. macOS execution still pending; no app,
+review passed both spec and quality. macOS run41318834444 passed on commit17ff4f1c8bbbc694d0ce54093c002c2dad56c9c7: all9C tests,13B tests and24A tests passed with no skips in those stages; no app,
 visual/FPS/device validation or IPA success is claimed.
 
 Review notes a minor conditional theme-cache miss: when native modal mapping

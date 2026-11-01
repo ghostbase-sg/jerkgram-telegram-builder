@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "owners": {
     "submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift": {
       "before_sha256": "86245bf28b694b58ccd2c59a0735b947b4688f160336b2768a9edcf5b7c67d6a",
@@ -24,7 +24,7 @@
     "submodules/TelegramCore/Sources/TelegramEngine/Payments/StarGifts.swift": "986bbd543dd36ebc58d6c7868bdbe4bab77ead4ad697ca396e6c3f5389a98868",
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "5f19a50e24c2ba3347419dbb68d07de100e6391f968785b75e9e3489bdad369f",
     "submodules/Display/Source/GhostBaseGlass.swift": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
-    "submodules/TelegramCore/Sources/Account/Account.swift": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
+    "submodules/TelegramCore/Sources/Account/Account.swift": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift": "4ed68d765736e9020798df6a6df1f5e26ea70dd3c9249f014cae964975cc1c96",
     "submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift": "9ca87b22483c8eda5444f09810904de5e9541db1381b3f373730b53d0be5fe7b",
     "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b",
@@ -36,5 +36,6 @@
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift": "f183aab9659d2ce83f82d52fdbcfc504baf9b80306821d0b4b58a979defb2eaa",
     "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift": "703a0c40bc390b4d9aee45a9763752a23be847a57464719bd899b15145a954c6",
     "submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift": "6d75b61d723d460082bd468b9fa1c0e99613ac8f11857b16756b74d5a8fe1630"
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

@@ -1,0 +1,363 @@
+--- old-final/versions.json
++++ new-final/versions.json
+@@ -1,5 +1,5 @@
+ {
+-    "app": "13.1.1",
++    "app": "13.1.2",
+     "xcode": "27.1",
+     "deploy_xcode": "27.1",
+     "bazel": "9.2.0:dd466352a3e4d3581b8898740ee1ff208866ccbe25f8d367c5dcb950219587e6",
+--- old-final/Telegram/BUILD
++++ new-final/Telegram/BUILD
+@@ -633,7 +633,7 @@
+ <plist version="1.0">
+ <dict>
+     <key>CFBundleShortVersionString</key>
+-    <string>13.1.1</string>
++    <string>13.1.2</string>
+ </dict>
+ </plist>
+ PLIST
+--- old-final/submodules/TelegramUI/Sources/SharedAccountContext.swift
++++ new-final/submodules/TelegramUI/Sources/SharedAccountContext.swift
+@@ -4892,6 +4892,7 @@
+         initialUsername: String?,
+         initialTitle: String?,
+         openAutomatically: Bool,
++        viaDeeplink: Bool,
+         completion: @escaping (EnginePeer.Id?) -> Void
+     ) async -> ViewController? {
+         return await CreateBotScreen(
+@@ -4900,6 +4901,7 @@
+             initialUsername: initialUsername,
+             initialTitle: initialTitle,
+             openAutomatically: openAutomatically,
++            viaDeeplink: viaDeeplink,
+             completion: completion
+         )
+     }
+--- old-final/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ new-final/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -982,7 +982,7 @@
+     public static let displayVersion = "1.2.0 Beta 1"
+     public static let technicalVersion = "1.2.0-beta.1"
+     public static let build = "176"
+-    public static let telegramBase = "13.1.1"
++    public static let telegramBase = "13.1.2"
+ 
+     public static var aboutText: String {
+         return "Jerkgram Version \(displayVersion)\nBuild \(build)\nTelegram Base \(telegramBase)"
+--- old-final/submodules/TelegramCore/Sources/Account/Account.swift
++++ new-final/submodules/TelegramCore/Sources/Account/Account.swift
+@@ -1523,7 +1523,7 @@
+         
+         self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
+             self?.contactSyncManager?.addIsContactUpdates(updates)
+-        }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
++        }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods, ignoresShortSentMessages: supplementary)
+         
+         self.viewTracker = AccountViewTracker(account: self)
+         self.viewTracker.resetPeerHoleManagement = { [weak self] peerId in
+@@ -2198,7 +2198,8 @@
+                                         },
+                                         shouldKeepOnlinePresence: .single(false),
+                                         peerInputActivityManager: nil,
+-                                        auxiliaryMethods: auxiliaryMethods
++                                        auxiliaryMethods: auxiliaryMethods,
++                                        ignoresShortSentMessages: true
+                                     )
+                                 }
+                             }
+--- old-final/submodules/TelegramCore/Sources/State/AccountStateManager.swift
++++ new-final/submodules/TelegramCore/Sources/State/AccountStateManager.swift
+@@ -199,6 +199,7 @@
+         
+         private let peerInputActivityManager: PeerInputActivityManager?
+         let auxiliaryMethods: AccountAuxiliaryMethods
++        private let ignoresShortSentMessages: Bool
+         var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
+         
+         private var updateService: UpdateMessageService?
+@@ -408,6 +409,7 @@
+             shouldKeepOnlinePresence: Signal<Bool, NoError>,
+             peerInputActivityManager: PeerInputActivityManager?,
+             auxiliaryMethods: AccountAuxiliaryMethods,
++            ignoresShortSentMessages: Bool,
+             updateConfigRequested: (() -> Void)?,
+             isPremiumUpdated: (() -> Void)?,
+             messagesRemovedContext: MessagesRemovedContext
+@@ -422,6 +424,7 @@
+             self.shouldKeepOnlinePresence = shouldKeepOnlinePresence
+             self.peerInputActivityManager = peerInputActivityManager
+             self.auxiliaryMethods = auxiliaryMethods
++            self.ignoresShortSentMessages = ignoresShortSentMessages
+             self.updateConfigRequested = updateConfigRequested
+             self.isPremiumUpdated = isPremiumUpdated
+             self.messagesRemovedContext = messagesRemovedContext
+@@ -441,7 +444,7 @@
+         public func reset() {
+             self.queue.async { [self] in
+                 if self.updateService == nil {
+-                    self.updateService = UpdateMessageService(peerId: self.accountPeerId)
++                    self.updateService = UpdateMessageService(peerId: self.accountPeerId, ignoresShortSentMessages: self.ignoresShortSentMessages)
+                     self.updateServiceDisposable.set(self.updateService!.pipe.signal().start(next: { [weak self] groups in
+                         if let strongSelf = self {
+                             strongSelf.addUpdateGroups(groups)
+@@ -2417,7 +2420,8 @@
+         addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void,
+         shouldKeepOnlinePresence: Signal<Bool, NoError>,
+         peerInputActivityManager: PeerInputActivityManager?,
+-        auxiliaryMethods: AccountAuxiliaryMethods
++        auxiliaryMethods: AccountAuxiliaryMethods,
++        ignoresShortSentMessages: Bool
+     ) {
+         let queue = Queue(name: "AccountStateManager")
+         
+@@ -2443,6 +2447,7 @@
+                 shouldKeepOnlinePresence: shouldKeepOnlinePresence,
+                 peerInputActivityManager: peerInputActivityManager,
+                 auxiliaryMethods: auxiliaryMethods,
++                ignoresShortSentMessages: ignoresShortSentMessages,
+                 updateConfigRequested: {
+                     updateConfigRequestedImpl?()
+                 },
+--- old-final/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
++++ new-final/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
+@@ -2210,11 +2210,11 @@
+         }
+         
+         public func setBotStorageValue(peerId: EnginePeer.Id, key: String, value: String?) -> Signal<Never, BotStorageError> {
+-            return _internal_setBotStorageValue(account: self.account, peerId: peerId, key: key, value: value)
++            return _internal_setBotStorageValue(postbox: self.account.postbox, peerId: peerId, key: key, value: value)
+         }
+ 
+         public func clearBotStorage(peerId: EnginePeer.Id) -> Signal<Never, BotStorageError> {
+-            return _internal_clearBotStorage(account: self.account, peerId: peerId)
++            return _internal_clearBotStorage(postbox: self.account.postbox, peerId: peerId)
+         }
+         
+         public func toggleChatManagingBotIsPaused(chatId: EnginePeer.Id) {
+--- old-final/submodules/MediaPlayer/Sources/MediaPlayerNode.swift
++++ new-final/submodules/MediaPlayer/Sources/MediaPlayerNode.swift
+@@ -49,6 +49,17 @@
+     }
+ }
+ 
++func mediaPlayerVideoRotationTransform(size: CGSize, rotationAngle: Double) -> CGAffineTransform {
++    guard size.width > 0.0, size.height > 0.0, size.width.isFinite, size.height.isFinite, rotationAngle.isFinite else {
++        return .identity
++    }
++    var transform = CGAffineTransform(rotationAngle: CGFloat(rotationAngle))
++    if abs(rotationAngle.truncatingRemainder(dividingBy: Double.pi)) > 0.1 {
++        transform = transform.scaledBy(x: size.height / size.width, y: size.width / size.height)
++    }
++    return transform
++}
++
+ private enum PollStatus: CustomStringConvertible {
+     case delay(Double)
+     case finished
+@@ -69,6 +80,7 @@
+     public var updateVideoInHierarchy: ((Bool) -> Void)?
+     
+     private var secondaryVideoLayers: [ObjectIdentifier: AVSampleBufferDisplayLayer] = [:]
++    private var secondaryVideoLayerBoundsObservers: [ObjectIdentifier: NSKeyValueObservation] = [:]
+     var secondaryVideoLayersUpdated: (([AVSampleBufferDisplayLayer]) -> Void)?
+     // V2's AVSampleBufferRenderSynchronizer owns its outputs' timebases.
+     // This ownership lasts for the node; async renderer removal is not a
+@@ -110,6 +122,14 @@
+     var currentRotationAngle = 0.0
+     var currentAspect = 1.0
+     
++    var externalVideoRotationAngle: Double? {
++        didSet {
++            if self.externalVideoRotationAngle != oldValue {
++                self.updateLayout()
++            }
++        }
++    }
++
+     public var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double, aspect: Double)? {
+         didSet {
+             self.updateState()
+@@ -131,7 +151,8 @@
+                     transform = transform.scaledBy(x: CGFloat(aspect), y: CGFloat(1.0 / aspect))
+                 }
+ 
+-                if !self.currentRotationAngle.isEqual(to: rotationAngle) || !self.currentAspect.isEqual(to: aspect) {
++                if self.externalVideoRotationAngle != nil || !self.currentRotationAngle.isEqual(to: rotationAngle) || !self.currentAspect.isEqual(to: aspect) {
++                    self.externalVideoRotationAngle = nil
+                     self.currentRotationAngle = rotationAngle
+                     self.currentAspect = aspect
+                     if videoLayer.affineTransform() != transform {
+@@ -162,6 +183,17 @@
+         }
+     }
+     
++    private func updateSecondaryVideoLayerRotation(_ layer: AVSampleBufferDisplayLayer) {
++        assert(Queue.mainQueue().isCurrent())
++        guard self.secondaryVideoLayers[ObjectIdentifier(layer)] === layer,
++              let rotationAngle = self.externalVideoRotationAngle else {
++            return
++        }
++        // Mirrors can have a different aspect ratio and can be attached after
++        // Chunk has supplied rotation without ever setting the ordinary state.
++        layer.setAffineTransform(mediaPlayerVideoRotationTransform(size: layer.bounds.size, rotationAngle: rotationAngle))
++    }
++
+     public func addSecondaryVideoLayer(_ layer: AVSampleBufferDisplayLayer) {
+         assert(Queue.mainQueue().isCurrent())
+         let key = ObjectIdentifier(layer)
+@@ -173,7 +205,14 @@
+         // can synchronously deadlock AVFoundation during scene resume.
+         layer.videoGravity = .resizeAspectFill
+         self.secondaryVideoLayers[key] = layer
++        self.secondaryVideoLayerBoundsObservers[key] = layer.observe(\.bounds, options: [.new]) { [weak self, weak layer] _, _ in
++            guard let self, let layer else {
++                return
++            }
++            self.updateSecondaryVideoLayerRotation(layer)
++        }
+         self.updateState()
++        self.updateSecondaryVideoLayerRotation(layer)
+         self.secondaryVideoLayersUpdated?(self.currentSecondaryVideoLayers)
+     }
+ 
+@@ -183,6 +222,7 @@
+         guard self.secondaryVideoLayers.removeValue(forKey: key) != nil else {
+             return
+         }
++        self.secondaryVideoLayerBoundsObservers.removeValue(forKey: key)?.invalidate()
+         layer.flushAndRemoveImage()
+         if !self.secondaryVideoLayersUseRenderSynchronizer {
+             layer.controlTimebase = nil
+@@ -483,6 +523,9 @@
+     }
+     
+     public func updateLayout() {
++        for layer in self.secondaryVideoLayers.values {
++            self.updateSecondaryVideoLayerRotation(layer)
++        }
+         let bounds = self.bounds
+         if bounds.isEmpty {
+             return
+@@ -507,6 +550,9 @@
+         if let videoLayer = self.videoLayer {
+             videoLayer.position = CGPoint(x: fittedRect.midX, y: fittedRect.midY)
+             videoLayer.bounds = CGRect(origin: CGPoint(), size: fittedRect.size)
++            if let rotationAngle = self.externalVideoRotationAngle {
++                videoLayer.setAffineTransform(mediaPlayerVideoRotationTransform(size: fittedRect.size, rotationAngle: rotationAngle))
++            }
+         }
+         self.snapshotNode?.frame = fittedRect
+     }
+--- old-final/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
++++ new-final/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
+@@ -169,6 +169,7 @@
+         var notifiedHasSound: Bool = false
+         var seekFromMinTimestamp: Double?
+         var audioBufferTimingState: AudioBufferTimingState?
++        var videoRotationAngle: Double = 0.0
+     }
+     
+     private static let sharedDataQueue = Queue(name: "ChunkMediaPlayerV2-DataQueue")
+@@ -273,6 +274,7 @@
+         self.audioSessionManager = audioSessionManager
+         self.onSeeked = onSeeked
+         self.playerNode = playerNode
++        playerNode.externalVideoRotationAngle = 0.0
+         
+         self.loadedPartsMediaData = QueueLocalObject(queue: self.dataQueue, generate: {
+             return LoadedPartsMediaData()
+@@ -1192,6 +1194,7 @@
+             }
+         
+             let didNotifySentVideoFrames = self.didNotifySentVideoFrames
++            let seekId = self.seekId
+             videoTarget.stopRequestingMediaData()
+             let secondaryVideoTargets: [AVQueuedSampleBufferRendering] = self.secondaryVideoRenderers.values.map { layer in
+                 if #available(iOS 17.0, *) {
+@@ -1203,6 +1206,22 @@
+             videoTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
+                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
+                     let bufferFillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: videoTarget, secondaryVideoTargets: secondaryVideoTargets, loadedPartsMediaData: loadedPartsMediaData, isVideo: true)
++                    if let rotationAngle = bufferFillResult.videoRotationAngle {
++                        videoTarget.stopRequestingMediaData()
++                        Queue.mainQueue().async { [weak self] in
++                            guard let self, self.seekId == seekId else {
++                                return
++                            }
++                            self.playerNode?.externalVideoRotationAngle = rotationAngle
++                            self.loadedPartsMediaData.with { data in
++                                data.videoRotationAngle = rotationAngle
++                            }
++                            self.videoIsRequestingMediaData = false
++                            self.videoRearmNotBefore = 0.0
++                            self.updateInternalState()
++                        }
++                        return
++                    }
+                     if bufferFillResult.bufferIsReadyForMoreData {
+                         // The renderer still wants data we do not have. Record the starvation instead of
+                         // re-arming from here: re-arming would immediately invoke this block again.
+@@ -1277,7 +1296,7 @@
+         }
+     }
+ 
+-    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, secondaryVideoTargets: [AVQueuedSampleBufferRendering], loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool) {
++    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, secondaryVideoTargets: [AVQueuedSampleBufferRendering], loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool, videoRotationAngle: Double?) {
+         let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.mediaFill)
+         defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         var bufferIsReadyForMoreData = true
+@@ -1300,6 +1319,9 @@
+                 }
+                 guard let reader = media.reader else {
+                     continue
++                }
++                if isVideo, reader.videoRotationAngle != loadedPartsMediaData.videoRotationAngle {
++                    return (bufferIsReadyForMoreData: true, didEnqueue: didEnqueue, videoRotationAngle: reader.videoRotationAngle)
+                 }
+                 media.didBeginReading = true
+                 switch reader.readSampleBuffer() {
+@@ -1357,6 +1379,9 @@
+                 }
+                 guard let reader = media.reader else {
+                     break outer
++                }
++                if isVideo, reader.videoRotationAngle != loadedPartsMediaData.videoRotationAngle {
++                    return (bufferIsReadyForMoreData: true, didEnqueue: didEnqueue, videoRotationAngle: reader.videoRotationAngle)
+                 }
+                 media.didBeginReading = true
+                 switch reader.readSampleBuffer() {
+@@ -1380,6 +1405,12 @@
+                             continue outer
+                         }
+                     }
++                    if !isVideo {
++                        sampleBuffer = ChunkMediaPlayerV2.normalizeAudioSampleBuffer(
++                            sampleBuffer,
++                            state: &loadedPartsMediaData.audioBufferTimingState
++                        )
++                    }
+                     /*if isVideo {
+                         print("Enqueue video \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value)")
+                     }*/
+@@ -1401,7 +1432,7 @@
+             }
+         }
+         
+-        return (bufferIsReadyForMoreData: bufferIsReadyForMoreData, didEnqueue: didEnqueue)
++        return (bufferIsReadyForMoreData: bufferIsReadyForMoreData, didEnqueue: didEnqueue, videoRotationAngle: nil)
+     }
+ 
+     private static func normalizeAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer, state: inout AudioBufferTimingState?) -> CMSampleBuffer {
+--- old-final/submodules/AccountContext/Sources/AccountContext.swift
++++ new-final/submodules/AccountContext/Sources/AccountContext.swift
+@@ -1716,6 +1716,7 @@
+         initialUsername: String?,
+         initialTitle: String?,
+         openAutomatically: Bool,
++        viaDeeplink: Bool,
+         completion: @escaping (EnginePeer.Id?) -> Void
+     ) async -> ViewController?
+     func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController

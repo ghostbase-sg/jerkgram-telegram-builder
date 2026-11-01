@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "patch_sha256": "e1bbb676161da6dc16e87e84a8db2695289317e6091b2b3a3648c7b8354fec17",
   "owners": {
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift": {
@@ -18,5 +18,6 @@
       "before_sha256": "1af032e878142782a75d5a169889d25dee90faad9d0010d8de5a77db3da48576",
       "after_sha256": "0aa8ab1d71f44536ef8f3633ba29097240b8e01324bf534c29fc1a61b52336cb"
     }
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

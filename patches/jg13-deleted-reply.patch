@@ -1,5 +1,5 @@
 diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
-index 83160d2..7581e54 100644
+index a0b113b..d517753 100644
 --- a/submodules/TelegramCore/Sources/Account/Account.swift
 +++ b/submodules/TelegramCore/Sources/Account/Account.swift
 @@ -1391,6 +1391,16 @@ public class Account {

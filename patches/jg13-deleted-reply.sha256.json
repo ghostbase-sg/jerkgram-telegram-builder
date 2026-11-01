@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "regression_locks": {
     "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
     "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
@@ -9,8 +9,8 @@
   },
   "owners": {
     "submodules/TelegramCore/Sources/Account/Account.swift": {
-      "before_sha256": "3af7d2c9497c1105d1c8f9ecfab52954caf55eb598aa60274d4af15c7e3f8d2a",
-      "after_sha256": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
+      "before_sha256": "1bd642b1df7e2f38d91de8a2659df986235f5b2dadbf0f2ede8756c1163eb52d",
+      "after_sha256": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
       "survival_functions": [
         "_internal_deletePasskey",
         "_internal_passkeysData",
@@ -136,5 +136,6 @@
       "after_sha256": "42b4823860b3b2b2e7a4feb4205035e3a1b817d2749c090c20a43af3e0c6ee49",
       "survival_functions": []
     }
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

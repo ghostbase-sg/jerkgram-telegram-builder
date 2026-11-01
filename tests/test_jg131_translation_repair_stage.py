@@ -37,7 +37,7 @@ class RepairStage(unittest.TestCase):
         self.patch.write_text(patch)
         sha = lambda data: hashlib.sha256(data).hexdigest() if data is not None else None
         self.manifest = self.root / 'repair.json'
-        self.manifest.write_text(json.dumps({'upstream_sha': 'fb0e62ba8a147f0821da6aa63c09da7d79a10111', 'patch_sha256': sha(self.patch.read_bytes()), 'owners': {n: {'before_sha256': sha(self.before.get(n)), 'after_sha256': sha(d)} for n, d in self.after.items()}}))
+        self.manifest.write_text(json.dumps({'upstream_sha': '279f89e4d4f63f17227bf877dc3d8990f22ecd58', 'patch_sha256': sha(self.patch.read_bytes()), 'owners': {n: {'before_sha256': sha(self.before.get(n)), 'after_sha256': sha(d)} for n, d in self.after.items()}}))
         spec = importlib.util.spec_from_file_location('repair_under_test', self.MATERIALIZER)
         self.stage = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.stage)

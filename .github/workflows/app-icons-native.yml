@@ -1,4 +1,4 @@
-name: App Icons 13.1.1 source and native capability gate
+name: App Icons 13.1.2 source and native capability gate
 on:
   push:
     branches: [dev/local-premium-icons-164]

@@ -1,0 +1,23 @@
+{
+  "finding": "P2 external rotation must reach secondary outputs",
+  "source_owner": "submodules/MediaPlayer/Sources/MediaPlayerNode.swift",
+  "before_sha256": "cf4eba01cea9881e6d045f4e0d104bd56199c402f32af1bebb3425655f039f50",
+  "after_sha256": "9cdddc3d5377464fb1340a1c63618b013136fc8cbdfa90e378ab5be6c96afd0b",
+  "changed_stage_owner_records": [
+    {
+      "stage": "jg13-stable.product",
+      "owners": [
+        "submodules/MediaPlayer/Sources/MediaPlayerNode.swift"
+      ]
+    },
+    {
+      "stage": "jg13-profile-p0-diagnostics",
+      "owners": [
+        "submodules/MediaPlayer/Sources/MediaPlayerNode.swift"
+      ]
+    }
+  ],
+  "source_diff": "source-fix.patch",
+  "ordinary_state_timebase_path": "unchanged",
+  "native_geometry_runtime": "not run; Swift/xcrun unavailable"
+}

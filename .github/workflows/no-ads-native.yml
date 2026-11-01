@@ -1,4 +1,4 @@
-name: Jerkgram 13.1.1 source and native regression gate
+name: Jerkgram 13.1.2 source and native regression gate
 on:
   push:
     branches: [dev/no-ads-166, codex/translation-folder-glass]
@@ -96,3 +96,4 @@ jobs:
           python3 tests/run_jg131_default_folder.py
           python3 scripts/materialize_jg131_settings_glass_expansion.py
           python3 tests/run_jg131_settings_glass_expansion.py
+          python3 -m unittest discover -s tests -p 'test_jg1312*.py'

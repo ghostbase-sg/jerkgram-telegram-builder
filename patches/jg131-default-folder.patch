@@ -639,9 +639,10 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
  }
  
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
+index 8f6e9c4..9361205 100644
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
-@@ -1168,6 +1168,14 @@
+@@ -1168,6 +1168,14 @@ public extension TelegramEngine {
              let _ = _internal_updateChatListFiltersDisplayTagsInteractively(postbox: self.account.postbox, displayTags: isEnabled).startStandalone()
          }
  

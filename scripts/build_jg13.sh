@@ -67,6 +67,7 @@ python3 scripts/materialize_jg131_default_folder.py
 python3 tests/run_jg131_default_folder.py
 python3 scripts/materialize_jg131_settings_glass_expansion.py
 python3 tests/run_jg131_settings_glass_expansion.py
+python3 -m unittest discover -s tests -p 'test_jg1312*.py'
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive

@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "owners": {
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift": {
       "before_sha256": "cb2542b2c8d59813db84b1e21e8278caa22f89b880c255a95247c0dc396dc39b",
@@ -37,8 +37,8 @@
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift": "3ad2df4eab7484e92007fb8ca749b9529b14d62228d8dfa4fae98cebfd023a60",
     "submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift": "6c3c3b32ca6025fb43e84fc83cae38cf5c92ba32bd6635d5ea287af9b67f507c",
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift": "21bfe0db9f76682b8a2b347c9bfb898e7c8359106da1ccb12634e8ee3c522e04",
-    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": "41c58ca5e82006076928afe0506e01a5725da678d8c8ddbc3f07c12a9d5dc9fa",
-    "submodules/TelegramCore/Sources/Account/Account.swift": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": "1f4b4b3c69c529f949b059721c79a002b7fff0dd85df608e0f5f1ef0b82f7737",
+    "submodules/TelegramCore/Sources/Account/Account.swift": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
     "submodules/TelegramUI/Sources/AppDelegate.swift": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
     "submodules/TelegramCore/Sources/Network/FetchV2.swift": "b6be8401de499c6d7a5e70c661a39b3120ef8f32f4eb308c4cda7ce96b53bbb9",
     "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f",
@@ -48,5 +48,6 @@
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6",
     "submodules/TelegramCore/BUILD": "438ab68a306e012e79d6f5d1a397a56739b25c36dbc3b1085640b51ca0f7b2bc",
     "submodules/TelegramApi/Sources/TLObjectSupport.swift": "f237889fa9c20bc36ee58e0e99760a36ac3dd9c58a7e11dd92e44aa06988f33a"
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

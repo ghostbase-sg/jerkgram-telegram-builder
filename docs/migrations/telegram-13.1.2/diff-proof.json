@@ -1,0 +1,231 @@
+{
+  "repeatable_files": 403,
+  "historical_final_physical_owners": 363,
+  "historical_final_mismatches": [],
+  "official_changed_text_paths": 40,
+  "unchanged_official_outputs": 33,
+  "feature_overlap_paths": [
+    "submodules/AccountContext/Sources/AccountContext.swift",
+    "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift",
+    "submodules/MediaPlayer/Sources/MediaPlayerNode.swift",
+    "submodules/TelegramCore/Sources/Account/Account.swift",
+    "submodules/TelegramCore/Sources/State/AccountStateManager.swift",
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift",
+    "submodules/TelegramUI/Sources/SharedAccountContext.swift"
+  ],
+  "old_final_changed_owners": [
+    "versions.json",
+    "Telegram/BUILD",
+    "submodules/TelegramUI/Sources/SharedAccountContext.swift",
+    "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift",
+    "submodules/TelegramCore/Sources/Account/Account.swift",
+    "submodules/TelegramCore/Sources/State/AccountStateManager.swift",
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift",
+    "submodules/MediaPlayer/Sources/MediaPlayerNode.swift",
+    "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift",
+    "submodules/AccountContext/Sources/AccountContext.swift"
+  ],
+  "gitlink": "92df98dc209bc39b1e567ec74a8c86a0af5239de",
+  "paths": [
+    {
+      "path": "Telegram/SiriIntents/IntentMessages.swift",
+      "official_blob": "cb6876f68a9530089ab3fb0190d2000c4f577110",
+      "final_equals_official": true
+    },
+    {
+      "path": "Telegram/SiriIntentsTests/IntentMessageFixtures.swift",
+      "official_blob": "4710f3b6b87f1c0a486da79ed12fcfa647e517a5",
+      "final_equals_official": true
+    },
+    {
+      "path": "Telegram/SiriIntentsTests/IntentMessageReadabilityTests.swift",
+      "official_blob": "b7851a185cf623a1801c856ce9138fa28a173e57",
+      "final_equals_official": true
+    },
+    {
+      "path": "Telegram/SiriIntentsTests/UnreadMessagesScanTests.swift",
+      "official_blob": "c5e8369cd739b4212c3b3c5902f311a3cb139687",
+      "final_equals_official": true
+    },
+    {
+      "path": "Tests/ComposerHarness/AppContext/HarnessSharedAccountContext+Generated.swift",
+      "official_blob": "2a15f092784ef07850bdaee1f37355671de617a8",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/AccountContext/Sources/AccountContext.swift",
+      "official_blob": "8a5d1daf4de64dc5c92a2e3b681cd1a45001418f",
+      "final_equals_official": false
+    },
+    {
+      "path": "submodules/LegacyComponents/Sources/TGMediaVideoConverter.m",
+      "official_blob": "efa123e01a70c05dba12db2e433a31fa8a778b7b",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/LocationUI/Sources/LocationViewControllerNode.swift",
+      "official_blob": "34ea0ab41aec0a8f367bc8d939fbc29b7d5deb97",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/MediaPickerUI/Sources/MediaPickerScreen.swift",
+      "official_blob": "ff522af2c4e23e8a5d6561f7915b4648b57b4cfa",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift",
+      "official_blob": "3ebd48940fd124eeea8447e8c2b100f5f73e21cf",
+      "final_equals_official": false
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/FFMpegAudioFrameDecoder.swift",
+      "official_blob": "297bd0ee777abefbb3a7283c9b2290e392caffa1",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/FFMpegFileReader.swift",
+      "official_blob": "1808ab3ddef3962155d6c0a0adf60a5a899058f8",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/MediaDataReader.swift",
+      "official_blob": "68e08066a847c43723e6e8deb0ef71316fbe3fe0",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/MediaPlayerNode.swift",
+      "official_blob": "5d31a8e50ea2881d8f90833880ddff2f57357a74",
+      "final_equals_official": false
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/SoftwareVideoSource.swift",
+      "official_blob": "f2b77471ce35e8f5302a69cc55d3bbe246cfc7c2",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/Account/Account.swift",
+      "official_blob": "d38cbe5216128adaa87a6298f37e98b22235fc91",
+      "final_equals_official": false
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/AccountStateManager.swift",
+      "official_blob": "4223241163d3708f2150f2254c76afc9b693e543",
+      "final_equals_official": false
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/UpdateMessageService.swift",
+      "official_blob": "56f529d2b1496b4e9fed234f00c0f9ae5b171748",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/BotWebView.swift",
+      "official_blob": "78b22586faded51f58661be19dd6b59e5e3fc49e",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift",
+      "official_blob": "7cfe8c208fa36a82ee67bd8b00fcec8fb02611c5",
+      "final_equals_official": false
+    },
+    {
+      "path": "submodules/TelegramCore/Tests/BotStorageTests.swift",
+      "official_blob": "01678d01dd1343e6ceb2ea834cac36a5f92053ef",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/AudioWaveformComponent/Sources/AudioWaveformComponent.swift",
+      "official_blob": "20fe78ac50e8c97be2fc419bfe859b6055319013",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/CreateBotScreen/Sources/CreateBotScreen.swift",
+      "official_blob": "6a26b785ea29fdc72e430c5edf3b75e925e67a95",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/MediaEditor/Sources/MediaEditorUtils.swift",
+      "official_blob": "7f4c204f60ff569387706a23be745bb558d745c4",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/MediaEditor/Sources/MediaEditorVideoExport.swift",
+      "official_blob": "6479b88e62f44b15bd2a90d6f4917978d4664316",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Resources/FetchVideoMediaResource/Sources/FetchVideoMediaResource.swift",
+      "official_blob": "b224b9c24e1b6709f853cd4362c50bca130dff6f",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/PeerWalletScreen/Sources/PeerWalletScreen.swift",
+      "official_blob": "6cd96d5b2d8fd86ac2e7fe20450eef92fb42c647",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletReceiveScreen/Sources/WalletReceiveQrRevealView.swift",
+      "official_blob": "0443010829e83d0549640e4992e5f15e9b202a6f",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletReceiveScreen/Sources/WalletReceiveScreen.swift",
+      "official_blob": "997be41930874f0ea7545677fc57df58a4ae08d8",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletSendScreen/Sources/WalletSendScreen.swift",
+      "official_blob": "a4af30f65d79928e8f789f883b0203e9b24e22b9",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletTransactionScreen/Sources/WalletTransactionScreen.swift",
+      "official_blob": "e5e67d71d5b03874edd9555980669f9cb99902ce",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/OpenResolvedUrl.swift",
+      "official_blob": "119ef05445f77ed81f8afd82e5f7a71ab41e1e8d",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/SharedAccountContext.swift",
+      "official_blob": "6f7b154742e2efe17ae23cafc833d6612c075fc6",
+      "final_equals_official": false
+    },
+    {
+      "path": "submodules/WalletContext/Sources/WalletCardStickers.swift",
+      "official_blob": "cdaef45f3c9de8bdf8a3dbfc34d6aca9c701e437",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/WalletContext/Sources/WalletContext.swift",
+      "official_blob": "cadd8eef7a8d9e0c7c294db046b3f09f3afed5df",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/WalletContext/Sources/WalletStoredState.swift",
+      "official_blob": "bf21244f251e19e35cf27e8b8f0b338cb534951f",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/WalletContext/Tests/WalletCardStickersTests.swift",
+      "official_blob": "ae2f6929829167f30b16e203ead317263a67b98d",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/WebUI/Sources/WebAppController.swift",
+      "official_blob": "c25ca9b81ea03e690fea514ce619173aaf687520",
+      "final_equals_official": true
+    },
+    {
+      "path": "submodules/WebUI/Sources/WebAppWebView.swift",
+      "official_blob": "18a7b8def5c150bb427d2e73076f5d13dc5d630d",
+      "final_equals_official": true
+    },
+    {
+      "path": "versions.json",
+      "official_blob": "76f35542771109add5d674c3541efd935ff1ef10",
+      "final_equals_official": true
+    }
+  ]
+}

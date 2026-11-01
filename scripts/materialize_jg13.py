@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the reviewed Stable delta to the one pinned clean Telegram 13.1.1 tree."""
+"""Apply the reviewed Stable delta to the one pinned clean Telegram 13.1.2 tree."""
 from pathlib import Path
 import hashlib
 import json

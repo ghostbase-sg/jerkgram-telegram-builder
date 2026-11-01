@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "owners": {
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
       "before_sha256": "a81949b3d9254ea94b3bce77a26b6b90512c2cd498a2631588409da0933a89f3",
@@ -15,7 +15,8 @@
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift": "b6e76d4fa7add8f9feca7676cf851b7de1b8b655e44decb16d90b07ad8634c92",
     "submodules/PeerAvatarGalleryUI/Sources/AvatarGalleryController.swift": "f5ed43dede2e2f1d88c551ddd4b0ebbe6a4793139d06073c782eb9afd57ccb84",
     "submodules/PeerAvatarGalleryUI/Sources/PeerAvatarImageGalleryItem.swift": "c18bd323e33d6e8350fbace7b8ea2182e0fda2c3998ac35a61e7f6a21ef19116",
-    "submodules/TelegramCore/Sources/Account/Account.swift": "a1817abe7397b21a6e97a8752d8a81e69dfbb24be4559a0c6c6ce0bdf4c7c78e",
-    "submodules/TelegramUI/Sources/SharedAccountContext.swift": "5fb6afb2aebf2910a252b22f938f3806ca4383adac759b3119e53af453e74d1b"
-  }
+    "submodules/TelegramCore/Sources/Account/Account.swift": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
+    "submodules/TelegramUI/Sources/SharedAccountContext.swift": "930f4d461a8ae0a7b04ac4caf9836e6f6d5c742c894d8bc508b92f933adeebc2"
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

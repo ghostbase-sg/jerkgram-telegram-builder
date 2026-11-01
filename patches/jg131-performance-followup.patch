@@ -1,7 +1,8 @@
 diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
+index d517753..08867b6 100644
 --- a/submodules/TelegramCore/Sources/Account/Account.swift
 +++ b/submodules/TelegramCore/Sources/Account/Account.swift
-@@ -1041,6 +1041,7 @@
+@@ -1041,6 +1041,7 @@ public enum JerkgramActivityGhostRuntime {
  
  public enum JerkgramHotSettings {
      public static let keys: Set<String> = [

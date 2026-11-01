@@ -6,14 +6,14 @@
   "upstream_repository": "TelegramMessenger/Telegram-iOS",
   "upstream_old_tag": "release-12.9.2",
   "upstream_old_sha": "6ad963e5b62d354da79040f388ae2b9132fb17b8",
-  "upstream_new_source": "Official Telegram-iOS release-13.1.1",
-  "upstream_new_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
-  "upstream_new_version": "13.1.1",
+  "upstream_new_source": "Official Telegram-iOS release-13.1.2",
+  "upstream_new_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_new_version": "13.1.2",
   "product_name": "Jerkgram",
   "product_version": "1.2.0",
   "product_display_version": "1.2.0 Beta 1",
   "product_technical_version": "1.2.0-beta.1",
-  "bundle_short_version": "13.1.1",
+  "bundle_short_version": "13.1.2",
   "build_number": 176,
   "bundle_id": "com.jerkgram.ios",
   "source_snapshot_sha256": "6499b01ab4a5db475dde15ac7b773643a1d6188d2432b9746dab2adde2a18813",
@@ -26,5 +26,11 @@
       "runtime_status": "NOT RUNTIME TESTED"
     }
   },
-  "source_snapshot_format": "git archive tar"
+  "source_snapshot_format": "git archive tar",
+  "source_snapshot_provenance": {
+    "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+    "upstream_version": "13.1.1",
+    "recorded_by_builder_commit": "950894f0a44fb8396dc172ceb4f6f4bf739ce8b5",
+    "role": "historical source export; not a 13.1.2 archive claim; unused by current materializers"
+  }
 }

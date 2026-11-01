@@ -1,7 +1,8 @@
 diff --git a/submodules/AccountContext/Sources/AccountContext.swift b/submodules/AccountContext/Sources/AccountContext.swift
+index 8a5d1da..dd76423 100644
 --- a/submodules/AccountContext/Sources/AccountContext.swift
 +++ b/submodules/AccountContext/Sources/AccountContext.swift
-@@ -1707,7 +1707,8 @@
+@@ -1707,7 +1707,8 @@ public protocol SharedAccountContext: AnyObject {
          mode: TextProcessingScreenMode,
          inputText: ComposedRichMessage,
          copyResult: ((ComposedRichMessage) -> Void)?,
@@ -11,7 +12,7 @@ diff --git a/submodules/AccountContext/Sources/AccountContext.swift b/submodules
      ) async -> ViewController
      func makeCreateBotScreen(
          context: AccountContext,
-@@ -2233,3 +2234,9 @@
+@@ -2234,3 +2235,9 @@ public extension SharedAccountContext {
          return self.makeWalletScreen(context: context, opensCollectibles: false)
      }
  }
@@ -742,9 +743,10 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
          guard let inputPeer = inputPeer else {
              return .never()
 diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+index 65d818d..2ce15b1 100644
 --- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
 +++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
-@@ -1014,8 +1014,8 @@
+@@ -1014,8 +1014,8 @@ public extension JerkgramStrings {
  public extension JerkgramStrings {
      var localTranslationUnavailable: String {
          self.languageCode == "ru"
@@ -1295,9 +1297,10 @@ diff --git a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
                          messageEntities = attribute.entities
                          break
 diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+index 8596f88..26c5036 100644
 --- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
 +++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
-@@ -4872,13 +4872,15 @@
+@@ -4872,13 +4872,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
          mode: TextProcessingScreenMode,
          inputText: ComposedRichMessage,
          copyResult: ((ComposedRichMessage) -> Void)?,

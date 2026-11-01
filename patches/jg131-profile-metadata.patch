@@ -239,9 +239,10 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
              if let cachedData = data.cachedData as? CachedUserData, let birthday = cachedData.birthday {
                  let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+index 15520e0..65d818d 100644
 --- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
 +++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
-@@ -584,7 +584,7 @@
+@@ -584,7 +584,7 @@ public struct JerkgramStrings {
          .deletedReplies: "Удалённые ответы",
          .portableReply: "Переносимый ответ",
          .saveDeletedMedia: "Сохранять удалённые медиа",
@@ -250,7 +251,7 @@ diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b
  
          .protectionEnabled: "Включить обход защиты",
          .shareFromGallery: "Поделиться из галереи",
-@@ -690,7 +690,7 @@
+@@ -690,7 +690,7 @@ public extension JerkgramStrings {
      var retentionRules: String { self.languageCode == "ru" ? "Правила хранения" : "Retention Rules" }
      var historyDuration: String { self.languageCode == "ru" ? "Хранить историю" : "Keep History" }
      var recoveredMediaLimit: String { self.languageCode == "ru" ? "Лимит восстановленных медиа" : "Recovered Media Limit" }
@@ -259,7 +260,7 @@ diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b
      var perChatRules: String { self.languageCode == "ru" ? "Правила по чатам" : "Per-Chat Rules" }
      var cleanupExpired: String { self.languageCode == "ru" ? "Очистить истёкшие данные" : "Clean Up Expired Data" }
      var backup: String { self.languageCode == "ru" ? "Резервная копия" : "Backup" }
-@@ -1001,3 +1001,30 @@
+@@ -1001,3 +1001,30 @@ public extension JerkgramStrings {
          return self.languageCode == "ru" ? "Переслать без автора" : "Forward without author"
      }
  }

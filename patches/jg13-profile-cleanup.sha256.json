@@ -30,5 +30,6 @@
       "before_sha256": "6ee6a7d61697390e2c2cfa8a62475601119eaf183928537213a72ea25405ed4d"
     }
   },
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111"
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

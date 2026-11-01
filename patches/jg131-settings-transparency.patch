@@ -816,9 +816,10 @@ diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowControlle
                  )
                  controller.present(alert, in: .window(.root), with: nil)
 diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+index ffafb65..7f469df 100644
 --- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
 +++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
-@@ -177,6 +177,7 @@
+@@ -177,6 +177,7 @@ private func jerkgramBuild135ProjectAccountSettings(accountPeerId: Int64) {
          "jerkgram.Profile.ShowDCs",
          "jerkgram.Profile.ShowRegistration",
          "jerkgram.Glass.Enabled",

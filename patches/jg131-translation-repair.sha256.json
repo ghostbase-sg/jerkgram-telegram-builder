@@ -1,11 +1,11 @@
 {
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111",
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "parent_build": 176,
-  "patch_sha256": "88e382764a84292c1ef2471840f0bedd5c8fad2b9139ac9d2b00be8df1eeef93",
+  "patch_sha256": "5eb14dc44677a9823fac67109d980162df4d8b06627ba0a80f81057d7a784227",
   "owners": {
     "submodules/AccountContext/Sources/AccountContext.swift": {
-      "before_sha256": "d806d67cfe26a63304ccf3da225853a797ee7b10878f8a545a967726d16fa00e",
-      "after_sha256": "60090fd6aa413eadfc88bf87f9195bb7ec37c43162c149cd4a0479a64f67048a"
+      "before_sha256": "e403d885320c0ffa37ef8ca683a1787773b1e66e0263b07bc44efec278d608b5",
+      "after_sha256": "86997b27c74d593d34dafcc423361bfd2502fcb33aa7c3fcff87707c439a8770"
     },
     "submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift": {
       "before_sha256": "a55ec8e55737c46d2046c79d90467384894038b6e9b1501893db64bbf9875939",
@@ -44,8 +44,8 @@
       "after_sha256": "1289237c2f91f0cd154a4b36c6fbb39dfb2ca3ea50fdabeb94d15565ec2367c5"
     },
     "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
-      "before_sha256": "ab53fea5d7e3a6bceb332615e20c140d774f3321dfd3cb2c0e88668be29998ad",
-      "after_sha256": "8e2ac0dddcac3a8afbd4fdbff5e4f943cf391cc0ad935ba412303363e86964f6"
+      "before_sha256": "aa3cff41580cba22023bc9c6fe8e38e92bd4355e64ca1eff2f64e7718fe586b7",
+      "after_sha256": "a087315349ae772a26840c206e0ce5d65b58ceed054d16d51303072db65b4ef4"
     },
     "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift": {
       "before_sha256": "e4c4ca6d19e5a251600abeb7f92f31bd658386e06bfbeb9ed1ac25b48856efa9",
@@ -104,8 +104,8 @@
       "after_sha256": "35a7a2a240bdee934341bc822ca1342dd9ff157758ab2f07d5a1f3046b5a4fed"
     },
     "submodules/TelegramUI/Sources/SharedAccountContext.swift": {
-      "before_sha256": "272f236e7dde12ce5382d5611e2788506d72a986307ee21effadef7f50be75b9",
-      "after_sha256": "632d7787cf2b6b74f96db50b14f2f6ee9b1f26cd91c2bf892761433ade763071"
+      "before_sha256": "477f97ded247ba641fc6ba5137c7eea48a959cc27991504468e07ad55d3ebd83",
+      "after_sha256": "18fb6c66d7c073c75e0b9f356d015decb3e27e31634a3fc90cc4827d4bd4013c"
     },
     "submodules/TranslateUI/Sources/ChatTranslation.swift": {
       "before_sha256": "27a030f96873737ef186ce9b066f33ea5d54ddd9a50b9df94dda2147a398475e",
@@ -115,5 +115,6 @@
       "before_sha256": "af47d004d99eda542ec9880f71e84667682a4cb1a6527d797e393d46032f293c",
       "after_sha256": "6bb604931c7edc4a75719494956d13c69e8d729b89d6e56e0983c17ec14cba6b"
     }
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

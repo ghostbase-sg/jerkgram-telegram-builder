@@ -2,8 +2,8 @@
   "base_builder_sha": "aa47856794a6dfe58f5e2c607c5504d6c4e98348",
   "owners": {
     "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift": {
-      "before_sha256": "e440007aeff76c03dd9ef641c0d9a7e45365e809c4e69221d26220dd4dc86c9e",
-      "after_sha256": "b8fd6341b6323b6253e0562fc14ce01eff141d1497051bd4c6ccf51bc529405b",
+      "before_sha256": "4dd1d86dda8be654cde2b00ba90fea12ad4340aa8c138b133f04fe3120376821",
+      "after_sha256": "b19e1a7722e45e31986c5489d53b7cb3d27f73b6f4eb58c65a594650560ccea7",
       "survival_functions": [
         "continuePlayingWithoutSound",
         "continueWithOverridingAmbientMode",
@@ -282,8 +282,8 @@
       "absent_before": true
     },
     "submodules/MediaPlayer/Sources/MediaPlayerNode.swift": {
-      "before_sha256": "8629c5105efddcf880d9bc1a14b0c6b8f08adc678813d980bb26268e289406d2",
-      "after_sha256": "1965ea6c872835afef3e9b8099234895bd3a64b234c3a619b254ea86002db4bd",
+      "before_sha256": "09b4c88beef69bc61bd962d2cf8070889470e4f1b29ec5772fc76f0383463c3a",
+      "after_sha256": "9cdddc3d5377464fb1340a1c63618b013136fc8cbdfa90e378ab5be6c96afd0b",
       "survival_functions": [
         "action",
         "addSecondaryVideoLayer",
@@ -332,5 +332,6 @@
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
   },
-  "upstream_sha": "fb0e62ba8a147f0821da6aa63c09da7d79a10111"
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
 }

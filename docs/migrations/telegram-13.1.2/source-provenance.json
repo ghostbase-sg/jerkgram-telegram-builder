@@ -1,0 +1,331 @@
+{
+  "kind": "selected pristine source projection; no claimed target Git HEAD",
+  "target": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "official_blobs": [
+    {
+      "path": "versions.json",
+      "blob_sha": "76f35542771109add5d674c3541efd935ff1ef10",
+      "sha256": "212e5bb28eba0efde490b68d145c22abd5c6c3318b33686189f0149d38640437",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": ".gitignore",
+      "blob_sha": "705d0cc2c0d032dcb9b55b8ba068d0c4a44b54e9",
+      "sha256": "10139c8d769899d234d8abac0df44060906bfe02c6d6f5fea10fb32514127588",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": ".gitattributes",
+      "blob_sha": "c3000a0458e96d74ebf2387fc049d530517099a1",
+      "sha256": "360b895c14a8baf0993416eb5bfe3619878bbf211bbe9b3e014776a192dcef0c",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/LegacyComponents/.gitignore",
+      "blob_sha": "1c2b8dd422c00e552e99ea2d511e63fdfaf95ba8",
+      "sha256": "9e427f58d4d448ac52cf8cc00f42476e7bc7bfd5a715939e5ec1e16b22f114a5",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/.gitignore",
+      "blob_sha": "67641bcb907369a0bc336ffc46e9e16edda60792",
+      "sha256": "025cf864c67eb074bf3af5c1fd32911adfd4b7a4d89df6e74f7aa004dcce429d",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/.gitignore",
+      "blob_sha": "3de7abd9c4329eb26a24856007abac385b33eea7",
+      "sha256": "c48949a57e089a0c2c8fd68f5c77438c29e89ff60b153b44a70b90d0c2a769c1",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/AsyncDisplayKit/.gitignore",
+      "blob_sha": "eed07e64824c17a3a537c07ba39efc755de8ef87",
+      "sha256": "482507ff4f4ada2003ac64eeaf48b8737cc6dcc64c2fdde3d984264fcc9da999",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/Display/.gitignore",
+      "blob_sha": "6e879fb6f0f9ef750bf575debd3646355522c91b",
+      "sha256": "63e189757bd25dd716382cfd3a622c4ab3fd66e4066fbf00fe83b317710a6bc2",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/Postbox/.gitignore",
+      "blob_sha": "23ee0bc42fd978981250dab24885ffde9deca1cb",
+      "sha256": "32bb89ae24ebe9f30522889fd38f5319e0c893e93dfd0b610aa7061293b031fe",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift",
+      "blob_sha": "30f2c0a2d6d184cb87b015b4783de4d9d7f0c912",
+      "sha256": "500e8f800c9139a84ad40b524ba4fb80879c21c347e643f28738647973fc7433",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift",
+      "blob_sha": "6c384a6580885b1937c935528d8b504ce84892af",
+      "sha256": "86f3057425c7a5d5b87fb05735ad6a56c3c79614f424cac051a1fbb72cfe03b0",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/ChatListUI/Sources/TabBarChatListFilterController.swift",
+      "blob_sha": "cf829f35b6b9a71fd473176153143beb63a705f2",
+      "sha256": "14e7aee3d1ad800781842696f6889813428291bc02114f912a360f3d689e757b",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/WebUI/Sources/WebAppController.swift",
+      "blob_sha": "c25ca9b81ea03e690fea514ce619173aaf687520",
+      "sha256": "5343a692dcd9d6f57c5b008b91db2d8c24e1ae7e6f8b75b2aa9d82192654d0b5",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/WebUI/Sources/WebAppWebView.swift",
+      "blob_sha": "18a7b8def5c150bb427d2e73076f5d13dc5d630d",
+      "sha256": "09c5db32e5c7a9f71be2b2524c3d733417478191936c2067fc5118936f376cee",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/WalletContext/Sources/WalletCardStickers.swift",
+      "blob_sha": "cdaef45f3c9de8bdf8a3dbfc34d6aca9c701e437",
+      "sha256": "c5d5a5bf904dffb0711f784a76dd01581350df02edc23b96cbeb689a25d8e160",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/WalletContext/Sources/WalletContext.swift",
+      "blob_sha": "cadd8eef7a8d9e0c7c294db046b3f09f3afed5df",
+      "sha256": "225672c313cd3c1e7fe59aabb4a5d44b2ff66c4737b9a8f304dddfcaf2cea3f2",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/WalletContext/Sources/WalletStoredState.swift",
+      "blob_sha": "bf21244f251e19e35cf27e8b8f0b338cb534951f",
+      "sha256": "b88afd7540c54210809aa59b96c15c9269852588d08539950bfb1de4c72605d9",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/WalletContext/Tests/WalletCardStickersTests.swift",
+      "blob_sha": "ae2f6929829167f30b16e203ead317263a67b98d",
+      "sha256": "77355eceb1985de53600a58ab433773a773afcf86c8ab72310a2148e02f4a0a6",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/OpenResolvedUrl.swift",
+      "blob_sha": "119ef05445f77ed81f8afd82e5f7a71ab41e1e8d",
+      "sha256": "e6d8189b3eb925378ef646888983d916f532255c31c0072437eee804a8cf1d09",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/SharedAccountContext.swift",
+      "blob_sha": "6f7b154742e2efe17ae23cafc833d6612c075fc6",
+      "sha256": "34520403d5ca71856e016b6d7b174c49cddd5a3e65b98641090fb33d5072051d",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/SceneDelegate.swift",
+      "blob_sha": "c570feb6c75f01f048d0fad8b7bacd19eab8c2e0",
+      "sha256": "984a5f9802dab579b34516cbb2e9ddf9df4a8b173e893228ac6f57d6ac89bd2e",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Sources/OverlayAudioPlayerController.swift",
+      "blob_sha": "4b4bd1c298fbd66c64e57aa8fd9731a687c647e9",
+      "sha256": "a00bb35af360d9f40b5e0937d3ced2970a6616fe34d16dc3a9bf1b8c0faa30e8",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletTransactionScreen/Sources/WalletTransactionScreen.swift",
+      "blob_sha": "e5e67d71d5b03874edd9555980669f9cb99902ce",
+      "sha256": "64e4d049a714a752cd48c55f13020542622a5a733332b22409bf4d005471fbea",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletSendScreen/Sources/WalletSendScreen.swift",
+      "blob_sha": "a4af30f65d79928e8f789f883b0203e9b24e22b9",
+      "sha256": "90464c70e77efa4e4f7ca1c0df7642daf8939a9d4b2574699b1ab3f9674fa7a9",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletReceiveScreen/Sources/WalletReceiveQrRevealView.swift",
+      "blob_sha": "0443010829e83d0549640e4992e5f15e9b202a6f",
+      "sha256": "a4c92a8bca3579b61527f37b90fab975fec4b72785d98d0ebd413876c4450a54",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/WalletReceiveScreen/Sources/WalletReceiveScreen.swift",
+      "blob_sha": "997be41930874f0ea7545677fc57df58a4ae08d8",
+      "sha256": "cf65c4f4b132902f071cf05173c923dca549ddb15fa4cf8e76788b8f35999fb1",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Wallet/PeerWalletScreen/Sources/PeerWalletScreen.swift",
+      "blob_sha": "6cd96d5b2d8fd86ac2e7fe20450eef92fb42c647",
+      "sha256": "8e38f8b4a4f3d9198bf4e84134a451b70e3675550a9d1712dfb58f95fd8f7a91",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/Resources/FetchVideoMediaResource/Sources/FetchVideoMediaResource.swift",
+      "blob_sha": "b224b9c24e1b6709f853cd4362c50bca130dff6f",
+      "sha256": "15cc06818f1dcd7cffdf75ee6d1d00d719bd462bbd3c54539c4f3f3c6b8af579",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/MediaEditor/Sources/MediaEditorUtils.swift",
+      "blob_sha": "7f4c204f60ff569387706a23be745bb558d745c4",
+      "sha256": "d56e48ccceb8f79e1104350f053ca89b105f36e98366350e546414ada2644999",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/MediaEditor/Sources/MediaEditorVideoExport.swift",
+      "blob_sha": "6479b88e62f44b15bd2a90d6f4917978d4664316",
+      "sha256": "5a9245b71dffdacfb95c44a6eba7000ba3ece393af4aaed08b4e0eb88ce526e2",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/CreateBotScreen/Sources/CreateBotScreen.swift",
+      "blob_sha": "6a26b785ea29fdc72e430c5edf3b75e925e67a95",
+      "sha256": "2c541c95e3679f77de10bd276c1c8b69cdcb01289bcf727e6958003286f2bc44",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramUI/Components/AudioWaveformComponent/Sources/AudioWaveformComponent.swift",
+      "blob_sha": "20fe78ac50e8c97be2fc419bfe859b6055319013",
+      "sha256": "80814fdb931c899a580c14b70c7ee7e3f305853e7a47ff8a005e3e0a5edb852a",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/Tests/BotStorageTests.swift",
+      "blob_sha": "01678d01dd1343e6ceb2ea834cac36a5f92053ef",
+      "sha256": "b682b7af74cc1b796a8f8ae6d2a22e88be625b6049ec49bcb22602dbb3289c37",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/Account/Account.swift",
+      "blob_sha": "d38cbe5216128adaa87a6298f37e98b22235fc91",
+      "sha256": "e1327578dfc5d0835de7bd721b024239b85fb73497bcb037358570152d2b1a7c",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/AccountStateManager.swift",
+      "blob_sha": "4223241163d3708f2150f2254c76afc9b693e543",
+      "sha256": "147c2b8d1b040bfd99ecf16e3f5928df1382462878124eb8e69399911907983d",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/UpdateMessageService.swift",
+      "blob_sha": "56f529d2b1496b4e9fed234f00c0f9ae5b171748",
+      "sha256": "a79d36fa45adda82b4772c9fb31857d4e510b4393567830f1f230bcec7819cdc",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/BotWebView.swift",
+      "blob_sha": "78b22586faded51f58661be19dd6b59e5e3fc49e",
+      "sha256": "008db5dc738d8fe7bcf2e403bfdc009d95b019a2f3e45fd41001ab70d0d6825f",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift",
+      "blob_sha": "7cfe8c208fa36a82ee67bd8b00fcec8fb02611c5",
+      "sha256": "97216ee4418fee7c7bec841fb744917f485c39142bc3ca6273a29ed51cb1892a",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift",
+      "blob_sha": "f8aacb5a3ca05f1dad8d2876a66e0e87075af7eb",
+      "sha256": "9eff606ea71671f44d826861f70143a98547755b431f9c4e7981e51bc9700a86",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift",
+      "blob_sha": "3ebd48940fd124eeea8447e8c2b100f5f73e21cf",
+      "sha256": "42c35a6fb836a371336a35ba98545b2271aef4a03abd74333e64466444592434",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/FFMpegAudioFrameDecoder.swift",
+      "blob_sha": "297bd0ee777abefbb3a7283c9b2290e392caffa1",
+      "sha256": "ae4fa0b42bddd3a26161b149ffff69b135a4a3b07671bd4f028d83deb2fdca3d",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/FFMpegFileReader.swift",
+      "blob_sha": "1808ab3ddef3962155d6c0a0adf60a5a899058f8",
+      "sha256": "277bbae2c72453a343d72c0af6f90f7b4708b94b7b16c5dcafe51ec2148b5e39",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/MediaDataReader.swift",
+      "blob_sha": "68e08066a847c43723e6e8deb0ef71316fbe3fe0",
+      "sha256": "60e51be8074789dbb63b612557ee0b212e4929859e70c94198222c0470d7cf9f",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/MediaPlayerNode.swift",
+      "blob_sha": "5d31a8e50ea2881d8f90833880ddff2f57357a74",
+      "sha256": "dfd720940cea38092b185772e5decc1aad9407cb749e31baaae9c1d614f229d9",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/MediaPlayer/Sources/SoftwareVideoSource.swift",
+      "blob_sha": "f2b77471ce35e8f5302a69cc55d3bbe246cfc7c2",
+      "sha256": "604a8c2245eb67e853f6e16cc661ddda47bb109ad136367d4b2f81052f460652",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/MediaPickerUI/Sources/MediaPickerScreen.swift",
+      "blob_sha": "ff522af2c4e23e8a5d6561f7915b4648b57b4cfa",
+      "sha256": "b2974cf021412190e5699ca92e5370bbee457850c23a57032737847fd2bebd14",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/LocationUI/Sources/LocationViewControllerNode.swift",
+      "blob_sha": "34ea0ab41aec0a8f367bc8d939fbc29b7d5deb97",
+      "sha256": "b0e1d31fb863fc33e028c193851e87c8afec26b02e695f560098d05672355de8",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/LegacyComponents/Sources/TGMediaVideoConverter.m",
+      "blob_sha": "efa123e01a70c05dba12db2e433a31fa8a778b7b",
+      "sha256": "ee17c3a1186dcf23b2a9bdf78a0e09aba30be13f46860f63eee1bf3e009f5bd1",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "submodules/AccountContext/Sources/AccountContext.swift",
+      "blob_sha": "8a5d1daf4de64dc5c92a2e3b681cd1a45001418f",
+      "sha256": "e403d885320c0ffa37ef8ca683a1787773b1e66e0263b07bc44efec278d608b5",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "Tests/ComposerHarness/AppContext/HarnessSharedAccountContext+Generated.swift",
+      "blob_sha": "2a15f092784ef07850bdaee1f37355671de617a8",
+      "sha256": "de5b0148a830e0612b026f38faf48e6520775a71f47674231811a1b58df852b6",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "Telegram/SiriIntents/IntentMessages.swift",
+      "blob_sha": "cb6876f68a9530089ab3fb0190d2000c4f577110",
+      "sha256": "9096e6ab44a0c4c1577a41e6a563f757414fac43f95e53156c2c1c48e426b968",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "Telegram/SiriIntentsTests/IntentMessageFixtures.swift",
+      "blob_sha": "4710f3b6b87f1c0a486da79ed12fcfa647e517a5",
+      "sha256": "17205c2b68877ba4a867695629d79eed695f31a067719639e615399767e3ecc3",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "Telegram/SiriIntentsTests/IntentMessageReadabilityTests.swift",
+      "blob_sha": "b7851a185cf623a1801c856ce9138fa28a173e57",
+      "sha256": "6c4ba923a35d4fca89918f3fe381df642efd56942125945c2ff8b97f64ed5ff1",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    },
+    {
+      "path": "Telegram/SiriIntentsTests/UnreadMessagesScanTests.swift",
+      "blob_sha": "c5e8369cd739b4212c3b3c5902f311a3cb139687",
+      "sha256": "51fe30c8816623086a239703af125bce8a9098418c6616c13866c70afcdab2e1",
+      "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58"
+    }
+  ],
+  "tlottie_gitlink": "92df98dc209bc39b1e567ec74a8c86a0af5239de"
+}
