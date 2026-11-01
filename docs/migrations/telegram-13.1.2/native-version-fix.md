@@ -1,0 +1,1 @@
+Full macOS source run41322511921 failed beta_followup metadata assertion still expecting13.1.1. Intended upstream/config target is13.1.2; corrected only that explicit expectedversion, retaining bundleowner and product assertions. Parent followup8/8PASS; scoped reviewPASS. Source/manifests unchanged. Next macOS rerun pending.
