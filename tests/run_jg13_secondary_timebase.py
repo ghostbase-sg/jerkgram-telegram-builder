@@ -30,7 +30,8 @@ final class Queue {
     static func mainQueue() -> Queue { Queue() }
     func isCurrent() -> Bool { Thread.isMainThread }
 }
-public final class AVSampleBufferDisplayLayer {
+public final class AVSampleBufferDisplayLayer: NSObject {
+    @objc dynamic var bounds = 0
     var synchronizerAttached = false
     var writes = 0
     var flushes = 0
@@ -45,6 +46,7 @@ public final class AVSampleBufferDisplayLayer {
 }
 final class Node {
     var secondaryVideoLayers: [ObjectIdentifier: AVSampleBufferDisplayLayer] = [:]
+    var secondaryVideoLayerBoundsObservers: [ObjectIdentifier: NSKeyValueObservation] = [:]
     var secondaryVideoLayersUpdated: (([AVSampleBufferDisplayLayer]) -> Void)?
 ''' + ownership + "\n" + block(text, "var currentSecondaryVideoLayers:") + block(text, "public func removeSecondaryVideoLayer(") + r'''
 }
@@ -63,13 +65,29 @@ native.removeSecondaryVideoLayer(attached)
 native.removeSecondaryVideoLayer(attached)
 precondition(attached.writes == 0 && attached.flushes == 1 && callbacks == 1)
 precondition(native.currentSecondaryVideoLayers.isEmpty)
+let observedNode = Node()
+let observedLayer = AVSampleBufferDisplayLayer()
+let observedKey = ObjectIdentifier(observedLayer)
+observedNode.secondaryVideoLayers[observedKey] = observedLayer
+var boundsCallbacks = 0
+observedNode.secondaryVideoLayerBoundsObservers[observedKey] = observedLayer.observe(\.bounds, options: [.new]) { _, _ in
+    boundsCallbacks += 1
+}
+observedLayer.bounds = 1
+precondition(boundsCallbacks == 1)
+observedNode.removeSecondaryVideoLayer(observedLayer)
+precondition(observedNode.secondaryVideoLayerBoundsObservers.isEmpty)
+observedLayer.bounds = 2
+precondition(boundsCallbacks == 1)
+observedNode.removeSecondaryVideoLayer(observedLayer)
+precondition(boundsCallbacks == 1 && observedNode.secondaryVideoLayerBoundsObservers.isEmpty)
 let legacy = Node()
 let manual = AVSampleBufferDisplayLayer()
 legacy.secondaryVideoLayers[ObjectIdentifier(manual)] = manual
 legacy.removeSecondaryVideoLayer(manual)
 legacy.removeSecondaryVideoLayer(manual)
 precondition(manual.writes == 1 && manual.flushes == 1)
-print("secondary-timebase component PASS: synchronizer ownership, legacy detach, idempotence")
+print("secondary-timebase component PASS: synchronizer ownership, observer invalidation, legacy detach, idempotence")
 '''
 
 if __name__ == "__main__":
