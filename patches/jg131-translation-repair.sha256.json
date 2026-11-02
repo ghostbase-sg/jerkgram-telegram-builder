@@ -1,7 +1,7 @@
 {
   "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
   "parent_build": 177,
-  "patch_sha256": "5eb14dc44677a9823fac67109d980162df4d8b06627ba0a80f81057d7a784227",
+  "patch_sha256": "9bdd9e5c477699049763e590a023a5c25a2cedb4fd7f37d2d2fc25342cf8ca0a",
   "owners": {
     "submodules/AccountContext/Sources/AccountContext.swift": {
       "before_sha256": "e403d885320c0ffa37ef8ca683a1787773b1e66e0263b07bc44efec278d608b5",
@@ -41,7 +41,7 @@
     },
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift": {
       "before_sha256": "032dbcdb6fd520a85c48772233c2d9e94a9b6d86205f8f2179f7b718e3796a14",
-      "after_sha256": "1289237c2f91f0cd154a4b36c6fbb39dfb2ca3ea50fdabeb94d15565ec2367c5"
+      "after_sha256": "fc71c063661ef363716332cf69561612bde4cdc34e719c956366252d38b84585"
     },
     "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
       "before_sha256": "fa85a8e266729be19bee5739c3fa5a2aedf22e5aa70b716c271aae47353254f5",

@@ -434,7 +434,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
 +        }
 +    }
 +    func request(key: String, count: Int, bytes: Int, start: @escaping () -> Signal<JerkgramTranslatedTexts, TranslationError>) -> Signal<JerkgramTranslatedTexts, TranslationError> {
-+        return Signal { subscriber in
++        return Signal { [self] subscriber in
 +            let token = UUID()
 +            self.queue.async {
 +                if let cached = self.cache[key] {

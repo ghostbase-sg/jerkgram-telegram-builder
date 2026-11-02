@@ -44,12 +44,51 @@ class TranslationCoreContract(unittest.TestCase):
         self.assertIn('guard let bytes = jerkgramTranslationPayloadBytes(texts)', source)
         self.assertIn('if let size = jerkgramTranslationPayloadBytes(value)', source)
 
+    def test_admission_outer_capture_is_explicit_and_timer_remains_weak(self):
+        source = (ROOT / 'TelegramEngine/Messages/Translate.swift').read_text()
+        request = source[source.index('    func request(key:'):source.index('    private func pump()')]
+        self.assertIn('return Signal { [self] subscriber in', request)
+        self.assertIn('DispatchWorkItem { [weak self, weak job] in', request)
+
     def test_settings_public_contract_and_transaction_generation(self):
         s = (ROOT / 'TelegramEngine/Messages/Translate.swift').read_text()
         for token in ('public enum JerkgramTranslationSettings', '"jerkgram.EnhancedTranslation"', 'generation(accountPeerId:', 'jerkgramPolicyIsCurrent(account: account, generation: generation)'):
             self.assertIn(token, s)
 
 class NativeProductionPolicyAdmission(unittest.TestCase):
+    @unittest.skipUnless(__import__('shutil').which('swiftc'), 'Swift compiler unavailable; capture typecheck requires macOS CI')
+    def test_actual_admission_capture_typechecks_with_real_dispatch(self):
+        import subprocess, tempfile
+        source = (ROOT / 'TelegramEngine/Messages/Translate.swift').read_text()
+        admission = source[source.index('private final class JerkgramTranslationAdmission'):source.index('private func jerkgramEnhancedTexts')]
+        fixtures = Path(__file__).parent / 'fixtures/translation-core'
+        # Exact pinned Signal initializer has @escaping only. Dispatch's real
+        # imported closure attributes must participate in capture checking.
+        deps = '\n'.join((fixtures / name).read_text().split('@available(iOS 13.0, macOS 10.15, *)')[0] for name in ('Atomic.swift', 'Disposable.swift', 'Subscriber.swift', 'Signal.swift'))
+        shapes = """
+private typealias JerkgramTranslatedTexts = [(String, [String])]
+private enum TranslationError { case generic, limitExceeded }
+private func jerkgramTranslationPayloadBytes(_ texts: JerkgramTranslatedTexts) -> Int? { 0 }
+"""
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'admission.swift'
+            path.write_text(deps + '\n' + shapes + admission)
+            command = ['swiftc', '-swift-version', '5', '-warnings-as-errors', '-typecheck']
+            result = subprocess.run(command + [str(path)], capture_output=True, text=True, timeout=55)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            # Sensitivity proof: restore only the original outer capture, then
+            # require the real compiler to reject the reported capture mismatch.
+            fixed = 'return Signal { [self] subscriber in'
+            self.assertEqual(admission.count(fixed), 1)
+            original = admission.replace(fixed, 'return Signal { subscriber in', 1)
+            path.write_text(deps + '\n' + shapes + original)
+            rejected = subprocess.run(command + [str(path)], capture_output=True, text=True, timeout=55)
+            diagnostic = rejected.stdout + rejected.stderr
+            self.assertNotEqual(rejected.returncode, 0, 'Original capture unexpectedly typechecked')
+            self.assertIn('self', diagnostic)
+            self.assertRegex(diagnostic, r'(?is)(weak.*strong|strong.*weak)')
+            self.assertRegex(diagnostic, r'(?is)(explicit.*captur|captur.*list)')
+
     @unittest.skipUnless(__import__('shutil').which('swift'), 'Swift unavailable; native policy/admission execution requires macOS CI')
     def test_actual_policy_and_admission_with_pinned_signal_lifetimes(self):
         import subprocess, tempfile

@@ -2873,7 +2873,7 @@
     "order": 26,
     "stage": "jg131-translation-repair",
     "original_patch_sha256": "88e382764a84292c1ef2471840f0bedd5c8fad2b9139ac9d2b00be8df1eeef93",
-    "regenerated_patch_sha256": "5eb14dc44677a9823fac67109d980162df4d8b06627ba0a80f81057d7a784227",
+    "regenerated_patch_sha256": "9bdd9e5c477699049763e590a023a5c25a2cedb4fd7f37d2d2fc25342cf8ca0a",
     "owners": {
       "submodules/AccountContext/Sources/AccountContext.swift": {
         "old_before": "d806d67cfe26a63304ccf3da225853a797ee7b10878f8a545a967726d16fa00e",
@@ -2933,7 +2933,7 @@
         "old_before": "032dbcdb6fd520a85c48772233c2d9e94a9b6d86205f8f2179f7b718e3796a14",
         "old_after": "1289237c2f91f0cd154a4b36c6fbb39dfb2ca3ea50fdabeb94d15565ec2367c5",
         "before": "032dbcdb6fd520a85c48772233c2d9e94a9b6d86205f8f2179f7b718e3796a14",
-        "after": "1289237c2f91f0cd154a4b36c6fbb39dfb2ca3ea50fdabeb94d15565ec2367c5"
+        "after": "fc71c063661ef363716332cf69561612bde4cdc34e719c956366252d38b84585"
       },
       "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
         "old_before": "ab53fea5d7e3a6bceb332615e20c140d774f3321dfd3cb2c0e88668be29998ad",
