@@ -3145,7 +3145,7 @@
     "order": 29,
     "stage": "jg131-botbridge1",
     "original_patch_sha256": "8c0e5554f636fbf40807c3da4f03e3869171176969a8eead7d7b69f2ef53f021",
-    "regenerated_patch_sha256": "8c0e5554f636fbf40807c3da4f03e3869171176969a8eead7d7b69f2ef53f021",
+    "regenerated_patch_sha256": "caf968f6071b440ba757977e8eec78f5cef617521c683240230147a36032a5d8",
     "owners": {
       "submodules/Postbox/Sources/Postbox.swift": {
         "before": "71ce7879969134652ceb1ea82f9fe56670977033d148b50a5fd76bfec716e231",
@@ -3189,7 +3189,7 @@
       },
       "submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift": {
         "before": null,
-        "after": "2acd698c5056f8576a410cf0204dad14186279d52a5df2918860706c0d6f1da3"
+        "after": "5a8df32804333ebf18d9dacfb3dd4c63a9af5eb720f40f7d0026a0ee7b53077b"
       },
       "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": {
         "before": null,

@@ -23,6 +23,16 @@ class Migration1312(unittest.TestCase):
                 self.assertEqual(hashlib.sha256(data).hexdigest(), m['patch_sha256'])
                 self.assertEqual(m['patch_sha256'], stages[name]['regenerated_patch_sha256'])
 
+    def test_botbridge_chain_owners_match_terminal_manifest(self):
+        chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
+        stage = next(s for s in chain if s['stage'] == 'jg131-botbridge1')
+        manifest = json.loads((ROOT / 'patches/jg131-botbridge1.sha256.json').read_text())
+
+        self.assertEqual(set(stage['owners']), set(manifest['owners']))
+        for path, owner in manifest['owners'].items():
+            self.assertEqual(stage['owners'][path]['before'], owner['before_sha256'], path)
+            self.assertEqual(stage['owners'][path]['after'], owner['after_sha256'], path)
+
     def test_prepare_asserts_target_version_and_tlottie_gitlink(self):
         prepare = (ROOT / 'scripts/prepare_source_official.sh').read_text()
         self.assertIn('EXPECTED_COMMIT="' + TARGET + '"', prepare)
