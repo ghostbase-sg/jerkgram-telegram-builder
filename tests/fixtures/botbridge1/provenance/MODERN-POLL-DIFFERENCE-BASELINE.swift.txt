@@ -1,0 +1,192 @@
+            case let .pollDifference(_, currentEvents):
+                self.operationTimer?.invalidate()
+                self.currentIsUpdatingValue = true
+                let queue = self.queue
+                let accountManager = self.accountManager
+                let postbox = self.postbox
+                let network = self.network
+                let mediaBox = postbox.mediaBox
+                let accountPeerId = self.accountPeerId
+                let auxiliaryMethods = self.auxiliaryMethods
+                let messagesRemovedContext = self.messagesRemovedContext
+                
+                let signal = postbox.transaction { transaction -> (AuthorizedAccountState?, [(peer: Peer, pts: Int32?)], Bool) in
+                    let state = transaction.getState() as? AuthorizedAccountState
+                    
+                    var disableParallelChannelReset = false
+                    if let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self), let data = appConfig.data {
+                        if let _ = data["ios_disable_parallel_channel_reset_v2"] {
+                            disableParallelChannelReset = true
+                        }
+                    }
+                    
+                    var invalidatedChannels: [(peer: Peer, pts: Int32?)] = []
+                    if let state = state, !disableParallelChannelReset {
+                        for record in state.invalidatedChannels {
+                            if record.validityMarker != currentValidityMarker {
+                                if let peer = transaction.getPeer(record.peerId) {
+                                    invalidatedChannels.append((peer, record.pts))
+                                }
+                            }
+                        }
+                    }
+                    
+                    return (state, invalidatedChannels, disableParallelChannelReset)
+                }
+                |> deliverOn(self.queue)
+                |> mapToSignal { [weak self] state, invalidatedChannels, disableParallelChannelReset -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
+                    if let state = state, let authorizedState = state.state {
+                        var flags: Int32 = 0
+                        var ptsTotalLimit: Int32?
+                        
+                        if !"".isEmpty {
+                            flags |= 1 << 0
+                            ptsTotalLimit = 1000
+                        }
+                        
+                        flags = 0
+                        ptsTotalLimit = nil
+                        
+                        if let strongSelf = self {
+                            if !invalidatedChannels.isEmpty {
+                                strongSelf.addAsyncResetChannels(peers: invalidatedChannels)
+                            }
+                        }
+                        
+                        let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsLimit: nil, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts, qtsLimit: nil))
+                        |> map(Optional.init)
+                        |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
+                            if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
+                                return .single(nil)
+                            } else {
+                                return .fail(error)
+                            }
+                        }
+                        |> retryRequest
+                        
+                        return request
+                        |> mapToSignal { difference -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
+                            guard let difference = difference else {
+                                return .single((nil, nil, true, false))
+                            }
+                            switch difference {
+                            case .differenceTooLong:
+                                return .single((nil, nil, false, true))
+                            default:
+                                return initialStateWithDifference(postbox: postbox, difference: difference)
+                                |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
+                                    if state.initialState.state != authorizedState {
+                                        Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
+                                        return .single((nil, nil, false, false))
+                                    } else {
+                                        return finalStateWithDifference(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, difference: difference, asyncResetChannels: disableParallelChannelReset ? nil : { peers in
+                                            queue.async {
+                                                self?.addAsyncResetChannels(peers: peers)
+                                            }
+                                        })
+                                        |> deliverOn(queue)
+                                        |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
+                                            if !finalState.state.preCachedResources.isEmpty {
+                                                for (resource, data) in finalState.state.preCachedResources {
+                                                    mediaBox.storeResourceData(resource.id, data: data)
+                                                }
+                                            }
+                                            let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
+                                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool) in
+                                                let startTime = CFAbsoluteTimeGetCurrent()
+                                                let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, skipVerification: false)
+                                                let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
+                                                if deltaTime > 1.0 {
+                                                    Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
+                                                }
+                                                
+                                                if let replayedState = replayedState {
+                                                    if !replayedState.deletedMessageIds.isEmpty {
+                                                        messagesRemovedContext.addIsMessagesDeletedInteractively(ids: replayedState.deletedMessageIds)
+                                                        messagesRemovedContext.addIsMessagesDeletedRemotely(ids: replayedState.deletedMessageIds)
+                                                    }
+                                                    
+                                                    return (difference, replayedState, false, false)
+                                                } else {
+                                                    return (nil, nil, false, false)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        let appliedState = network.request(Api.functions.updates.getState())
+                        |> retryRequest
+                        |> mapToSignal { state in
+                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool) in
+                                if let currentState = transaction.getState() as? AuthorizedAccountState {
+                                    switch state {
+                                    case let .state(stateData):
+                                        let (pts, qts, date, seq) = (stateData.pts, stateData.qts, stateData.date, stateData.seq)
+                                        transaction.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
+                                    }
+                                }
+                                return (nil, nil, false, false)
+                            }
+                        }
+                        return appliedState
+                    }
+                }
+                |> deliverOn(self.queue)
+                
+                let _ = signal.start(next: { [weak self] difference, finalState, skipBecauseOfError, resetState in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if resetState {
+                        let _ = (_internal_resetAccountState(postbox: postbox, network: network, accountPeerId: accountPeerId)
+                        |> deliverOn(strongSelf.queue)).start(completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if case .pollDifference = strongSelf.operations.removeFirst().content {
+                                strongSelf.startFirstOperation()
+                            }
+                        })
+                    } else {
+                        if case .pollDifference = strongSelf.operations.removeFirst().content {
+                            let events: AccountFinalStateEvents
+                            if let finalState = finalState {
+                                events = currentEvents.union(with: AccountFinalStateEvents(state: finalState))
+                            } else {
+                                events = currentEvents
+                            }
+                            if let difference = difference {
+                                switch difference {
+                                case .differenceSlice:
+                                    strongSelf.addOperation(.pollDifference(strongSelf.getNextId(), events), position: .first)
+                                default:
+                                    if let currentChannelOperationsContext = strongSelf.currentChannelOperationsContext {
+                                        currentChannelOperationsContext.canComplete = true
+                                        currentChannelOperationsContext.events = currentChannelOperationsContext.events.union(with: events)
+                                        
+                                        strongSelf.checkChannelOperationsCompletion()
+                                    } else {
+                                        if !events.isEmpty {
+                                            strongSelf.insertProcessEvents(events)
+                                        }
+                                        strongSelf.currentIsUpdatingValue = false
+                                        strongSelf.significantStateUpdateCompletedPipe.putNext(Void())
+                                    }
+                                }
+                            } else if skipBecauseOfError {
+                                if !events.isEmpty {
+                                    strongSelf.insertProcessEvents(events)
+                                }
+                            } else {
+                                if !events.isEmpty {
+                                    strongSelf.insertProcessEvents(events)
+                                }
+                                strongSelf.replaceOperations(with: .pollDifference(strongSelf.getNextId(), AccountFinalStateEvents()))
+                            }
+                            strongSelf.startFirstOperation()
+                        }
+                    }
+                })

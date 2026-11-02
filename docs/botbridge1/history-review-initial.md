@@ -1,0 +1,46 @@
+### Spec Compliance
+
+- ❌ Issues found: the active serialized operation is not bounded while its reservation transaction is pending; mandatory complete-controller behavioral fixtures are absent; one supplied native policy fixture deterministically contradicts the production reservation invariant. See Important R1–R3.
+- ⚠️ Cannot verify from this diff: native compilation/execution, full generated-checkout preference-key uniqueness, final stage/source inclusion, real Postbox/interactive-hook behavior, and device/server behavior. These remain pending; the reported four Linux skips are not passes. Explicit logout/removal registry wiring and diagnostic recording belong to Task 2; authoritative materialization and application integration belong to Task 3 and are not Task 1 omissions.
+- ⚠️ The package supplies before/after digests and source guards but not independent proof of the complete baseline's provenance. The controller should retain/verify BASELINE.json and the official-input provenance when accepting the authoritative Task 3 package. I did not regenerate provenance or rerun reported tests.
+
+### Strengths
+
+- `submodules/Postbox/Sources/Postbox.swift:55,2204,2232,2238`: the historical entry uses the same insertion implementation and `.Random`, and only the two installed callback dispatches acquire the opt-out flag; the ordinary entry and shared default preserve normal behavior. The complete shared function was inspected because its diff hunks did not include its whole body.
+- `submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:16,109,137,319,339,432`: Int64 candidate arithmetic, durable request reservations, separate committed-page counters, exact stored-progress equality, pre-mutation page/delete-vector bounds, and the atomic storage/progress transaction are clearly separated. A progressing zero-insertion slice is not used as a success terminator.
+- `submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:228,319,390,435,577` and `submodules/TelegramCore/Sources/Authorization.swift:1576`: confirmed bot validation, absent-message filtering, current-peer preservation, cancellation guards, authorization generation renewal, and the two permitted network requests are present. The new history path contains no live-state setter or generic historical replay.
+- `submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift:3125` and `submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:438`: historical insertion uses the existing inclusion algorithm, which leaves existing archive/pin/cutoff inclusion intact. Its body was inspected because the diff only showed the access-level change.
+- `submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:191,445,628`: typed events contain finite reasons/numeric counters, the lease owns its request work and once gate, and successful storage completes the current custom operation before asynchronously scheduling the next page. Task 2 can use the no-op callback without another controller or recorder.
+
+### Issues
+
+#### Critical (Must Fix)
+
+- None identified in this scoped source review.
+
+#### Important (Should Fix)
+
+1. **R1 — Start the lease watchdog before waiting for the reservation transaction.** `submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:529–533,540–568`: the custom signal installs an active lease and subscribes to Postbox, but its timer is created only after the reservation result arrives. If that transaction is suspended or its queue is blocked, there is no timer or deadline action capable of finishing this custom operation, so modern manager work queued behind it can remain blocked indefinitely. This is a real supported Postbox condition: unchanged `before/submodules/Postbox/Sources/Postbox.swift:3285–3295` queues transactions while `canBeginTransactionsValue` is false, and `:3359–3386` returns no cancellation mechanism for that queued closure. Unchanged manager execution at `source/submodules/TelegramCore/Sources/State/AccountStateManager.swift:1112–1126` advances past `.custom` only on completion. Arm an independent bounded lease watchdog when the custom operation becomes active, before the reservation subscription; preserve reserve-before-network ordering and ensure expiry closes the gate/completes once even if Postbox never calls back. Add a controller scenario that holds the reservation transaction, advances time, confirms modern work can proceed, and then releases the stale transaction without mutation/dispatch.
+
+2. **R2 — The native policy fixture cannot pass as written.** `tests/fixtures/botbridge1/policy.swift:24–28` commits the first page on `p`, making `p.committedPages == p.reservedPages == 1`. Line 27 reserves the next request on the separate decoded value `afterCommit`; line 28 then expects a second commit on the original `p` to succeed. Production `submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:141–145` correctly rejects that commit because `committedPages < reservedPages` is false, so `check(..., "final dedup success")` calls `fatalError`. Reserve the second request on the value being committed, or commit `afterCommit` and assert its terminal state. Keep an explicit negative assertion for an unreserved second commit. This is a static contradiction, not a claim that native execution occurred on Linux.
+
+3. **R3 — Supply the required complete-controller behavioral harness.** `tests/test_jg131_botbridge1_history.py:113–144` extracts the policy, page lease, storage helper and Postbox entry/implementation only. It never compiles or exercises `BotBridgeHistoryController` (`submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:461–654`) or the actual `botBridgePage` response adapter (`:279–291`). The lease fixture calls `finish()` directly; the policy fixture mutates a value directly. These cannot verify reservation/dispatch sequencing, real response shapes, timeout/error/cancellation ownership, pending/late transactions, replacement, actual interleaving of a modern operation between pages, or the requested controller crash/resume cases. The Linux compiler absence justifies not executing a native fixture here; it does not justify omitting the fixture. Add an unchanged-production-controller extraction with strict controllable queue/transport/transaction facades and the mandatory scenarios. The source fixture must be reviewable in Task 1; its macOS execution can remain an explicit pending gate until available. A full app/device test is not required to fix this omission.
+
+#### Minor (Nice to Have)
+
+- **R4 — Avoid repeatedly parsing the whole chat vector inside the message loop.** `submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift:371–386`: for each message whose destination peer is absent, the helper reparses `page.chats` from the beginning. At permitted bounds this is up to 5,000 × 10,000 parse attempts inside a Postbox transaction, including absent cloud-user destinations that cannot match a chat. Index/parse the bounded chat vector once, or cache lookup results by destination peer. This reduces the time that a historical page occupies the shared database queue. No timing benchmark was run, so this is a complexity finding rather than a measured timeout claim.
+
+### Checks and Review Scope
+
+- Read the task brief, implementation report, and supplied complete diff/test package. No reported test was rerun; no product/test file, Git state, or baseline was changed. This report is the only written artifact.
+- Named outside-diff check — **custom-operation completion and Postbox suspension/cancellation contract:** inspected manager `.custom` execution, operation enqueue/reset handling, and Postbox transaction/begin-transaction implementations. These establish the R1 execution path and the need for guards inside transactions.
+- Named outside-diff check — **storage-boundary compatibility hidden by the Swift facades:** checked `MessagesRemovedContext` deletion-query signatures/locking, `apiMessagePeerIds`, the current StoreMessage converter signature, `StoreMessageForwardInfo`, and Postbox's public `updatePeersInternal` declaration. No signature mismatch was found in those inspected boundaries; this does not replace compilation.
+- Truncated-hunk completion — inspected the full Postbox shared insertion method, unchanged inclusion helper, and containing bot-authorization transaction. The last confirms that `user` is a TelegramUser and generation renewal runs inside the existing successful authorization transaction.
+
+### Assessment
+
+**Task quality:** Needs fixes.
+
+**Reasoning:** The storage and progress design is narrow and largely follows the binding constraints, but the reservation wait can occupy the serialized manager without a time bound. The deterministic fixture failure and missing production-controller harness must be fixed before accepting Task 1; deferred native/application/device checks remain explicitly pending.
+
+Paths beginning `submodules/` above refer to `/home/pixi/ChatGPT/iOS DEV/jerkgram-next/botbridge1/task1/source/`. Paths beginning `tests/` refer to `/home/pixi/ChatGPT/iOS DEV/jerkgram-telegram-builder/`. Explicit `before/` and `source/` references are relative to `/home/pixi/ChatGPT/iOS DEV/jerkgram-next/botbridge1/task1/`.

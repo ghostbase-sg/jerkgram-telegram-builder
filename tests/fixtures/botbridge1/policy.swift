@@ -1,0 +1,57 @@
+func check(_ condition: @autoclosure () -> Bool, _ label: String) {
+    if !condition() { fatalError(label) }
+}
+let c = BotBridgeCursor(pts: 100, qts: 4, date: 20, seq: 6)
+check(c.candidate(unread: 10) == BotBridgeCursor(pts: 90, qts: 4, date: 20, seq: 6), "exact tuple")
+check(c.candidate(unread: Int32.max)?.pts == 1, "Int64 clamp")
+check(c.candidate(unread: 0) == nil, "no candidate")
+check(BotBridgeCursor(pts: 1, qts: 0, date: 0, seq: 0).candidate(unread: 1) == nil, "pts one")
+func fresh() -> BotBridgeHistoryProgress { return BotBridgeHistoryProgress(owner: 7, peer: 9, testing: false, generation: "g1") }
+var p = fresh()
+check(p.reserve(now: 1000) == .state, "initial reservation")
+check(p.started == 1000 && p.deadline == 1120 && p.reservedState, "durable original window")
+let encoded = try! JSONEncoder().encode(p)
+var crashed = try! JSONDecoder().decode(BotBridgeHistoryProgress.self, from: encoded)
+check(crashed.reserve(now: 1001) == nil && crashed.terminal == .interruptedState, "crash before state dispatch/commit")
+check(p.acceptState(c, unread: 10, now: 1001), "state snapshot")
+check(p.original == c && p.next?.pts == 90, "private cursor")
+let pageRequest = p.reserve(now: 1002)
+check(pageRequest == .difference(p.next!), "difference reservation")
+check(p.reservedPages == 1 && p.committedPages == 0, "reserved separate from committed")
+var beforeCommit = try! JSONDecoder().decode(BotBridgeHistoryProgress.self, from: JSONEncoder().encode(p))
+check(beforeCommit.reserve(now: 1003) == pageRequest && beforeCommit.reservedPages == 2, "response before commit retry consumes budget")
+let next = BotBridgeCursor(pts: 95, qts: 4, date: 21, seq: 6)
+check(p.commit(next: next, final: false, examined: 0, inserted: 0, peers: 0, skipped: 0, unsupported: 0, deletions: 0, missing: 0, now: 1003), "empty progressing slice")
+check(p.terminal == nil && p.committedPages == 1, "empty slice continues")
+var afterCommit = try! JSONDecoder().decode(BotBridgeHistoryProgress.self, from: JSONEncoder().encode(p))
+check(afterCommit.reserve(now: 1004) == .difference(next), "after commit next cursor")
+var unreserved = p
+check(!unreserved.commit(next: next, final: true, examined: 0, inserted: 0, peers: 0, skipped: 0, unsupported: 0, deletions: 0, missing: 0, now: 1004) && unreserved.terminal == .corrupt, "unreserved second commit rejected")
+check(afterCommit.commit(next: next, final: true, examined: 0, inserted: 0, peers: 0, skipped: 0, unsupported: 0, deletions: 0, missing: 0, now: 1004), "final dedup success")
+check(afterCommit.terminal == .completed && afterCommit.reserve(now: 1005) == nil, "no rerun")
+for reason in [BotBridgeHistoryReason.tooLong, .rpcError, .cancelled, .timeout, .limit, .clockChanged] {
+    var terminal = fresh(); terminal.terminal = reason
+    check(terminal.reserve(now: 1000) == nil, "terminal rerun")
+}
+var backwards = fresh(); _ = backwards.reserve(now: 1000)
+check(!backwards.acceptState(c, unread: 1, now: 999) && backwards.terminal == .clockChanged, "backward wall")
+var expired = fresh(); _ = expired.reserve(now: 1000)
+check(!expired.acceptState(c, unread: 1, now: 1120) && expired.terminal == .deadline, "original deadline")
+var cap = fresh(); _ = cap.reserve(now: 1000); _ = cap.acceptState(c, unread: 10, now: 1000)
+for _ in 0..<32 { check(cap.reserve(now: 1001) != nil, "32 reservations") }
+check(cap.reserve(now: 1001) == nil && cap.terminal == .limit, "request cap")
+var corrupt = fresh(); corrupt.reservedPages = -1
+check(corrupt.reserve(now: 1000) == nil && corrupt.terminal == .corrupt, "corrupt counters")
+var nonadvancing = fresh(); _ = nonadvancing.reserve(now: 1000); _ = nonadvancing.acceptState(c, unread: 10, now: 1000); _ = nonadvancing.reserve(now: 1000)
+check(!nonadvancing.commit(next: nonadvancing.next!, final: false, examined: 0, inserted: 0, peers: 0, skipped: 0, unsupported: 0, deletions: 0, missing: 0, now: 1001), "reject nonadvancing slice")
+check(nonadvancing.terminal == .nonadvancing, "finite rejection")
+check(!BotBridgeHistoryProgress.withinPageBounds(messages: 5001, peers: 0, updates: 0, examined: 0), "message bound")
+check(!BotBridgeHistoryProgress.withinPageBounds(messages: 0, peers: 10001, updates: 0, examined: 0), "peer bound")
+check(!BotBridgeHistoryProgress.withinPageBounds(messages: 0, peers: 0, updates: 10001, examined: 0), "updates bound")
+check(!BotBridgeHistoryProgress.withinPageBounds(messages: 1, peers: 0, updates: 0, examined: 20000), "examined bound")
+let gate = BotBridgeOnceGate()
+check(gate.isOpen && gate.finish() && !gate.finish() && !gate.isOpen, "finish once, reject late response")
+let lifetimeA = BotBridgeLifetime(); let lifetimeB = BotBridgeLifetime()
+lifetimeA.cancel()
+check(!lifetimeA.isActive && lifetimeB.isActive, "account isolation")
+print("PASS production policy, crash reservations, bounds, once gate, account lifetime")

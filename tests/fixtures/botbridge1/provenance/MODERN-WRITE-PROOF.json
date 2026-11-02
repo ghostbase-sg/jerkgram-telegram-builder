@@ -1,0 +1,89 @@
+{
+  "normalization": "Reverse the exact ordered optional argument and context-local insertions. No RPC/operator/error/update/disposal edits allowed.",
+  "files": [
+    {
+      "path": "submodules/TelegramCore/Sources/State/PendingMessageManager.swift",
+      "modern_sha256": "e5fd04ed9a3d11f615d9eee5f17fa184768fa1c51ced79103b0068f1ffbc92c2",
+      "edits": [
+        {
+          "before": "            } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {",
+          "after": "            } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {\n                let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: messages[0].0.attributes, hasText: messages.contains { !$0.0.text.isEmpty })"
+        },
+        {
+          "before": "            } else if let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {",
+          "after": "            } else if let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {\n                let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: message.attributes, hasText: !message.text.isEmpty)"
+        },
+        {
+          "before": "                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)",
+          "after": "                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars))",
+          "after": "                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars), diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag)",
+          "after": "                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag, diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)",
+          "after": "                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)",
+          "after": "                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, allowPaidStars: allowPaidStars))",
+          "after": "                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, allowPaidStars: allowPaidStars), diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                        sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))",
+          "after": "                        sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId), diagnosticContext: botBridgeContext)"
+        }
+      ]
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift",
+      "modern_sha256": "ab8a7c29995eba1865880e3c5c6be2c367725d773cd8b3f0450d0ce69a040bd8",
+      "edits": [
+        {
+          "before": "private func sendUploadedMessageContent(\n    postbox: Postbox,\n    network: Network,\n    stateManager: AccountStateManager,\n    accountPeerId: PeerId,\n    peerId: PeerId,\n    content: PendingMessageUploadedContentAndReuploadInfo,\n    text: String,\n    attributes: [MessageAttribute],\n    media: [Media],\n    threadId: Int64?\n) -> Signal<Never, StandaloneSendMessagesError> {\n    return postbox.transaction { transaction -> Signal<Never, StandaloneSendMessagesError> in\n        if peerId.namespace == Namespaces.Peer.SecretChat {\n            return .fail(StandaloneSendMessagesError(peerId: peerId, reason: .none))\n        } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {",
+          "after": "private func sendUploadedMessageContent(\n    postbox: Postbox,\n    network: Network,\n    stateManager: AccountStateManager,\n    accountPeerId: PeerId,\n    peerId: PeerId,\n    content: PendingMessageUploadedContentAndReuploadInfo,\n    text: String,\n    attributes: [MessageAttribute],\n    media: [Media],\n    threadId: Int64?\n) -> Signal<Never, StandaloneSendMessagesError> {\n    return postbox.transaction { transaction -> Signal<Never, StandaloneSendMessagesError> in\n        if peerId.namespace == Namespaces.Peer.SecretChat {\n            return .fail(StandaloneSendMessagesError(peerId: peerId, reason: .none))\n        } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {\n            let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: attributes, hasText: !text.isEmpty)"
+        },
+        {
+          "before": "private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent, threadId: Int32?) -> Signal<Void, StandaloneSendMessageError> {\n    return account.postbox.transaction { transaction -> Signal<Void, StandaloneSendMessageError> in\n        if peerId.namespace == Namespaces.Peer.SecretChat {\n            // Secret chats cannot be written to from here.\n            return .fail(.generic)\n        } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {",
+          "after": "private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent, threadId: Int32?) -> Signal<Void, StandaloneSendMessageError> {\n    return account.postbox.transaction { transaction -> Signal<Void, StandaloneSendMessageError> in\n        if peerId.namespace == Namespaces.Peer.SecretChat {\n            // Secret chats cannot be written to from here.\n            return .fail(.generic)\n        } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {\n            let botBridgeHasText: Bool\n            switch content {\n            case let .text(text), let .media(_, text): botBridgeHasText = !text.isEmpty\n            }\n            let botBridgeContext = botBridgeOperationContext(network: account.network, peer: peer, attributes: attributes, hasText: botBridgeHasText)"
+        },
+        {
+          "before": "                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag)",
+          "after": "                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag, diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                    sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)",
+          "after": "                    sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: nil), tag: dependencyTag)",
+          "after": "                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: nil), tag: dependencyTag, diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                    sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, allowPaidStars: allowPaidStars))",
+          "after": "                    sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, allowPaidStars: allowPaidStars), diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                    sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))",
+          "after": "                    sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId), diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: nil, richMessage: apiRichMessage))",
+          "after": "                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: nil, richMessage: apiRichMessage), diagnosticContext: botBridgeContext)"
+        },
+        {
+          "before": "                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost))",
+          "after": "                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), diagnosticContext: botBridgeContext)"
+        }
+      ]
+    }
+  ]
+}

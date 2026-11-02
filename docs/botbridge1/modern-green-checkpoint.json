@@ -1,0 +1,36 @@
+{
+  "modern_builder_commit": "5ba6add985d6995ca102d4e40d8da66e98f443c1",
+  "modern_builder_tree": "0e88d3c54e9f0efc9d72fc0c7f793ea18ecfc423",
+  "branch": "codex/translation-folder-glass",
+  "upstream_commit": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_tree": "eed199f66d25696d0e4d4506469866139eb7828b",
+  "upstream_version": "13.1.2",
+  "product_version": "1.2.0 Beta 1",
+  "build_number": 177,
+  "run_id": 41372637134,
+  "native_job": 125046174279,
+  "app_job": 125047118856,
+  "result": "GREEN",
+  "artifact": {
+    "id": 13111834999,
+    "name": "Jerkgram-1.2.0-Build177",
+    "size_in_bytes": 95232649,
+    "url": "https://api.github.com/repos/ghostbase-sg/jerkgram-telegram-builder/actions/artifacts/13111834999",
+    "archive_download_url": "https://api.github.com/repos/ghostbase-sg/jerkgram-telegram-builder/actions/artifacts/13111834999/zip",
+    "expired": false,
+    "created_at": "2026-11-02T02:39:17Z",
+    "expires_at": "2027-01-31T01:28:07Z",
+    "updated_at": "2026-11-02T02:39:17Z",
+    "digest": "sha256:bdd6e43ae2a03659fd87412a0c3b38b8c15164b0886ba748219fd23e7dadc74f",
+    "workflow_run": {
+      "id": 41372637134,
+      "repository_id": 1237883391,
+      "head_repository_id": 1237883391,
+      "head_branch": "codex/translation-folder-glass",
+      "head_sha": "5ba6add985d6995ca102d4e40d8da66e98f443c1"
+    }
+  },
+  "artifact_digest_kind": "GitHub artifact ZIP archive SHA256; not separately measured inner IPA digest",
+  "compiled_not_device_tested": true,
+  "historical_build82_commit": "2d120ab4a72dd2217269d7b6a7142a8ef0ce3cd3"
+}

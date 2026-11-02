@@ -80,6 +80,19 @@ def main():
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()
         return
+    from materialize_jg131_botbridge1 import is_applied as bot_applied, parent_source_view as bot_parent, manifest as bot_manifest
+    bot_present = any((final_source / name).exists() for name, row in bot_manifest()['owners'].items() if row['before_sha256'] is None)
+    if bot_present or bot_applied(final_source):
+        from verify_jg131_botbridge1 import verify_source as verify_bot_source
+        verify_bot_source(final_source)
+        try:
+            with bot_parent(final_source) as parent:
+                SOURCE = parent
+                main()
+        finally:
+            SOURCE = final_source
+        print("BOTBRIDGE1 terminal owners VERIFIED; native/app/device evidence separate")
+        return
     from materialize_jg131_settings_glass_expansion import is_applied as glass_applied, verify_glass, parent_source_view as glass_parent
     if glass_applied(final_source):
         verify_glass(final_source)

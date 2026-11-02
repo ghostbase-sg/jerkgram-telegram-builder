@@ -1,0 +1,30 @@
+{
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "patch_sha256": "4ae3ae4143d5b6069199b8d2fd1bdb357e55edb5dbefbac2b9a734a9bba6ad3b",
+  "owners": {
+    "submodules/Postbox/Sources/Postbox.swift": {
+      "before_sha256": "71ce7879969134652ceb1ea82f9fe56670977033d148b50a5fd76bfec716e231",
+      "after_sha256": "c49591f2fc0167b679363ed1587ea3b57d2c675372c47bd0a4efba1451037aa5"
+    },
+    "submodules/TelegramCore/Sources/Account/Account.swift": {
+      "before_sha256": "4aa4627a4e70c16bdaf1ceefcb429c4ffaea40759f3258088e88494d51bed7a4",
+      "after_sha256": "59632aa5256d5ec676c33922988131f4395d9f3f34bc0f668b47edff4781fa02"
+    },
+    "submodules/TelegramCore/Sources/Authorization.swift": {
+      "before_sha256": "a183d895fa556c5bee433a8dbe616c40c880af8e137a058f78d0caa3ec5604d4",
+      "after_sha256": "92e8fc0730f5eae967dac8eb2fa061c18531d2f4bb134cf9552d722f1584795b"
+    },
+    "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift": {
+      "before_sha256": "92ff02f0b0bc76fca785b3b509cde3389b243313eb4d3617909556c3dbe584e0",
+      "after_sha256": "cd2f1f22a2423bfb9a0996f92c36139f3f3dc5dc8bfbbfc71a11c304f620c3fd"
+    },
+    "submodules/TelegramCore/Sources/State/AccountStateManager.swift": {
+      "before_sha256": "f5f92b12adb44f476a0805c1a7f7848b98221e2f36355d58d6ef4102f8d95a97",
+      "after_sha256": "0ccaa08c55b54a8daad68a42651b1789464d7090d3525a65f18d341ff8d65290"
+    },
+    "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": {
+      "before_sha256": null,
+      "after_sha256": "c75d0de635a02d2d1ae74ebbcc15282cf5df78571d921707b051c4f807cf6296"
+    }
+  }
+}

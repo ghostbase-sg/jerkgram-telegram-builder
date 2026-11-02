@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.2 / Build177 modern base with translation repair, default folder and settings glass
+name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.2 / Build178 BOTBRIDGE1 experimental history and diagnostics
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - docs/**
     branches:
+      - dev/botbridge1-legacy-history-modern-write
       - codex/build176-wave1
       - codex/translation-folder-glass
       - dev/jg-1.1.0-beta1-upstream13
@@ -65,8 +66,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build177-diagnostics
+          name: Jerkgram-1.2.0-Build178-BOTBRIDGE1-diagnostics
           path: |
+            patches/jg131-botbridge1.patch
+            patches/jg131-botbridge1.sha256.json
+            scripts/materialize_jg131_botbridge1.py
+            scripts/verify_jg131_botbridge1.py
+            tests/run_jg131_botbridge1.py
+            tests/test_jg131_botbridge1*.py
+            tests/fixtures/botbridge1/
             patches/jg131-ui-type-compat.sha256.json
             scripts/materialize_jg131_ui_type_compat.py
             patches/jg131-profile-polish.patch
@@ -194,9 +202,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build177
+          name: Jerkgram-1.2.0-Build178-BOTBRIDGE1
           path: |
-            artifacts/Jerkgram-1.2.0-Build177.ipa
-            artifacts/Jerkgram-1.2.0-Build177.json
+            artifacts/Jerkgram-1.2.0-Build178-BOTBRIDGE1.ipa
+            artifacts/Jerkgram-1.2.0-Build178-BOTBRIDGE1.json
           if-no-files-found: error
           retention-days: 90

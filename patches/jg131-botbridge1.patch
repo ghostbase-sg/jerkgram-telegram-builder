@@ -1,0 +1,2259 @@
+diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sources/Postbox.swift
+--- a/submodules/Postbox/Sources/Postbox.swift
++++ b/submodules/Postbox/Sources/Postbox.swift
+@@ -52,6 +52,16 @@
+         }
+     }
+     
++    /// Sparse historical insertion; bypasses only installed interactive insertion hooks.
++    public func addHistoricalMessagesWithoutInteractiveActions(_ messages: [StoreMessage]) -> [Int64: MessageId] {
++        assert(!self.disposed)
++        if let postbox = self.postbox {
++            return postbox.addMessages(transaction: self, messages: messages, location: .Random, runInstalledActions: false)
++        } else {
++            return [:]
++        }
++    }
++
+     public func messageExists(id: MessageId) -> Bool {
+         if let postbox = self.postbox {
+             return postbox.messageHistoryIndexTable.exists(id)
+@@ -2191,7 +2201,7 @@
+         metaDisposable.set(disposable)
+     }
+     
+-    fileprivate func addMessages(transaction: Transaction, messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
++    fileprivate func addMessages(transaction: Transaction, messages: [StoreMessage], location: AddMessagesLocation, runInstalledActions: Bool = true) -> [Int64: MessageId] {
+         var addedMessagesByPeerId: [PeerId: [StoreMessage]] = [:]
+         let addResult = self.messageHistoryTable.addMessages(messages: messages, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, processMessages: { messagesByPeerId in
+             addedMessagesByPeerId = messagesByPeerId
+@@ -2219,13 +2229,13 @@
+                     }
+             }
+             
+-            if let bag = self.installedMessageActionsByPeerId[peerId] {
++            if runInstalledActions, let bag = self.installedMessageActionsByPeerId[peerId] {
+                 for f in bag.copyItems() {
+                     f(peerMessages, transaction)
+                 }
+             }
+             
+-            if let bag = self.installedStoreOrUpdateMessageActionsByPeerId[peerId] {
++            if runInstalledActions, let bag = self.installedStoreOrUpdateMessageActionsByPeerId[peerId] {
+                 for f in bag.copyItems() {
+                     f.addOrUpdate(messages: peerMessages, transaction: transaction)
+                 }
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+@@ -625,3 +625,43 @@
+     )
+     controller.present(picker, in: .window(.root), with: nil)
+ }
++
++// Both picker callbacks and picker destruction release the single export slot.
++// This lease owns only a URL; it cannot retain a controller, Account or picker.
++private final class JerkgramBotBridgeDiagnosticExportLease {
++    let url: URL
++    init(_ url: URL) { self.url = url }
++    func release() { jerkgramReleaseBotBridgeDiagnosticExport(self.url) }
++    deinit { jerkgramReleaseBotBridgeDiagnosticExport(self.url) }
++}
++
++// Dedicated BOTBRIDGE1 redacted JSON only. The facade owns all I/O and export lifetime.
++public func jerkgramPresentBotBridgeDiagnosticExport(context: AccountContext, controller: ViewController) {
++    jerkgramExportBotBridgeDiagnostics { [weak controller] result in
++        Queue.mainQueue().async { [weak controller] in
++            guard let controller = controller else {
++                if case let .success(url) = result { jerkgramReleaseBotBridgeDiagnosticExport(url) }
++                return
++            }
++            switch result {
++            case let .success(url):
++                let lease = JerkgramBotBridgeDiagnosticExportLease(url)
++                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
++                let picker = legacyICloudFilePicker(theme: presentationData.theme, mode: .export, url: url, documentTypes: [], dismissed: {
++                    lease.release()
++                }, completion: { _ in
++                    lease.release()
++                })
++                controller.present(picker, in: .window(.root), with: nil)
++            case let .failure(error):
++                let isRussian = context.sharedContext.currentPresentationData.with { $0.strings.jerkgram.languageCode == "ru" }
++                let text: String
++                switch error {
++                case .busy: text = isRussian ? "Экспорт уже открыт." : "An export is already open."
++                case .storage: text = isRussian ? "Не удалось подготовить диагностику." : "Could not prepare diagnostics."
++                }
++                controller.present(textAlertController(context: context, title: "BOTBRIDGE1", text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
++            }
++        }
++    }
++}
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+@@ -61,7 +61,7 @@
+                 disclosureStyle: .none, action: nil
+             )
+         case let .action(_, _, title, value, action):
+-            if action == "export" || action == "import" || action == "cleanup" {
++            if action == "export" || action == "import" || action == "cleanup" || action == "botbridgeDiagnostics" {
+                 return ItemListActionItem(
+                     presentationData: presentationData, title: title,
+                     kind: .generic, alignment: .center,
+@@ -138,6 +138,12 @@
+         .info(2, strings.backupAccountHint(state.configuration.accountPeerId)),
+         .info(3, strings.languageCode == "ru" ? "После исключения чат остаётся в списке с уже загруженной перепиской и сведениями. Доступен только просмотр. Включите до исключения." : "After removal, keep the chat in the list with locally loaded history and information. Read-only. Enable before removal."),
+     ])
++    // Explicit experimental action is always reachable after bot account removal.
++    entries.append(contentsOf: [
++        .header(4, "BOTBRIDGE1"),
++        .action(4, 1, strings.languageCode == "ru" ? "Экспорт диагностики BOTBRIDGE1" : "Export BOTBRIDGE1 Diagnostics", "", "botbridgeDiagnostics"),
++        .info(4, strings.languageCode == "ru" ? "Обезличенная экспериментальная диагностика. Содержимое сообщений и общий журнал не включаются." : "Redacted experimental diagnostics. Message content and general logs are excluded."),
++    ])
+     return entries
+ }
+ 
+@@ -174,6 +180,8 @@
+                 let current = configuration.accountPolicy.mediaByteLimit
+                 configuration.accountPolicy.mediaByteLimit = mediaLimits[(mediaLimits.firstIndex(of: current)! + 1) % mediaLimits.count]
+             }
++        case "botbridgeDiagnostics":
++            if let controller = actionTarget { jerkgramPresentBotBridgeDiagnosticExport(context: context, controller: controller) }
+         case "export":
+             if let controller = actionTarget { jerkgramPresentArchiveExport(context: context, controller: controller) }
+         case "import":
+diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
+--- a/submodules/TelegramCore/Sources/Account/Account.swift
++++ b/submodules/TelegramCore/Sources/Account/Account.swift
+@@ -1356,35 +1356,13 @@
+     Logger.shared.log("BOTSAFE1", value)
+ }
+ 
+-// This gate is process-local. It never changes account authorization state.
+-enum GhostBaseBotHistoryGate {
+-    private static let lock = NSLock()
+-    private static var activePeerIds = Set<Int64>()
+-
+-    static func set(peerId: PeerId, active: Bool) {
+-        self.lock.lock()
+-        if active {
+-            self.activePeerIds.insert(peerId.toInt64())
+-        } else {
+-            self.activePeerIds.remove(peerId.toInt64())
+-        }
+-        self.lock.unlock()
+-    }
+-
+-    static func isActive(peerId: PeerId) -> Bool {
+-        self.lock.lock()
+-        let result = self.activePeerIds.contains(peerId.toInt64())
+-        self.lock.unlock()
+-        return result
+-    }
+-}
+-
+ public class Account {
+     static let sharedQueue = Queue(name: "Account-Shared")
+     
+     public let id: AccountRecordId
+     public let basePath: String
+     public let testingEnvironment: Bool
++    private let botBridgeDiagnostics = BotBridgeDiagnosticOwner()
+     public let supplementary: Bool
+     public let isSupportUser: Bool
+     public let postbox: Postbox
+@@ -1617,26 +1595,21 @@
+         self.network.loggedOut = { [weak self] in
+             Logger.shared.log("Account", "network logged out")
+             if let strongSelf = self {
+-                if ghostBaseBotSafeMode && GhostBaseBotHistoryGate.isActive(peerId: peerId) {
+-                    // A zero historical cursor may provoke a logout-like transport callback.
+-                    // Suppress it only for this request; never mark the account logged out.
+-                    ghostBaseBotSafeRecord(
+-                        peerId: peerId,
+-                        event: "BOTSHADOW1 network loggedOut callback suppressed"
+-                    )
+-                    return
+-                }
+                 if ghostBaseBotSafeMode {
+                     ghostBaseBotSafeRecord(
+                         peerId: peerId,
+                         event: "network loggedOut callback"
+                     )
+                 }
++                strongSelf.botBridgeDiagnostics.lifecycle(.serverLogout)
++                strongSelf.stateManager.jerkgramCancelBotBridgeHistory(reason: .loggedOut)
+                 strongSelf._loggedOut.set(true)
+                 strongSelf.callSessionManager.dropAll()
+             }
+         }
+         self.network.didReceiveSoftAuthResetError = { [weak self] in
++            self?.botBridgeDiagnostics.lifecycle(.softReset, terminal: false)
++            self?.stateManager.jerkgramCancelBotBridgeHistory(reason: .softReset)
+             if ghostBaseBotSafeMode {
+                 ghostBaseBotSafeRecord(
+                     peerId: peerId,
+@@ -1897,13 +1870,17 @@
+         self.automaticCacheEvictionContext = AutomaticCacheEvictionContext(postbox: postbox, accountManager: accountManager)
+ 
+ 
+-        if ghostBaseBotSafeMode && !supplementary {
+-            Queue.concurrentDefaultQueue().after(1.5) { [weak self] in
+-                self?.stateManager.ghostBaseStartBotShadowHistory()
+-            }
+-        }
+-
+-        
++        if !supplementary {
++            self.stateManager.jerkgramStartBotBridgeHistory(recordId: id.int64, admit: { [weak self] generation in
++                guard let self = self else { return false }
++                return self.botBridgeDiagnostics.admit(namespace: self.accountManager, record: id.int64, generation: generation, registration: self.network.botBridgeRegistration, directoryName: accountRecordIdPathName(id), cancelHistory: { [weak manager = self.stateManager] kind in
++                    manager?.jerkgramCancelBotBridgeHistory(reason: (kind == .softReset || kind == .authKeyUnknown) ? .softReset : (kind == .deinitialized ? .cancelled : .loggedOut))
++                })
++            }, event: { [weak owner = self.botBridgeDiagnostics] event in
++                owner?.history(event)
++            })
++        }
++
+         /*#if DEBUG
+         self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {
+             print("debugFetchAllStickers done")
+@@ -1912,6 +1889,8 @@
+     }
+     
+     deinit {
++        self.botBridgeDiagnostics.teardown(namespace: self.accountManager, record: self.id.int64, registration: self.network.botBridgeRegistration)
++        self.stateManager.jerkgramCancelBotBridgeHistory(reason: .cancelled)
+         self.managedContactsDisposable.dispose()
+         self.managedStickerPacksDisposable.dispose()
+         self.managedServiceViewsDisposable.dispose()
+@@ -1950,6 +1929,8 @@
+     }
+     
+     public func resetStateManagement() {
++        self.botBridgeDiagnostics.lifecycle(.softReset, terminal: false)
++        self.stateManager.jerkgramCancelBotBridgeHistory(reason: .softReset)
+         self.stateManager.reset()
+         self.restartContactManagement()
+         self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
+diff --git a/submodules/TelegramCore/Sources/Account/AccountManager.swift b/submodules/TelegramCore/Sources/Account/AccountManager.swift
+--- a/submodules/TelegramCore/Sources/Account/AccountManager.swift
++++ b/submodules/TelegramCore/Sources/Account/AccountManager.swift
+@@ -368,7 +368,9 @@
+ 
+ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager<TelegramAccountManagerTypes>, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
+     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
+-    return accountManager.transaction { transaction -> Void in
++    return Signal { subscriber in
++        BotBridgeDiagnosticRegistry.shared.notify(namespace: accountManager, record: id.int64, kind: alreadyLoggedOutRemotely ? .remoteLogout : .localLogout)
++        return (accountManager.transaction { transaction -> Void in
+         transaction.updateRecord(id, { current in
+             if alreadyLoggedOutRemotely {
+                 return nil
+@@ -389,6 +391,7 @@
+                 return nil
+             }
+         })
++        }).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+     }
+ }
+ 
+@@ -406,6 +409,7 @@
+             }
+         }).start()
+         let disposable = accountManager.accountRecords().start(next: { view in
++            BotBridgeDiagnosticRegistry.shared.reconcile(namespace: accountManager, records: Set(view.records.map { $0.id.int64 }))
+             var disposeList: [(AccountRecordId, MetaDisposable)] = []
+             var beginList: [(AccountRecordId, [TelegramAccountManagerTypes.Attribute], MetaDisposable)] = []
+             let _ = loggedOutAccounts.modify { disposables in
+@@ -445,8 +449,12 @@
+                 disposable.dispose()
+             }
+             for (id, attributes, disposable) in beginList {
++                let diagnosticTarget = BotBridgeDiagnosticRegistry.shared.target(namespace: accountManager, record: id.int64)
++                BotBridgeDiagnosticRegistry.shared.notify(target: diagnosticTarget, kind: .cleanupStart)
+                 Logger.shared.log("managedCleanupAccounts", "cleanup \(id), current is \(String(describing: view.currentRecord?.id))")
+-                disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, encryptionParameters: encryptionParameters, attributes: attributes, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start())
++                disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, encryptionParameters: encryptionParameters, attributes: attributes, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start(completed: {
++                    BotBridgeDiagnosticRegistry.shared.notify(target: diagnosticTarget, kind: .cleanupResult)
++                }))
+             }
+             
+             var validPaths = Set<String>()
+@@ -460,13 +468,12 @@
+                 validPaths.insert("\(accountRecordIdPathName(record.id))")
+             }
+             
++            let deletionTargets = BotBridgeDiagnosticRegistry.shared.targets(namespace: accountManager)
+             DispatchQueue.global(qos: .utility).async {
+                 if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
+                     for url in files {
+-                        if url.lastPathComponent.hasPrefix("account-") {
+-                            if !validPaths.contains(url.lastPathComponent) {
+-                                try? FileManager.default.removeItem(at: url)
+-                            }
++                        if botBridgeScheduleAccountDirectoryDeletion(directoryName: url.lastPathComponent, validPaths: validPaths, targets: deletionTargets) {
++                            try? FileManager.default.removeItem(at: url)
+                         }
+                     }
+                 }
+diff --git a/submodules/TelegramCore/Sources/Authorization.swift b/submodules/TelegramCore/Sources/Authorization.swift
+--- a/submodules/TelegramCore/Sources/Authorization.swift
++++ b/submodules/TelegramCore/Sources/Authorization.swift
+@@ -1573,6 +1573,7 @@
+                         }
+                     )
+                     transaction.setState(state)
++                    jerkgramRenewBotBridgeGeneration(transaction: transaction, recordId: authorizedAccount.id.int64, user: user, testing: authorizedAccount.testingEnvironment)
+ 
+                     UserDefaults.standard.set(
+                         true,
+diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/TelegramCore/Sources/Network/Network.swift
+--- a/submodules/TelegramCore/Sources/Network/Network.swift
++++ b/submodules/TelegramCore/Sources/Network/Network.swift
+@@ -916,6 +916,7 @@
+     private let rustEngineDisabled: Atomic<Bool>
+     private let rustEngineWaitsForWebProxy: Atomic<Bool>
+     let mainSession: NetworkEngineSession
++    let botBridgeRegistration = BotBridgeScopeRegistration()
+     let requestService: NetworkEngineRequestService
+     let basePath: String
+     private let mainSessionDelegate: NetworkMainSessionDelegate
+@@ -1070,6 +1071,7 @@
+             Logger.shared.log("Network", "contextLoggedOut")
+             self?.loggedOut?()
+         }, contextPermanentKeyUnknown: { [weak self] datacenterId, authKeyId in
++            self?.botBridgeRegistration.lifecycle(.authKeyUnknown)
+             self?.permanentKeyUnknown?(datacenterId, authKeyId)
+         })
+         self.networkHelper = networkHelper
+@@ -1371,9 +1373,11 @@
+         }
+     }
+     
+-    func requestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<NetworkRequestResult<T>, MTRpcError> {
++    func requestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, diagnosticContext: BotBridgeOperationContext? = nil) -> Signal<NetworkRequestResult<T>, MTRpcError> {
+         let requestService = self.requestService
+-        return Signal { [requestService] subscriber in
++        let botBridgeRegistration = self.botBridgeRegistration
++        return Signal { [requestService, botBridgeRegistration] subscriber in
++            let observation = botBridgeRegistration.begin(method: data.0.name, context: diagnosticContext)
+             let request = NetworkEngineRequest(
+                 payload: data.1.makeData(),
+                 metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag),
+@@ -1388,6 +1392,7 @@
+                 shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, failOnServerErrors: false),
+                 dependsOn: networkRequestDependency(tag: tag),
+                 acknowledged: {
++                    observation?.acknowledge()
+                     if info.contains(.acknowledgement) {
+                         subscriber.putNext(.acknowledged)
+                     }
+@@ -1401,25 +1406,35 @@
+                     switch result {
+                     case let .success(response):
+                         if let result = (response.result as! BoxedMessage).body as? T {
++                            observation?.finish(.result)
+                             subscriber.putNext(.result(result))
+                             subscriber.putCompletion()
+                         }
+                         else {
++                            observation?.finish(.parseFailure, errorCode: 500)
+                             subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                         }
+                     case let .failure(failure):
++                        observation?.finish(.rpcFailure, errorCode: failure.error.errorCode)
+                         subscriber.putError(failure.error)
+                     }
+                 }
+             )
+             
+-            return requestService.add(request)
+-        }
+-    }
+-    
+-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
++            let disposable = requestService.add(request)
++            guard let observation = observation else { return disposable }
++            return ActionDisposable {
++                observation.cancel()
++                disposable.dispose()
++            }
++        }
++    }
++    
++    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, diagnosticContext: BotBridgeOperationContext? = nil) -> Signal<T, MTRpcError> {
+         let requestService = self.requestService
+-        return Signal { [requestService] subscriber in
++        let botBridgeRegistration = self.botBridgeRegistration
++        return Signal { [requestService, botBridgeRegistration] subscriber in
++            let observation = botBridgeRegistration.begin(method: data.0.name, context: diagnosticContext)
+             let request = NetworkEngineRequest(
+                 payload: data.1.makeData(),
+                 metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag),
+@@ -1439,19 +1454,27 @@
+                     switch result {
+                     case let .success(response):
+                         if let result = (response.result as! BoxedMessage).body as? T {
++                            observation?.finish(.result)
+                             subscriber.putNext(result)
+                             subscriber.putCompletion()
+                         }
+                         else {
++                            observation?.finish(.parseFailure, errorCode: 500)
+                             subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                         }
+                     case let .failure(failure):
++                        observation?.finish(.rpcFailure, errorCode: failure.error.errorCode)
+                         subscriber.putError(failure.error)
+                     }
+                 }
+             )
+             
+-            return requestService.add(request)
++            let disposable = requestService.add(request)
++            guard let observation = observation else { return disposable }
++            return ActionDisposable {
++                observation.cancel()
++                disposable.dispose()
++            }
+         }
+     }
+     
+diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift
+--- a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift
++++ b/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift
+@@ -428,6 +428,7 @@
+         if peerId.namespace == Namespaces.Peer.SecretChat {
+             return .fail(StandaloneSendMessagesError(peerId: peerId, reason: .none))
+         } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
++            let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: attributes, hasText: !text.isEmpty)
+             var uniqueId: Int64 = 0
+             var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+             var messageEntities: [Api.MessageEntity]?
+@@ -584,7 +585,7 @@
+                         flags |= 1 << 22
+                     }
+                 
+-                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag)
++                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag, diagnosticContext: botBridgeContext)
+                 case let .media(inputMedia, text):
+                     if bubbleUpEmojiOrStickersets {
+                         flags |= Int32(1 << 15)
+@@ -619,7 +620,7 @@
+                         flags |= 1 << 22
+                     }
+                     
+-                    sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)
++                    sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)
+                     |> map(NetworkRequestResult.result)
+                 case let .forward(sourceInfo):
+                     if topMsgId != nil {
+@@ -630,7 +631,7 @@
+                     }
+                 
+                     if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
+-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: nil), tag: dependencyTag)
++                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: nil), tag: dependencyTag, diagnosticContext: botBridgeContext)
+                         |> map(NetworkRequestResult.result)
+                     } else {
+                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
+@@ -659,7 +660,7 @@
+                         }
+                     }
+ 
+-                    sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, allowPaidStars: allowPaidStars))
++                    sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, allowPaidStars: allowPaidStars), diagnosticContext: botBridgeContext)
+                     |> map(NetworkRequestResult.result)
+                 case .messageScreenshot:
+                     let replyTo: Api.InputReplyTo
+@@ -680,7 +681,7 @@
+                         replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
+                     }
+                 
+-                    sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))
++                    sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId), diagnosticContext: botBridgeContext)
+                     |> map(NetworkRequestResult.result)
+                 case .secretMedia:
+                     assertionFailure()
+@@ -767,6 +768,11 @@
+             // Secret chats cannot be written to from here.
+             return .fail(.generic)
+         } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
++            let botBridgeHasText: Bool
++            switch content {
++            case let .text(text), let .media(_, text): botBridgeHasText = !text.isEmpty
++            }
++            let botBridgeContext = botBridgeOperationContext(network: account.network, peer: peer, attributes: attributes, hasText: botBridgeHasText)
+             var uniqueId: Int64 = Int64.random(in: Int64.min ... Int64.max)
+             //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+             var messageEntities: [Api.MessageEntity]?
+@@ -849,7 +855,7 @@
+                         replyTo = .inputReplyToMessage(.init(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
+                     }
+ 
+-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: nil, richMessage: apiRichMessage))
++                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: nil, richMessage: apiRichMessage), diagnosticContext: botBridgeContext)
+                     |> mapError { _ -> StandaloneSendMessageError in
+                         return .generic
+                     }
+@@ -874,7 +880,7 @@
+                         flags |= 1 << 22
+                     }
+                 
+-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost))
++                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), diagnosticContext: botBridgeContext)
+                     |> mapError { _ -> StandaloneSendMessageError in
+                         return .generic
+                     }
+diff --git a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
+--- a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
++++ b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
+@@ -3122,7 +3122,7 @@
+     return ghostBaseIsBotAccount(accountPeerId)
+ }
+ 
+-private func jerkgramIncludeBotMessagePeers(transaction: Transaction, accountPeerId: PeerId, messages: [StoreMessage]) {
++func jerkgramIncludeBotMessagePeers(transaction: Transaction, accountPeerId: PeerId, messages: [StoreMessage]) {
+     guard jerkgramIsBotAccount(accountPeerId: accountPeerId, peer: transaction.getPeer(accountPeerId)) else { return }
+     var visited = Set<PeerId>()
+     for message in messages {
+diff --git a/submodules/TelegramCore/Sources/State/AccountStateManager.swift b/submodules/TelegramCore/Sources/State/AccountStateManager.swift
+--- a/submodules/TelegramCore/Sources/State/AccountStateManager.swift
++++ b/submodules/TelegramCore/Sources/State/AccountStateManager.swift
+@@ -393,7 +393,8 @@
+         private let appliedQtsDisposable = MetaDisposable()
+         private let reportMessageDeliveryDisposable = DisposableSet()
+         private let updateEmojiGameInfoDisposable = MetaDisposable()
+-        private let ghostBaseBotShadowHistoryDisposable = MetaDisposable()
++        private let botBridgeStartDisposable = MetaDisposable()
++        private var botBridgeHistory: BotBridgeHistoryController?
+         
+         let updateConfigRequested: (() -> Void)?
+         let isPremiumUpdated: (() -> Void)?
+@@ -437,8 +438,8 @@
+             self.appliedQtsDisposable.dispose()
+             self.reportMessageDeliveryDisposable.dispose()
+             self.updateEmojiGameInfoDisposable.dispose()
+-            self.ghostBaseBotShadowHistoryDisposable.dispose()
+-            GhostBaseBotHistoryGate.set(peerId: self.accountPeerId, active: false)
++            self.botBridgeStartDisposable.dispose()
++            self.botBridgeHistory?.cancel(reason: .cancelled)
+         }
+         
+         public func reset() {
+@@ -1559,285 +1560,29 @@
+             }
+         }
+         
+-        private struct GhostBaseBotShadowCursor {
+-            let state: AuthorizedAccountState.State
+-            let slice: Int
+-        }
+-
+-        private func ghostBaseBotShadowPrefix() -> String {
+-            return "jerkgram.BotShadow1.\(self.accountPeerId.toInt64())"
+-        }
+-
+-        private func ghostBaseBotShadowSet(_ key: String, _ value: Any) {
+-            UserDefaults.standard.set(value, forKey: self.ghostBaseBotShadowPrefix() + "." + key)
+-        }
+-
+-        private func ghostBaseBotShadowRelease() {
+-            GhostBaseBotHistoryGate.set(peerId: self.accountPeerId, active: false)
+-            UserDefaults.standard.removeObject(forKey: self.ghostBaseBotShadowPrefix() + ".RunningAt")
+-        }
+-
+-        private func ghostBaseBotShadowLoadCursor() -> GhostBaseBotShadowCursor {
+-            let defaults = UserDefaults.standard
+-            let prefix = self.ghostBaseBotShadowPrefix() + ".Cursor."
+-            if defaults.object(forKey: prefix + "pts") != nil {
+-                let state = AuthorizedAccountState.State(
+-                    pts: Int32(defaults.integer(forKey: prefix + "pts")),
+-                    qts: Int32(defaults.integer(forKey: prefix + "qts")),
+-                    date: Int32(defaults.integer(forKey: prefix + "date")),
+-                    seq: Int32(defaults.integer(forKey: prefix + "seq"))
+-                )
+-                if state.pts != 0 || state.qts != 0 || state.date != 0 || state.seq != 0 {
+-                    return GhostBaseBotShadowCursor(state: state, slice: defaults.integer(forKey: prefix + "slice"))
+-                }
+-            }
+-            // The all-zero cursor exists only in memory and is never written to Postbox.
+-            return GhostBaseBotShadowCursor(state: AuthorizedAccountState.State(pts: 0, qts: 0, date: 0, seq: 0), slice: 0)
+-        }
+-
+-        private func ghostBaseBotShadowSaveCursor(_ cursor: GhostBaseBotShadowCursor) {
+-            guard cursor.state.pts != 0 || cursor.state.qts != 0 || cursor.state.date != 0 || cursor.state.seq != 0 else {
+-                return
+-            }
+-            let defaults = UserDefaults.standard
+-            let prefix = self.ghostBaseBotShadowPrefix() + ".Cursor."
+-            defaults.set(Int(cursor.state.pts), forKey: prefix + "pts")
+-            defaults.set(Int(cursor.state.qts), forKey: prefix + "qts")
+-            defaults.set(Int(cursor.state.date), forKey: prefix + "date")
+-            defaults.set(Int(cursor.state.seq), forKey: prefix + "seq")
+-            defaults.set(cursor.slice, forKey: prefix + "slice")
+-        }
+-
+-        private func ghostBaseBotShadowClearCursor() {
+-            let defaults = UserDefaults.standard
+-            let prefix = self.ghostBaseBotShadowPrefix() + ".Cursor."
+-            for key in ["pts", "qts", "date", "seq", "slice"] {
+-                defaults.removeObject(forKey: prefix + key)
+-            }
+-        }
+-
+-        private func ghostBaseBotShadowSafeOperation(_ operation: AccountStateMutationOperation) -> Bool {
+-            switch operation {
+-            case .AddMessages,
+-                 .DeleteMessagesWithGlobalIds,
+-                 .DeleteMessages,
+-                 .EditMessage,
+-                 .UpdateMessagePoll,
+-                 .UpdateMessageReactions,
+-                 .UpdateMedia,
+-                 .MergeApiChats,
+-                 .UpdatePeer,
+-                 .UpdateCachedPeerData,
+-                 .UpdateMessagesPinned,
+-                 .MergeApiUsers,
+-                 .UpdateMessageImpressionCount,
+-                 .UpdateMessageForwardsCount,
+-                 .UpdateExtendedMedia,
+-                 .UpdateAudioTranscription:
+-                return true
+-            default:
+-                // In particular: never replay UpdateState, channel pts/state, read
+-                // state, notification settings, stories, calls or authorization data.
+-                return false
+-            }
+-        }
+-
+-        private func ghostBaseBotShadowReplay(difference: Api.updates.Difference, cursor: GhostBaseBotShadowCursor) -> Signal<Int, NoError> {
++        func jerkgramStartBotBridgeHistory(recordId: Int64, lifetime: BotBridgeLifetime, admit: @escaping (String) -> Bool, event: @escaping (BotBridgeHistoryEvent) -> Void) {
++            guard self.botBridgeHistory == nil, lifetime.isActive else { return }
+             let accountPeerId = self.accountPeerId
+-            let accountManager = self.accountManager
+-            let postbox = self.postbox
+-            let network = self.network
+-            let mediaBox = self.postbox.mediaBox
+-            let auxiliaryMethods = self.auxiliaryMethods
+-            let messagesRemovedContext = self.messagesRemovedContext
+-
+-            return postbox.transaction { transaction -> AuthorizedAccountState.State? in
+-                return (transaction.getState() as? AuthorizedAccountState)?.state
+-            }
+-            |> mapToSignal { persistentState -> Signal<Int, NoError> in
+-                guard let persistentState else {
+-                    return .single(0)
+-                }
+-                return initialStateWithDifference(
+-                    postbox: postbox,
+-                    difference: difference,
+-                    overrideState: cursor.state,
+-                    resetChannelStates: cursor.slice == 0 && cursor.state.pts == 0
+-                )
+-                |> mapToSignal { initialState -> Signal<Int, NoError> in
+-                    return finalStateWithDifference(
+-                        accountPeerId: accountPeerId,
+-                        postbox: postbox,
+-                        network: network,
+-                        state: initialState,
+-                        difference: difference,
+-                        asyncResetChannels: nil,
+-                        shouldResetChannels: false
+-                    )
+-                    |> mapToSignal { finalState -> Signal<Int, NoError> in
+-                        var safeFinalState = finalState
+-                        safeFinalState.state.operations = safeFinalState.state.operations.filter(self.ghostBaseBotShadowSafeOperation)
+-                        safeFinalState.state.state = persistentState
+-                        safeFinalState.shouldPoll = false
+-                        safeFinalState.incomplete = false
+-                        safeFinalState.missingUpdatesFromChannels.removeAll()
+-                        safeFinalState.discard = false
+-
+-                        var messageIds = Set<MessageId>()
+-                        var minTimestamps: [PeerId: Int32] = [:]
+-                        for operation in safeFinalState.state.operations {
+-                            if case let .AddMessages(messages, _) = operation {
+-                                for message in messages {
+-                                    if case let .Id(id) = message.id {
+-                                        messageIds.insert(id)
+-                                        minTimestamps[id.peerId] = min(minTimestamps[id.peerId] ?? message.timestamp, message.timestamp)
+-                                    }
+-                                }
+-                            }
+-                        }
+-
+-                        for (resource, data) in safeFinalState.state.preCachedResources {
+-                            mediaBox.storeResourceData(resource.id, data: data)
+-                        }
+-
+-                        return postbox.transaction { transaction -> (Int, [DeletedMessageId]) in
+-                            let existingIds = transaction.filterStoredMessageIds(messageIds)
+-                            guard let replayed = replayFinalState(
+-                                accountManager: accountManager,
+-                                postbox: postbox,
+-                                accountPeerId: accountPeerId,
+-                                mediaBox: mediaBox,
+-                                encryptionProvider: network.encryptionProvider,
+-                                transaction: transaction,
+-                                auxiliaryMethods: auxiliaryMethods,
+-                                finalState: safeFinalState,
+-                                removePossiblyDeliveredMessagesUniqueIds: [:],
+-                                ignoreDate: true,
+-                                skipVerification: true
+-                            ) else {
+-                                return (0, [])
+-                            }
+-                            for (peerId, timestamp) in minTimestamps {
+-                                updatePeerChatInclusionWithMinTimestamp(
+-                                    transaction: transaction,
+-                                    id: peerId,
+-                                    minTimestamp: timestamp,
+-                                    forceRootGroupIfNotExists: true
+-                                )
+-                            }
+-                            return (max(0, messageIds.count - existingIds.count), replayed.deletedMessageIds)
+-                        }
+-                        |> map { added, deletedIds in
+-                            if !deletedIds.isEmpty {
+-                                messagesRemovedContext.addIsMessagesDeletedInteractively(ids: deletedIds)
+-                                messagesRemovedContext.addIsMessagesDeletedRemotely(ids: deletedIds)
+-                            }
+-                            return added
+-                        }
+-                    }
+-                }
+-            }
+-        }
+-
+-        private func ghostBaseBotShadowPage(cursor: GhostBaseBotShadowCursor, importedTotal: Int) -> Signal<Bool, NoError> {
+-            guard cursor.slice < 96 else {
+-                self.ghostBaseBotShadowSet("LastResult", "sliceLimit")
+-                self.ghostBaseBotShadowRelease()
+-                return .single(false)
+-            }
+-            self.ghostBaseBotShadowSet("LastRequest", "pts=\(cursor.state.pts) qts=\(cursor.state.qts) date=\(cursor.state.date) seq=\(cursor.state.seq) slice=\(cursor.slice)")
+-
+-            return self.network.request(
+-                Api.functions.updates.getDifference(
+-                    flags: 0,
+-                    pts: cursor.state.pts,
+-                    ptsLimit: nil,
+-                    ptsTotalLimit: nil,
+-                    date: cursor.state.date,
+-                    qts: cursor.state.qts,
+-                    qtsLimit: nil
+-                ),
+-                automaticFloodWait: false
+-            )
+-            |> map(Optional.init)
+-            |> `catch` { error -> Signal<Api.updates.Difference?, NoError> in
+-                self.ghostBaseBotShadowSet("LastResult", "rpcError")
+-                self.ghostBaseBotShadowSet("LastErrorCode", Int(error.errorCode))
+-                self.ghostBaseBotShadowSet("LastError", error.errorDescription ?? "nil")
+-                Logger.shared.log("jerkgram.BotShadow1", "getDifference failed \(error.errorCode) \(error.errorDescription ?? "nil")")
+-                self.ghostBaseBotShadowRelease()
+-                return .single(nil)
+-            }
+-            |> mapToSignal { difference -> Signal<Bool, NoError> in
+-                guard let difference else {
+-                    return .single(false)
+-                }
+-                switch difference {
+-                case let .difference(data):
+-                    self.ghostBaseBotShadowSet("LastResult", "difference")
+-                    self.ghostBaseBotShadowSet("LastMessages", data.newMessages.count)
+-                    self.ghostBaseBotShadowSet("LastOtherUpdates", data.otherUpdates.count)
+-                    return self.ghostBaseBotShadowReplay(difference: difference, cursor: cursor)
+-                    |> map { added in
+-                        let total = importedTotal + added
+-                        self.ghostBaseBotShadowSet("Imported", total)
+-                        self.ghostBaseBotShadowSet("Completed", total > 0)
+-                        self.ghostBaseBotShadowClearCursor()
+-                        self.ghostBaseBotShadowRelease()
+-                        Logger.shared.log("jerkgram.BotShadow1", "final added=\(total)")
+-                        return total > 0
+-                    }
+-                case let .differenceSlice(data):
+-                    self.ghostBaseBotShadowSet("LastResult", "differenceSlice")
+-                    self.ghostBaseBotShadowSet("LastMessages", data.newMessages.count)
+-                    self.ghostBaseBotShadowSet("LastOtherUpdates", data.otherUpdates.count)
+-                    return self.ghostBaseBotShadowReplay(difference: difference, cursor: cursor)
+-                    |> mapToSignal { added -> Signal<Bool, NoError> in
+-                        switch data.intermediateState {
+-                        case let .state(state):
+-                            let next = GhostBaseBotShadowCursor(
+-                                state: AuthorizedAccountState.State(pts: state.pts, qts: state.qts, date: state.date, seq: state.seq),
+-                                slice: cursor.slice + 1
+-                            )
+-                            self.ghostBaseBotShadowSaveCursor(next)
+-                            return self.ghostBaseBotShadowPage(cursor: next, importedTotal: importedTotal + added)
+-                        }
+-                    }
+-                case .differenceEmpty:
+-                    self.ghostBaseBotShadowSet("LastResult", "differenceEmpty")
+-                    self.ghostBaseBotShadowSet("Imported", importedTotal)
+-                    if importedTotal > 0 {
+-                        self.ghostBaseBotShadowSet("Completed", true)
+-                        self.ghostBaseBotShadowClearCursor()
+-                    }
+-                    self.ghostBaseBotShadowRelease()
+-                    return .single(importedTotal > 0)
+-                case .differenceTooLong:
+-                    self.ghostBaseBotShadowSet("LastResult", "differenceTooLong")
+-                    self.ghostBaseBotShadowRelease()
+-                    Logger.shared.log("jerkgram.BotShadow1", "differenceTooLong; no state mutation and no dialog RPC")
+-                    return .single(false)
+-                }
+-            }
+-        }
+-
+-        func ghostBaseStartBotShadowHistory() {
+-            assert(self.queue.isCurrent())
+-            let defaults = UserDefaults.standard
+-            let prefix = self.ghostBaseBotShadowPrefix()
+-            guard !defaults.bool(forKey: prefix + ".Completed") else {
+-                return
+-            }
+-            let now = Int64(Date().timeIntervalSince1970)
+-            let runningAt = Int64(defaults.double(forKey: prefix + ".RunningAt"))
+-            guard runningAt == 0 || now - runningAt > 600 else {
+-                return
+-            }
+-            defaults.set(Double(now), forKey: prefix + ".RunningAt")
+-            GhostBaseBotHistoryGate.set(peerId: self.accountPeerId, active: true)
+-            let cursor = self.ghostBaseBotShadowLoadCursor()
+-            self.ghostBaseBotShadowHistoryDisposable.set((self.ghostBaseBotShadowPage(cursor: cursor, importedTotal: 0)
+-            |> deliverOn(self.queue)).start())
++            self.botBridgeStartDisposable.set((self.postbox.transaction { transaction -> (BotBridgeHistoryProgress, BotBridgeCursor?)? in
++                guard let progress = jerkgramPrepareBotBridgeHistory(transaction: transaction, owner: recordId, accountPeerId: accountPeerId, lifetime: lifetime) else { return nil }
++                let live = botBridgeObservedLive(transaction: transaction)
++                return (progress, live)
++            } |> deliverOn(self.queue)).start(next: { [weak self] prepared in
++                guard let self = self, let (progress, live) = prepared, lifetime.isActive, self.botBridgeHistory == nil else { return }
++                guard admit(progress.generation), lifetime.isActive else { return }
++                let controller = BotBridgeHistoryController(queue: self.queue, postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, initialProgress: progress, removed: self.messagesRemovedContext, lifetime: lifetime, enqueue: { [weak self] signal in
++                    guard let self = self else { return }
++                    self.addOperation(.custom(self.getNextId(), signal), position: .last)
++                }, event: event)
++                self.botBridgeHistory = controller
++                controller.observeLive(live)
++                controller.start()
++            }))
++        }
++
++        func jerkgramCancelBotBridgeHistory(reason: BotBridgeHistoryReason) {
++            self.botBridgeStartDisposable.dispose()
++            self.botBridgeHistory?.cancel(reason: reason)
+         }
+ 
+         private func insertProcessEvents(_ events: AccountFinalStateEvents) {
+@@ -2208,6 +1953,7 @@
+         }
+     }
+     
++    private let botBridgeLifetime = BotBridgeLifetime()
+     private let impl: QueueLocalObject<Impl>
+     
+     public let accountPeerId: PeerId
+@@ -2612,12 +2358,19 @@
+         }
+     }
+     
+-    public func ghostBaseStartBotShadowHistory() {
++    func jerkgramStartBotBridgeHistory(recordId: Int64, admit: @escaping (String) -> Bool = { _ in true }, event: @escaping (BotBridgeHistoryEvent) -> Void = { _ in }) {
++        let lifetime = self.botBridgeLifetime
+         self.impl.with { impl in
+-            impl.ghostBaseStartBotShadowHistory()
+-        }
+-    }
+-    
++            impl.jerkgramStartBotBridgeHistory(recordId: recordId, lifetime: lifetime, admit: admit, event: event)
++        }
++    }
++
++    func jerkgramCancelBotBridgeHistory(reason: BotBridgeHistoryReason) {
++        // Invalidate before hopping to the manager queue or waiting on Postbox.
++        self.botBridgeLifetime.cancel()
++        self.impl.with { impl in impl.jerkgramCancelBotBridgeHistory(reason: reason) }
++    }
++
+     public static func extractIncomingCallUpdate(data: Data) -> IncomingCallUpdate? {
+         var rawData = data
+         let reader = BufferReader(Buffer(data: data))
+diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift
+new file mode 100644
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift
+@@ -0,0 +1,587 @@
++import Foundation
++import Postbox
++
++// BEGIN BOTBRIDGE DIAGNOSTICS
++// Every value accepted here is finite or generated locally. Neither API objects nor
++// account identifiers cross the sink boundary. The registry's identifiers stay RAM only.
++struct BotBridgeOperationFlags: OptionSet, Codable {
++    let rawValue: Int
++    static let text = Self(rawValue: 1)
++    static let reply = Self(rawValue: 2)
++    static let media = Self(rawValue: 4)
++    static let post = Self(rawValue: 8)
++}
++struct BotBridgeOperationContext {
++    let logicalId = UUID()
++    let flags: BotBridgeOperationFlags
++}
++enum BotBridgeDiagnosticCategory: String, Codable {
++    case text, media, forward, inline, reaction, edit, delete, mutation
++    case stateRead = "state_read"
++    case readAck = "read_ack"
++    case unknown
++    static func classify(_ method: String) -> Self {
++        switch method {
++        case "messages.sendMessage": return .text
++        case "messages.sendMedia", "messages.sendMultiMedia": return .media
++        case "messages.forwardMessages": return .forward
++        case "messages.sendInlineBotResult": return .inline
++        case "messages.sendReaction", "messages.sendPaidReaction": return .reaction
++        case "messages.editMessage", "messages.editInlineBotMessage", "ephemeral.editMessage": return .edit
++        case "messages.deleteMessages", "channels.deleteMessages", "channels.deleteHistory", "messages.deleteHistory", "channels.deleteParticipantHistory", "messages.deleteScheduledMessages", "messages.deleteQuickReplyMessages", "ephemeral.deleteMessage", "ephemeral.deleteWelcomeMessage", "messages.deleteTopicHistory", "messages.deleteSavedHistory", "messages.deleteQuickReplyShortcut", "channels.deleteChannel", "messages.deleteChat": return .delete
++        case "messages.readHistory", "channels.readHistory", "messages.readMessageContents", "channels.readMessageContents", "messages.readMentions", "messages.readReactions", "messages.readDiscussion", "stories.readStories": return .readAck
++        case "updates.getState", "updates.getDifference": return .stateRead
++        case "messages.sendScreenshotNotification", "messages.sendVote", "messages.sendWebViewResultMessage", "channels.leaveChannel", "messages.deleteChatUser", "messages.reportSpam": return .mutation
++        default: return .unknown
++        }
++    }
++}
++enum BotBridgeDiagnosticPhase: String, Codable { case submitted, acknowledged, result, rpcFailure, parseFailure, cancelled, snapshot, historyStart, historyPage, historyEnd, handoff, restoredTerminal }
++enum BotBridgeDiagnosticLifecycle: String, Codable { case localLogout, remoteLogout, serverLogout, softReset, authKeyUnknown, removed, cleanupStart, cleanupResult, deletionScheduled, deinitialized }
++struct BotBridgeDiagnosticTuple: Codable { let pts: Int32; let qts: Int32; let date: Int32; let seq: Int32 }
++enum BotBridgeDiagnosticHistoryReason: String, Codable {
++    case completed, noCandidate, tooLong, limit, deadline, clockChanged, corrupt
++    case nonadvancing, rpcError, timeout, cancelled, replaced, loggedOut, softReset, interruptedState
++}
++enum BotBridgeDiagnosticCorrelation: String, Codable { case expired, historyLost = "history_lost", none, observedOrderOnly = "observed_order_only" }
++struct BotBridgeDiagnosticHistory: Codable {
++    let original: BotBridgeDiagnosticTuple?
++    let candidate: BotBridgeDiagnosticTuple?
++    let lastRetrieval: BotBridgeDiagnosticTuple?
++    let observedLive: BotBridgeDiagnosticTuple?
++    let reservedAttempts: Int
++    let committedPages: Int
++    let examinedMessages: Int
++    let insertedMessages: Int
++    let insertedPeers: Int
++    let insertedChats: Int
++    let insertedUsers: Int
++    let skipped: Int
++    let unsupported: Int
++    let historicalDeletionObserved: Int
++    let deleteIdsObserved: Int
++    let missingReferences: Int
++    let reason: BotBridgeDiagnosticHistoryReason?
++    var deletionCoverageLimited = true
++    var liveStateNeverReplaced = true
++    let modernProcessingResumed: Bool
++}
++enum BotBridgeDiagnosticErrorClass: String, Codable { case auth, rateLimit, server, client, unknown }
++struct BotBridgeDiagnosticFlight: Codable {
++    let request: UUID
++    let logical: UUID?
++    let category: BotBridgeDiagnosticCategory
++    let flags: BotBridgeOperationFlags
++    let attempt: Int
++    let submittedAt: Double
++    var completion: BotBridgeDiagnosticPhase?
++    var errorCode: Int32?
++}
++struct BotBridgeDiagnosticRecord: Codable {
++    var schema = 1
++    let session: UUID
++    let epoch: UUID
++    let sequence: UInt64
++    let wall: Double
++    let phase: BotBridgeDiagnosticPhase
++    var request: UUID?
++    var logical: UUID?
++    var category: BotBridgeDiagnosticCategory = .unknown
++    var flags: BotBridgeOperationFlags = []
++    var attempt: Int = 0
++    var errorCode: Int32?
++    var errorClass: BotBridgeDiagnosticErrorClass?
++    var lifecycle: BotBridgeDiagnosticLifecycle?
++    var lastSubmitted: BotBridgeDiagnosticFlight?
++    var lastCompleted: BotBridgeDiagnosticFlight?
++    var inFlight: [BotBridgeDiagnosticFlight] = []
++    var history: BotBridgeDiagnosticHistory?
++    var evictedEvents: UInt64 = 0
++    var lostContexts: UInt64 = 0
++    var expiredContexts: UInt64 = 0
++    var correlation: BotBridgeDiagnosticCorrelation?
++}
++private func botBridgeIncrement(_ value: inout UInt64) { if value < UInt64.max { value += 1 } }
++
++final class BotBridgeDiagnosticScope {
++    let epoch = UUID()
++    let session: UUID
++    let generation: String // Validated preference generation; never exported.
++    private let lock = NSLock()
++    private let sink: BotBridgeDiagnosticSink
++    private let clock: () -> Double
++    private let cancelHistory: (BotBridgeDiagnosticLifecycle) -> Void
++    weak var registration: BotBridgeScopeRegistration?
++    private var frozen = false
++    private var sequence: UInt64 = 0
++    private var ring: [BotBridgeDiagnosticRecord] = []
++    private var snapshots: [BotBridgeDiagnosticRecord] = []
++    private var active: [UUID: BotBridgeDiagnosticFlight] = [:]
++    private var attempts: [UUID: (Int, Double)] = [:]
++    private var lastSubmitted: BotBridgeDiagnosticFlight?
++    private var lastHistory: BotBridgeDiagnosticHistory?
++    private var lastCompleted: BotBridgeDiagnosticFlight?
++    private var evicted: UInt64 = 0
++    private var lost: UInt64 = 0
++    private var expired: UInt64 = 0
++    init(generation: String, sink: BotBridgeDiagnosticSink = .shared, clock: @escaping () -> Double = { Date().timeIntervalSince1970 }, cancelHistory: @escaping (BotBridgeDiagnosticLifecycle) -> Void) {
++        self.generation = generation; self.session = UUID(uuidString: generation) ?? UUID(); self.sink = sink; self.clock = clock; self.cancelHistory = cancelHistory
++    }
++    var isFrozen: Bool { lock.lock(); defer { lock.unlock() }; return frozen }
++    var activeCount: Int { lock.lock(); defer { lock.unlock() }; return active.count }
++    func snapshotEvents() -> [BotBridgeDiagnosticRecord] { lock.lock(); defer { lock.unlock() }; return (ring + snapshots).sorted { $0.sequence < $1.sequence } }
++    private func expire(_ now: Double) {
++        let old = active.filter { now < $0.value.submittedAt || now - $0.value.submittedAt > 1800 }.map { $0.key }
++        for id in old { active.removeValue(forKey: id); botBridgeIncrement(&expired) }
++        attempts = attempts.filter { now >= $0.value.1 && now - $0.value.1 <= 1800 }
++        if let value = lastSubmitted, now < value.submittedAt || now - value.submittedAt > 1800 { lastSubmitted = nil }
++        if let value = lastCompleted, now < value.submittedAt || now - value.submittedAt > 1800 { lastCompleted = nil }
++    }
++    private func record(_ phase: BotBridgeDiagnosticPhase, now: Double) -> BotBridgeDiagnosticRecord {
++        botBridgeIncrement(&sequence)
++        return BotBridgeDiagnosticRecord(session: session, epoch: epoch, sequence: sequence, wall: now, phase: phase, evictedEvents: evicted, lostContexts: lost, expiredContexts: expired)
++    }
++    private func append(_ record: BotBridgeDiagnosticRecord, reserved: Bool = false) {
++        var value = record
++        if reserved {
++            if snapshots.count == 8 { snapshots.removeFirst(); botBridgeIncrement(&evicted) }
++            value.evictedEvents = evicted
++            snapshots.append(value)
++        } else {
++            if ring.count == 248 { ring.removeFirst(); botBridgeIncrement(&evicted) }
++            value.evictedEvents = evicted
++            ring.append(value)
++        }
++        // Sink only takes a short bounded lock, schedules a single drain, and returns.
++        sink.accept(value, reserved: reserved)
++    }
++    func begin(category: BotBridgeDiagnosticCategory, context: BotBridgeOperationContext?) -> BotBridgeRequestObservation? {
++        lock.lock(); defer { lock.unlock() }
++        guard !frozen else { return nil }
++        let now = clock(); expire(now)
++        guard active.count < 64 else {
++            botBridgeIncrement(&lost)
++            var value = record(.snapshot, now: now); value.correlation = .historyLost
++            append(value, reserved: true)
++            return nil
++        }
++        var attempt = 1
++        if let context = context {
++            if let previous = attempts[context.logicalId] { attempt = min(previous.0 + 1, Int(Int32.max)) }
++            else if attempts.count == 64, let oldest = attempts.min(by: { $0.value.1 < $1.value.1 }) { attempts.removeValue(forKey: oldest.key); botBridgeIncrement(&lost) }
++            attempts[context.logicalId] = (attempt, now)
++        }
++        let id = UUID()
++        var flags = context?.flags ?? []
++        if category == .text { flags.insert(.text) }
++        if category == .media { flags.insert(.media) }
++        let flight = BotBridgeDiagnosticFlight(request: id, logical: context?.logicalId, category: category, flags: flags, attempt: attempt, submittedAt: now)
++        active[id] = flight; lastSubmitted = flight
++        var value = record(.submitted, now: now)
++        value.request = id; value.logical = flight.logical; value.category = category; value.flags = flags; value.attempt = attempt
++        append(value)
++        return BotBridgeRequestObservation(scope: self, id: id)
++    }
++    func observe(_ id: UUID, phase: BotBridgeDiagnosticPhase, errorCode: Int32? = nil) {
++        lock.lock(); defer { lock.unlock() }
++        let now = clock(); expire(now)
++        guard !frozen, var flight = active[id] else { return }
++        var value = record(phase, now: now)
++        value.request = id; value.logical = flight.logical; value.category = flight.category; value.flags = flight.flags; value.attempt = flight.attempt
++        value.errorCode = errorCode
++        if let code = errorCode {
++            value.errorClass = code == 401 ? .auth : (code == 420 ? .rateLimit : (code >= 500 ? .server : (code >= 400 ? .client : .unknown)))
++        }
++        if phase != .acknowledged {
++            flight.completion = phase; flight.errorCode = errorCode
++            active.removeValue(forKey: id); lastCompleted = flight
++        }
++        append(value)
++    }
++    func history(_ history: BotBridgeDiagnosticHistory, phase: BotBridgeDiagnosticPhase) {
++        lock.lock(); defer { lock.unlock() }
++        // Terminal manager callbacks may arrive after freeze; retain their typed result.
++        lastHistory = history
++        var value = record(phase, now: clock()); value.history = history
++        append(value, reserved: phase == .historyEnd || phase == .handoff || phase == .restoredTerminal)
++    }
++    func lifecycle(_ kind: BotBridgeDiagnosticLifecycle, terminal: Bool = true) {
++        // Invalidation of the existing sole manager happens before any snapshot or detach.
++        if kind != .cleanupResult && kind != .deletionScheduled { cancelHistory(kind) }
++        lock.lock()
++        let now = clock(); expire(now)
++        var value = record(.snapshot, now: now)
++        value.history = lastHistory
++        value.lifecycle = kind; value.lastSubmitted = lastSubmitted; value.lastCompleted = lastCompleted
++        value.inFlight = Array(active.values).sorted { $0.submittedAt < $1.submittedAt }
++        let correlation: BotBridgeDiagnosticCorrelation = expired > 0 ? .expired : (lost > 0 || evicted > 0 ? .historyLost : (lastSubmitted == nil ? .none : .observedOrderOnly))
++        value.correlation = correlation
++        if terminal { frozen = true; active.removeAll(); attempts.removeAll() }
++        append(value, reserved: true)
++        lock.unlock()
++        if terminal { registration?.clear(epoch: epoch) }
++    }
++}
++// Independent box: Signals capture this object, which owns neither Network nor Account.
++final class BotBridgeScopeRegistration {
++    private let lock = NSLock()
++    private weak var scope: BotBridgeDiagnosticScope?
++    func install(_ scope: BotBridgeDiagnosticScope) { scope.registration = self; lock.lock(); self.scope = scope; lock.unlock() }
++    func clear(epoch: UUID) { lock.lock(); if scope?.epoch == epoch { scope = nil }; lock.unlock() }
++    func begin(method: String, context: BotBridgeOperationContext?) -> BotBridgeRequestObservation? {
++        lock.lock(); let scope = self.scope; lock.unlock()
++        return scope?.begin(category: .classify(method), context: context)
++    }
++    func lifecycle(_ kind: BotBridgeDiagnosticLifecycle) {
++        lock.lock(); let scope = self.scope; lock.unlock()
++        scope?.lifecycle(kind, terminal: false)
++    }
++    func context(flags: BotBridgeOperationFlags) -> BotBridgeOperationContext? {
++        lock.lock(); let scope = self.scope; lock.unlock()
++        guard let scope = scope, !scope.isFrozen else { return nil }
++        return BotBridgeOperationContext(flags: flags)
++    }
++}
++final class BotBridgeRequestObservation {
++    private weak var scope: BotBridgeDiagnosticScope?
++    private let id: UUID
++    private let lock = NSLock()
++    private var terminal = false
++    init(scope: BotBridgeDiagnosticScope, id: UUID) { self.scope = scope; self.id = id }
++    func acknowledge() { lock.lock(); defer { lock.unlock() }; if !terminal { scope?.observe(id, phase: .acknowledged) } }
++    func finish(_ phase: BotBridgeDiagnosticPhase, errorCode: Int32? = nil) {
++        lock.lock(); defer { lock.unlock() }
++        guard !terminal else { return }; terminal = true
++        scope?.observe(id, phase: phase, errorCode: errorCode)
++    }
++    func cancel() { finish(.cancelled) }
++}
++// Immutable operation target. It keeps no Account, scope or manager alive and is
++// never Codable. Delayed callbacks cannot re-resolve a replacement generation.
++final class BotBridgeDiagnosticTarget {
++    private(set) weak var namespace: AnyObject?
++    let record: Int64
++    let generation: UUID
++    let epoch: UUID
++    let directoryName: String?
++    init(namespace: AnyObject, record: Int64, generation: UUID, epoch: UUID, directoryName: String?) {
++        self.namespace = namespace; self.record = record; self.generation = generation
++        self.epoch = epoch; self.directoryName = directoryName
++    }
++}
++// Process-local aggregate only: no rejected account identifier or recorder is retained.
++struct BotBridgeDiagnosticAdmissionLoss: Encodable {
++    var capacity: UInt64 = 0
++    var duplicateTarget: UInt64 = 0
++    var invalidGeneration: UInt64 = 0
++}
++// Cancellation index only. No API hook, no polling, and no Account retention.
++final class BotBridgeDiagnosticRegistry {
++    static let shared = BotBridgeDiagnosticRegistry()
++    private struct Entry {
++        weak var namespace: AnyObject?
++        let record: Int64
++        let generation: UUID
++        let epoch: UUID
++        let directoryName: String?
++        weak var scope: BotBridgeDiagnosticScope?
++    }
++    private let lock = NSLock()
++    private var entries: [Entry] = []
++    private var deniedAdmissions = BotBridgeDiagnosticAdmissionLoss()
++    var admissionLoss: BotBridgeDiagnosticAdmissionLoss { lock.lock(); defer { lock.unlock() }; return deniedAdmissions }
++    func register(namespace: AnyObject, record: Int64, scope: BotBridgeDiagnosticScope, directoryName: String? = nil) -> Bool {
++        lock.lock(); defer { lock.unlock() }
++        entries.removeAll { $0.namespace == nil || $0.scope == nil }
++        // Never silently evict a still-live cancellation target (even a different epoch).
++        guard let generation = UUID(uuidString: scope.generation) else { botBridgeIncrement(&deniedAdmissions.invalidGeneration); return false }
++        guard !entries.contains(where: { $0.namespace === namespace && $0.record == record }) else { botBridgeIncrement(&deniedAdmissions.duplicateTarget); return false }
++        guard entries.count < 32 else { botBridgeIncrement(&deniedAdmissions.capacity); return false }
++        entries.append(Entry(namespace: namespace, record: record, generation: generation, epoch: scope.epoch, directoryName: directoryName, scope: scope)); return true
++    }
++    func unregister(namespace: AnyObject, record: Int64, epoch: UUID) {
++        lock.lock(); entries.removeAll { $0.namespace == nil || $0.scope == nil || ($0.namespace === namespace && $0.record == record && $0.epoch == epoch) }; lock.unlock()
++    }
++    func targets(namespace: AnyObject) -> [BotBridgeDiagnosticTarget] {
++        lock.lock(); defer { lock.unlock() }
++        entries.removeAll { $0.namespace == nil || $0.scope == nil }
++        return entries.filter { $0.namespace === namespace }.map {
++            BotBridgeDiagnosticTarget(namespace: namespace, record: $0.record, generation: $0.generation, epoch: $0.epoch, directoryName: $0.directoryName)
++        }
++    }
++    func target(namespace: AnyObject, record: Int64) -> BotBridgeDiagnosticTarget? {
++        return targets(namespace: namespace).first { $0.record == record }
++    }
++    func notify(target: BotBridgeDiagnosticTarget?, kind: BotBridgeDiagnosticLifecycle) {
++        guard let target = target, let namespace = target.namespace else { return }
++        lock.lock(); entries.removeAll { $0.namespace == nil || $0.scope == nil }
++        let value = entries.first { $0.namespace === namespace && $0.record == target.record && $0.generation == target.generation && $0.epoch == target.epoch }?.scope
++        lock.unlock()
++        guard let value = value else { return }
++        if kind != .removed || !value.isFrozen { value.lifecycle(kind) }
++    }
++    // Immediate subscribed observations resolve once; delayed work captures target().
++    func notify(namespace: AnyObject, record: Int64, kind: BotBridgeDiagnosticLifecycle) {
++        notify(target: target(namespace: namespace, record: record), kind: kind)
++    }
++    func reconcile(namespace: AnyObject, records: Set<Int64>) {
++        for target in targets(namespace: namespace) where !records.contains(target.record) {
++            notify(target: target, kind: .removed)
++        }
++    }
++}
++// The original deletion predicate and its diagnostic observation share a boundary.
++// Call immediately before the existing removal attempt on the utility queue.
++func botBridgeScheduleAccountDirectoryDeletion(directoryName: String, validPaths: Set<String>, targets: [BotBridgeDiagnosticTarget]) -> Bool {
++    guard directoryName.hasPrefix("account-"), !validPaths.contains(directoryName) else { return false }
++    for target in targets where target.directoryName == directoryName {
++        BotBridgeDiagnosticRegistry.shared.notify(target: target, kind: .deletionScheduled)
++    }
++    return true
++}
++// Account's lock makes admission race safely with logout before the first request.
++final class BotBridgeDiagnosticOwner {
++    private let lock = NSLock()
++    private var closed = false
++    private var scope: BotBridgeDiagnosticScope?
++    func admit(namespace: AnyObject, record: Int64, generation: String, registration: BotBridgeScopeRegistration, directoryName: String? = nil, cancelHistory: @escaping (BotBridgeDiagnosticLifecycle) -> Void) -> Bool {
++        lock.lock(); defer { lock.unlock() }
++        guard !closed, scope == nil, UUID(uuidString: generation) != nil else { return false }
++        let value = BotBridgeDiagnosticScope(generation: generation, cancelHistory: cancelHistory)
++        guard BotBridgeDiagnosticRegistry.shared.register(namespace: namespace, record: record, scope: value, directoryName: directoryName) else { return false }
++        scope = value; value.registration = registration; registration.install(value); return true
++    }
++    func history(_ event: BotBridgeDiagnosticHistory, phase: BotBridgeDiagnosticPhase) { lock.lock(); let scope = self.scope; lock.unlock(); scope?.history(event, phase: phase) }
++    func lifecycle(_ kind: BotBridgeDiagnosticLifecycle, terminal: Bool = true) {
++        lock.lock(); if terminal { closed = true }; let scope = self.scope; lock.unlock()
++        scope?.lifecycle(kind, terminal: terminal)
++    }
++    func teardown(namespace: AnyObject, record: Int64, registration: BotBridgeScopeRegistration) {
++        lifecycle(.deinitialized)
++        lock.lock(); let scope = self.scope; self.scope = nil; lock.unlock()
++        if let scope = scope { registration.clear(epoch: scope.epoch); BotBridgeDiagnosticRegistry.shared.unregister(namespace: namespace, record: record, epoch: scope.epoch) }
++    }
++}
++public enum BotBridgeDiagnosticExportError: Error { case busy, storage }
++private struct BotBridgeDiagnosticEnvelope: Encodable {
++    let schema = 1
++    let status: String
++    let records: [BotBridgeDiagnosticRecord]
++    let sinkDropped: UInt64
++    let snapshotDropped: UInt64
++    let storageFailures: UInt64
++    let storageLossCountUnknown: Bool
++    let exportTruncated: Int
++    let retentionExpiredFiles: UInt64
++    let rotationEvictedFiles: UInt64
++    let malformedRecords: UInt64
++    let retentionExpiredRecords: UInt64
++    let admissionDenied: BotBridgeDiagnosticAdmissionLoss
++    let internalRetriesUnobserved = true
++    let uploadsUnobserved = true
++    let localUpdateApplicationUnobserved = true
++    let restartAndCrashDurabilityUnknown = true
++    let snapshotPersistenceBestEffort = true
++    let unknownMethodsAreCoverageGaps = true
++    let cleanupResultMeansSignalCompletion = true
++    let directoryDeletionIsScheduledOnly = true
++}
++final class BotBridgeDiagnosticSink {
++    static let shared = BotBridgeDiagnosticSink(root: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Jerkgram/BotBridge1", isDirectory: true))
++    private let root: URL
++    private let queue: DispatchQueue
++    private let listDirectory: (URL) throws -> [URL]
++    private let lock = NSLock()
++    private var pending: [BotBridgeDiagnosticRecord] = []
++    private var reserved: [BotBridgeDiagnosticRecord] = []
++    private var scheduled = false
++    private var dropped: UInt64 = 0
++    private var snapshotDropped: UInt64 = 0
++    private var failures: UInt64 = 0 // sink queue only from here
++    private var expiredFiles: UInt64 = 0
++    private var evictedFiles: UInt64 = 0
++    private var malformedRecords: UInt64 = 0
++    private var expiredRecords: UInt64 = 0
++    private var exportBusy = false // protected by lock, includes queued export preparation
++    private var activeExport: URL?
++    init(root: URL, queue: DispatchQueue = DispatchQueue(label: "Jerkgram.BotBridge1.sink", qos: .utility), listDirectory: @escaping (URL) throws -> [URL] = { url in
++        try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey])
++    }) {
++        self.root = root; self.queue = queue; self.listDirectory = listDirectory
++        queue.async { self.prepare() }
++    }
++    func accept(_ record: BotBridgeDiagnosticRecord, reserved isReserved: Bool) {
++        lock.lock()
++        if isReserved {
++            if reserved.count == 8 { reserved.removeFirst(); botBridgeIncrement(&snapshotDropped) }
++            reserved.append(record)
++        } else if pending.count < 248 { pending.append(record) }
++        else { botBridgeIncrement(&dropped) }
++        if !scheduled { scheduled = true; queue.async { self.drain() } }
++        lock.unlock()
++    }
++    private func prepare() {
++        do {
++            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
++            try prune()
++            try removeStaleExports()
++        } catch { botBridgeIncrement(&failures) }
++    }
++    private func files() throws -> [URL] {
++        return try listDirectory(root).filter { $0.lastPathComponent.hasPrefix("events-") && $0.pathExtension == "jsonl" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
++    }
++    private func removeStaleExports() throws {
++        for url in try listDirectory(root) where url.lastPathComponent.hasPrefix("BOTBRIDGE1-export-") && url.pathExtension == "json" {
++            try FileManager.default.removeItem(at: url)
++        }
++    }
++    private func prune() throws {
++        let now = Date().timeIntervalSince1970
++        var retained: [URL] = []
++        for url in try files() {
++            let values = try url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
++            if now - (values.contentModificationDate?.timeIntervalSince1970 ?? 0) > 86400 || (values.fileSize ?? Int.max) > 256 * 1024 {
++                try FileManager.default.removeItem(at: url); botBridgeIncrement(&expiredFiles)
++            } else { retained.append(url) }
++        }
++        while retained.count > 8 {
++            try FileManager.default.removeItem(at: retained.removeFirst()); botBridgeIncrement(&evictedFiles)
++        }
++        // Atomic appends refresh mtime. Inspect physical records on every lazy
++        // access instead of allowing steady low-volume traffic to extend their TTL.
++        // Enforce the file/byte caps first: at most eight 256 KiB files are decoded.
++        let cutoff = now - 86400
++        let decoder = JSONDecoder()
++        for url in retained {
++            let bytes = try Data(contentsOf: url)
++            guard bytes.count <= 256 * 1024 else { throw CocoaError(.fileReadCorruptFile) }
++            var kept = Data()
++            var expired: UInt64 = 0
++            var malformed: UInt64 = 0
++            for line in bytes.split(separator: 10) {
++                guard line.count <= 32 * 1024, let value = try? decoder.decode(BotBridgeDiagnosticRecord.self, from: Data(line)), value.schema == 1, value.inFlight.count <= 64, value.flags.rawValue >= 0, value.flags.rawValue <= 15 else { botBridgeIncrement(&malformed); continue }
++                guard value.wall >= cutoff else { botBridgeIncrement(&expired); continue }
++                kept.append(contentsOf: line); kept.append(10)
++            }
++            if kept != bytes {
++                try kept.write(to: url, options: .atomic)
++                // Count physical losses only after the replacement succeeds.
++                self.expiredRecords += min(expired, UInt64.max - self.expiredRecords)
++                self.malformedRecords += min(malformed, UInt64.max - self.malformedRecords)
++            }
++        }
++    }
++    private func take() -> [BotBridgeDiagnosticRecord] {
++        lock.lock(); let values = (pending + reserved).sorted { $0.wall < $1.wall }; pending.removeAll(keepingCapacity: true); reserved.removeAll(keepingCapacity: true); scheduled = false; lock.unlock()
++        return values
++    }
++    @discardableResult private func drain() -> Bool {
++        let values = take(); guard !values.isEmpty else { return true }
++        do {
++            // No write is permitted until retention has actually been enumerated.
++            try prune()
++            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
++            var urls = try files()
++            var url = urls.last ?? newFile()
++            var bytes = Data()
++            if !urls.isEmpty { bytes = try Data(contentsOf: url) }
++            for record in values {
++                let encoded = try encoder.encode(record)
++                guard encoded.count <= 32 * 1024 else { throw CocoaError(.fileWriteUnknown) }
++                var line = encoded; line.append(10)
++                if bytes.count + line.count > 256 * 1024 {
++                    try bytes.write(to: url, options: .atomic)
++                    url = newFile(); bytes = Data()
++                    urls = try files()
++                    while urls.count >= 8 {
++                        try FileManager.default.removeItem(at: urls.removeFirst()); botBridgeIncrement(&evictedFiles)
++                    }
++                }
++                bytes.append(line)
++            }
++            try bytes.write(to: url, options: .atomic)
++            try prune()
++            return true
++        } catch { botBridgeIncrement(&failures); return false }
++    }
++    private func newFile() -> URL { return root.appendingPathComponent("events-\(String(format: "%020.0f", Date().timeIntervalSince1970 * 1000000))-\(UUID().uuidString).jsonl") }
++    func export(completion: @escaping (Result<URL, BotBridgeDiagnosticExportError>) -> Void) {
++        lock.lock()
++        guard !exportBusy else { lock.unlock(); queue.async { completion(.failure(.busy)) }; return }
++        exportBusy = true
++        lock.unlock()
++        queue.async {
++            guard self.drain() else { self.unlockExport(); completion(.failure(.storage)); return }
++            var records: [BotBridgeDiagnosticRecord] = []
++            let cutoff = Date().timeIntervalSince1970 - 86400
++            do {
++                try self.prune()
++                try self.removeStaleExports()
++                for url in try self.files() {
++                    let bytes = try Data(contentsOf: url)
++                    guard bytes.count <= 256 * 1024 else { throw CocoaError(.fileReadCorruptFile) }
++                    for line in bytes.split(separator: 10) {
++                        guard line.count <= 32 * 1024, let value = try? JSONDecoder().decode(BotBridgeDiagnosticRecord.self, from: Data(line)), value.schema == 1, value.inFlight.count <= 64, value.flags.rawValue >= 0, value.flags.rawValue <= 15 else { botBridgeIncrement(&self.malformedRecords); continue }
++                        guard value.wall >= cutoff else { botBridgeIncrement(&self.expiredRecords); continue }
++                        records.append(value)
++                    }
++                }
++            } catch { botBridgeIncrement(&self.failures); self.unlockExport(); completion(.failure(.storage)); return }
++            self.lock.lock(); let dropped = self.dropped; let snapshotDropped = self.snapshotDropped; self.lock.unlock()
++            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
++            let originalCount = records.count
++            var output: Data?
++            repeat {
++                let envelope = BotBridgeDiagnosticEnvelope(status: records.isEmpty ? "no_captured_sessions" : "captured_sessions_with_explicit_coverage_limits", records: records, sinkDropped: dropped, snapshotDropped: snapshotDropped, storageFailures: self.failures, storageLossCountUnknown: self.failures > 0, exportTruncated: originalCount - records.count, retentionExpiredFiles: self.expiredFiles, rotationEvictedFiles: self.evictedFiles, malformedRecords: self.malformedRecords, retentionExpiredRecords: self.expiredRecords, admissionDenied: BotBridgeDiagnosticRegistry.shared.admissionLoss)
++                output = try? encoder.encode(envelope)
++                if let value = output, value.count <= 2 * 1024 * 1024 { break }
++                if records.isEmpty { self.unlockExport(); completion(.failure(.storage)); return }
++                records.removeFirst(min(records.count, 64))
++            } while true
++            let url = self.root.appendingPathComponent("BOTBRIDGE1-export-\(UUID().uuidString).json")
++            do { try output!.write(to: url, options: .atomic); self.activeExport = url; completion(.success(url)) }
++            catch { botBridgeIncrement(&self.failures); self.unlockExport(); completion(.failure(.storage)) }
++        }
++    }
++    private func unlockExport() { lock.lock(); exportBusy = false; lock.unlock() }
++    func release(_ url: URL) {
++        queue.async { guard self.activeExport == url else { return }; try? FileManager.default.removeItem(at: url); self.activeExport = nil; self.unlockExport() }
++    }
++}
++public func jerkgramExportBotBridgeDiagnostics(completion: @escaping (Result<URL, BotBridgeDiagnosticExportError>) -> Void) { BotBridgeDiagnosticSink.shared.export(completion: completion) }
++public func jerkgramReleaseBotBridgeDiagnosticExport(_ url: URL) { BotBridgeDiagnosticSink.shared.release(url) }
++// END BOTBRIDGE DIAGNOSTICS
++
++// Typed adapter: no Codable progress object, owner/peer id, API payload, or error
++// crosses into diagnostics. Tuple values are observations only.
++private func botBridgeDiagnosticTuple(_ value: BotBridgeCursor?) -> BotBridgeDiagnosticTuple? {
++    guard let value = value else { return nil }
++    return BotBridgeDiagnosticTuple(pts: value.pts, qts: value.qts, date: value.date, seq: value.seq)
++}
++func botBridgeDiagnosticHistory(_ event: BotBridgeHistoryEvent) -> (history: BotBridgeDiagnosticHistory, phase: BotBridgeDiagnosticPhase) {
++    let phase: BotBridgeDiagnosticPhase
++    switch event.phase {
++    case .started: phase = .historyStart
++    case .reserved, .committed: phase = .historyPage
++    case .terminal: phase = .historyEnd
++    case .handoff: phase = .handoff
++    case .restoredTerminal: phase = .restoredTerminal
++    }
++    let history = BotBridgeDiagnosticHistory(original: botBridgeDiagnosticTuple(event.original), candidate: botBridgeDiagnosticTuple(event.candidate), lastRetrieval: botBridgeDiagnosticTuple(event.retrieval), observedLive: botBridgeDiagnosticTuple(event.live), reservedAttempts: event.reservedRequests, committedPages: event.committedPages, examinedMessages: event.examinedMessages, insertedMessages: event.insertedMessages, insertedPeers: event.insertedPeers, insertedChats: event.insertedChats, insertedUsers: event.insertedUsers, skipped: event.skipped, unsupported: event.unsupported, historicalDeletionObserved: event.historicalDeletionObserved, deleteIdsObserved: event.deleteIdsObserved, missingReferences: event.missingReferences, reason: event.reason.flatMap { BotBridgeDiagnosticHistoryReason(rawValue: $0.rawValue) }, modernProcessingResumed: event.phase == .handoff || event.phase == .restoredTerminal)
++    return (history, phase)
++}
++extension BotBridgeDiagnosticOwner {
++    func history(_ event: BotBridgeHistoryEvent) {
++        let adapted = botBridgeDiagnosticHistory(event)
++        self.history(adapted.history, phase: adapted.phase)
++    }
++}
++// Call only at a real modern worker request site, while resolved peer and explicit
++// attributes are already available. Forum routing alone is never a user reply.
++func botBridgeOperationContext(network: Network, peer: Peer, attributes: [MessageAttribute], hasText: Bool) -> BotBridgeOperationContext? {
++    var flags: BotBridgeOperationFlags = []
++    if hasText { flags.insert(.text) }
++    if attributes.contains(where: { $0 is ReplyMessageAttribute || $0 is ReplyStoryAttribute }) { flags.insert(.reply) }
++    if let channel = peer as? TelegramChannel, case .broadcast = channel.info { flags.insert(.post) }
++    return network.botBridgeRegistration.context(flags: flags)
++}
+diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+new file mode 100644
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+@@ -0,0 +1,693 @@
++import Foundation
++import Postbox
++import SwiftSignalKit
++internal import TelegramApi
++
++// BEGIN BOTBRIDGE POLICY
++// Foundation-only policy is also compiled verbatim by the focused native fixtures.
++struct BotBridgeCursor: Codable, Equatable {
++    let pts: Int32
++    let qts: Int32
++    let date: Int32
++    let seq: Int32
++
++    var isValid: Bool { return pts >= 0 && qts >= 0 && date >= 0 && seq >= 0 }
++
++    func candidate(unread: Int32) -> BotBridgeCursor? {
++        guard isValid, unread > 0, pts > 1 else { return nil }
++        return BotBridgeCursor(pts: Int32(max(1, Int64(pts) - Int64(unread))), qts: qts, date: date, seq: seq)
++    }
++
++    func advances(_ previous: BotBridgeCursor) -> Bool {
++        return isValid && self != previous && pts >= previous.pts && qts >= previous.qts && date >= previous.date && seq >= previous.seq
++    }
++}
++
++enum BotBridgeHistoryReason: String, Codable {
++    case completed, noCandidate, tooLong, limit, deadline, clockChanged, corrupt
++    case nonadvancing, rpcError, timeout, cancelled, replaced, loggedOut, softReset, interruptedState
++}
++
++enum BotBridgeHistoryRequest: Equatable {
++    case state
++    case difference(BotBridgeCursor)
++}
++
++struct BotBridgeHistoryProgress: Codable, Equatable {
++    static let maxDeleteIdsPerPage = 20000
++    let schema: Int
++    let owner: Int64
++    let peer: Int64
++    let testing: Bool
++    let generation: String
++    var started: Double?
++    var deadline: Double?
++    var lastWall: Double?
++    var original: BotBridgeCursor?
++    var candidate: BotBridgeCursor?
++    var next: BotBridgeCursor?
++    var reservedState = false
++    var reservedPages = 0
++    var committedPages = 0
++    var examined = 0
++    var inserted = 0
++    var insertedPeers = 0
++    var insertedUsers = 0
++    var insertedChats = 0
++    var deleteIdsObserved = 0
++    var skipped = 0
++    var unsupported = 0
++    var deletions = 0
++    var missingReferences = 0
++    var terminal: BotBridgeHistoryReason?
++
++    init(owner: Int64, peer: Int64, testing: Bool, generation: String) {
++        self.schema = 1
++        self.owner = owner
++        self.peer = peer
++        self.testing = testing
++        self.generation = generation
++    }
++
++    var isValid: Bool {
++        guard schema == 1, !generation.isEmpty, generation.utf8.count <= 64,
++            reservedPages >= 0, reservedPages <= 32, committedPages >= 0, committedPages <= reservedPages,
++            examined >= 0, examined <= 20000, inserted >= 0, inserted <= examined,
++            insertedPeers >= 0, insertedPeers <= 320000, insertedUsers >= 0, insertedUsers <= 320000, insertedChats >= 0, insertedChats <= 320000, insertedUsers + insertedChats == insertedPeers,
++            deleteIdsObserved >= 0, deleteIdsObserved <= 640001,
++            skipped >= 0, skipped <= examined, unsupported >= 0, unsupported <= 800000,
++            deletions >= 0, deletions <= 320000, missingReferences >= 0, missingReferences <= 3200000 else { return false }
++        if let started = started {
++            guard started.isFinite, let deadline = deadline, deadline.isFinite, deadline == started + 120,
++                let lastWall = lastWall, lastWall.isFinite, lastWall >= started, reservedState else { return false }
++        } else if deadline != nil || lastWall != nil || reservedState || original != nil || candidate != nil || next != nil || reservedPages != 0 || committedPages != 0 {
++            return false
++        }
++        if let original = original {
++            guard original.isValid, reservedState else { return false }
++            if let candidate = candidate {
++                guard candidate.isValid, candidate.pts >= 1, candidate.pts <= original.pts,
++                    candidate.qts == original.qts, candidate.date == original.date, candidate.seq == original.seq,
++                    let next = next, next.isValid, next.pts >= candidate.pts,
++                    next.qts >= candidate.qts, next.date >= candidate.date, next.seq >= candidate.seq else { return false }
++            } else if next != nil || terminal != .noCandidate { return false }
++        } else if candidate != nil || next != nil || reservedPages != 0 || committedPages != 0 { return false }
++        return true
++    }
++
++    mutating func checkTime(now: Double) -> Bool {
++        guard terminal == nil else { return false }
++        guard isValid, now.isFinite else { terminal = .corrupt; return false }
++        if let lastWall = lastWall, now < lastWall { terminal = .clockChanged; return false }
++        if let deadline = deadline, now >= deadline { terminal = .deadline; return false }
++        if started != nil { lastWall = now }
++        return true
++    }
++
++    // Called only inside the preference transaction, before subscribing to Network.
++    // A reservation survives a crash; page commits are a different counter.
++    mutating func reserve(now: Double) -> BotBridgeHistoryRequest? {
++        guard checkTime(now: now) else { return nil }
++        if original == nil {
++            guard !reservedState else { terminal = .interruptedState; return nil }
++            started = now
++            deadline = now + 120
++            lastWall = now
++            reservedState = true
++            return .state
++        }
++        guard let next = next else { terminal = .corrupt; return nil }
++        guard reservedPages < 32 else { terminal = .limit; return nil }
++        reservedPages += 1
++        return .difference(next)
++    }
++
++    mutating func acceptState(_ cursor: BotBridgeCursor, unread: Int32, now: Double) -> Bool {
++        guard checkTime(now: now), original == nil, reservedState, cursor.isValid, unread >= 0 else {
++            if terminal == nil { terminal = .corrupt }
++            return false
++        }
++        original = cursor
++        candidate = cursor.candidate(unread: unread)
++        next = candidate
++        if candidate == nil { terminal = .noCandidate }
++        return true
++    }
++
++    static func withinPageBounds(messages: Int, peers: Int, updates: Int, examined: Int) -> Bool {
++        return messages >= 0 && messages <= 5000 && peers >= 0 && peers <= 10000 && updates >= 0 && updates <= 10000 && examined >= 0 && examined <= 20000 && messages <= 20000 - examined
++    }
++
++    mutating func commit(next cursor: BotBridgeCursor, final: Bool, examined pageExamined: Int, inserted pageInserted: Int, peers: Int, users: Int = 0, skipped pageSkipped: Int, unsupported pageUnsupported: Int, deletions pageDeletions: Int, missing: Int, now: Double) -> Bool {
++        guard checkTime(now: now), let previous = next, committedPages < reservedPages else {
++            if terminal == nil { terminal = .corrupt }
++            return false
++        }
++        guard cursor.isValid, cursor.pts >= previous.pts, cursor.qts >= previous.qts, cursor.date >= previous.date, cursor.seq >= previous.seq,
++            final || cursor.advances(previous) else { terminal = .nonadvancing; return false }
++        guard Self.withinPageBounds(messages: pageExamined, peers: peers, updates: 0, examined: examined),
++            pageInserted >= 0, pageInserted <= pageExamined, users >= 0, users <= peers, pageSkipped >= 0, pageSkipped <= pageExamined,
++            pageUnsupported >= 0, pageUnsupported <= 25000, pageDeletions >= 0, pageDeletions <= 10000,
++            missing >= 0, missing <= 100000 else { terminal = .limit; return false }
++        next = cursor
++        committedPages += 1
++        examined += pageExamined
++        inserted += pageInserted
++        insertedPeers += peers
++        insertedUsers += users
++        insertedChats += peers - users
++        skipped += pageSkipped
++        unsupported += pageUnsupported
++        deletions += pageDeletions
++        missingReferences += missing
++        if final { terminal = .completed }
++        return true
++    }
++}
++
++// Transactions use this token too: queue teardown cannot admit a stale page.
++final class BotBridgeLifetime {
++    private let lock = NSLock()
++    private var active = true
++    var isActive: Bool { lock.lock(); defer { lock.unlock() }; return active }
++    func cancel() { lock.lock(); active = false; lock.unlock() }
++}
++
++final class BotBridgeOnceGate {
++    private let lock = NSLock()
++    private var open = true
++    var isOpen: Bool { lock.lock(); defer { lock.unlock() }; return open }
++    @discardableResult func finish() -> Bool {
++        lock.lock(); defer { lock.unlock() }
++        guard open else { return false }
++        open = false
++        return true
++    }
++}
++// END BOTBRIDGE POLICY
++
++// Task 2 receives only finite reasons, numeric state/counters; never an account,
++// message, API object, token, peer identifier, or raw RPC error.
++struct BotBridgeHistoryEvent {
++    enum Phase { case started, reserved, committed, terminal, handoff, restoredTerminal }
++    let phase: Phase
++    let original: BotBridgeCursor?
++    let candidate: BotBridgeCursor?
++    let retrieval: BotBridgeCursor?
++    let live: BotBridgeCursor?
++    let reservedRequests: Int
++    let committedPages: Int
++    let examinedMessages: Int
++    let insertedMessages: Int
++    let insertedPeers: Int
++    let insertedUsers: Int
++    let insertedChats: Int
++    let deleteIdsObserved: Int
++    let skipped: Int
++    let unsupported: Int
++    let historicalDeletionObserved: Int
++    let missingReferences: Int
++    let reason: BotBridgeHistoryReason?
++    // Physical preexisting deletions without tombstones are never fully covered.
++    let deletionCoverageLimited = true
++}
++
++private let botBridgeHistoryKey: ValueBoxKey = {
++    let key = ValueBoxKey(length: 4)
++    key.setInt32(0, value: 0x4A470002)
++    return key
++}()
++
++// Called only from the successful, confirmed bot authorization transaction.
++func jerkgramRenewBotBridgeGeneration(transaction: Transaction, recordId: Int64, user: TelegramUser, testing: Bool) {
++    guard user.botInfo != nil else { return }
++    let progress = BotBridgeHistoryProgress(owner: recordId, peer: user.id.toInt64(), testing: testing, generation: UUID().uuidString)
++    transaction.updatePreferencesEntry(key: botBridgeHistoryKey, { _ in PreferencesEntry(progress) })
++}
++
++private func botBridgeValidatedAccount(transaction: Transaction, accountPeerId: PeerId, testing: Bool) -> Bool {
++    guard let authorized = transaction.getState() as? AuthorizedAccountState,
++        authorized.peerId == accountPeerId, authorized.isTestingEnvironment == testing,
++        let user = transaction.getPeer(accountPeerId) as? TelegramUser, user.botInfo != nil else { return false }
++    return true
++}
++
++private func botBridgeReadProgress(transaction: Transaction, owner: Int64, accountPeerId: PeerId, testing: Bool) -> BotBridgeHistoryProgress {
++    if let entry = transaction.getPreferencesEntry(key: botBridgeHistoryKey) {
++        if let progress = entry.get(BotBridgeHistoryProgress.self), progress.owner == owner,
++            progress.peer == accountPeerId.toInt64(), progress.testing == testing, progress.isValid {
++            return progress
++        }
++        // Fail closed for an unreadable or different owner's record. A successful
++        // authorization transaction is the only path that grants a new generation.
++        var invalid = BotBridgeHistoryProgress(owner: owner, peer: accountPeerId.toInt64(), testing: testing, generation: UUID().uuidString)
++        invalid.terminal = .corrupt
++        return invalid
++    }
++    // Existing bots initialize once, after validation of this Account record.
++    return BotBridgeHistoryProgress(owner: owner, peer: accountPeerId.toInt64(), testing: testing, generation: UUID().uuidString)
++}
++
++func jerkgramPrepareBotBridgeHistory(transaction: Transaction, owner: Int64, accountPeerId: PeerId, lifetime: BotBridgeLifetime) -> BotBridgeHistoryProgress? {
++    guard lifetime.isActive, let authorized = transaction.getState() as? AuthorizedAccountState,
++        botBridgeValidatedAccount(transaction: transaction, accountPeerId: accountPeerId, testing: authorized.isTestingEnvironment) else { return nil }
++    let progress = botBridgeReadProgress(transaction: transaction, owner: owner, accountPeerId: accountPeerId, testing: authorized.isTestingEnvironment)
++    botBridgeWriteProgress(progress, transaction: transaction)
++    return progress
++}
++
++// Observation only, from the same bounded existing Postbox transactions.
++func botBridgeObservedLive(transaction: Transaction) -> BotBridgeCursor? {
++    guard let state = (transaction.getState() as? AuthorizedAccountState)?.state else { return nil }
++    return BotBridgeCursor(pts: state.pts, qts: state.qts, date: state.date, seq: state.seq)
++}
++
++private func botBridgeWriteProgress(_ progress: BotBridgeHistoryProgress, transaction: Transaction) {
++    transaction.updatePreferencesEntry(key: botBridgeHistoryKey, { _ in PreferencesEntry(progress) })
++}
++
++private func botBridgeCursor(_ state: Api.updates.State) -> (BotBridgeCursor, Int32) {
++    switch state {
++    case let .state(data):
++        return (BotBridgeCursor(pts: data.pts, qts: data.qts, date: data.date, seq: data.seq), data.unreadCount)
++    }
++}
++
++private struct BotBridgeHistoryPage {
++    let cursor: BotBridgeCursor
++    let final: Bool
++    let messages: [Api.Message]
++    let users: [Api.User]
++    let chats: [Api.Chat]
++    let updates: [Api.Update]
++    let encryptedCount: Int
++}
++
++// Decoding already happened in Network. Bounds below precede new working arrays.
++private func botBridgePage(_ difference: Api.updates.Difference, previous: BotBridgeCursor) -> BotBridgeHistoryPage? {
++    switch difference {
++    case let .difference(data):
++        return BotBridgeHistoryPage(cursor: botBridgeCursor(data.state).0, final: true, messages: data.newMessages, users: data.users, chats: data.chats, updates: data.otherUpdates, encryptedCount: data.newEncryptedMessages.count)
++    case let .differenceSlice(data):
++        return BotBridgeHistoryPage(cursor: botBridgeCursor(data.intermediateState).0, final: false, messages: data.newMessages, users: data.users, chats: data.chats, updates: data.otherUpdates, encryptedCount: data.newEncryptedMessages.count)
++    case let .differenceEmpty(data):
++        return BotBridgeHistoryPage(cursor: BotBridgeCursor(pts: previous.pts, qts: previous.qts, date: data.date, seq: data.seq), final: true, messages: [], users: [], chats: [], updates: [], encryptedCount: 0)
++    case .differenceTooLong:
++        return nil
++    }
++}
++
++private func botBridgeReplyPeerIds(_ message: Api.Message) -> Set<PeerId> {
++    let reply: Api.MessageReplyHeader?
++    switch message {
++    case let .message(data): reply = data.replyTo
++    case let .messageService(data): reply = data.replyTo
++    default: reply = nil
++    }
++    var result = Set<PeerId>()
++    if let reply = reply {
++        switch reply {
++        case let .messageReplyHeader(data):
++            if let peer = data.replyToPeerId { result.insert(peer.peerId) }
++            if let header = data.replyFrom, case let .messageFwdHeader(forward) = header {
++                if let peer = forward.fromId { result.insert(peer.peerId) }
++                if let peer = forward.savedFromPeer { result.insert(peer.peerId) }
++                if let peer = forward.savedFromId { result.insert(peer.peerId) }
++            }
++        case let .messageReplyStoryHeader(data): result.insert(data.peer.peerId)
++        }
++    }
++    return result
++}
++
++// This is storage-only. It neither constructs mutable live state nor replays updates.
++// Progress and messages are committed by the same caller-owned Postbox transaction.
++private func importBotBridgeHistoryPage(transaction: Transaction, page: BotBridgeHistoryPage, expected: BotBridgeHistoryProgress, accountPeerId: PeerId, removed: MessagesRemovedContext, now: Double, lifetime: BotBridgeLifetime, requestGate: BotBridgeOnceGate) -> BotBridgeHistoryProgress? {
++    guard lifetime.isActive, requestGate.isOpen,
++        botBridgeValidatedAccount(transaction: transaction, accountPeerId: accountPeerId, testing: expected.testing),
++        let current = transaction.getPreferencesEntry(key: botBridgeHistoryKey)?.get(BotBridgeHistoryProgress.self), current == expected else { return nil }
++    var progress = current
++    guard progress.checkTime(now: now) else { botBridgeWriteProgress(progress, transaction: transaction); return progress }
++    guard BotBridgeHistoryProgress.withinPageBounds(messages: page.messages.count, peers: page.users.count + page.chats.count, updates: page.updates.count, examined: progress.examined), page.encryptedCount <= 10000 else {
++        progress.terminal = .limit; botBridgeWriteProgress(progress, transaction: transaction); return progress
++    }
++    guard let previous = progress.next, page.cursor.isValid,
++        page.cursor.pts >= previous.pts, page.cursor.qts >= previous.qts, page.cursor.date >= previous.date, page.cursor.seq >= previous.seq,
++        page.final || page.cursor.advances(previous) else {
++        progress.terminal = .nonadvancing; botBridgeWriteProgress(progress, transaction: transaction); return progress
++    }
++    // Inspect vector lengths before allocating sets; a single Update may contain
++    // arbitrarily many IDs. Parent-approved refinement: 20,000 IDs per page.
++    var deleteIdCount = 0
++    for update in page.updates {
++        let count: Int
++        switch update {
++        case let .updateDeleteMessages(data): count = data.messages.count
++        case let .updateDeleteChannelMessages(data): count = data.messages.count
++        default: count = 0
++        }
++        if count > BotBridgeHistoryProgress.maxDeleteIdsPerPage - deleteIdCount {
++            progress.deleteIdsObserved += BotBridgeHistoryProgress.maxDeleteIdsPerPage + 1
++            progress.terminal = .limit
++            botBridgeWriteProgress(progress, transaction: transaction)
++            return progress
++        }
++        deleteIdCount += count
++    }
++    guard deleteIdCount <= BotBridgeHistoryProgress.maxDeleteIdsPerPage else { return nil }
++    progress.deleteIdsObserved += deleteIdCount
++    var deletedGlobalIds = Set<Int32>()
++    var deletedChannelIds = Set<MessageId>()
++    for update in page.updates {
++        switch update {
++        case let .updateDeleteMessages(data): deletedGlobalIds.formUnion(data.messages)
++        case let .updateDeleteChannelMessages(data):
++            let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(data.channelId))
++            for id in data.messages { deletedChannelIds.insert(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)) }
++        default: break
++        }
++    }
++    // Historical mutation updates only exclude absent candidates; never replay them.
++    // Parse the bounded chat vector once. Current transaction metadata still wins;
++    // absent user destinations do not repeatedly scan/convert unrelated chats.
++    var responseChatsById: [PeerId: Peer] = [:]
++    var responseChats: [Peer] = []
++    for chat in page.chats {
++        if let parsed = parseTelegramGroupOrChannel(chat: chat), responseChatsById[parsed.id] == nil {
++            responseChatsById[parsed.id] = parsed
++            responseChats.append(parsed)
++        }
++    }
++    var candidates: [StoreMessage] = []
++    var references = Set<PeerId>()
++    var seen = Set<MessageId>()
++    var skipped = 0
++    var unsupported = page.encryptedCount
++    var deletions = 0
++    for apiMessage in page.messages {
++        let peerIds = apiMessagePeerIds(apiMessage)
++        // Current peer metadata determines forum conversion; response data is used
++        // only when the peer is absent, and can never replace an existing peer.
++        let peerId: PeerId?
++        switch apiMessage {
++        case let .message(data): peerId = data.peerId.peerId
++        case let .messageService(data): peerId = data.peerId.peerId
++        default: peerId = nil
++        }
++        let peer = peerId.flatMap { transaction.getPeer($0) ?? responseChatsById[$0] }
++        let forum = (peer as? TelegramChannel)?.flags.contains(.isForum) ?? false
++        guard let message = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: forum),
++            case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud else { unsupported += 1; continue }
++        guard seen.insert(id).inserted, !transaction.messageExists(id: id) else { skipped += 1; continue }
++        guard removed.synchronouslyIsMessageDeletedInteractively(ids: [id]).isEmpty,
++            removed.synchronouslyIsMessageDeletedRemotely(ids: [id]).isEmpty else { skipped += 1; continue }
++        let isGlobal = id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup
++        if (isGlobal && deletedGlobalIds.contains(id.id)) || deletedChannelIds.contains(id) { skipped += 1; continue }
++        candidates.append(message)
++        references.formUnion(peerIds)
++        references.formUnion(botBridgeReplyPeerIds(apiMessage))
++        references.insert(id.peerId)
++        if let author = message.authorId { references.insert(author) }
++        if let forward = message.forwardInfo {
++            if let id = forward.authorId { references.insert(id) }
++            if let id = forward.sourceId { references.insert(id) }
++            if let id = forward.sourceMessageId { references.insert(id.peerId) }
++        }
++        for attribute in message.attributes {
++            references.formUnion(attribute.associatedPeerIds)
++            for id in attribute.associatedMessageIds { references.insert(id.peerId) }
++            for id in attribute.associatedStoryIds { references.insert(id.peerId) }
++            if let reply = attribute as? ReplyMessageAttribute { references.insert(reply.messageId.peerId) }
++        }
++    }
++    // Only count update constructors; a vector may be huge even with one update.
++    for update in page.updates {
++        switch update {
++        case .updateDeleteMessages, .updateDeleteChannelMessages: deletions += 1
++        default: unsupported += 1
++        }
++    }
++    var peers: [Peer] = []
++    var provided = Set<PeerId>()
++    for user in page.users {
++        let peer = TelegramUser(user: user)
++        if references.contains(peer.id), transaction.getPeer(peer.id) == nil, provided.insert(peer.id).inserted { peers.append(peer) }
++    }
++    for peer in responseChats {
++        if references.contains(peer.id), transaction.getPeer(peer.id) == nil, provided.insert(peer.id).inserted { peers.append(peer) }
++    }
++    var missing = 0
++    for id in references { if transaction.getPeer(id) == nil && !provided.contains(id) { missing += 1 } }
++    // Validate every prospective progress change before mutating the transaction.
++    let users = peers.reduce(0) { count, peer in count + (peer is TelegramUser ? 1 : 0) }
++    guard progress.commit(next: page.cursor, final: page.final, examined: page.messages.count, inserted: candidates.count, peers: peers.count, users: users, skipped: skipped, unsupported: unsupported, deletions: deletions, missing: missing, now: now) else {
++        botBridgeWriteProgress(progress, transaction: transaction); return progress
++    }
++    guard lifetime.isActive, requestGate.isOpen else { return nil }
++    transaction.updatePeersInternal(peers, update: { current, proposed in current ?? proposed })
++    let _ = transaction.addHistoricalMessagesWithoutInteractiveActions(candidates)
++    jerkgramIncludeBotMessagePeers(transaction: transaction, accountPeerId: accountPeerId, messages: candidates)
++    botBridgeWriteProgress(progress, transaction: transaction)
++    return progress
++}
++
++// Each queued custom operation has independent disposal. Generic addCustomOperation
++// subscription disposal does not cancel its underlying work and is not used here.
++private final class BotBridgePageLease {
++    let gate = BotBridgeOnceGate()
++    let work = MetaDisposable()
++    var timer: SwiftSignalKit.Timer?
++    private let completion: () -> Void
++    init(completion: @escaping () -> Void) { self.completion = completion }
++    func finish() {
++        guard gate.finish() else { return }
++        timer?.invalidate()
++        timer = nil
++        work.dispose()
++        completion()
++    }
++    deinit { timer?.invalidate(); work.dispose() }
++}
++
++final class BotBridgeHistoryController {
++    private let queue: Queue
++    private let postbox: Postbox
++    private let network: Network
++    private let accountPeerId: PeerId
++    private let owner: Int64
++    private let testing: Bool
++    private let removed: MessagesRemovedContext
++    private let lifetime: BotBridgeLifetime
++    private let enqueue: (Signal<Void, NoError>) -> Void
++    private let wall: () -> Double
++    private let monotonic: () -> Double
++    private let event: (BotBridgeHistoryEvent) -> Void
++    private var started = false
++    private var active: BotBridgePageLease?
++    private var progress: BotBridgeHistoryProgress?
++    private var monotonicDeadline: Double?
++    private let terminalWrite = MetaDisposable()
++
++    init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId, initialProgress: BotBridgeHistoryProgress, removed: MessagesRemovedContext, lifetime: BotBridgeLifetime, enqueue: @escaping (Signal<Void, NoError>) -> Void, wall: @escaping () -> Double = { Date().timeIntervalSince1970 }, monotonic: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime }, event: @escaping (BotBridgeHistoryEvent) -> Void = { _ in }) {
++        self.queue = queue; self.postbox = postbox; self.network = network
++        self.accountPeerId = accountPeerId; self.owner = initialProgress.owner; self.testing = initialProgress.testing
++        self.progress = initialProgress
++        self.removed = removed; self.lifetime = lifetime; self.enqueue = enqueue
++        self.wall = wall; self.monotonic = monotonic; self.event = event
++    }
++
++    func observeLive(_ value: BotBridgeCursor?) { observedLive = value }
++
++    func start() {
++        assert(queue.isCurrent())
++        guard !started, lifetime.isActive else { return }
++        started = true
++        if let progress = progress, progress.terminal != nil {
++            emit(.restoredTerminal, progress: progress)
++            return
++        }
++        if let progress = progress { emit(.started, progress: progress) }
++        schedulePage()
++    }
++
++    func cancel(reason: BotBridgeHistoryReason) {
++        // The manager invalidates lifetime synchronously at its public boundary.
++        lifetime.cancel()
++        active?.finish()
++        active = nil
++        persistTerminal(reason)
++    }
++
++    private var observedLive: BotBridgeCursor?
++
++    private func emit(_ phase: BotBridgeHistoryEvent.Phase, progress p: BotBridgeHistoryProgress, live: BotBridgeCursor? = nil) {
++        event(BotBridgeHistoryEvent(phase: phase, original: p.original, candidate: p.candidate, retrieval: p.next, live: live ?? observedLive, reservedRequests: (p.reservedState ? 1 : 0) + p.reservedPages, committedPages: p.committedPages, examinedMessages: p.examined, insertedMessages: p.inserted, insertedPeers: p.insertedPeers, insertedUsers: p.insertedUsers, insertedChats: p.insertedChats, deleteIdsObserved: p.deleteIdsObserved, skipped: p.skipped, unsupported: p.unsupported, historicalDeletionObserved: p.deletions, missingReferences: p.missingReferences, reason: p.terminal))
++    }
++
++    private func persistTerminal(_ reason: BotBridgeHistoryReason) {
++        guard let expected = progress, expected.terminal == nil else { return }
++        let accountPeerId = self.accountPeerId
++        // The write may outlive the controller, but is bound to this exact progress
++        // and authorization. It cannot mark a later generation terminal.
++        terminalWrite.set((postbox.transaction { transaction -> (BotBridgeHistoryProgress, BotBridgeCursor?)? in
++            guard botBridgeValidatedAccount(transaction: transaction, accountPeerId: accountPeerId, testing: expected.testing),
++                var current = transaction.getPreferencesEntry(key: botBridgeHistoryKey)?.get(BotBridgeHistoryProgress.self),
++                current.generation == expected.generation, current.terminal == nil else { return nil }
++            current.terminal = reason
++            botBridgeWriteProgress(current, transaction: transaction)
++            return (current, botBridgeObservedLive(transaction: transaction))
++        } |> deliverOn(queue)).start(next: { [weak self] result in
++            guard let self = self, let (current, live) = result else { return }
++            self.observedLive = live
++            self.progress = current; self.emit(.terminal, progress: current); self.emit(.handoff, progress: current)
++        }))
++    }
++
++    private func schedulePage() {
++        guard lifetime.isActive else { return }
++        // Both the queued signal and its continuation retain only a weak owner.
++        enqueue(Signal { [weak self] subscriber in
++            guard let self = self, self.lifetime.isActive else { subscriber.putCompletion(); return EmptyDisposable }
++            let lease = BotBridgePageLease(completion: { subscriber.putCompletion() })
++            self.active = lease
++            // Postbox may suspend a transaction indefinitely. The manager custom
++            // operation is bounded independently of reservation or transport work.
++            self.armWatchdog(lease)
++            if lease.gate.isOpen { self.reserveAndDispatch(lease) }
++            return ActionDisposable { [weak self, weak lease] in
++                guard let self = self else { lease?.finish(); return }
++                self.queue.async { lease?.finish() }
++            }
++        })
++    }
++
++    private func armWatchdog(_ lease: BotBridgePageLease) {
++        guard let progress = progress else { fail(.corrupt, lease: lease); return }
++        let now = wall()
++        var checked = progress
++        guard checked.checkTime(now: now) else { fail(checked.terminal ?? .corrupt, lease: lease); return }
++        let wallRemaining = (progress.deadline ?? (now + 120)) - now
++        if monotonicDeadline == nil {
++            monotonicDeadline = monotonic() + min(120, max(0, wallRemaining))
++        }
++        let remaining = min(wallRemaining, (monotonicDeadline ?? 0) - monotonic())
++        guard remaining > 0 else { fail(.deadline, lease: lease); return }
++        lease.timer = SwiftSignalKit.Timer(timeout: min(10, remaining), repeat: false, completion: { [weak self, weak lease] in
++            guard let self = self, let lease = lease else { return }
++            self.fail(remaining <= 10 ? .deadline : .timeout, lease: lease)
++        }, queue: queue)
++        lease.timer?.start()
++    }
++
++    private func reserveAndDispatch(_ lease: BotBridgePageLease) {
++        let lifetime = self.lifetime; let owner = self.owner; let accountPeerId = self.accountPeerId; let testing = self.testing
++        let now = wall(); let gate = lease.gate; let generation = progress?.generation
++        let reservation = postbox.transaction { transaction -> (BotBridgeHistoryProgress, BotBridgeHistoryRequest?, BotBridgeCursor?)? in
++            guard lifetime.isActive, gate.isOpen, botBridgeValidatedAccount(transaction: transaction, accountPeerId: accountPeerId, testing: testing) else { return nil }
++            var progress = botBridgeReadProgress(transaction: transaction, owner: owner, accountPeerId: accountPeerId, testing: testing)
++            guard progress.generation == generation else { return nil }
++            let request = progress.reserve(now: now)
++            botBridgeWriteProgress(progress, transaction: transaction)
++            return (progress, request, botBridgeObservedLive(transaction: transaction))
++        }
++        // Reserve has its own disposable so a synchronous completion cannot replace
++        // and dispose the subsequently installed Network request.
++        let reservationWork = MetaDisposable()
++        lease.work.set(reservationWork)
++        reservationWork.set((reservation |> deliverOn(queue)).start(next: { [weak self, weak lease] result in
++            guard let self = self, let lease = lease, lease.gate.isOpen, self.lifetime.isActive else { return }
++            guard let (progress, request, live) = result else { lease.finish(); return }
++            self.observedLive = live
++            self.progress = progress
++            guard let request = request else { self.emit(.terminal, progress: progress); self.emit(.handoff, progress: progress); lease.finish(); return }
++            self.emit(.reserved, progress: progress)
++            var dispatchProgress = progress
++            guard dispatchProgress.checkTime(now: self.wall()) else { self.fail(dispatchProgress.terminal ?? .corrupt, lease: lease); return }
++            let remaining = min((progress.deadline ?? 0) - self.wall(), (self.monotonicDeadline ?? 0) - self.monotonic())
++            guard remaining > 0 else { self.fail(.deadline, lease: lease); return }
++            // The activation watchdog remains armed; a delayed reservation never
++            // grants a second timeout window or revives a closed request gate.
++            self.dispatch(request, expected: progress, lease: lease)
++        }))
++    }
++
++    private func dispatch(_ request: BotBridgeHistoryRequest, expected: BotBridgeHistoryProgress, lease: BotBridgePageLease) {
++        // Single existing Network. No bridge retry/flood-wait policy or second poller.
++        switch request {
++        case .state:
++            lease.work.set((network.request(Api.functions.updates.getState(), automaticFloodWait: false)
++            |> deliverOn(queue)).start(next: { [weak self, weak lease] state in
++                guard let self = self, let lease = lease, lease.gate.isOpen, self.lifetime.isActive else { return }
++                let (cursor, unread) = botBridgeCursor(state)
++                self.storeState(cursor, unread: unread, expected: expected, lease: lease)
++            }, error: { [weak self, weak lease] _ in
++                guard let self = self, let lease = lease else { return }; self.fail(.rpcError, lease: lease)
++            }))
++        case let .difference(cursor):
++            lease.work.set((network.request(Api.functions.updates.getDifference(flags: 0, pts: cursor.pts, ptsLimit: nil, ptsTotalLimit: nil, date: cursor.date, qts: cursor.qts, qtsLimit: nil), automaticFloodWait: false)
++            |> deliverOn(queue)).start(next: { [weak self, weak lease] difference in
++                guard let self = self, let lease = lease, lease.gate.isOpen, self.lifetime.isActive else { return }
++                // The first response is consumed here, never discarded or replayed
++                // through a final-state builder, and never seeds the live cursor.
++                guard let page = botBridgePage(difference, previous: cursor) else { self.fail(.tooLong, lease: lease); return }
++                self.storePage(page, expected: expected, lease: lease)
++            }, error: { [weak self, weak lease] _ in
++                guard let self = self, let lease = lease else { return }; self.fail(.rpcError, lease: lease)
++            }))
++        }
++    }
++
++    private func storeState(_ cursor: BotBridgeCursor, unread: Int32, expected: BotBridgeHistoryProgress, lease: BotBridgePageLease) {
++        let lifetime = self.lifetime; let accountPeerId = self.accountPeerId; let now = wall(); let gate = lease.gate
++        lease.work.set((postbox.transaction { transaction -> (BotBridgeHistoryProgress, BotBridgeCursor?)? in
++            guard lifetime.isActive, gate.isOpen, botBridgeValidatedAccount(transaction: transaction, accountPeerId: accountPeerId, testing: expected.testing),
++                let current = transaction.getPreferencesEntry(key: botBridgeHistoryKey)?.get(BotBridgeHistoryProgress.self), current == expected else { return nil }
++            var updated = current
++            let _ = updated.acceptState(cursor, unread: unread, now: now)
++            botBridgeWriteProgress(updated, transaction: transaction)
++            return (updated, botBridgeObservedLive(transaction: transaction))
++        } |> deliverOn(queue)).start(next: { [weak self, weak lease] progress in
++            guard let self = self, let lease = lease else { return }
++            self.didStore(progress, lease: lease)
++        }))
++    }
++
++    private func storePage(_ page: BotBridgeHistoryPage, expected: BotBridgeHistoryProgress, lease: BotBridgePageLease) {
++        let lifetime = self.lifetime; let accountPeerId = self.accountPeerId; let removed = self.removed; let now = wall(); let gate = lease.gate
++        lease.work.set((postbox.transaction { transaction -> (BotBridgeHistoryProgress, BotBridgeCursor?)? in
++            guard let progress = importBotBridgeHistoryPage(transaction: transaction, page: page, expected: expected, accountPeerId: accountPeerId, removed: removed, now: now, lifetime: lifetime, requestGate: gate) else { return nil }
++            return (progress, botBridgeObservedLive(transaction: transaction))
++        } |> deliverOn(queue)).start(next: { [weak self, weak lease] progress in
++            guard let self = self, let lease = lease else { return }
++            self.didStore(progress, lease: lease)
++        }))
++    }
++
++    private func didStore(_ result: (BotBridgeHistoryProgress, BotBridgeCursor?)?, lease: BotBridgePageLease) {
++        guard lease.gate.isOpen, lifetime.isActive else { lease.finish(); return }
++        guard let (progress, live) = result else { fail(.replaced, lease: lease); return }
++        self.observedLive = live
++        self.progress = progress
++        emit(progress.terminal == nil ? .committed : .terminal, progress: progress)
++        if progress.terminal != nil { emit(.handoff, progress: progress) }
++        lease.finish()
++        active = nil
++        guard progress.terminal == nil else { return }
++        // putCompletion has already been sent. Append one new operation on a later
++        // manager queue turn, allowing current live operations to run between pages.
++        queue.async { [weak self] in self?.schedulePage() }
++    }
++
++    private func fail(_ reason: BotBridgeHistoryReason, lease: BotBridgePageLease) {
++        guard lease.gate.isOpen else { return }
++        lease.finish()
++        active = nil
++        persistTerminal(reason)
++    }
++
++    deinit {
++        lifetime.cancel()
++        active?.finish()
++        terminalWrite.dispose()
++    }
++}
+diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
+--- a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
++++ b/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
+@@ -1207,6 +1207,7 @@
+                 
+                 return .complete()
+             } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
++                let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: messages[0].0.attributes, hasText: messages.contains { !$0.0.text.isEmpty })
+                 var isForward = false
+                 var hideSendersNames = false
+                 var hideCaptions = false
+@@ -1375,7 +1376,7 @@
+                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
+                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
+ 
+-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)
++                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)
+                     } else {
+                         assertionFailure()
+                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
+@@ -1504,7 +1505,7 @@
+                         flags |= 1 << 21
+                     }
+                     
+-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars))
++                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars), diagnosticContext: botBridgeContext)
+                 }
+                 
+                 return sendMessageRequest
+@@ -1707,6 +1708,7 @@
+                 PendingMessageManager.sendSecretMessageContent(transaction: transaction, message: message, content: content)
+                 return .complete()
+             } else if let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {
++                let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: message.attributes, hasText: !message.text.isEmpty)
+                 var uniqueId: Int64 = 0
+                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+                 var messageEntities: [Api.MessageEntity]?
+@@ -1901,7 +1903,7 @@
+                             flags |= 1 << 22
+                         }
+                     
+-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag)
++                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost, richMessage: apiRichMessage), info: .acknowledgement, tag: dependencyTag, diagnosticContext: botBridgeContext)
+                     case let .media(inputMedia, text):
+                         if bubbleUpEmojiOrStickersets {
+                             flags |= Int32(1 << 15)
+@@ -1978,7 +1980,7 @@
+                             flags |= 1 << 22
+                         }
+                     
+-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)
++                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)
+                         |> map(NetworkRequestResult.result)
+                     case let .forward(sourceInfo):
+                         var topMsgId: Int32?
+@@ -2027,7 +2029,7 @@
+                         }
+                     
+                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
+-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)
++                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)
+                             |> map(NetworkRequestResult.result)
+                         } else {
+                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
+@@ -2090,7 +2092,7 @@
+                             flags |= 1 << 21
+                         }
+                     
+-                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, allowPaidStars: allowPaidStars))
++                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, allowPaidStars: allowPaidStars), diagnosticContext: botBridgeContext)
+                         |> map(NetworkRequestResult.result)
+                     case .messageScreenshot:
+                         let replyTo: Api.InputReplyTo
+@@ -2111,7 +2113,7 @@
+                             replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil, pollOption: nil, quoteRich: nil))
+                         }
+                     
+-                        sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))
++                        sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId), diagnosticContext: botBridgeContext)
+                         |> map(NetworkRequestResult.result)
+                     case .secretMedia:
+                         assertionFailure()

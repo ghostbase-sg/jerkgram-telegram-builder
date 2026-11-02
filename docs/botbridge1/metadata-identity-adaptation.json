@@ -1,0 +1,26 @@
+{
+  "source_base_builder": "5ba6add985d6995ca102d4e40d8da66e98f443c1",
+  "owner": "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift",
+  "scope": "read-only derivation in temporary restored C/B/A source views; no builder/product changes",
+  "build177_before_sha256": "fa85a8e266729be19bee5739c3fa5a2aedf22e5aa70b716c271aae47353254f5",
+  "build177_after_sha256": "e6da4e5c2540fbedf070b992219bd631ad26e65c14d215c3acabdcf78d569768",
+  "proposed_build178_before_sha256": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1",
+  "proposed_build178_after_sha256": "15677b2c2ed54ac471a15529cff3925fdbaa62d14d51bbad09ab453fb33c516d",
+  "identity_change": "exact one build177-to178 line on each parent/output; no feature behavior changes",
+  "next_build_check": "Latest10 repository workflow runs fetched in this continuation show Build177 latest; recheck before final publication",
+  "derivation_time_utc": "2026-11-02T11:43:46.296947+00:00",
+  "profile_metadata": {
+    "scope": "profile-metadata release identity owner only; unchanged feature patch",
+    "owner": "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift",
+    "build177": {
+      "before_sha256": "c57c93064f17618eee5f8203f0bf9764eade913b41498d8516e95d007d1aea24",
+      "after_sha256": "fa85a8e266729be19bee5739c3fa5a2aedf22e5aa70b716c271aae47353254f5"
+    },
+    "build178": {
+      "before_sha256": "7f3583ea0308d7406ad6b17829e5fad75920ca3dab3d558522f49bc783c78a0f",
+      "after_sha256": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1"
+    },
+    "patch_sha256": "0dab43126da5fd172fa7e8088c99c46451ab3bc6dbe14bb47dd87636e5f7326b"
+  },
+  "note": "Only JerkgramStrings build identity line differs; patches unchanged. Prior stale stage-chain row values retained in stage-chain JSON."
+}

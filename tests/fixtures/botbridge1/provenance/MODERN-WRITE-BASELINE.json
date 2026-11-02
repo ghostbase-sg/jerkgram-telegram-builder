@@ -1,0 +1,88 @@
+{
+  "base_builder_commit": "5ba6add985d6995ca102d4e40d8da66e98f443c1",
+  "upstream": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "files": [
+    {
+      "path": "submodules/TelegramCore/Sources/Account/Account.swift",
+      "sha256": "4aa4627a4e70c16bdaf1ceefcb429c4ffaea40759f3258088e88494d51bed7a4",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/Authorization.swift",
+      "sha256": "a183d895fa556c5bee433a8dbe616c40c880af8e137a058f78d0caa3ec5604d4",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/AccountStateManager.swift",
+      "sha256": "f5f92b12adb44f476a0805c1a7f7848b98221e2f36355d58d6ef4102f8d95a97",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift",
+      "sha256": "92ff02f0b0bc76fca785b3b509cde3389b243313eb4d3617909556c3dbe584e0",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift",
+      "sha256": "564e07de904ac6360bb454aeb7e2db9ac13313e44cedde177eaf3b13644dc2e8",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/PendingMessageManager.swift",
+      "sha256": "e5fd04ed9a3d11f615d9eee5f17fa184768fa1c51ced79103b0068f1ffbc92c2",
+      "provenance": "exact official13.1.2 blob, untouched by active builder chain"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift",
+      "sha256": "ab8a7c29995eba1865880e3c5c6be2c367725d773cd8b3f0450d0ce69a040bd8",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/MessageReactions.swift",
+      "sha256": "c1558b13976171e86263e9d59a459a5fc5036c8fa38c3991c7a17c5506f8a5eb",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/PendingMessages/RequestEditMessage.swift",
+      "sha256": "d9b01936dd1bc7b17182b19074003d1a4685ef66cdbfb89087b1bba5834d0a6f",
+      "provenance": "exact official13.1.2 blob, untouched by active builder chain"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/PendingMessages/PendingUpdateMessageManager.swift",
+      "sha256": "c68d5c83d8f516d05084870b23b5ccdab19cbcb199b03b55f520a06ab11e6f1a",
+      "provenance": "exact official13.1.2 blob, untouched by active builder chain"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/State/ManagedCloudChatRemoveMessagesOperations.swift",
+      "sha256": "1c399fe0f05b08a14b995f9aed14f395c056fb41d8ffc206cafa5efebd9b4afc",
+      "provenance": "exact official13.1.2 blob, untouched by active builder chain"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessagesInteractively.swift",
+      "sha256": "e39cd2e7e746e9689cc00ff65df7a7390c0b5d6f097b22a12ac72eba8a8b76f9",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift",
+      "sha256": "ee648c07b0a5cff906f6b56a93a237a36e5bead3ce81c29eca52c157490d71c5",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift",
+      "sha256": "9f3c142ca005794c9bcb21ae5696489eb6f6c93ec402da1bf45596353b2716e3",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/Network/Network.swift",
+      "sha256": "b135376f7db35a77995d2c06dd92d1ba9b6acbe490cd339d8f745307c3ca812e",
+      "provenance": "reviewed modern177 materialized source"
+    },
+    {
+      "path": "submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift",
+      "sha256": "6c3c3b32ca6025fb43e84fc83cae38cf5c92ba32bd6635d5ea287af9b67f507c",
+      "provenance": "reviewed modern177 materialized source"
+    }
+  ],
+  "protected_modern_poll_difference_case_sha256": "e180d31018ae7ec305cea2c7dd32e06291cd5d5a1da0c5bd735b9863ca351f26",
+  "policy": "Files allowed additive diagnostic context/lifecycle edits require explicit allowed-diff/source review; unchanged workers must remain byte-identical. Native poll handler must remain byte-identical. Hash equality does not replace behavioral evidence."
+}

@@ -11,7 +11,7 @@ TARGET = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
 class Migration1312(unittest.TestCase):
     def test_active_manifests_share_target_and_chain_proof(self):
         chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
-        self.assertEqual(len(chain), 28)
+        self.assertEqual(len(chain), 29)
         stages = {s['stage']: s for s in chain}
         for p in (ROOT / 'patches').glob('jg13*.sha256.json'):
             m = json.loads(p.read_text())
@@ -37,11 +37,11 @@ class Migration1312(unittest.TestCase):
         original = (ROOT / 'patches/jg13-stable.product.patch').read_bytes()
         self.assertEqual(hashlib.sha256(original).hexdigest(), 'c6449542039d11cd351b0f32454e50013c53b1fcfe45a5130109a892facb30cf')
 
-    def test_preservation_gate_runs_after_final_glass_in_both_entrypoints(self):
+    def test_preservation_gate_runs_after_final_botbridge_in_both_entrypoints(self):
         for name in ('scripts/build_jg13.sh', '.github/workflows/no-ads-native.yml'):
             text = (ROOT / name).read_text()
             self.assertIn("-p 'test_jg1312*.py'", text, name)
-            self.assertLess(text.index('python3 tests/run_jg131_settings_glass_expansion.py'),
+            self.assertLess(text.index('python3 tests/run_jg131_botbridge1.py --require-native --require-full-source'),
                             text.index("-p 'test_jg1312*.py'"), name)
 
 

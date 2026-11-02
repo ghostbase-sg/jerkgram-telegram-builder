@@ -64,6 +64,8 @@ def main():
     out = ROOT / "artifacts"
     out.mkdir(exist_ok=True)
     artifact_name = f'Jerkgram-{config["product_version"]}-Build{config["build_number"]}'
+    if config.get('artifact_suffix'):
+        artifact_name += '-' + config['artifact_suffix']
     ipa = out / (artifact_name + ".ipa")
     shutil.copy2(Path(sys.argv[1]), ipa)
     # Same asset hashes and main-app-only packaging as the proven Build138.

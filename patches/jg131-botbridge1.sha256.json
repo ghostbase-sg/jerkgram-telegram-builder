@@ -1,0 +1,69 @@
+{
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "base_builder_commit": "5ba6add985d6995ca102d4e40d8da66e98f443c1",
+  "stage": "BOTBRIDGE1 after exact C",
+  "patch_sha256": "caf968f6071b440ba757977e8eec78f5cef617521c683240230147a36032a5d8",
+  "owners": {
+    "submodules/Postbox/Sources/Postbox.swift": {
+      "before_sha256": "71ce7879969134652ceb1ea82f9fe56670977033d148b50a5fd76bfec716e231",
+      "after_sha256": "c49591f2fc0167b679363ed1587ea3b57d2c675372c47bd0a4efba1451037aa5"
+    },
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": {
+      "before_sha256": "215ab9b5f4aab7968ec894c7cd54bdfc9d129ca6d3421438b14cf69b38835430",
+      "after_sha256": "dfac82d7280037f44147070e474ee05135d4a5d7f44f668094fb2f42537899ce"
+    },
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift": {
+      "before_sha256": "8475280ce7f9be1102b1ef516e31dc6f77df296a11144701c11bc11b81cabbdf",
+      "after_sha256": "852a35db8f0d0c85443f60d2465d066073b3767c7e476aa24d287f2f6cc8d633"
+    },
+    "submodules/TelegramCore/Sources/Account/Account.swift": {
+      "before_sha256": "4aa4627a4e70c16bdaf1ceefcb429c4ffaea40759f3258088e88494d51bed7a4",
+      "after_sha256": "90af53fff47956875a48490f1299e6e6c60ed2f92b02ed04aeae6f8a72712fb8"
+    },
+    "submodules/TelegramCore/Sources/Account/AccountManager.swift": {
+      "before_sha256": "3b895522301c0b0f7aa7245d6217b96a5ad1b9f9ac4d614f5292f73ddcc56d64",
+      "after_sha256": "19e13b217a98cbfae109d220fd38afaea09c5d00b6d4787c4b806b41bcc8ccf6"
+    },
+    "submodules/TelegramCore/Sources/Authorization.swift": {
+      "before_sha256": "a183d895fa556c5bee433a8dbe616c40c880af8e137a058f78d0caa3ec5604d4",
+      "after_sha256": "92e8fc0730f5eae967dac8eb2fa061c18531d2f4bb134cf9552d722f1584795b"
+    },
+    "submodules/TelegramCore/Sources/Network/Network.swift": {
+      "before_sha256": "b135376f7db35a77995d2c06dd92d1ba9b6acbe490cd339d8f745307c3ca812e",
+      "after_sha256": "b3523f20406d2c076f29d4f9e46b47a13010f1fe686ceea856ef9ec8bb3b75d6"
+    },
+    "submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift": {
+      "before_sha256": "ab8a7c29995eba1865880e3c5c6be2c367725d773cd8b3f0450d0ce69a040bd8",
+      "after_sha256": "b23dd503a2ea7c17b00198c7f67f591ee4d5594328d2d13011822ee53f5477a6"
+    },
+    "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift": {
+      "before_sha256": "92ff02f0b0bc76fca785b3b509cde3389b243313eb4d3617909556c3dbe584e0",
+      "after_sha256": "cd2f1f22a2423bfb9a0996f92c36139f3f3dc5dc8bfbbfc71a11c304f620c3fd"
+    },
+    "submodules/TelegramCore/Sources/State/AccountStateManager.swift": {
+      "before_sha256": "f5f92b12adb44f476a0805c1a7f7848b98221e2f36355d58d6ef4102f8d95a97",
+      "after_sha256": "fb253699e027ae7cc0b1352b1e27afd43a8c698bc4c861cf08b963eec5913ceb"
+    },
+    "submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift": {
+      "before_sha256": null,
+      "after_sha256": "5a8df32804333ebf18d9dacfb3dd4c63a9af5eb720f40f7d0026a0ee7b53077b"
+    },
+    "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": {
+      "before_sha256": null,
+      "after_sha256": "a5c01bb8c596e5d42c7519b66803fcef31b7600591e3ed0ed2a3050ba97c0ff6"
+    },
+    "submodules/TelegramCore/Sources/State/PendingMessageManager.swift": {
+      "before_sha256": "e5fd04ed9a3d11f615d9eee5f17fa184768fa1c51ced79103b0068f1ffbc92c2",
+      "after_sha256": "1d1e8df4d65ae4d7f474c87a1e6e89439474e5ae21af723b0c5ebf5bafd43ae7"
+    }
+  },
+  "accepted_task1_patch_sha256": "4ae3ae4143d5b6069199b8d2fd1bdb357e55edb5dbefbac2b9a734a9bba6ad3b",
+  "accepted_task2_patch_sha256": "93839d0ab2988a29382003abbaaf9eb2093876ec91cc587cc86a6c101f0d31c4",
+  "portable_provenance": {
+    "tests/fixtures/botbridge1/provenance/MODERN-POLL-DIFFERENCE-BASELINE.swift.txt": "e180d31018ae7ec305cea2c7dd32e06291cd5d5a1da0c5bd735b9863ca351f26",
+    "tests/fixtures/botbridge1/provenance/MODERN-WRITE-BASELINE.json": "8b8f06c63db1329c3b13563f5bb9766e96e9f6685722baf67208ba189db9c068",
+    "tests/fixtures/botbridge1/provenance/MODERN-WRITE-PROOF.json": "7339d534bd7bc6ca44865ab6d9815a8b2a68968f5b0dcf09f9dc5cbdec8d26c1",
+    "tests/fixtures/botbridge1/provenance/task1.patch": "4ae3ae4143d5b6069199b8d2fd1bdb357e55edb5dbefbac2b9a734a9bba6ad3b",
+    "tests/fixtures/botbridge1/provenance/task1.sha256.json": "0f4de3bb875e760eba8f51515e0b1e0e4762033e15aa448ae67960c82a1a1f90"
+  }
+}
