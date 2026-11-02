@@ -86,7 +86,7 @@ t.messages[id(2)] = StoreMessage(id: id(2), marker: 102)
 t.messages[id(3)] = StoreMessage(id: id(3), marker: -1)
 t.inclusion[chat] = "archive/pinned/cutoff=17"
 removed.interactive.insert(id(5)); removed.remote.insert(id(6))
-let page = BotBridgeHistoryPage(cursor: BotBridgeCursor(pts: 95, qts: 4, date: 21, seq: 6), final: false,
+private let page = BotBridgeHistoryPage(cursor: BotBridgeCursor(pts: 95, qts: 4, date: 21, seq: 6), final: false,
     messages: [api(1), api(2), api(3), api(4, author: absent), api(4), api(5), api(6), api(7), .empty],
     users: [Api.User(peer: TelegramUser(id: chat, bot: false, marker: 999)), Api.User(peer: TelegramUser(id: absent, bot: false)), Api.User(peer: TelegramUser(id: unrelated, bot: false))], chats: [],
     updates: [.updateDeleteMessages(Api.DeleteMessages(messages: [7])), .mutation], encryptedCount: 0)
@@ -104,18 +104,18 @@ precondition(importBotBridgeHistoryPage(transaction: cancelled, page: page, expe
 let ordinary = transaction(expected); ordinary.peers[account] = TelegramUser(id: account, bot: false)
 precondition(importBotBridgeHistoryPage(transaction: ordinary, page: page, expected: expected, accountPeerId: account, removed: removed, now: 1004, lifetime: lifetime, requestGate: gate) == nil && ordinary.mutationCalls == 0)
 let oversized = transaction(expected)
-let bigPage = BotBridgeHistoryPage(cursor: page.cursor, final: false, messages: page.messages, users: [], chats: [], updates: Array(repeating: .mutation, count: 10001), encryptedCount: 0)
+private let bigPage = BotBridgeHistoryPage(cursor: page.cursor, final: false, messages: page.messages, users: [], chats: [], updates: Array(repeating: .mutation, count: 10001), encryptedCount: 0)
 precondition(importBotBridgeHistoryPage(transaction: oversized, page: bigPage, expected: expected, accountPeerId: account, removed: removed, now: 1004, lifetime: lifetime, requestGate: gate)?.terminal == .limit && oversized.mutationCalls == 0)
 let nested = transaction(expected)
-let nestedPage = BotBridgeHistoryPage(cursor: page.cursor, final: false, messages: page.messages, users: [], chats: [], updates: [.updateDeleteMessages(Api.DeleteMessages(messages: Array(repeating: 7, count: 20001)))], encryptedCount: 0)
+private let nestedPage = BotBridgeHistoryPage(cursor: page.cursor, final: false, messages: page.messages, users: [], chats: [], updates: [.updateDeleteMessages(Api.DeleteMessages(messages: Array(repeating: 7, count: 20001)))], encryptedCount: 0)
 precondition(importBotBridgeHistoryPage(transaction: nested, page: nestedPage, expected: expected, accountPeerId: account, removed: removed, now: 1004, lifetime: lifetime, requestGate: gate)?.terminal == .limit && nested.mutationCalls == 0)
 let aggregate = transaction(expected)
-let aggregatePage = BotBridgeHistoryPage(cursor: page.cursor, final: false, messages: page.messages, users: [], chats: [], updates: [.updateDeleteMessages(Api.DeleteMessages(messages: Array(repeating: 7, count: 10001))), .updateDeleteMessages(Api.DeleteMessages(messages: Array(repeating: 8, count: 10000)))], encryptedCount: 0)
+private let aggregatePage = BotBridgeHistoryPage(cursor: page.cursor, final: false, messages: page.messages, users: [], chats: [], updates: [.updateDeleteMessages(Api.DeleteMessages(messages: Array(repeating: 7, count: 10001))), .updateDeleteMessages(Api.DeleteMessages(messages: Array(repeating: 8, count: 10000)))], encryptedCount: 0)
 precondition(importBotBridgeHistoryPage(transaction: aggregate, page: aggregatePage, expected: expected, accountPeerId: account, removed: removed, now: 1004, lifetime: lifetime, requestGate: gate)?.terminal == .limit && aggregate.mutationCalls == 0)
 let conversion = transaction(expected)
 let manyChats = (0..<10000).map { Api.Chat(peer: TelegramChannel(id: peer(Int64($0 + 10), 2), flags: [])) }
 let manyMessages = (0..<5000).map { Api.Message.message(Api.MessageData(id: id(Int32($0 + 100), peer(999999)), marker: 1, author: nil, attributes: [], replyTo: nil)) } // absent cloud-user destination cannot match chats
-let conversionPage = BotBridgeHistoryPage(cursor: page.cursor, final: true, messages: manyMessages, users: [], chats: manyChats, updates: [], encryptedCount: 0)
+private let conversionPage = BotBridgeHistoryPage(cursor: page.cursor, final: true, messages: manyMessages, users: [], chats: manyChats, updates: [], encryptedCount: 0)
 chatParseCount = 0
 precondition(importBotBridgeHistoryPage(transaction: conversion, page: conversionPage, expected: expected, accountPeerId: account, removed: removed, now: 1004, lifetime: lifetime, requestGate: gate)?.inserted == 5000)
 precondition(chatParseCount == manyChats.count, "each bounded response chat converted exactly once")

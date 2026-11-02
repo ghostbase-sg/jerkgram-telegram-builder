@@ -10,7 +10,7 @@ enum SwiftSignalKit { final class Timer { var invalidations = 0; func invalidate
 /* REAL_POLICY */
 /* REAL_LEASE */
 var completions = 0
-var lease: BotBridgePageLease? = BotBridgePageLease(completion: { completions += 1 })
+private var lease: BotBridgePageLease? = BotBridgePageLease(completion: { completions += 1 })
 let network = CountingDisposable(); let timer = SwiftSignalKit.Timer()
 lease!.work.set(network); lease!.timer = timer
 lease!.finish() // timeout or cancellation; same production path as result completion

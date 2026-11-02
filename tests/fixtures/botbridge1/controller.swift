@@ -155,9 +155,9 @@ let account = peer(1), destination = peer(2)
 func messageId(_ n: Int32) -> MessageId { return MessageId(peerId: destination, namespace: 0, id: n) }
 func apiMessage(_ n: Int32) -> Api.Message { return .message(Api.MessageData(id: messageId(n), marker: 8, author: nil, attributes: [], replyTo: nil)) }
 func state(_ pts: Int32 = 100, unread: Int32 = 10, date: Int32 = 20) -> Api.updates.State { return .state(Api.updates.StateData(pts: pts, qts: 4, date: date, seq: 6, unreadCount: unread)) }
-func difference(_ pts: Int32, slice: Bool = false, messages: [Api.Message] = [], updates: [Api.Update] = []) -> Api.updates.Difference {
-    if slice { return .differenceSlice(Api.updates.SliceData(intermediateState: state(pts, date: 21), newMessages: messages, users: [], chats: [], otherUpdates: updates, newEncryptedMessages: [])) }
-    return .difference(Api.updates.FinalData(state: state(pts, date: 21), newMessages: messages, users: [], chats: [], otherUpdates: updates, newEncryptedMessages: []))
+func difference(_ pts: Int32, slice: Bool = false, date: Int32 = 21, messages: [Api.Message] = [], updates: [Api.Update] = []) -> Api.updates.Difference {
+    if slice { return .differenceSlice(Api.updates.SliceData(intermediateState: state(pts, date: date), newMessages: messages, users: [], chats: [], otherUpdates: updates, newEncryptedMessages: [])) }
+    return .difference(Api.updates.FinalData(state: state(pts, date: date), newMessages: messages, users: [], chats: [], otherUpdates: updates, newEncryptedMessages: []))
 }
 final class Clock { var offset: Double = 1000 }
 final class EventSink { var values: [BotBridgeHistoryEvent] = [] }
@@ -243,8 +243,17 @@ do {
     check(h.network.requests.count == 3 && h.progress.terminal == nil, "zero-message progressing slice continues")
     h.reply(Api.updates.Difference.differenceEmpty(Api.updates.EmptyData(date: 22, seq: 6))); h.finished(.completed)
 }
+// A slice that changes only date still advances the full retrieval tuple.
+do {
+    let h = Host(); h.seedToDifference()
+    h.reply(difference(90, slice: true, date: 21))
+    check(h.progress.terminal == nil && h.progress.committedPages == 1 && h.network.requests.count == 3, "date-only progressing slice continues")
+    check(h.progress.next == BotBridgeCursor(pts: 90, qts: 4, date: 21, seq: 6) && h.network.requests.last?.cursor?.pts == 90 && h.network.requests.last?.cursor?.qts == 4 && h.network.requests.last?.cursor?.date == 21, "next request uses date-only advancement")
+    h.reply(difference(100, messages: [apiMessage(1)])); h.finished(.completed)
+    check(h.progress.committedPages == 2 && h.progress.inserted == 1 && h.transaction.messages[messageId(1)] != nil, "date-only slice reaches later final payload")
+}
 do { let h = Host(); h.seedToDifference(); h.reply(Api.updates.Difference.differenceTooLong(500)); h.finished(.tooLong); check(h.transaction.mutationCalls == 0, "tooLong no reset/import") }
-do { let h = Host(); h.seedToDifference(); h.reply(difference(90, slice: true, messages: [apiMessage(1)])); h.finished(.nonadvancing); check(h.transaction.mutationCalls == 0, "nonadvancing no mutation") }
+do { let h = Host(); h.seedToDifference(); h.reply(difference(90, slice: true, date: 20, messages: [apiMessage(1)])); h.finished(.nonadvancing); check(h.transaction.mutationCalls == 0, "nonadvancing no mutation") }
 do { let h = Host(); h.seedToDifference(); h.reply(difference(89, messages: [apiMessage(1)])); h.finished(.nonadvancing); check(h.transaction.mutationCalls == 0, "regressing final response rejected") }
 do { let h = Host(); h.start(); h.queue.drain(); h.reply(state(unread: 0)); h.finished(.noCandidate); check(h.network.requests.count == 1, "no candidate no difference") }
 // Hanging request, error, cancellation, late callbacks, and replacement.
