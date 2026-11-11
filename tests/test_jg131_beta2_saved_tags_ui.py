@@ -11,6 +11,7 @@ from pathlib import Path
 import hashlib
 import json
 import os
+import re
 import unittest
 from saved_tags_native import declaration
 
@@ -33,6 +34,14 @@ class SavedTagsUIContracts(unittest.TestCase):
         cls.inputs = (UI / 'Sources/ChatInterfaceStateInputPanels.swift').read_text()
         cls.menu = (UI / 'Sources/ChatInterfaceStateContextMenus.swift').read_text()
         cls.nav = (UI / 'Sources/Chat/ChatControllerNavigationButtonAction.swift').read_text()
+
+    def test_results_font_matches_native_chat_list_presentation(self):
+        native = (SOURCE / 'submodules/ChatListUI/Sources/ChatListSearchListPaneNode.swift').read_text()
+        native_fonts = set(re.findall(r'ChatListPresentationData\(theme: (?:self\.)?presentationData\.theme, fontSize: (?:self\.)?presentationData\.(\w+)', native))
+        self.assertTrue(native_fonts, 'No native result presentation reference found')
+        local_fonts = re.findall(r'ChatListPresentationData\(theme: presentation\.theme, fontSize: presentation\.(\w+)', self.controller)
+        self.assertTrue(local_fonts, 'Local result presentation must use the current presentation data')
+        self.assertTrue(set(local_fonts) <= native_fonts, (local_fonts, native_fonts))
 
     def test_only_declared_ui_owners_changed_against_task4_parent(self):
         before = BASE / 'task4-before'

@@ -1337,7 +1337,7 @@ new file mode 100644
 +            // an unavailable indexed entry or navigate to a forward's source ID.
 +            let message = self.message!
 +            let presentation = session.presentation
-+            let chatPresentation = ChatListPresentationData(theme: presentation.theme, fontSize: presentation.chatListFontSize, strings: presentation.strings, dateTimeFormat: presentation.dateTimeFormat, nameSortOrder: presentation.nameSortOrder, nameDisplayOrder: presentation.nameDisplayOrder, disableAnimations: false)
++            let chatPresentation = ChatListPresentationData(theme: presentation.theme, fontSize: presentation.listsFontSize, strings: presentation.strings, dateTimeFormat: presentation.dateTimeFormat, nameSortOrder: presentation.nameSortOrder, nameDisplayOrder: presentation.nameDisplayOrder, disableAnimations: false)
 +            var peers: [EnginePeer.Id: EnginePeer] = [:]
 +            if let peer = message.peers[message.id.peerId] { peers[peer.id] = EnginePeer(peer) }
 +            return ChatListItem(presentationData: chatPresentation, context: session.context,
