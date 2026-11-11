@@ -1,0 +1,17 @@
+{
+  "upstream": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "files": [
+    {
+      "path": "submodules/TelegramCore/Sources/ChatInputContent/ChatInputContentModel.swift",
+      "git_blob_sha1": "37b78ddaef33b82d142e865f58886daabb2a7c46",
+      "sha256": "2603a17b8f4fe579083717dc79a65241d524aeebc769d86137d2e6a083b1f5ef",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/TelegramCore/Sources/ChatInputContent/ChatInputContentModel.swift"
+    },
+    {
+      "path": "submodules/TextFormat/Sources/ChatInputContentConversion.swift",
+      "git_blob_sha1": "87655551da10cf443cdaf73935d7af943342a9cf",
+      "sha256": "1aa9a94c71eace86c4162b48c59a48afb3b2ae777a85ef0d6c8a035052e14333",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/TextFormat/Sources/ChatInputContentConversion.swift"
+    }
+  ]
+}

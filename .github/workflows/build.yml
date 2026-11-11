@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - docs/**
     branches:
+      - perf/build179-wave2a1-chat-typing
       - dev/beta2-local-premium-tags-179
       - dev/botbridge1-legacy-history-modern-write
       - codex/build176-wave1
@@ -69,6 +70,14 @@ jobs:
         with:
           name: Jerkgram-1.2.0-Build179-BETA2-diagnostics
           path: |
+            patches/perf-build179-wave2a1.patch
+            patches/perf-build179-wave2a1.sha256.json
+            scripts/materialize_jg131_wave2a1.py
+            scripts/verify_jg131_wave2a1.py
+            tests/run_jg131_wave2a1.py
+            tests/test_jg131_wave2a1*.py
+            tests/wave2a1_native.py
+            tests/fixtures/wave2a1/
             patches/jg131-saved-tags.patch
             patches/jg131-saved-tags.sha256.json
             scripts/materialize_jg131_saved_tags.py
@@ -225,7 +234,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build179-BETA2
+          name: ${{ github.ref_name == 'perf/build179-wave2a1-chat-typing' && 'Jerkgram-Build179-WAVE2A1-performance-candidate' || 'Jerkgram-1.2.0-Build179-BETA2' }}
           path: |
             artifacts/Jerkgram-1.2.0-Build179-BETA2.ipa
             artifacts/Jerkgram-1.2.0-Build179-BETA2.json

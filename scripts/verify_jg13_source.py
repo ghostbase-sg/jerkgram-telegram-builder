@@ -80,6 +80,18 @@ def main():
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()
         return
+    from materialize_jg131_wave2a1 import is_present as wave2a1_present, parent_source_view as wave2a1_parent
+    if wave2a1_present(final_source):
+        from verify_jg131_wave2a1 import verify_source as verify_wave2a1_source
+        verify_wave2a1_source(final_source)
+        try:
+            with wave2a1_parent(final_source) as parent:
+                SOURCE = parent
+                main()
+        finally:
+            SOURCE = final_source
+        print("Wave2A1 exact candidate owners VERIFIED; native/app/device evidence separate")
+        return
     from materialize_jg131_saved_tags import is_present as tags_present, parent_source_view as tags_parent
     if tags_present(final_source):
         from verify_jg131_saved_tags import verify_source as verify_tags_source

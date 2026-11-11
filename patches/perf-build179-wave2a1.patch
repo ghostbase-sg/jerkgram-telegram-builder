@@ -1,0 +1,31 @@
+diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+--- a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+@@ -530,7 +530,7 @@
+         )
+         return echo.consume(node: node, content: state.content,
+             selection: NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count),
+-            configuration: configuration, literalText: { attributedString(from: state.content).string },
++            configuration: configuration, literalText: { state.content.plainText },
+             currentDisplayText: { node.attributedText ?? NSAttributedString() },
+             currentContent: { node.currentInputContent().content })
+     }
+diff --git a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
+--- a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
+@@ -238,10 +238,12 @@
+             }
+         }
+         
+-        let ghostBaseIsDeleted = ((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted) ?? false
++        if !ghostBaseShowDeleted {
++            let ghostBaseIsDeleted = ((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted) ?? false
+ 
+-        if !ghostBaseShowDeleted && ghostBaseIsDeleted {
+-            continue loop
++            if ghostBaseIsDeleted {
++                continue loop
++            }
+         }
+         
+         var contentTypeHint: ChatMessageEntryContentType = .generic
