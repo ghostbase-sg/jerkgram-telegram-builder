@@ -1,0 +1,132 @@
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -16,8 +16,10 @@
+ // Opt-in refresh callback owner. The existing capture owns the session lifetime.
+ private final class JerkgramDiagnosticSettingsController: ItemListController {
+     var diagnosticRoute = "settingsSubpage"
++    var refreshSettingsOnAppearance: (() -> Void)?
+     override func viewWillAppear(_ animated: Bool) {
+         super.viewWillAppear(animated)
++        self.refreshSettingsOnAppearance?()
+         JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.diagnosticRoute, owner: self)
+     }
+     override func viewDidAppear(_ animated: Bool) {
+@@ -812,6 +814,8 @@
+     let background: UInt32
+ 
+     switch name {
++    case "Item List/Icons/Premium":
++        return PresentationResourcesSettings.premium
+     case "Jerkgram/Settings/Airplane":
+         background = 0x53606A
+     case "Chat/Context Menu/Eye":
+@@ -847,6 +851,7 @@
+ private enum GhostBaseSettingsPage: Equatable {
+     case root
+     case dataAndBackup
++    case localPremium
+     case stars
+     case home
+     case ghostMode
+@@ -863,6 +868,8 @@
+             return "Jerkgram"
+         case .dataAndBackup:
+             return "Data and Backup"
++        case .localPremium:
++            return "Local Premium"
+         case .stars:
+             return "Stars"
+         case .home:
+@@ -891,6 +898,8 @@
+             return strings.settingsTitle
+         case .dataAndBackup:
+             return strings.dataAndBackup
++        case .localPremium:
++            return strings.localPremium
+         case .stars:
+             return strings.starsBalance
+         case .home:
+@@ -2131,7 +2140,22 @@
+             .toggle(1, 51, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
+             .info(1, strings.removeSponsoredHint),
+             .header(2, strings.backup),
+-            .disclosure(2, 1, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup)
++            .disclosure(2, 1, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup),
++            .disclosure(2, 2, strings.localPremium, "Item List/Icons/Premium", .localPremium)
++        ]
++    }
++
++    if page == .localPremium {
++        return [
++            .header(0, strings.appearance),
++            .toggle(0, 1, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
++            .header(1, strings.localPremiumMedia),
++            .downloadBoost(1, 1, state.downloadBoost),
++            .info(1, strings.downloadBoostHint),
++            .header(2, strings.messages),
++            .toggle(2, 1, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
++            .toggle(2, 2, JerkgramTranslationSettings.preferenceKey, strings.translationNeedsWork, state.enhancedTranslation),
++            .info(2, strings.localPremiumScopeHint)
+         ]
+     }
+ 
+@@ -2225,7 +2249,7 @@
+             .toggle(5, 1, GhostBaseKey.hideBlockedMessages, strings.hideBlockedMessages, state.hideBlockedMessages),
+             .toggle(5, 2, GhostBaseKey.hideBlockedReactions, strings.hideBlockedReactions, state.hideBlockedReactions),
+             .header(6, isRussian ? "Перевод" : "Translation"),
+-            .toggle(6, 1, JerkgramTranslationSettings.preferenceKey, isRussian ? "Улучшенный перевод" : "Enhanced Translation", state.enhancedTranslation),
++            .toggle(6, 1, JerkgramTranslationSettings.preferenceKey, strings.translationNeedsWork, state.enhancedTranslation),
+             .info(6, isRussian ? "Использует текстовый перевод Telegram и системный перевод при необходимости. Не предоставляет Telegram Premium." : "Uses Telegram text translation with system translation when needed. Does not provide Telegram Premium."),
+         ]
+     }
+@@ -2967,13 +2991,17 @@
+     let statePromise = ValuePromise(initialState, ignoreRepeated: false)
+     let stateValue = Atomic(value: initialState)
+     let accountPeerId = context.account.peerId.toInt64()
++    // Each pushed page owns a snapshot. Refresh it on appearance so retained
++    // aliases display current values after back navigation without publishing
++    // imports, polling, or writing settings merely by opening a page.
++    let reloadSettings: () -> Void = {
++        let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId)
++        _ = stateValue.modify { _ in refreshed }
++        statePromise.set(refreshed)
++    }
+     let jerkgramImportRefreshSignal = jerkgramSettingsImportRefreshSignal(
+         accountPeerId: accountPeerId,
+-        reload: {
+-            let refreshed = GhostBaseSettingsState.load(accountPeerId: accountPeerId)
+-            _ = stateValue.modify { _ in refreshed }
+-            statePromise.set(refreshed)
+-        }
++        reload: reloadSettings
+     )
+     // Retain the import observer through the controller's existing state
+     // subscription without changing the arity or closure shape of whatever
+@@ -4011,6 +4039,7 @@
+         context: context,
+         state: signal
+     )
++    controller.refreshSettingsOnAppearance = reloadSettings
+     controller.diagnosticRoute = page == .about ? "about" : "settingsSubpage"
+     sharePerformanceImpl = { [weak controller] in
+         guard let root = controller?.view.window?.rootViewController else { return }
+diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -1028,3 +1028,15 @@
+     var archiveErrorConflicts: String { self.languageCode == "ru" ? "В архиве найдены конфликты. Выберите способ объединения и повторите импорт." : "The archive contains conflicts. Choose how to merge them and retry the import." }
+     var archiveErrorGeneric: String { self.languageCode == "ru" ? "Не удалось обработать архив. Проверьте файл, пароль и свободное место, затем повторите попытку." : "Couldn't process the archive. Check the file, password and free storage, then try again." }
+ }
++
++// Local Premium groups existing local settings; it does not change entitlement.
++public extension JerkgramStrings {
++    var localPremium: String { self.languageCode == "ru" ? "Локальный Premium" : "Local Premium" }
++    var localPremiumMedia: String { self.languageCode == "ru" ? "Медиа" : "Media" }
++    var translationNeedsWork: String { self.languageCode == "ru" ? "Перевод · Требует доработки" : "Translation · Needs work" }
++    var localPremiumScopeHint: String {
++        self.languageCode == "ru"
++            ? "Эти локальные возможности не предоставляют Telegram Premium. Иконки действуют на всём устройстве; остальные настройки относятся к текущему аккаунту. Перевод требует доработки."
++            : "These local features do not grant Telegram Premium. App Icons apply to this device; the other settings apply to the current account. Translation needs work."
++    }
++}

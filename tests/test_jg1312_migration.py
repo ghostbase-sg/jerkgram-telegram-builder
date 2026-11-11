@@ -11,7 +11,7 @@ TARGET = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
 class Migration1312(unittest.TestCase):
     def test_active_manifests_share_target_and_chain_proof(self):
         chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
-        self.assertEqual(len(chain), 30)
+        self.assertEqual(len(chain), 31)
         stages = {s['stage']: s for s in chain}
         for p in (ROOT / 'patches').glob('jg13*.sha256.json'):
             m = json.loads(p.read_text())
@@ -35,7 +35,7 @@ class Migration1312(unittest.TestCase):
 
     def test_recovery_chain_owners_match_terminal_manifest(self):
         chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
-        stage = chain[-1]
+        stage = next(s for s in chain if s['stage'] == 'jg131-beta2-recovery')
         manifest = json.loads((ROOT / 'patches/jg131-beta2-recovery.sha256.json').read_text())
         self.assertEqual(stage['stage'], 'jg131-beta2-recovery')
         self.assertEqual(len(manifest['owners']), 5)

@@ -3236,5 +3236,21 @@
         "after": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13"
       }
     }
+  },
+  {
+    "order": 31,
+    "stage": "jg131-local-premium",
+    "original_patch_sha256": "20ac9aff4297e357d766f36f4d15e133a61afa4e0c0b286100a9a82b8f69e54a",
+    "regenerated_patch_sha256": "20ac9aff4297e357d766f36f4d15e133a61afa4e0c0b286100a9a82b8f69e54a",
+    "owners": {
+      "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+        "before": "c3b3f5ce7b4756c4ebf5ac5e7b1486bafa5c5265b193fe63e8b2720b0af1509f",
+        "after": "6f9c38a74eee56e07c732d701fa69bf13a974048016240f02af9a729cb7588cf"
+      },
+      "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
+        "before": "2c7183d60a5bfb66e8a7fb39cbd7d8354ba7411d178c54e5b73e54b36e4bc837",
+        "after": "2e4512799cc807ae98ef2f91d33f968f5e00487977e36706d68098aaccc81eb0"
+      }
+    }
   }
 ]

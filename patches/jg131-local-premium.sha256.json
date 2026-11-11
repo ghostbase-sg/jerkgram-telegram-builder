@@ -1,0 +1,24 @@
+{
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "stage": "Local Premium Hub after exact Beta2 recovery",
+  "parent_commit": "ce7fc4cc67a8dc036c51aa33de762e5e29ddabec",
+  "parent_stage": "jg131-beta2-recovery",
+  "patch_sha256": "20ac9aff4297e357d766f36f4d15e133a61afa4e0c0b286100a9a82b8f69e54a",
+  "parent_owners": {
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "c3b3f5ce7b4756c4ebf5ac5e7b1486bafa5c5265b193fe63e8b2720b0af1509f",
+    "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": "4e50ada693a5f7cae35703d162f65f71b7fd9d5c95c42fc4c918b07b0b1bee16",
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift": "acb8ee2738fd79b43d2358a0ba246b98ff47b9a34867c1d1ebbd86124623c0a1",
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": "4d3cffff7756eccf3a01e98bd56f6c4faee3325c5b1c20fe87cf788ca82dbcce",
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13"
+  },
+  "owners": {
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+      "before_sha256": "c3b3f5ce7b4756c4ebf5ac5e7b1486bafa5c5265b193fe63e8b2720b0af1509f",
+      "after_sha256": "6f9c38a74eee56e07c732d701fa69bf13a974048016240f02af9a729cb7588cf"
+    },
+    "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
+      "before_sha256": "2c7183d60a5bfb66e8a7fb39cbd7d8354ba7411d178c54e5b73e54b36e4bc837",
+      "after_sha256": "2e4512799cc807ae98ef2f91d33f968f5e00487977e36706d68098aaccc81eb0"
+    }
+  }
+}

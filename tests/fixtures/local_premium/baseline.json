@@ -1,0 +1,19 @@
+{
+  "parent_commit": "ce7fc4cc67a8dc036c51aa33de762e5e29ddabec",
+  "blocks": {
+    "struct GhostBaseSettingsState:": "888e78c5e186d78a4fef84df387e2d63c945b97e4a9ae9a7263a08f399bc52a5",
+    "private func jerkgramStateValues(": "ea47020c91c6b69338b6b77f7d611fb5ba6a49830a41bd6bf5424783b77f0152",
+    "private func jerkgramPersistChangedSettings(": "c5312c8a87addb8ccb7595364a2a9169641a2772f622ecb9c4dc94dd3a3f516e",
+    "private func jerkgramScopedSettingsKey(": "6d68a5ba0f2eb7288326dcb864b779df226d6e47adac7ddd4489809efb7eca7e"
+  },
+  "setters": "f7ce067e8e200d4074910639ef36465887070b5a5659c42777482e23e5daf8b3",
+  "unchanged_owners": {
+    "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4",
+    "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": "e082a02a6edb071c7d4f04c1593ba56b2e01b380af07d45da92281cc62556883",
+    "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f",
+    "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b",
+    "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift": "fc71c063661ef363716332cf69561612bde4cdc34e719c956366252d38b84585",
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": "dfac82d7280037f44147070e474ee05135d4a5d7f44f668094fb2f42537899ce",
+    "submodules/TelegramUI/Sources/SharedAccountContext.swift": "18fb6c66d7c073c75e0b9f356d015decb3e27e31634a3fc90cc4827d4bd4013c"
+  }
+}
