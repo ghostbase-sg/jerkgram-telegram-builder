@@ -105,5 +105,15 @@
     "source": "jerkgram-next/beta2/recovery/before/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift",
     "sha256": "beea0a989a7bb803496afbb9617b9c2564f9fb083b763ceb5f2da889562e81f1",
     "owner_source_sha256": "a5c01bb8c596e5d42c7519b66803fcef31b7600591e3ed0ed2a3050ba97c0ff6"
-  }
+  },
+  "support_files": [
+    {
+      "path": "submodules/Postbox/Sources/ValueBoxKey.swift",
+      "fixture_path": "support/ValueBoxKey.swift",
+      "sha": "021adfaa69b980a4e83a2da644dcb86ba01f54ff",
+      "sha256": "fafd6c410065a4cca9893f64ec052a946d1e0c9145afaf5e126e90da74f4ace2",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/ValueBoxKey.swift",
+      "retrieved_via": "Existing byte-verified pinned fixture; computed blob hash independently matched read-only exact-pin git ls-tree"
+    }
+  ]
 }

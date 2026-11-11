@@ -36,6 +36,12 @@ def policy(source):
     return source.split('// BEGIN BOTBRIDGE POLICY\n')[1].split('// END BOTBRIDGE POLICY')[0]
 
 
+def codec_sources():
+    official = FIXTURE / 'official/submodules/Postbox/Sources'
+    return [p for p in sorted(official.rglob('*.swift')) if p.name != 'MediaResource.swift'] + [
+        FIXTURE / 'support/ValueBoxKey.swift']
+
+
 def compile_fixture(folder, optimization, old=False):
     """Full pinned codec, exact supporting declaration, real ObjC hash module."""
     official = FIXTURE / 'official/submodules'
@@ -64,8 +70,7 @@ def compile_fixture(folder, optimization, old=False):
             'func jerkgramPrepareBotBridgeHistory(', 'private func botBridgeWriteProgress('])
         main = 'import Foundation\n' + policy(source) + (FIXTURE / 'native.swift').read_text().replace('/* REAL_STORAGE_BOUNDARY */', storage)
     (folder / 'main.swift').write_text(main)
-    sources = sorted((official / 'Postbox/Sources').rglob('*.swift'))
-    sources = [p for p in sources if p.name != 'MediaResource.swift']
+    sources = codec_sources()
     executable = folder / 'codec'
     command = [shutil.which('swiftc'), '-swift-version', '5', optimization, '-I', str(includes),
                *map(str, sources), str(folder / 'MediaResourceId.swift'), str(folder / 'main.swift'),
@@ -78,6 +83,17 @@ def compile_fixture(folder, optimization, old=False):
 
 class CodecSourceContract(unittest.TestCase):
     maxDiff = 2000
+
+    def test_native_comparator_dependency_is_pinned(self):
+        sources = codec_sources()
+        declarations = [p for p in sources if 'func mdb_cmp_memn(' in p.read_text()]
+        self.assertEqual(len(declarations), 1, 'Complete Coding.swift needs the real pinned buffer comparator')
+        manifest = json.loads((FIXTURE / 'PROVENANCE.json').read_text())
+        row = next(r for r in manifest['support_files']
+                   if r['fixture_path'] == str(declarations[0].relative_to(FIXTURE)))
+        data = declarations[0].read_bytes()
+        self.assertEqual(hashlib.sha256(data).hexdigest(), row['sha256'])
+        self.assertEqual(hashlib.sha1(f'blob {len(data)}\0'.encode() + data).hexdigest(), row['sha'])
 
     def test_pinned_official_codec_bytes_and_old_policy(self):
         manifest = json.loads((FIXTURE / 'PROVENANCE.json').read_text())
