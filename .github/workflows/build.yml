@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 2 / Telegram 13.1.2 / Build179 Beta2 recovery
+name: Jerkgram 1.2.0 Beta 2 / Telegram 13.1.2 / Build179 Recovery, Local Premium and Saved Tags
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     paths-ignore:
       - docs/**
     branches:
-      - dev/beta2-recovery-179
+      - dev/beta2-local-premium-tags-179
       - dev/botbridge1-legacy-history-modern-write
       - codex/build176-wave1
       - codex/translation-folder-glass
@@ -67,8 +67,23 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build179-BETA2-RECOVERY-diagnostics
+          name: Jerkgram-1.2.0-Build179-BETA2-diagnostics
           path: |
+            patches/jg131-saved-tags.patch
+            patches/jg131-saved-tags.sha256.json
+            scripts/materialize_jg131_saved_tags.py
+            scripts/verify_jg131_saved_tags.py
+            tests/run_jg131_saved_tags.py
+            tests/test_jg131_saved_tags*.py
+            tests/saved_tags_native.py
+            tests/saved_tags_core_native.py
+            tests/fixtures/beta2_saved_tags/
+            patches/jg131-local-premium.patch
+            patches/jg131-local-premium.sha256.json
+            scripts/materialize_jg131_local_premium.py
+            scripts/verify_jg131_local_premium.py
+            tests/run_jg131_local_premium.py
+            tests/test_jg131_local_premium*.py
             patches/jg131-beta2-recovery.patch
             patches/jg131-beta2-recovery.sha256.json
             scripts/materialize_jg131_beta2_recovery.py
@@ -210,9 +225,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build179-BETA2-RECOVERY
+          name: Jerkgram-1.2.0-Build179-BETA2
           path: |
-            artifacts/Jerkgram-1.2.0-Build179-BETA2-RECOVERY.ipa
-            artifacts/Jerkgram-1.2.0-Build179-BETA2-RECOVERY.json
+            artifacts/Jerkgram-1.2.0-Build179-BETA2.ipa
+            artifacts/Jerkgram-1.2.0-Build179-BETA2.json
           if-no-files-found: error
           retention-days: 90

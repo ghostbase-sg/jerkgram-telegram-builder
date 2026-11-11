@@ -1,0 +1,48 @@
+{
+  "upstream": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "files": [
+    {
+      "path": "submodules/Postbox/Sources/Table.swift",
+      "sha256": "8941f3d213704b6827c96bd50c47b032a829c9a15b8a457618d668b163413417",
+      "git_blob_sha1": "ae3a385c043ad3adde4cf32534d3a52d4a547116",
+      "origin": "../jerkgram-next/beta2/research/saved-tags/storage-support/submodules/Postbox/Sources/Table.swift"
+    },
+    {
+      "path": "submodules/Postbox/Sources/ValueBox.swift",
+      "sha256": "42ad37bcbd8d85d94991eaae0eab40dcc8e7c027fbc0cf84887d1294842e7a11",
+      "git_blob_sha1": "f4f5bdafa635f0ec2d98e190e5b9d8d4a26ea96b",
+      "origin": "../jerkgram-next/beta2/research/saved-tags/storage-support/submodules/Postbox/Sources/ValueBox.swift"
+    },
+    {
+      "path": "submodules/Postbox/Sources/ValueBoxKey.swift",
+      "sha256": "fafd6c410065a4cca9893f64ec052a946d1e0c9145afaf5e126e90da74f4ace2",
+      "git_blob_sha1": "021adfaa69b980a4e83a2da644dcb86ba01f54ff",
+      "origin": "../jerkgram-next/beta2/research/saved-tags/storage-support/submodules/Postbox/Sources/ValueBoxKey.swift"
+    },
+    {
+      "path": "submodules/Postbox/Sources/PreferencesTable.swift",
+      "sha256": "ff120ea2b64b6e43940bde1ff8859585caac3195c8508aaf8aece91004e49508",
+      "git_blob_sha1": "68fb95543d804539f760d1f3d6b459fa0aa338e8",
+      "origin": "../jerkgram-next/beta2/research/saved-tags/storage-support/submodules/Postbox/Sources/PreferencesTable.swift"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Peer.swift",
+      "sha256": "a7605153677483271c3a602129985fd9f2514bfad22f77e182e0f5089464723a",
+      "git_blob_sha1": "60ef42caceac64b60a9ff105e1974b7c0596b22a",
+      "origin": "../jerkgram-next/beta2/research/saved-tags/storage-support/submodules/Postbox/Sources/Peer.swift"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Message.swift",
+      "sha256": "c382cdf51199878336bf65c396cc56aeebaf74685b00a941211676e07c2e476e",
+      "git_blob_sha1": "a3a0bd715d60809d66295a05c7069b798195daee",
+      "origin": "../jerkgram-next/beta2/research/saved-tags/sources/submodules/Postbox/Sources/Message.swift"
+    },
+    {
+      "path": "submodules/Postbox/BUILD",
+      "sha256": "fb7297fbdeba14b0cda6d6ee821571d5b89c3a956ce739d5bbaf81a8086b76ae",
+      "git_blob_sha1": "c619c0ccef35e1c39df5b4d863275dfef62e3839",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/BUILD",
+      "bytes": 4438
+    }
+  ]
+}

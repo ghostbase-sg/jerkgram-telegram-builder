@@ -11,7 +11,7 @@ TARGET = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
 class Migration1312(unittest.TestCase):
     def test_active_manifests_share_target_and_chain_proof(self):
         chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
-        self.assertEqual(len(chain), 31)
+        self.assertEqual(len(chain), 32)
         stages = {s['stage']: s for s in chain}
         for p in (ROOT / 'patches').glob('jg13*.sha256.json'):
             m = json.loads(p.read_text())
@@ -62,7 +62,7 @@ class Migration1312(unittest.TestCase):
         for name in ('scripts/build_jg13.sh', '.github/workflows/no-ads-native.yml'):
             text = (ROOT / name).read_text()
             self.assertIn("-p 'test_jg1312*.py'", text, name)
-            self.assertLess(text.index('python3 tests/run_jg131_beta2_recovery.py --require-native --require-full-source'),
+            self.assertLess(text.index('python3 tests/run_jg131_saved_tags.py --require-native --require-full-source'),
                             text.index("-p 'test_jg1312*.py'"), name)
 
 

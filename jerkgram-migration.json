@@ -33,5 +33,5 @@
     "recorded_by_builder_commit": "950894f0a44fb8396dc172ceb4f6f4bf739ce8b5",
     "role": "historical source export; not a 13.1.2 archive claim; unused by current materializers"
   },
-  "artifact_suffix": "BETA2-RECOVERY"
+  "artifact_suffix": "BETA2"
 }

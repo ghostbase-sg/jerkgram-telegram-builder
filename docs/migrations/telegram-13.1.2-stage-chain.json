@@ -3252,5 +3252,61 @@
         "after": "2e4512799cc807ae98ef2f91d33f968f5e00487977e36706d68098aaccc81eb0"
       }
     }
+  },
+  {
+    "order": 32,
+    "stage": "jg131-saved-tags",
+    "original_patch_sha256": "e5c307c7717a42977817ef0a666abc938c956efe34011346abb5dfb16fb9cc13",
+    "regenerated_patch_sha256": "e5c307c7717a42977817ef0a666abc938c956efe34011346abb5dfb16fb9cc13",
+    "owners": {
+      "submodules/Postbox/Sources/LocalSavedTagsTable.swift": {
+        "before": null,
+        "after": "4281a7927d2cc8d345e9eb34ecbbce89f0cb1a8afc05922568ccbaadf4b66f91"
+      },
+      "submodules/Postbox/Sources/Postbox.swift": {
+        "before": "c49591f2fc0167b679363ed1587ea3b57d2c675372c47bd0a4efba1451037aa5",
+        "after": "47cfba511a142f076bb207bddc02475551b7f773ea980b3aee00708cfbc38cd8"
+      },
+      "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift": {
+        "before": "cd2f1f22a2423bfb9a0996f92c36139f3f3dc5dc8bfbbfc71a11c304f620c3fd",
+        "after": "abc7387831cb4180f1883efac4486ab43fb05f1f1f31faed428a0f4898cbcaed"
+      },
+      "submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift": {
+        "before": "ee648c07b0a5cff906f6b56a93a237a36e5bead3ce81c29eca52c157490d71c5",
+        "after": "2cc11a0baed5ecf49003fc71ead45a767f767d5bfd3821187356581a0686c136"
+      },
+      "submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsLifecycle.swift": {
+        "before": null,
+        "after": "e8d6fe932f91bae06c354806826b4561b786fcedb8568acd70827b01aef669d5"
+      },
+      "submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsOperations.swift": {
+        "before": null,
+        "after": "9f1cfe0a7e44f618915ae6a0da7668aa95bcb5cdffa1ea7b9bcd343cbe0d02e7"
+      },
+      "submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift": {
+        "before": null,
+        "after": "37a7099cb1ea4856c257d2f903fce6c51abf029aa7e7fcb10f2d0b5beb6b531f"
+      },
+      "submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode/Sources/ChatMessageSelectionInputPanelNode.swift": {
+        "before": "d8aa8ce8c89b22691d10fd7201898455c535c51d79c59dead29ab203593a512c",
+        "after": "258234010650356eaaa81701a1f9bee16f9de171bb3e89efb76604f4e976ce0c"
+      },
+      "submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift": {
+        "before": "7deb3b1a60d0308a2849cca0c06520922e1dc5031e82349a0f5d99308a4a6ee4",
+        "after": "ee07d1a0f4081dceb4109052448a8859445f021a1fcbd1e0e1289cce483dfc9b"
+      },
+      "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift": {
+        "before": "d6b93d4ef8c9472e7f09506008fe7aca57081897d96c557007c24b083ab4d7c2",
+        "after": "5d78cca74a4e7773aefbd3baa9ef8b307e6b2733f1cb600b68bb44d257da4cf0"
+      },
+      "submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift": {
+        "before": "98b8d40f5fd4363e6c465f13678b6b97cda0587d88d4c62d0f88aa4610fef6f3",
+        "after": "45e08a3fb74582936c90f858c5d9872d4f13041621e4a9d8bf2e53f326c0da8f"
+      },
+      "submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift": {
+        "before": null,
+        "after": "e82ab4261c0eddd02a3d519f7a5c100ce27615abefcf89766ea0c8d627faac7e"
+      }
+    }
   }
 ]

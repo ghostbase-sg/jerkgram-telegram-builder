@@ -80,6 +80,18 @@ def main():
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()
         return
+    from materialize_jg131_saved_tags import is_present as tags_present, parent_source_view as tags_parent
+    if tags_present(final_source):
+        from verify_jg131_saved_tags import verify_source as verify_tags_source
+        verify_tags_source(final_source)
+        try:
+            with tags_parent(final_source) as parent:
+                SOURCE = parent
+                main()
+        finally:
+            SOURCE = final_source
+        print("Saved Tags terminal owners VERIFIED; native/app/device evidence separate")
+        return
     from materialize_jg131_local_premium import is_present as hub_present, parent_source_view as hub_parent
     if hub_present(final_source):
         from verify_jg131_local_premium import verify_source as verify_hub_source

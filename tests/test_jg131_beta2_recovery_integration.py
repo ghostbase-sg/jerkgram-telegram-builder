@@ -21,21 +21,21 @@ class RecoveryIntegration(unittest.TestCase):
 
     def test_release_identity_and_gates_agree(self):
         config = json.loads((ROOT/'jerkgram-migration.json').read_text())
-        self.assertEqual((config['product_display_version'], config['product_technical_version'], config['build_number'], config['artifact_suffix']), ('1.2.0 Beta 2', '1.2.0-beta.2', 179, 'BETA2-RECOVERY'))
+        self.assertEqual((config['product_display_version'], config['product_technical_version'], config['build_number'], config['artifact_suffix']), ('1.2.0 Beta 2', '1.2.0-beta.2', 179, 'BETA2'))
         for name in ('scripts/build_jg13.sh', '.github/workflows/no-ads-native.yml'):
             text = (ROOT/name).read_text()
             self.assertLess(text.index('scripts/materialize_jg131_botbridge1.py'), text.index('scripts/materialize_jg131_beta2_recovery.py'))
-            self.assertLess(text.index('tests/run_jg131_beta2_recovery.py --require-native --require-full-source'), text.index("-p 'test_jg1312*.py'"))
+            self.assertLess(text.index('tests/run_jg131_saved_tags.py --require-native --require-full-source'), text.index("-p 'test_jg1312*.py'"))
         build = (ROOT/'scripts/build_jg13.sh').read_text()
         self.assertIn('--define=buildNumber=179', build)
-        self.assertLess(build.index('tests/run_jg131_beta2_recovery.py'), build.index('"${BAZEL_BIN:-bazelisk}" build'))
+        self.assertLess(build.index('tests/run_jg131_saved_tags.py'), build.index('"${BAZEL_BIN:-bazelisk}" build'))
         workflow = (ROOT/'.github/workflows/build.yml').read_text()
         self.assertIn('needs: source-preflight', workflow)
-        self.assertIn('      - dev/beta2-recovery-179', workflow)
+        self.assertIn('      - dev/beta2-local-premium-tags-179', workflow)
         self.assertIn('      - dev/botbridge1-legacy-history-modern-write', workflow)
         self.assertNotIn('            artifacts/build.log', workflow)
         for suffix in ('.ipa', '.json'):
-            self.assertIn('artifacts/Jerkgram-1.2.0-Build179-BETA2-RECOVERY'+suffix, workflow)
+            self.assertIn('artifacts/Jerkgram-1.2.0-Build179-BETA2'+suffix, workflow)
 
     def test_final_verifier_refuses_partial_recovery_before_bot_fallback(self):
         import materialize_jg131_beta2_recovery as recovery

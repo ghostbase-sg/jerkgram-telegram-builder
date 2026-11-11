@@ -23,15 +23,16 @@ class LocalPremiumIntegration(unittest.TestCase):
 
     def test_chain_and_build_use_exact_hub_after_recovery(self):
         chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
-        self.assertEqual(chain[-1]['stage'], 'jg131-local-premium')
+        stage = next(row for row in chain if row['stage'] == 'jg131-local-premium')
+        self.assertEqual(chain[-1]['stage'], 'jg131-saved-tags')
         manifest = json.loads((ROOT / 'patches/jg131-local-premium.sha256.json').read_text())
-        self.assertEqual(chain[-1]['regenerated_patch_sha256'], manifest['patch_sha256'])
+        self.assertEqual(stage['regenerated_patch_sha256'], manifest['patch_sha256'])
         for name, row in manifest['owners'].items():
-            self.assertEqual(chain[-1]['owners'][name], {'before': row['before_sha256'], 'after': row['after_sha256']})
+            self.assertEqual(stage['owners'][name], {'before': row['before_sha256'], 'after': row['after_sha256']})
         for name in ('scripts/build_jg13.sh', '.github/workflows/no-ads-native.yml'):
             source = (ROOT / name).read_text()
             self.assertLess(source.index('scripts/materialize_jg131_beta2_recovery.py'), source.index('scripts/materialize_jg131_local_premium.py'))
-            self.assertLess(source.index('tests/run_jg131_local_premium.py --require-native --require-full-source'), source.index("-p 'test_jg1312*.py'"))
+            self.assertLess(source.index('tests/run_jg131_saved_tags.py --require-native --require-full-source'), source.index("-p 'test_jg1312*.py'"))
 
     def test_partial_hub_cannot_fall_back_to_recovery(self):
         import materialize_jg131_local_premium as hub
