@@ -11,7 +11,7 @@ TARGET = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
 class Migration1312(unittest.TestCase):
     def test_active_manifests_share_target_and_chain_proof(self):
         chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
-        self.assertEqual(len(chain), 29)
+        self.assertEqual(len(chain), 30)
         stages = {s['stage']: s for s in chain}
         for p in (ROOT / 'patches').glob('jg13*.sha256.json'):
             m = json.loads(p.read_text())
@@ -33,6 +33,17 @@ class Migration1312(unittest.TestCase):
             self.assertEqual(stage['owners'][path]['before'], owner['before_sha256'], path)
             self.assertEqual(stage['owners'][path]['after'], owner['after_sha256'], path)
 
+    def test_recovery_chain_owners_match_terminal_manifest(self):
+        chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
+        stage = chain[-1]
+        manifest = json.loads((ROOT / 'patches/jg131-beta2-recovery.sha256.json').read_text())
+        self.assertEqual(stage['stage'], 'jg131-beta2-recovery')
+        self.assertEqual(len(manifest['owners']), 5)
+        self.assertEqual(set(stage['owners']), set(manifest['owners']))
+        for path, row in manifest['owners'].items():
+            self.assertEqual(stage['owners'][path]['before'], row['before_sha256'])
+            self.assertEqual(stage['owners'][path]['after'], row['after_sha256'])
+
     def test_prepare_asserts_target_version_and_tlottie_gitlink(self):
         prepare = (ROOT / 'scripts/prepare_source_official.sh').read_text()
         self.assertIn('EXPECTED_COMMIT="' + TARGET + '"', prepare)
@@ -51,7 +62,7 @@ class Migration1312(unittest.TestCase):
         for name in ('scripts/build_jg13.sh', '.github/workflows/no-ads-native.yml'):
             text = (ROOT / name).read_text()
             self.assertIn("-p 'test_jg1312*.py'", text, name)
-            self.assertLess(text.index('python3 tests/run_jg131_botbridge1.py --require-native --require-full-source'),
+            self.assertLess(text.index('python3 tests/run_jg131_beta2_recovery.py --require-native --require-full-source'),
                             text.index("-p 'test_jg1312*.py'"), name)
 
 

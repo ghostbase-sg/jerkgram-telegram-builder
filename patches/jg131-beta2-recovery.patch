@@ -1,0 +1,288 @@
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -2253,12 +2253,11 @@
+             .toggle(0, 3, GhostBaseKey.oneTimeSave, strings.oneTimeMedia, state.oneTimeSave),
+             .toggle(0, 4, GhostBaseKey.storySave, strings.storySave, state.storySave),
+             .downloadBoost(0, 5, state.downloadBoost),
+-            .info(1, strings.downloadBoostHint)
++            .info(0, strings.downloadBoostHint)
+         ]
+     }
+ 
+     if page == .appearance {
+-        let isRussian = strings.languageCode.hasPrefix("ru")
+         return [
+             .header(0, strings.profileBackground),
+             .toggle(0, 1, GhostBaseKey.glassEnabled, strings.profileBackgroundEffect, state.glassEnabled),
+@@ -2278,8 +2277,7 @@
+                 state.showRamUnderClock
+             ),
+             .toggle(1, 8, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
+-            .toggle(1, 9, JerkgramDefaultFolderSettings.preferenceKey, isRussian ? "Разблокировать папку по умолчанию" : "Unlock Default Chat Folder", state.unlockDefaultChatFolder),
+-            .info(1, strings.hidePhoneHint + "\n\n" + (isRussian ? "Выберите первую папку обычным изменением порядка папок. Порядок сохраняется для этого аккаунта только на этом устройстве. Лимиты папок остаются прежними." : "Choose the first folder using the normal folder reorder. The order is saved for this account on this device only. Folder limits still apply."))
++            .info(1, strings.hidePhoneHint)
+         ]
+     }
+ 
+diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+--- a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+@@ -69,6 +69,122 @@
+         self.generation = generation
+     }
+ 
++    // Postbox supports keyed Int32 primitives, but not Codable Int or raw enums.
++    private enum CodingKeys: String, CodingKey {
++        case schema
++        case owner
++        case peer
++        case testing
++        case generation
++        case started
++        case deadline
++        case lastWall
++        case original
++        case candidate
++        case next
++        case reservedState
++        case reservedPages
++        case committedPages
++        case examined
++        case inserted
++        case insertedPeers
++        case insertedUsers
++        case insertedChats
++        case deleteIdsObserved
++        case skipped
++        case unsupported
++        case deletions
++        case missingReferences
++        case terminal
++    }
++
++    init(from decoder: Decoder) throws {
++        let container = try decoder.container(keyedBy: CodingKeys.self)
++        schema = Int(try container.decode(Int32.self, forKey: .schema))
++        owner = try container.decode(Int64.self, forKey: .owner)
++        peer = try container.decode(Int64.self, forKey: .peer)
++        testing = try container.decode(Bool.self, forKey: .testing)
++        generation = try container.decode(String.self, forKey: .generation)
++        started = try container.decodeIfPresent(Double.self, forKey: .started)
++        deadline = try container.decodeIfPresent(Double.self, forKey: .deadline)
++        lastWall = try container.decodeIfPresent(Double.self, forKey: .lastWall)
++        original = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .original)
++        candidate = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .candidate)
++        next = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .next)
++        reservedState = try container.decode(Bool.self, forKey: .reservedState)
++        reservedPages = Int(try container.decode(Int32.self, forKey: .reservedPages))
++        committedPages = Int(try container.decode(Int32.self, forKey: .committedPages))
++        examined = Int(try container.decode(Int32.self, forKey: .examined))
++        inserted = Int(try container.decode(Int32.self, forKey: .inserted))
++        insertedPeers = Int(try container.decode(Int32.self, forKey: .insertedPeers))
++        insertedUsers = Int(try container.decode(Int32.self, forKey: .insertedUsers))
++        insertedChats = Int(try container.decode(Int32.self, forKey: .insertedChats))
++        deleteIdsObserved = Int(try container.decode(Int32.self, forKey: .deleteIdsObserved))
++        skipped = Int(try container.decode(Int32.self, forKey: .skipped))
++        unsupported = Int(try container.decode(Int32.self, forKey: .unsupported))
++        deletions = Int(try container.decode(Int32.self, forKey: .deletions))
++        missingReferences = Int(try container.decode(Int32.self, forKey: .missingReferences))
++        if let rawValue = try container.decodeIfPresent(String.self, forKey: .terminal) {
++            guard let reason = BotBridgeHistoryReason(rawValue: rawValue) else {
++                throw DecodingError.dataCorruptedError(forKey: .terminal, in: container, debugDescription: "Unknown bot bridge terminal reason")
++            }
++            terminal = reason
++        } else {
++            terminal = nil
++        }
++        guard isValid else {
++            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Invalid bot bridge progress"))
++        }
++    }
++
++    func encode(to encoder: Encoder) throws {
++        guard isValid else {
++            throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "Invalid bot bridge progress"))
++        }
++        func wireInt32(_ value: Int, key: CodingKeys) throws -> Int32 {
++            guard let result = Int32(exactly: value) else {
++                throw EncodingError.invalidValue(value, .init(codingPath: encoder.codingPath + [key], debugDescription: "Bot bridge counter exceeds Int32"))
++            }
++            return result
++        }
++        var container = encoder.container(keyedBy: CodingKeys.self)
++        try container.encode(try wireInt32(schema, key: .schema), forKey: .schema)
++        try container.encode(owner, forKey: .owner)
++        try container.encode(peer, forKey: .peer)
++        try container.encode(testing, forKey: .testing)
++        try container.encode(generation, forKey: .generation)
++        try container.encodeIfPresent(started, forKey: .started)
++        try container.encodeIfPresent(deadline, forKey: .deadline)
++        try container.encodeIfPresent(lastWall, forKey: .lastWall)
++        try container.encodeIfPresent(original, forKey: .original)
++        try container.encodeIfPresent(candidate, forKey: .candidate)
++        try container.encodeIfPresent(next, forKey: .next)
++        try container.encode(reservedState, forKey: .reservedState)
++        try container.encode(try wireInt32(reservedPages, key: .reservedPages), forKey: .reservedPages)
++        try container.encode(try wireInt32(committedPages, key: .committedPages), forKey: .committedPages)
++        try container.encode(try wireInt32(examined, key: .examined), forKey: .examined)
++        try container.encode(try wireInt32(inserted, key: .inserted), forKey: .inserted)
++        try container.encode(try wireInt32(insertedPeers, key: .insertedPeers), forKey: .insertedPeers)
++        try container.encode(try wireInt32(insertedUsers, key: .insertedUsers), forKey: .insertedUsers)
++        try container.encode(try wireInt32(insertedChats, key: .insertedChats), forKey: .insertedChats)
++        try container.encode(try wireInt32(deleteIdsObserved, key: .deleteIdsObserved), forKey: .deleteIdsObserved)
++        try container.encode(try wireInt32(skipped, key: .skipped), forKey: .skipped)
++        try container.encode(try wireInt32(unsupported, key: .unsupported), forKey: .unsupported)
++        try container.encode(try wireInt32(deletions, key: .deletions), forKey: .deletions)
++        try container.encode(try wireInt32(missingReferences, key: .missingReferences), forKey: .missingReferences)
++        try container.encodeIfPresent(terminal?.rawValue, forKey: .terminal)
++    }
++
++    // Postbox uses try! around Encodable. Validate before crossing that boundary,
++    // including failure paths which may have marked an invalid value corrupt.
++    var validatedForStorage: BotBridgeHistoryProgress {
++        if isValid { return self }
++        let validGeneration = !generation.isEmpty && generation.utf8.count <= 64
++        var fallback = BotBridgeHistoryProgress(owner: owner, peer: peer, testing: testing, generation: validGeneration ? generation : UUID().uuidString)
++        fallback.terminal = .corrupt
++        return fallback
++    }
++
+     var isValid: Bool {
+         guard schema == 1, !generation.isEmpty, generation.utf8.count <= 64,
+             reservedPages >= 0, reservedPages <= 32, committedPages >= 0, committedPages <= reservedPages,
+@@ -222,7 +338,7 @@
+ func jerkgramRenewBotBridgeGeneration(transaction: Transaction, recordId: Int64, user: TelegramUser, testing: Bool) {
+     guard user.botInfo != nil else { return }
+     let progress = BotBridgeHistoryProgress(owner: recordId, peer: user.id.toInt64(), testing: testing, generation: UUID().uuidString)
+-    transaction.updatePreferencesEntry(key: botBridgeHistoryKey, { _ in PreferencesEntry(progress) })
++    botBridgeWriteProgress(progress, transaction: transaction)
+ }
+ 
+ private func botBridgeValidatedAccount(transaction: Transaction, accountPeerId: PeerId, testing: Bool) -> Bool {
+@@ -263,7 +379,7 @@
+ }
+ 
+ private func botBridgeWriteProgress(_ progress: BotBridgeHistoryProgress, transaction: Transaction) {
+-    transaction.updatePreferencesEntry(key: botBridgeHistoryKey, { _ in PreferencesEntry(progress) })
++    transaction.updatePreferencesEntry(key: botBridgeHistoryKey, { _ in PreferencesEntry(progress.validatedForStorage) })
+ }
+ 
+ private func botBridgeCursor(_ state: Api.updates.State) -> (BotBridgeCursor, Int32) {
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
+@@ -6,6 +6,8 @@
+ 
+ // BEGIN JERKGRAM DEFAULT FOLDER FOUNDATION
+ public enum JerkgramDefaultFolderSettings {
++    // Retain stored opt-in/order for a future repair; all runtime consumers stay native.
++    public static let runtimeEnabled = false
+     public static let preferenceKey = "jerkgram.UnlockDefaultChatFolder"
+     public static let changed = Notification.Name("JerkgramDefaultFolderPolicyChanged")
+     private static let lock = NSLock()
+@@ -25,7 +27,7 @@
+     public static func snapshot(accountPeerId: Int64) -> (enabled: Bool, generation: UInt64) {
+         lock.lock(); defer { lock.unlock() }
+         let current = value(accountPeerId)
+-        return (current.0, current.1)
++        return (runtimeEnabled && current.0, current.1)
+     }
+     public static func enabled(accountPeerId: Int64) -> Bool { return snapshot(accountPeerId: accountPeerId).enabled }
+     public static func generation(accountPeerId: Int64) -> UInt64 { return snapshot(accountPeerId: accountPeerId).generation }
+@@ -42,7 +44,7 @@
+ // Pure policy is shared by presentation, both reorder surfaces and transaction cleanup.
+ public enum JerkgramFolderOrder {
+     public static func startupReady(enabled: Bool, premium: Bool?, localRead: Bool) -> Bool {
+-        return localRead && (!enabled || premium != nil)
++        return localRead && (!JerkgramDefaultFolderSettings.runtimeEnabled || !enabled || premium != nil)
+     }
+     public static func bounded(_ ids: [Int32]) -> [Int32] {
+         var result: [Int32] = []
+@@ -57,7 +59,7 @@
+         return result
+     }
+     public static func effective(native: [Int32], saved: [Int32], allowed: Set<Int32>, active: Bool) -> [Int32] {
+-        guard active else { return native }
++        guard JerkgramDefaultFolderSettings.runtimeEnabled && active else { return native }
+         let movable = [Int32(0)] + native.filter { $0 != 0 && allowed.contains($0) }
+         let movableSet = Set(movable)
+         var result = bounded(saved).filter { movableSet.contains($0) }
+@@ -84,7 +86,7 @@
+         return result
+     }
+     public static func proposalIsCurrent(enabled: Bool, premium: Bool?, generation: UInt64, proposedGeneration: UInt64) -> Bool {
+-        return enabled && premium == false && generation == proposedGeneration
++        return JerkgramDefaultFolderSettings.runtimeEnabled && enabled && premium == false && generation == proposedGeneration
+     }
+ }
+ 
+@@ -1288,6 +1290,7 @@
+     return account.viewTracker.hiddenChatListFilterIds |> take(1) |> mapToSignal { hiddenIds in
+         return account.postbox.transaction { transaction -> [ChatListFilter] in
+             let state = _internal_currentChatListFiltersState(transaction: transaction)
++            guard JerkgramDefaultFolderSettings.runtimeEnabled else { return state.filters }
+             let policy = JerkgramDefaultFolderSettings.snapshot(accountPeerId: account.peerId.toInt64())
+             let premium = transaction.getPeer(account.peerId)?.isPremium
+             let configuration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
+@@ -1310,6 +1313,7 @@
+ }
+ 
+ private func jerkgramPruneDefaultFolderOrder(transaction: Transaction, old: [ChatListFilter], new: [ChatListFilter]) {
++    guard JerkgramDefaultFolderSettings.runtimeEnabled else { return }
+     guard !Set(old.map { $0.id }).subtracting(new.map { $0.id }).isEmpty,
+           let saved = transaction.getPreferencesEntry(key: PreferencesKeys.jerkgramDefaultFolderOrder)?.get(JerkgramDefaultFolderOrder.self) else { return }
+     let ids = JerkgramFolderOrder.pruned(saved: saved.ids, old: old.map { $0.id }, new: new.map { $0.id })
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -251,8 +251,8 @@
+         self.ghostBaseProfileMetricsSettings = GhostBaseProfileMetricsSettings.load()
+         self.headerNode.updateJerkgramVisualState(settings: settings)
+         self.paneContainerNode.updateJerkgramVisualState(glassEnabled: glassEnabled, revision: revision)
+-        for sectionNode in self.regularSections.values {
+-            sectionNode.updateJerkgramVisualState(glassEnabled: glassEnabled)
++        for (sectionId, sectionNode) in self.regularSections {
++            sectionNode.updateJerkgramVisualState(glassEnabled: glassEnabled, darkBackgroundAlpha: self.isSettings && sectionId == AnyHashable(SettingsSection.ghostbase) ? 0.44 : nil)
+         }
+         for sectionNode in self.editingSections.values {
+             sectionNode.updateJerkgramVisualState(glassEnabled: glassEnabled)
+@@ -5868,6 +5868,7 @@
+                     self.scrollNode.insertSubnode(sectionNode, belowSubnode: self.paneContainerNode)
+                     wasAdded = true
+                 }
++                sectionNode.updateJerkgramVisualState(glassEnabled: self.ghostBaseProfileBackgroundView != nil, darkBackgroundAlpha: self.isSettings && sectionId == AnyHashable(SettingsSection.ghostbase) ? 0.44 : nil)
+                 
+                 if wasAdded && transition.isAnimated && (self.isSettings || self.isMyProfile) && !self.state.isEditing {
+                     sectionNode.alpha = 0.0
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+@@ -7,6 +7,7 @@
+ 
+ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
+     private var ghostBaseGlassEnabled: Bool
++    private var ghostBaseDarkBackgroundAlpha: CGFloat?
+     private let backgroundNode: ASDisplayNode
+     private let topSeparatorNode: ASDisplayNode
+     private let bottomSeparatorNode: ASDisplayNode
+@@ -38,8 +39,9 @@
+         self.addSubnode(self.bottomSeparatorNode)
+     }
+     
+-    func updateJerkgramVisualState(glassEnabled: Bool) {
++    func updateJerkgramVisualState(glassEnabled: Bool, darkBackgroundAlpha: CGFloat? = nil) {
+         self.ghostBaseGlassEnabled = glassEnabled
++        self.ghostBaseDarkBackgroundAlpha = darkBackgroundAlpha
+     }
+ 
+     func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
+@@ -47,7 +49,7 @@
+             let isDark = presentationData.theme.overallDarkAppearance
+             self.backgroundNode.backgroundColor = UIColor(
+                 white: isDark ? 0.0 : 1.0,
+-                alpha: isDark ? 0.26 : 0.18
++                alpha: isDark ? (self.ghostBaseDarkBackgroundAlpha ?? 0.26) : 0.18
+             )
+             self.itemContainerNode.backgroundColor = .clear
+             self.topSeparatorNode.backgroundColor = .clear

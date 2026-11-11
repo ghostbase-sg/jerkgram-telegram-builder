@@ -11,8 +11,12 @@
       "after_sha256": "772b38670b3479076bc8835f8e438b222933fd5b8ae7fbe8ef23fc7dc22e7eb4"
     },
     "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
-      "before_sha256": "7f3583ea0308d7406ad6b17829e5fad75920ca3dab3d558522f49bc783c78a0f",
-      "after_sha256": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1"
+      "before_sha256": "33139d06ad4a250c3a207b76d151aaf869f57892e88eda57dc77f4830bd131cc",
+      "after_sha256": "55c0c8bbc577b290f176fac478d2bf8a867f418533378deef141453431b787ff",
+      "preserved_previous_beta1_178": {
+        "before_sha256": "7f3583ea0308d7406ad6b17829e5fad75920ca3dab3d558522f49bc783c78a0f",
+        "after_sha256": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1"
+      }
     },
     "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift": {
       "before_sha256": "074d1991e7358149c0412096cb028390fafe30f2613b4c0d5d6f950b40ad2146",

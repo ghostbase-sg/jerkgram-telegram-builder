@@ -1,0 +1,109 @@
+{
+  "repository": "TelegramMessenger/Telegram-iOS",
+  "ref": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "files": [
+    {
+      "path": "submodules/Postbox/Sources/PreferencesEntry.swift",
+      "sha": "09ad00e9055085658908dae7517b2ac00f739758",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/PreferencesEntry.swift",
+      "retrieved_via": "copied immutable GitHub-connector audit evidence",
+      "sha256": "66f8d03c6f71407fc8f180e7f9dc083d679785118c32b4ece8cda35629ba0346"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Coding.swift",
+      "sha": "1279ab531cebb026aaddd21849bfeb68a22e0ecf",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Coding.swift",
+      "retrieved_via": "copied immutable GitHub-connector audit evidence",
+      "sha256": "33a43a51e3cea199af4fead0a64d85e711490360683e90313e8c7eb2bac41131"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxKeyedEncodingContainer.swift",
+      "sha": "9e0c500f75f6c9f2c8bfc60ea00715e51ba37534",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxKeyedEncodingContainer.swift",
+      "retrieved_via": "copied immutable GitHub-connector audit evidence",
+      "sha256": "b1d36dd0b40304cde9e85c65f683c8b36d7970a05fa77de4ece555b6b737c055"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxEncoder.swift",
+      "sha": "695f9663a85c3f13d7f573cd68745a20f0f51d85",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxEncoder.swift",
+      "retrieved_via": "copied immutable GitHub-connector audit evidence",
+      "sha256": "d1b20346e192def5fbc8361c560f89f0008d1e87ce95b8cbab95d078d4e26f96"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxSingleValueEncodingContainer.swift",
+      "sha": "3bba11f5b11a00100166984510ec1efd0b2e7692",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxSingleValueEncodingContainer.swift",
+      "retrieved_via": "copied immutable GitHub-connector audit evidence",
+      "sha256": "2563434f8f9487857f8f35130afcdbecb406c12414ccd4cf149dae1b78b13495"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxKeyedDecodingContainer.swift",
+      "sha": "63a79a17c7b0bc5fdf52a86d68fc8f77ee5c0e1e",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxKeyedDecodingContainer.swift",
+      "retrieved_via": "copied immutable GitHub-connector audit evidence",
+      "sha256": "ec898e932668e1efe376268f7df9af028258c35f7b86c6d08bcf7ac1e9949f64"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxDecoder.swift",
+      "sha": "267c999109311cca5a644cea3906167d1ef0e030",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxDecoder.swift",
+      "retrieved_via": "copied immutable GitHub-connector audit evidence",
+      "sha256": "3637581981fcb5806e1faaa61943736a5c3cfefa9c2c00161b7d786ad3dcb63a"
+    },
+    {
+      "path": "submodules/Postbox/Sources/PostboxLogging.swift",
+      "sha": "8faf111fc052c3707af90ee7ce93e7ecbe21f2f9",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/PostboxLogging.swift",
+      "sha256": "47c9593fbc6d4bacc1d0aebdd717dd10b0ee03f52a1b0e2c9c9839080c09d1dd",
+      "retrieved_via": "GitHub connector github_fetch_file at exact pin"
+    },
+    {
+      "path": "submodules/Postbox/Sources/MediaResource.swift",
+      "sha": "aafeb87f9bf0329743146e5389610ae379873a80",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/MediaResource.swift",
+      "sha256": "c09ed95729794f599168c978f3ffb0febd4eb9574e3ab8f67bb67334155bab64",
+      "retrieved_via": "GitHub connector github_fetch_file at exact pin"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxUnkeyedEncodingContainer.swift",
+      "sha": "874fac42f4d7ba72da24fb1ae8dd7772491fe17e",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Encoder/AdaptedPostboxUnkeyedEncodingContainer.swift",
+      "sha256": "b19adce7b225d90a6fadb19e4cd2cab8ad7d484f395e8942f9b51c3b185e2f16",
+      "retrieved_via": "GitHub connector github_fetch_file at exact pin"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxSingleValueDecodingContainer.swift",
+      "sha": "5f21bc88f7fb134470a1e90c9c331af37d15c6c2",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxSingleValueDecodingContainer.swift",
+      "sha256": "fb1abc3589147d5a401a4891c619a709acfba6b9964de296042af84694e1fe48",
+      "retrieved_via": "GitHub connector github_fetch_file at exact pin"
+    },
+    {
+      "path": "submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxUnkeyedDecodingContainer.swift",
+      "sha": "ebc3a779d7ace6b69e188fd549ec95ff91c2e753",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/Postbox/Sources/Utils/Decoder/AdaptedPostboxUnkeyedDecodingContainer.swift",
+      "sha256": "d3c9ec69da401aa3efae74004989be21bdcfcab0434f5135188de3a5d8eb6830",
+      "retrieved_via": "GitHub connector github_fetch_file at exact pin"
+    },
+    {
+      "path": "submodules/MurMurHash32/PublicHeaders/MurMurHash32/MurMurHash32.h",
+      "sha": "69eeb1e99abcd0fda0725f1bed6a12277f10036e",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/MurMurHash32/PublicHeaders/MurMurHash32/MurMurHash32.h",
+      "sha256": "bd7a0c45a23e65ef544133935818290e5feefa3572f23a2a8e7174481f377e56",
+      "retrieved_via": "GitHub connector github_fetch_file at exact pin"
+    },
+    {
+      "path": "submodules/MurMurHash32/Sources/MurMurHash32.m",
+      "sha": "5db59099a34d1ec86621a32777d12df794281670",
+      "url": "https://github.com/TelegramMessenger/Telegram-iOS/blob/279f89e4d4f63f17227bf877dc3d8990f22ecd58/submodules/MurMurHash32/Sources/MurMurHash32.m",
+      "sha256": "dda11ad6fbb06eb55cb454d2cd087353befead966d9c1963a5ba4a398c7680ff",
+      "retrieved_via": "GitHub connector github_fetch_file at exact pin"
+    }
+  ],
+  "old_policy": {
+    "source": "jerkgram-next/beta2/recovery/before/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift",
+    "sha256": "beea0a989a7bb803496afbb9617b9c2564f9fb083b763ceb5f2da889562e81f1",
+    "owner_source_sha256": "a5c01bb8c596e5d42c7519b66803fcef31b7600591e3ed0ed2a3050ba97c0ff6"
+  }
+}

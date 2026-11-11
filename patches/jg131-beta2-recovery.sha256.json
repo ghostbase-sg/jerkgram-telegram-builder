@@ -1,0 +1,29 @@
+{
+  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "stage": "Beta2 recovery after exact BOTBRIDGE1",
+  "parent_build": 178,
+  "release_build": 179,
+  "patch_sha256": "8f37710d67cd65ff9a866189a24a25fb4189ab8ed037a877bfdbbd76999a6bdc",
+  "owners": {
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+      "before_sha256": "2afe952d9bc8b68090c71be8585e7344f79a2e2da2e9873866a0565f2eee6cff",
+      "after_sha256": "c3b3f5ce7b4756c4ebf5ac5e7b1486bafa5c5265b193fe63e8b2720b0af1509f"
+    },
+    "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": {
+      "before_sha256": "a5c01bb8c596e5d42c7519b66803fcef31b7600591e3ed0ed2a3050ba97c0ff6",
+      "after_sha256": "4e50ada693a5f7cae35703d162f65f71b7fd9d5c95c42fc4c918b07b0b1bee16"
+    },
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift": {
+      "before_sha256": "abc02c2154576c70eee28bffae1a98d0b74624ab4b69153b40ed558d4d39b3a4",
+      "after_sha256": "acb8ee2738fd79b43d2358a0ba246b98ff47b9a34867c1d1ebbd86124623c0a1"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
+      "before_sha256": "83ff5227ad5cd722df529625c8771a9e1146f263bdcac23b17da46a8fee4b1a6",
+      "after_sha256": "4d3cffff7756eccf3a01e98bd56f6c4faee3325c5b1c20fe87cf788ca82dbcce"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": {
+      "before_sha256": "cb6a1ce5f6e4f5d88f4ac0a65a265c623f8e068084a4988e903b6185628ecf75",
+      "after_sha256": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13"
+    }
+  }
+}

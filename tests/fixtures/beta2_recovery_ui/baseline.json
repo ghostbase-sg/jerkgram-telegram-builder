@@ -1,0 +1,23 @@
+{
+  "source": "Build178 immutable recovery/before; builder33fffd93b5d3cc207a5ce2492b43292fe09ea6b8; upstream279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "unchanged_owners": {
+    "submodules/ChatListUI/Sources/ChatListController.swift": "fdd9d6fbe52f2511533133ae3ad63f1b6b3026b6b3f909ea1ccf68cf16513343",
+    "submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift": "fc2876d762d3bf555f8db29b795ceec536bc2355e03f7b91dd3f1354f0f68959",
+    "submodules/ChatListUI/Sources/TabBarChatListFilterController.swift": "720c8b1e82940d4dbdc58a0e4ab29282bd37e79b539c7cbc4cd433e9644120b6",
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": "7a7e39fcce525916916a5b51d2243f920b96785b315aedbd3773b10a67dfdaab",
+    "submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift": "bbb62b5936d3fda89a82eb11ca6e202073d1840c3b62cf41a972b605cb49f9a1",
+    "submodules/Display/Source/GhostBaseGlass.swift": "81c72e8adff2784a94ce8dfb699c9e847a309a0e3a4967a262c329ffc5be452c",
+    "submodules/Display/Source/ViewController.swift": "aefe303584e6da13e1d80fa12130054835cb87fe007a05f062ce7e523ff1a5e8",
+    "submodules/TelegramPresentationData/Sources/PresentationTheme.swift": "6c7a7f5268e349bd37dcba6094b08784a17e80bab3cdd2588cdbe6770a2dcc70"
+  },
+  "settings_other_pages_sha256": "71b3a69f609d79649dcc9e89e0f1c5a712591e77c140664d2bfa2037d1877ab1",
+  "storage_type_sha256": "9207fb9fd7c2613b1a09a48ba0b4a6eb835d928538468283f9197b78770651b9",
+  "cache_update_sha256": "72ce1885e90c0edd382b02ef3c899cd3264ffa697a040760a28038cf4fe7bfca",
+  "native_core_remainder_sha256": "0fe92021cd0f5e78df5fba8a9a5c3c290625048880d41b4a73554b20ebcd3eb1",
+  "changed_owner_before_sha256": {
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift": "abc02c2154576c70eee28bffae1a98d0b74624ab4b69153b40ed558d4d39b3a4",
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "2afe952d9bc8b68090c71be8585e7344f79a2e2da2e9873866a0565f2eee6cff",
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": "83ff5227ad5cd722df529625c8771a9e1146f263bdcac23b17da46a8fee4b1a6",
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "cb6a1ce5f6e4f5d88f4ac0a65a265c623f8e068084a4988e903b6185628ecf75"
+  }
+}

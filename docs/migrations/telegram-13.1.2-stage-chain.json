@@ -2200,8 +2200,12 @@
       "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
         "old_before": "d2aff72b6a557d45598014024f04442390129201741f066d04cd18bb07111dba",
         "old_after": "ab53fea5d7e3a6bceb332615e20c140d774f3321dfd3cb2c0e88668be29998ad",
-        "before": "7f3583ea0308d7406ad6b17829e5fad75920ca3dab3d558522f49bc783c78a0f",
-        "after": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1"
+        "before": "33139d06ad4a250c3a207b76d151aaf869f57892e88eda57dc77f4830bd131cc",
+        "after": "55c0c8bbc577b290f176fac478d2bf8a867f418533378deef141453431b787ff",
+        "preserved_previous_beta1_178": {
+          "before": "7f3583ea0308d7406ad6b17829e5fad75920ca3dab3d558522f49bc783c78a0f",
+          "after": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1"
+        }
       },
       "submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode/Sources/JerkgramTimeMachineController.swift": {
         "old_before": "074d1991e7358149c0412096cb028390fafe30f2613b4c0d5d6f950b40ad2146",
@@ -2945,8 +2949,12 @@
       "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
         "old_before": "ab53fea5d7e3a6bceb332615e20c140d774f3321dfd3cb2c0e88668be29998ad",
         "old_after": "8e2ac0dddcac3a8afbd4fdbff5e4f943cf391cc0ad935ba412303363e86964f6",
-        "before": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1",
-        "after": "15677b2c2ed54ac471a15529cff3925fdbaa62d14d51bbad09ab453fb33c516d"
+        "before": "55c0c8bbc577b290f176fac478d2bf8a867f418533378deef141453431b787ff",
+        "after": "2c7183d60a5bfb66e8a7fb39cbd7d8354ba7411d178c54e5b73e54b36e4bc837",
+        "preserved_previous_beta1_178": {
+          "before": "d6d66bf69757418e59daa5989513f181214fb62f881c5f4200fd4c57e75a3ec1",
+          "after": "15677b2c2ed54ac471a15529cff3925fdbaa62d14d51bbad09ab453fb33c516d"
+        }
       },
       "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift": {
         "old_before": "e4c4ca6d19e5a251600abeb7f92f31bd658386e06bfbeb9ed1ac25b48856efa9",
@@ -3198,6 +3206,34 @@
       "submodules/TelegramCore/Sources/State/PendingMessageManager.swift": {
         "before": "e5fd04ed9a3d11f615d9eee5f17fa184768fa1c51ced79103b0068f1ffbc92c2",
         "after": "1d1e8df4d65ae4d7f474c87a1e6e89439474e5ae21af723b0c5ebf5bafd43ae7"
+      }
+    }
+  },
+  {
+    "order": 30,
+    "stage": "jg131-beta2-recovery",
+    "original_patch_sha256": "8f37710d67cd65ff9a866189a24a25fb4189ab8ed037a877bfdbbd76999a6bdc",
+    "regenerated_patch_sha256": "8f37710d67cd65ff9a866189a24a25fb4189ab8ed037a877bfdbbd76999a6bdc",
+    "owners": {
+      "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+        "before": "2afe952d9bc8b68090c71be8585e7344f79a2e2da2e9873866a0565f2eee6cff",
+        "after": "c3b3f5ce7b4756c4ebf5ac5e7b1486bafa5c5265b193fe63e8b2720b0af1509f"
+      },
+      "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": {
+        "before": "a5c01bb8c596e5d42c7519b66803fcef31b7600591e3ed0ed2a3050ba97c0ff6",
+        "after": "4e50ada693a5f7cae35703d162f65f71b7fd9d5c95c42fc4c918b07b0b1bee16"
+      },
+      "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift": {
+        "before": "abc02c2154576c70eee28bffae1a98d0b74624ab4b69153b40ed558d4d39b3a4",
+        "after": "acb8ee2738fd79b43d2358a0ba246b98ff47b9a34867c1d1ebbd86124623c0a1"
+      },
+      "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift": {
+        "before": "83ff5227ad5cd722df529625c8771a9e1146f263bdcac23b17da46a8fee4b1a6",
+        "after": "4d3cffff7756eccf3a01e98bd56f6c4faee3325c5b1c20fe87cf788ca82dbcce"
+      },
+      "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": {
+        "before": "cb6a1ce5f6e4f5d88f4ac0a65a265c623f8e068084a4988e903b6185628ecf75",
+        "after": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13"
       }
     }
   }

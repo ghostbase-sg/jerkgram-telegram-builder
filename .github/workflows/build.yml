@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 1 / Telegram 13.1.2 / Build178 BOTBRIDGE1 experimental history and diagnostics
+name: Jerkgram 1.2.0 Beta 2 / Telegram 13.1.2 / Build179 Beta2 recovery
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - docs/**
     branches:
+      - dev/beta2-recovery-179
       - dev/botbridge1-legacy-history-modern-write
       - codex/build176-wave1
       - codex/translation-folder-glass
@@ -55,19 +56,27 @@ jobs:
           bazelisk --version
       - name: Prepare clean pinned Official Telegram 13.1.2 source
         run: bash scripts/prepare_source_official.sh
-      - name: Build Jerkgram 1.2.0 Beta 1
+      - name: Build Jerkgram 1.2.0 Beta 2
         run: |
           set -euo pipefail
           mkdir -p artifacts
           python3 -m py_compile tests/test_jg13_capture_retention.py tests/run_jg13_capture_retention.py
           python3 -m py_compile tests/test_jg13_row_detail.py tests/test_jg13_history_detail.py tests/run_jg13_history_bounds.py scripts/materialize_jg13_expanded_diagnostics.py tests/test_jg13_expanded_diagnostics.py tests/run_jg13_expanded_diagnostics.py scripts/materialize_jg13.py scripts/materialize_jg13_profile_p0.py scripts/materialize_jg13_profile_cleanup.py scripts/materialize_jg13_profile_preferences.py scripts/configure_jg13.py scripts/verify_jg13_source.py scripts/package_jg13.py tests/test_jg13_profile_p0.py tests/test_jg13_profile_cleanup.py tests/test_jg13_profile_preferences.py tests/test_jg13_performance_capture.py tests/run_jg13_ping_policy.py tests/run_jg13_followup.py tests/run_jg13_profile_preferences.py
           bash scripts/build_jg13.sh 2>&1 | tee artifacts/build.log
-      - name: Upload build log and focused owner diagnostics
+      - name: Upload focused owner diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build178-BOTBRIDGE1-diagnostics
+          name: Jerkgram-1.2.0-Build179-BETA2-RECOVERY-diagnostics
           path: |
+            patches/jg131-beta2-recovery.patch
+            patches/jg131-beta2-recovery.sha256.json
+            scripts/materialize_jg131_beta2_recovery.py
+            scripts/verify_jg131_beta2_recovery.py
+            tests/run_jg131_beta2_recovery.py
+            tests/test_jg131_beta2*.py
+            tests/fixtures/beta2_bot_codec/
+            tests/fixtures/beta2_recovery_ui/
             patches/jg131-botbridge1.patch
             patches/jg131-botbridge1.sha256.json
             scripts/materialize_jg131_botbridge1.py
@@ -187,7 +196,6 @@ jobs:
             work/swiftgram-src/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
             work/swiftgram-src/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
             work/swiftgram-src/submodules/ChatListUI/Sources/ChatListController.swift
-            artifacts/build.log
             jerkgram-migration.json
             work/swiftgram-src/submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift
             work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift
@@ -202,9 +210,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build178-BOTBRIDGE1
+          name: Jerkgram-1.2.0-Build179-BETA2-RECOVERY
           path: |
-            artifacts/Jerkgram-1.2.0-Build178-BOTBRIDGE1.ipa
-            artifacts/Jerkgram-1.2.0-Build178-BOTBRIDGE1.json
+            artifacts/Jerkgram-1.2.0-Build179-BETA2-RECOVERY.ipa
+            artifacts/Jerkgram-1.2.0-Build179-BETA2-RECOVERY.json
           if-no-files-found: error
           retention-days: 90

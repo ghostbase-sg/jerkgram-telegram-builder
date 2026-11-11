@@ -15,7 +15,8 @@ concurrency:
 jobs:
   policy:
     runs-on: xcode-27
-    timeout-minutes: 15
+    # Real Postbox old/fixed fixtures compile in both optimization modes.
+    timeout-minutes: 20
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
@@ -98,5 +99,7 @@ jobs:
           python3 tests/run_jg131_settings_glass_expansion.py
           python3 scripts/materialize_jg131_botbridge1.py
           python3 tests/run_jg131_botbridge1.py --require-native --require-full-source
+          python3 scripts/materialize_jg131_beta2_recovery.py
+          python3 tests/run_jg131_beta2_recovery.py --require-native --require-full-source
           python3 tests/run_jg13_secondary_timebase.py
           python3 -m unittest discover -s tests -p 'test_jg1312*.py'
