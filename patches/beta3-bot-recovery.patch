@@ -1,0 +1,136 @@
+--- a/submodules/TelegramCore/Sources/Account/Account.swift
++++ b/submodules/TelegramCore/Sources/Account/Account.swift
+@@ -1933,8 +1933,7 @@
+     }
+     
+     public func resetStateManagement() {
+-        self.botBridgeDiagnostics.lifecycle(.softReset, terminal: false)
+-        self.stateManager.jerkgramCancelBotBridgeHistory(reason: .softReset)
++        self.botBridgeDiagnostics.lifecycle(.stateManagementReset, terminal: false)
+         self.stateManager.reset()
+         self.restartContactManagement()
+         self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
+--- a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift
+@@ -37,7 +37,7 @@
+     }
+ }
+ enum BotBridgeDiagnosticPhase: String, Codable { case submitted, acknowledged, result, rpcFailure, parseFailure, cancelled, snapshot, historyStart, historyPage, historyEnd, handoff, restoredTerminal }
+-enum BotBridgeDiagnosticLifecycle: String, Codable { case localLogout, remoteLogout, serverLogout, softReset, authKeyUnknown, removed, cleanupStart, cleanupResult, deletionScheduled, deinitialized }
++enum BotBridgeDiagnosticLifecycle: String, Codable { case localLogout, remoteLogout, serverLogout, softReset, stateManagementReset, authKeyUnknown, removed, cleanupStart, cleanupResult, deletionScheduled, deinitialized }
+ struct BotBridgeDiagnosticTuple: Codable { let pts: Int32; let qts: Int32; let date: Int32; let seq: Int32 }
+ enum BotBridgeDiagnosticHistoryReason: String, Codable {
+     case completed, noCandidate, tooLong, limit, deadline, clockChanged, corrupt
+@@ -206,8 +206,10 @@
+         append(value, reserved: phase == .historyEnd || phase == .handoff || phase == .restoredTerminal)
+     }
+     func lifecycle(_ kind: BotBridgeDiagnosticLifecycle, terminal: Bool = true) {
+-        // Invalidation of the existing sole manager happens before any snapshot or detach.
+-        if kind != .cleanupResult && kind != .deletionScheduled { cancelHistory(kind) }
++        precondition(kind != .stateManagementReset || !terminal)
++        // Routine manager activation observes the existing history lifetime.
++        // Genuine invalidation still happens before any snapshot or detach.
++        if kind != .cleanupResult && kind != .deletionScheduled && kind != .stateManagementReset { cancelHistory(kind) }
+         lock.lock()
+         let now = clock(); expire(now)
+         var value = record(.snapshot, now: now)
+@@ -353,6 +355,7 @@
+     }
+     func history(_ event: BotBridgeDiagnosticHistory, phase: BotBridgeDiagnosticPhase) { lock.lock(); let scope = self.scope; lock.unlock(); scope?.history(event, phase: phase) }
+     func lifecycle(_ kind: BotBridgeDiagnosticLifecycle, terminal: Bool = true) {
++        precondition(kind != .stateManagementReset || !terminal)
+         lock.lock(); if terminal { closed = true }; let scope = self.scope; lock.unlock()
+         scope?.lifecycle(kind, terminal: terminal)
+     }
+--- a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+@@ -46,6 +46,7 @@
+     var original: BotBridgeCursor?
+     var candidate: BotBridgeCursor?
+     var next: BotBridgeCursor?
++    var softResetRecoveryVersion: Int32 = 0
+     var reservedState = false
+     var reservedPages = 0
+     var committedPages = 0
+@@ -82,6 +83,7 @@
+         case original
+         case candidate
+         case next
++        case softResetRecoveryVersion
+         case reservedState
+         case reservedPages
+         case committedPages
+@@ -111,6 +113,7 @@
+         original = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .original)
+         candidate = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .candidate)
+         next = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .next)
++        softResetRecoveryVersion = try container.decodeIfPresent(Int32.self, forKey: .softResetRecoveryVersion) ?? 0
+         reservedState = try container.decode(Bool.self, forKey: .reservedState)
+         reservedPages = Int(try container.decode(Int32.self, forKey: .reservedPages))
+         committedPages = Int(try container.decode(Int32.self, forKey: .committedPages))
+@@ -159,6 +162,7 @@
+         try container.encodeIfPresent(original, forKey: .original)
+         try container.encodeIfPresent(candidate, forKey: .candidate)
+         try container.encodeIfPresent(next, forKey: .next)
++        try container.encode(softResetRecoveryVersion, forKey: .softResetRecoveryVersion)
+         try container.encode(reservedState, forKey: .reservedState)
+         try container.encode(try wireInt32(reservedPages, key: .reservedPages), forKey: .reservedPages)
+         try container.encode(try wireInt32(committedPages, key: .committedPages), forKey: .committedPages)
+@@ -181,12 +185,14 @@
+         if isValid { return self }
+         let validGeneration = !generation.isEmpty && generation.utf8.count <= 64
+         var fallback = BotBridgeHistoryProgress(owner: owner, peer: peer, testing: testing, generation: validGeneration ? generation : UUID().uuidString)
++        // A failed write must never make a consumed/unknown recovery eligible again.
++        fallback.softResetRecoveryVersion = 1
+         fallback.terminal = .corrupt
+         return fallback
+     }
+ 
+     var isValid: Bool {
+-        guard schema == 1, !generation.isEmpty, generation.utf8.count <= 64,
++        guard schema == 1, (0...1).contains(softResetRecoveryVersion), !generation.isEmpty, generation.utf8.count <= 64,
+             reservedPages >= 0, reservedPages <= 32, committedPages >= 0, committedPages <= reservedPages,
+             examined >= 0, examined <= 20000, inserted >= 0, inserted <= examined,
+             insertedPeers >= 0, insertedPeers <= 320000, insertedUsers >= 0, insertedUsers <= 320000, insertedChats >= 0, insertedChats <= 320000, insertedUsers + insertedChats == insertedPeers,
+@@ -279,6 +285,22 @@
+         if final { terminal = .completed }
+         return true
+     }
++}
++
++// One repair for the exact retained initial-state interruption seen in Build 179.
++// The old generation consumed one request; this new generation grants at most 33
++// more requests (34 cumulative) and its normal fresh 120-second wall window.
++func botBridgeRecoverInitialSoftReset(_ progress: BotBridgeHistoryProgress, owner: Int64, accountPeerId: Int64, testing: Bool) -> BotBridgeHistoryProgress {
++    guard progress.isValid, progress.owner == owner, progress.peer == accountPeerId, progress.testing == testing,
++        progress.terminal == .softReset, progress.softResetRecoveryVersion == 0,
++        progress.reservedState, progress.original == nil, progress.candidate == nil, progress.next == nil,
++        progress.reservedPages == 0, progress.committedPages == 0,
++        progress.examined == 0, progress.inserted == 0, progress.insertedPeers == 0,
++        progress.insertedUsers == 0, progress.insertedChats == 0, progress.deleteIdsObserved == 0,
++        progress.skipped == 0, progress.unsupported == 0, progress.deletions == 0, progress.missingReferences == 0 else { return progress }
++    var recovered = BotBridgeHistoryProgress(owner: owner, peer: accountPeerId, testing: testing, generation: UUID().uuidString)
++    recovered.softResetRecoveryVersion = 1
++    return recovered
+ }
+ 
+ // Transactions use this token too: queue teardown cannot admit a stale page.
+@@ -357,6 +379,7 @@
+         // Fail closed for an unreadable or different owner's record. A successful
+         // authorization transaction is the only path that grants a new generation.
+         var invalid = BotBridgeHistoryProgress(owner: owner, peer: accountPeerId.toInt64(), testing: testing, generation: UUID().uuidString)
++        invalid.softResetRecoveryVersion = 1
+         invalid.terminal = .corrupt
+         return invalid
+     }
+@@ -367,7 +390,9 @@
+ func jerkgramPrepareBotBridgeHistory(transaction: Transaction, owner: Int64, accountPeerId: PeerId, lifetime: BotBridgeLifetime) -> BotBridgeHistoryProgress? {
+     guard lifetime.isActive, let authorized = transaction.getState() as? AuthorizedAccountState,
+         botBridgeValidatedAccount(transaction: transaction, accountPeerId: accountPeerId, testing: authorized.isTestingEnvironment) else { return nil }
+-    let progress = botBridgeReadProgress(transaction: transaction, owner: owner, accountPeerId: accountPeerId, testing: authorized.isTestingEnvironment)
++    let retained = botBridgeReadProgress(transaction: transaction, owner: owner, accountPeerId: accountPeerId, testing: authorized.isTestingEnvironment)
++    let progress = botBridgeRecoverInitialSoftReset(retained, owner: owner, accountPeerId: accountPeerId.toInt64(), testing: authorized.isTestingEnvironment)
++    // Persist the one-time marker in this transaction before admission/dispatch.
+     botBridgeWriteProgress(progress, transaction: transaction)
+     return progress
+ }
