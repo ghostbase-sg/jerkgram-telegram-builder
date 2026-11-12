@@ -1,0 +1,1220 @@
+--- a/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift
++++ b/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift
+@@ -410,15 +410,38 @@
+     }
+     
+     public struct HistoryFilter: Equatable {
+-        public var customTag: MemoryBuffer
++        public enum Domain: Equatable {
++            case cloudReaction(MemoryBuffer)
++            case localSavedTag(String)
++        }
++        public var domain: Domain
+         public var isActive: Bool
+-        
++        public var customTag: MemoryBuffer? {
++            if case let .cloudReaction(tag) = self.domain { return tag }
++            return nil
++        }
++        public var localSavedTagId: String? {
++            if case let .localSavedTag(id) = self.domain { return id }
++            return nil
++        }
+         public init(customTag: MemoryBuffer, isActive: Bool) {
+-            self.customTag = customTag
++            self.domain = .cloudReaction(customTag)
+             self.isActive = isActive
+         }
+-    }
+-    
++        public init(localSavedTagId: String, isActive: Bool = true) {
++            self.domain = .localSavedTag(localSavedTagId)
++            self.isActive = isActive
++        }
++    }
++
++    public var hasLocalSavedTags: Bool {
++        guard self.chatLocation.peerId == self.accountPeerId, self.chatLocation.threadId == nil else { return false }
++        switch self.subject {
++        case nil, .message: return true
++        default: return false
++        }
++    }
++
+     public final class ReportReasonData: Equatable {
+         public let title: String
+         public let option: Data
+--- a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
++++ b/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+@@ -4700,15 +4700,21 @@
+             }
+             
+             let updatedFilter = update(self.presentationInterfaceState.historyFilter)
++            guard updatedFilter != self.presentationInterfaceState.historyFilter else { return }
++            self.jerkgramHistoryFilterRequestGeneration &+= 1
++            let filterGeneration = self.jerkgramHistoryFilterRequestGeneration
+             
+             let apply: () -> Void = { [weak self] in
+-                guard let self else {
++                guard let self, self.jerkgramHistoryFilterRequestGeneration == filterGeneration else {
+                     return
+                 }
+                 
+                 self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                     var state = state.updatedHistoryFilter(updatedFilter)
+-                    if let updatedFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: updatedFilter.customTag) {
++                    if updatedFilter?.localSavedTagId != nil {
++                        state = state.updatedSearch(nil).updatedDisplayHistoryFilterAsList(false)
++                    }
++                    if let updatedFilter, let cloudTag = updatedFilter.customTag, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: cloudTag) {
+                         if let search = state.search, search.domain != .tag(reaction) {
+                             state = state.updatedSearch(ChatSearchData())
+                         } else if state.search == nil {
+@@ -4719,8 +4725,8 @@
+                 })
+             }
+             
+-            if let updatedFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: updatedFilter.customTag) {
+-                let tag = updatedFilter.customTag
++            if let updatedFilter, let cloudTag = updatedFilter.customTag, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: cloudTag) {
++                let tag = cloudTag
+                 
+                 let _ = (self.context.engine.data.get(
+                     TelegramEngine.EngineData.Item.Messages.ReactionTagMessageCount(peerId: self.context.account.peerId, threadId: self.chatLocation.threadId, reaction: reaction)
+--- a/submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift
++++ b/submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift
+@@ -502,24 +502,7 @@
+                 }
+             })
+         case .search:
+-            if self.chatLocation.peerId == self.context.account.peerId, self.presentationInterfaceState.subject != .scheduledMessages {
+-                let sheet = ActionSheetController(presentationData: self.presentationData)
+-                let strings = JerkgramSavedTagsStrings(self.presentationData.strings)
+-                sheet.setItemGroups([ActionSheetItemGroup(items: [
+-                    ActionSheetButtonItem(title: self.presentationData.strings.Conversation_Search, color: .accent, action: { [weak self, weak sheet] in
+-                        sheet?.dismissAnimated()
+-                        self?.interfaceInteraction?.beginMessageSearch(.everything, "")
+-                    }),
+-                    ActionSheetButtonItem(title: strings.title, color: .accent, action: { [weak self, weak sheet] in
+-                        sheet?.dismissAnimated()
+-                        guard let self else { return }
+-                        self.effectiveNavigationController?.pushViewController(jerkgramSavedTagsController(context: self.context))
+-                    })
+-                ]), ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak sheet] in sheet?.dismissAnimated() })])])
+-                self.present(sheet, in: .window(.root))
+-            } else {
+-                self.interfaceInteraction?.beginMessageSearch(.everything, "")
+-            }
++            self.interfaceInteraction?.beginMessageSearch(.everything, "")
+         case .dismiss:
+             if self.attemptNavigation({}) {
+                 self.dismiss()
+--- a/submodules/TelegramUI/Sources/Chat/UpdateChatPresentationInterfaceState.swift
++++ b/submodules/TelegramUI/Sources/Chat/UpdateChatPresentationInterfaceState.swift
+@@ -485,6 +485,9 @@
+         selfController.updateNextChannelToReadVisibility()
+     }
+     
++    if updatedChatPresentationInterfaceState.historyFilter?.localSavedTagId != nil {
++        updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedDisplayHistoryFilterAsList(false)
++    }
+     if updatedChatPresentationInterfaceState.displayHistoryFilterAsList {
+         var canDisplayAsList = false
+         if updatedChatPresentationInterfaceState.search != nil {
+@@ -662,13 +665,25 @@
+     
+     if case .tag = selfController.chatDisplayNode.historyNode.tag {
+     } else {
+-        if let historyFilter = selfController.presentationInterfaceState.historyFilter, historyFilter.isActive {
+-            selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(historyFilter.customTag, nil))
++        if let historyFilter = selfController.presentationInterfaceState.historyFilter, historyFilter.isActive, let cloudTag = historyFilter.customTag {
++            selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(cloudTag, nil))
+         } else {
+             selfController.chatDisplayNode.historyNode.updateTag(tag: nil)
+         }
+     }
+     
++    let localFilter = selfController.presentationInterfaceState.historyFilter
++    let expectedLocalFilterId = localFilter?.localSavedTagId
++    let expectedLocalFilterGeneration = selfController.jerkgramHistoryFilterRequestGeneration
++    selfController.chatDisplayNode.historyNode.updateLocalSavedTag(
++        localFilter?.isActive == true ? localFilter?.localSavedTagId : nil,
++        cleared: { [weak selfController] in
++            guard let selfController else { return }
++            selfController.interfaceInteraction?.updateHistoryFilter { filter in
++                return jerkgramClearingLocalSavedTagsFilter(filter, expectedId: expectedLocalFilterId,
++                    generation: selfController.jerkgramHistoryFilterRequestGeneration, expectedGeneration: expectedLocalFilterGeneration)
++            }
++        })
+     selfController.updateDownButtonVisibility()
+     
+     if selfController.presentationInterfaceState.hasBirthdayToday {
+--- a/submodules/TelegramUI/Sources/ChatController.swift
++++ b/submodules/TelegramUI/Sources/ChatController.swift
+@@ -245,6 +245,7 @@
+ }
+ 
+ public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
++    var jerkgramHistoryFilterRequestGeneration: UInt64 = 0
+     public override var jerkgramAcceptsSettingsSurface: Bool { return false }
+     private var jerkgramArchiveVisitRequest: JerkgramArchiveVisitRequest?
+ 
+@@ -8495,6 +8496,11 @@
+     override public func viewWillDisappear(_ animated: Bool) {
+         super.viewWillDisappear(animated)
+         self.forwardSideListAppearance(.willDisappear, animated: animated)
++        if self.isMovingFromParent || self.isBeingDismissed {
++            self.interfaceInteraction?.updateHistoryFilter { filter in
++                return filter?.localSavedTagId != nil ? nil : filter
++            }
++        }
+         self.jerkgramArchiveVisitRequest?.cancel()
+         self.jerkgramArchiveVisitRequest = nil
+ 
+--- a/submodules/TelegramUI/Sources/ChatControllerNode.swift
++++ b/submodules/TelegramUI/Sources/ChatControllerNode.swift
+@@ -3277,6 +3277,7 @@
+             }
+         }
+         
++        if self.chatPresentationInterfaceState.historyFilter?.localSavedTagId != nil { displayInlineSearch = false }
+         var showNavigateButtons = true
+         if let _ = self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+             showNavigateButtons = false
+@@ -3314,8 +3315,8 @@
+             let mappedContents: ChatInlineSearchResultsListComponent.Contents
+             if let _ = self.chatPresentationInterfaceState.search?.resultsState {
+                 mappedContents = .search(query: self.chatPresentationInterfaceState.search?.query ?? "", includeSavedPeers: self.alwaysShowSearchResultsAsList && self.includeSavedPeersInSearchResults)
+-            } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter {
+-                mappedContents = .tag(historyFilter.customTag)
++            } else if let cloudTag = self.chatPresentationInterfaceState.historyFilter?.customTag {
++                mappedContents = .tag(cloudTag)
+             } else if let search = self.chatPresentationInterfaceState.search, self.alwaysShowSearchResultsAsList {
+                 if !search.query.isEmpty {
+                     mappedContents = .search(query: search.query, includeSavedPeers: self.alwaysShowSearchResultsAsList && self.includeSavedPeersInSearchResults)
+@@ -3371,7 +3372,7 @@
+                                 forceNew: true,
+                                 animated: true
+                             )
+-                        } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag), let peerId = self.chatLocation.peerId, historyFilter.isActive {
++                        } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter, let cloudTag = historyFilter.customTag, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: cloudTag), let peerId = self.chatLocation.peerId, historyFilter.isActive {
+                             let _ = (self.context.engine.messages.searchMessages(
+                                 location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: [reaction], threadId: self.chatLocation.threadId, minDate: nil, maxDate: nil),
+                                 query: "",
+@@ -3394,7 +3395,7 @@
+                                 }
+                                 
+                                 self.controller?.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+-                                    guard var filter = state.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: filter.customTag) else {
++                                    guard var filter = state.historyFilter, let cloudTag = filter.customTag, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: cloudTag) else {
+                                         return state
+                                     }
+                                     filter.isActive = false
+@@ -3976,7 +3977,7 @@
+             if let _ = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
+                 var activate = false
+                 if self.searchNavigationNode == nil {
+-                    if !self.chatPresentationInterfaceState.hasSearchTags {
++                    if !self.chatPresentationInterfaceState.hasSearchTags && !self.chatPresentationInterfaceState.hasLocalSavedTags {
+                         activate = true
+                     }
+                     self.searchNavigationNode = ChatSearchNavigationContentNode(context: self.context, theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction, presentationInterfaceState: self.chatPresentationInterfaceState)
+--- a/submodules/TelegramUI/Sources/ChatControllerUpdateSearch.swift
++++ b/submodules/TelegramUI/Sources/ChatControllerUpdateSearch.swift
+@@ -11,6 +11,16 @@
+             return nil
+         }
+         
++        if interfaceState.historyFilter?.localSavedTagId != nil {
++            if interfaceState.search != nil {
++                return interfaceState.updatedHistoryFilter(nil).updatedDisplayHistoryFilterAsList(false)
++            }
++            self.searchState = nil
++            self.searching.set(false)
++            self.searchResultsCount.set(0)
++            self.searchDisposable?.set(nil)
++            return nil
++        }
+         let limit: Int32 = 100
+         
+         var derivedSearchState: ChatSearchState?
+@@ -37,8 +47,8 @@
+             }
+             
+             var reactions: [MessageReaction.Reaction]?
+-            if !search.query.isEmpty, let historyFilter = interfaceState.historyFilter {
+-                reactions = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag).flatMap {
++            if !search.query.isEmpty, let cloudTag = interfaceState.historyFilter?.customTag {
++                reactions = ReactionsMessageAttribute.reactionFromMessageTag(tag: cloudTag).flatMap {
+                     [$0]
+                 }
+             }
+--- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+@@ -511,6 +511,11 @@
+     private let systemStyle: ItemListSystemStyle
+     private(set) var chatLocation: ChatLocation
+     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
++    private var localSavedTagsHistory: JerkgramLocalSavedTagsHistory?
++    private var localSavedTagsStatusPresented = false
++    private var localSavedTagsClear: (() -> Void)?
++    private var savedUnfilteredLocation: ChatHistoryLocationInput?
++    private var savedUnfilteredAnchor: (MessageIndex, CGFloat)?
+     private let source: ChatHistoryListSource
+     private let subject: ChatControllerSubject?
+     // The subject this node was created with. It can differ from the owning controller's `subject`: an in-place
+@@ -582,7 +587,29 @@
+     private var chatHistoryLocationValue: ChatHistoryLocationInput? {
+         didSet {
+             if let chatHistoryLocationValue = self.chatHistoryLocationValue, chatHistoryLocationValue != oldValue {
+-                self.chatHistoryLocationPromise.set(chatHistoryLocationValue)
++                let requiresNormalHistory: Bool
++                if let local = self.localSavedTagsHistory {
++                    switch chatHistoryLocationValue.content {
++                    case let .Scroll(subject, _, _, _, _, _, _):
++                        if case let .message(index) = subject.index { requiresNormalHistory = !local.contains(index) }
++                        else { requiresNormalHistory = false }
++                    case .InitialSearch: requiresNormalHistory = true
++                    default: requiresNormalHistory = false
++                    }
++                } else { requiresNormalHistory = false }
++                if requiresNormalHistory, let local = self.localSavedTagsHistory {
++                    DispatchQueue.main.async { [weak self] in
++                        guard let self, self.localSavedTagsHistory === local else { return }
++                        let cleared = self.localSavedTagsClear ?? {}
++                        jerkgramResolveLocalSavedTagsNavigation(clearHistory: {
++                            self.updateLocalSavedTag(nil, cleared: cleared)
++                        }, replayLocation: {
++                            self.chatHistoryLocationValue = chatHistoryLocationValue
++                        }, notifyFilterCleared: cleared)
++                    }
++                } else {
++                    self.chatHistoryLocationPromise.set(chatHistoryLocationValue)
++                }
+             }
+         }
+     }
+@@ -1412,6 +1439,7 @@
+     }
+ 
+     deinit {
++        self.localSavedTagsHistory?.dispose()
+         self.cancelJerkgramTranslations()
+         for observer in self.jerkgramTranslationObservers { NotificationCenter.default.removeObserver(observer) }
+         self.historyDisposable.dispose()
+@@ -1438,6 +1466,48 @@
+         }
+     }
+     
++    public func updateLocalSavedTag(_ tagId: String?, cleared: @escaping () -> Void) {
++        guard self.chatLocation.peerId == self.context.account.peerId, self.chatLocation.threadId == nil else { return }
++        guard self.localSavedTagsHistory?.tagId != tagId else { return }
++        if self.localSavedTagsHistory == nil, tagId != nil {
++            self.savedUnfilteredLocation = self.chatHistoryLocationValue
++            self.forEachVisibleMessageItemNode { node in
++                if self.savedUnfilteredAnchor == nil, let item = node.item, let frame = self.listView.itemNodeFrame(node) {
++                    self.savedUnfilteredAnchor = (item.message.index, frame.minY - self.insets.top)
++                }
++            }
++        }
++        self.localSavedTagsHistory?.dispose()
++        self.localSavedTagsClear = cleared
++        self.localSavedTagsStatusPresented = false
++        self.localSavedTagsHistory = tagId.map { JerkgramLocalSavedTagsHistory(context: self.context, tagId: $0, cleared: cleared) }
++        self.localSavedTagsHistory?.status = { [weak self] text in
++            guard let self, let local = self.localSavedTagsHistory, !self.localSavedTagsStatusPresented else { return }
++            self.localSavedTagsStatusPresented = true
++            let presentation = self.context.sharedContext.currentPresentationData.with { $0 }
++            let strings = JerkgramSavedTagsStrings(presentation.strings)
++            let sheet = ActionSheetController(presentationData: presentation)
++            sheet.setItemGroups([ActionSheetItemGroup(items: [
++                ActionSheetTextItem(title: text),
++                ActionSheetButtonItem(title: strings.text("Older tagged messages", "Сообщения с тегом старее"), color: .accent, action: { [weak self, weak sheet] in sheet?.dismissAnimated(); guard let self, self.localSavedTagsHistory === local else { return }; self.localSavedTagsStatusPresented = false; local.loadBoundary(earlier: true) }),
++                ActionSheetButtonItem(title: strings.text("Newer tagged messages", "Сообщения с тегом новее"), color: .accent, action: { [weak self, weak sheet] in sheet?.dismissAnimated(); guard let self, self.localSavedTagsHistory === local else { return }; self.localSavedTagsStatusPresented = false; local.loadBoundary(earlier: false) }),
++                ActionSheetButtonItem(title: strings.text("Retry", "Повторить"), color: .accent, action: { [weak self, weak sheet] in sheet?.dismissAnimated(); guard let self, self.localSavedTagsHistory === local else { return }; self.localSavedTagsStatusPresented = false; local.retry() }),
++                ActionSheetButtonItem(title: strings.text("Clear local filter", "Сбросить локальный фильтр"), color: .accent, action: { [weak sheet] in sheet?.dismissAnimated(); cleared() })
++            ])])
++            self.controllerInteraction.presentController(sheet, nil)
++        }
++        if tagId != nil {
++            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: historyMessageCount), id: self.takeNextHistoryLocationId())
++        }
++        if tagId == nil {
++            if let (index, offset) = self.savedUnfilteredAnchor {
++                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(subject: MessageHistoryScrollToSubject(index: .message(index), quote: nil), anchorIndex: .message(index), sourceIndex: .message(index), scrollPosition: .top(offset), animated: false, highlight: false, setupReply: false), id: self.takeNextHistoryLocationId())
++            } else { self.chatHistoryLocationValue = self.savedUnfilteredLocation }
++            self.savedUnfilteredAnchor = nil; self.savedUnfilteredLocation = nil
++        }
++        self.beginChatHistoryTransitions(resetScrolling: false, switchedToAnotherSource: true)
++    }
++
+     public func updateTag(tag: HistoryViewInputTag?) {
+         if self.tag == tag {
+             return
+@@ -1450,6 +1520,11 @@
+     public func updateChatLocation(chatLocation: ChatLocation) {
+         if self.chatLocation == chatLocation {
+             return
++        }
++        if self.localSavedTagsHistory != nil {
++            self.localSavedTagsHistory?.dispose(); self.localSavedTagsHistory = nil
++            self.savedUnfilteredLocation = nil; self.savedUnfilteredAnchor = nil
++            self.localSavedTagsClear?()
+         }
+         self.chatLocation = chatLocation
+         
+@@ -1519,7 +1594,13 @@
+         let context = self.context
+         let chatLocation = self.chatLocation
+         let subject = self.subject
+-        let source = self.source
++        let source: ChatHistoryListSource = self.localSavedTagsHistory.map { .customView(historyView: $0.signal) } ?? self.source
++        let selectedHistoryView: Signal<(MessageHistoryView, ViewUpdateType), NoError>?
++        if let localSavedTagsHistory = self.localSavedTagsHistory {
++            selectedHistoryView = localSavedTagsHistory.signal
++        } else if case let .customView(historyView) = source {
++            selectedHistoryView = historyView
++        } else { selectedHistoryView = nil }
+         let tag = self.tag
+         let chatLocationContextHolder = self.chatLocationContextHolder
+         let controllerInteraction = self.controllerInteraction
+@@ -1621,7 +1702,7 @@
+         var isSavedMusic = false
+         var canReorder = false
+         var richMessageQueueId: EngineMessage.Id?
+-        if case let .custom(messages, at, quote, isSavedMusicValue, canReorderValue, richMessageIdValue, _) = self.source {
++        if case let .custom(messages, at, quote, isSavedMusicValue, canReorderValue, richMessageIdValue, _) = source {
+             isSavedMusic = isSavedMusicValue
+             canReorder = canReorderValue
+             richMessageQueueId = richMessageIdValue
+@@ -1645,7 +1726,7 @@
+                 
+                 return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tag: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil, nil, Set())
+             }
+-        } else if case let .customView(historyView) = self.source {
++        } else if let historyView = selectedHistoryView {
+             historyViewUpdate = combineLatest(queue: .mainQueue(),
+                 self.chatHistoryLocationPromise.get(),
+                 self.ignoreMessagesInTimestampRangePromise.get(),
+@@ -3841,7 +3922,11 @@
+                 }
+             }
+             
+-            if mathesFirst && historyView.originalView.laterId != nil {
++            if let localSavedTagsHistory = self.localSavedTagsHistory {
++                if mathesLast {
++                    if !localSavedTagsHistory.loadBoundary(earlier: true), mathesFirst { localSavedTagsHistory.loadBoundary(earlier: false) }
++                } else if mathesFirst { localSavedTagsHistory.loadBoundary(earlier: false) }
++            } else if mathesFirst && historyView.originalView.laterId != nil {
+                 let locationInput: ChatHistoryLocation = .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount, highlight: false)
+                 if self.chatHistoryLocationValue?.content != locationInput {
+                     self.chatHistoryLocationValue = ChatHistoryLocationInput(content: locationInput, id: self.takeNextHistoryLocationId())
+--- a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+@@ -1003,7 +1003,7 @@
+                 ?? (selectAll ? messages.map { $0.id } : [message.id])
+             actions.append(.action(ContextMenuActionItem(text: JerkgramSavedTagsStrings(chatPresentationInterfaceState.strings).title, icon: { _ in nil }, action: { controller, _ in
+                 controller?.dismiss(completion: {
+-                    controllerInteraction.navigationController()?.pushViewController(jerkgramSavedTagsController(context: context, selectedMessageIds: localTagIds))
++                    controllerInteraction.navigationController()?.present(jerkgramSavedTagsController(context: context, selectedMessageIds: localTagIds), in: .window(.root))
+                 })
+             })))
+         }
+--- a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
+@@ -37,7 +37,7 @@
+     panel.localTagsCaption = strings.text("Local", "Лок.")
+     if state.chatLocation.peerId == context.account.peerId, state.subject != .scheduledMessages {
+         panel.localTagsAction = { ids in
+-            interaction?.navigationController()?.pushViewController(jerkgramSavedTagsController(context: context, selectedMessageIds: ids))
++            interaction?.navigationController()?.present(jerkgramSavedTagsController(context: context, selectedMessageIds: ids), in: .window(.root))
+         }
+     } else {
+         panel.localTagsAction = nil
+--- a/submodules/TelegramUI/Sources/ChatInterfaceTitlePanelNodes.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceTitlePanelNodes.swift
+@@ -19,10 +19,17 @@
+     if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
+         return nil
+     }
++    if chatPresentationInterfaceState.hasLocalSavedTags, chatPresentationInterfaceState.search == nil,
++        chatPresentationInterfaceState.interfaceState.selectionState == nil {
++        if let currentPanel = currentPanel as? ChatSearchTitleAccessoryPanelNode { return currentPanel }
++        let panel = ChatSearchTitleAccessoryPanelNode(context: context, chatLocation: chatPresentationInterfaceState.chatLocation)
++        panel.interfaceInteraction = interfaceInteraction
++        return panel
++    }
+     if let search = chatPresentationInterfaceState.search {
+         var matches = false
+         if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId {
+-            if chatPresentationInterfaceState.hasSearchTags || !chatPresentationInterfaceState.isPremium {
++            if chatPresentationInterfaceState.hasLocalSavedTags || chatPresentationInterfaceState.hasSearchTags || !chatPresentationInterfaceState.isPremium {
+                 if case .everything = search.domain {
+                     matches = true
+                 } else if case .tag = search.domain, search.query.isEmpty {
+--- a/submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift
++++ b/submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import Postbox
+ import UIKit
+ import Display
+ import AsyncDisplayKit
+@@ -26,6 +27,27 @@
+     }
+ }()
+ 
++// Only native strip inputs participate; unrelated chat/panel updates do no work.
++struct JerkgramLocalSavedTagsRenderKey: Equatable {
++    let revision: Int64?
++    let selectedId: String?
++    let theme: ObjectIdentifier
++    let strings: ObjectIdentifier
++    let width: CGFloat
++    let leftInset: CGFloat
++    let rightInset: CGFloat
++    let available: Bool
++}
++struct JerkgramLocalSavedTagsRenderGate {
++    private var previous: JerkgramLocalSavedTagsRenderKey?
++    mutating func update(_ key: JerkgramLocalSavedTagsRenderKey) -> Bool {
++        guard self.previous != key else { return false }
++        self.previous = key
++        return true
++    }
++    mutating func invalidate() { self.previous = nil }
++}
++
+ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode, ASScrollViewDelegate {
+     private struct Params: Equatable {
+         var width: CGFloat
+@@ -443,12 +465,38 @@
+     private var itemViews: [MessageReaction.Reaction: ItemView] = [:]
+     private var promoView: PromoView?
+     
++    private final class LocalButton: UIButton {
++        var action: (() -> Void)?
++        var longAction: (() -> Void)?
++        override init(frame: CGRect) {
++            super.init(frame: frame)
++            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
++            self.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.held(_:))))
++            self.titleLabel?.font = Font.medium(14.0)
++            self.layer.cornerRadius = 14.0
++            self.contentEdgeInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
++        }
++        required init?(coder: NSCoder) { preconditionFailure() }
++        @objc private func pressed() { self.action?() }
++        @objc private func held(_ gesture: UILongPressGestureRecognizer) { if gesture.state == .began { self.longAction?() } }
++    }
++    private let localEligible: Bool
++    private var localService: LocalSavedTagsService?
++    private let localCatalogue = MetaDisposable()
++    private let localAccounts = MetaDisposable()
++    private var localTags: [LocalSavedTag] = []
++    private var localRevision: Int64?
++    private var localRenderGate = JerkgramLocalSavedTagsRenderGate()
++    private var localButtons: [LocalButton] = []
++    private var showingCloudTags = false
++
+     private var itemsDisposable: Disposable?
+     
+     private var appliedScrollToTag: EngineMemoryBuffer?
+     
+     init(context: AccountContext, chatLocation: ChatLocation) {
+         self.context = context
++        self.localEligible = chatLocation.peerId == context.account.peerId && chatLocation.threadId == nil
+         
+         self.scrollView = ScrollView(frame: CGRect())
+         
+@@ -472,6 +520,29 @@
+         
+         self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
+         
++        if self.localEligible {
++            let service = LocalSavedTagsService(account: context.account)
++            self.localService = service
++            self.localCatalogue.set((service.catalogueUpdates() |> deliverOnMainQueue).start(next: { [weak self] result in
++                guard let self, self.localService != nil else { return }
++                if case let .success(catalogue) = result {
++                    self.localTags = catalogue.tags
++                    self.localRevision = catalogue.revision
++                    self.update(transition: .immediate)
++                }
++            }))
++            self.localAccounts.set((context.sharedContext.activeAccountContexts |> deliverOnMainQueue).start(next: { [weak self] value in
++                guard let self else { return }
++                guard let primary = value.primary, primary.account.id == context.account.id,
++                    primary.account.peerId == context.account.peerId,
++                    primary.account.testingEnvironment == context.account.testingEnvironment else {
++                    self.localCatalogue.set(nil); self.localService?.dispose(); self.localService = nil
++                    self.localTags = []; self.update(transition: .immediate)
++                    return
++                }
++            }))
++        }
++
+         let tagsAndFiles: Signal<([MessageReaction.Reaction: Int], [Int64: TelegramMediaFile]), NoError> = context.engine.data.subscribe(
+             TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: chatLocation.threadId)
+         )
+@@ -542,6 +613,7 @@
+     
+     deinit {
+         self.itemsDisposable?.dispose()
++        self.localCatalogue.dispose(); self.localAccounts.dispose(); self.localService?.dispose()
+     }
+     
+     private func update(transition: ContainedViewLayoutTransition) {
+@@ -566,7 +638,68 @@
+         return self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, transition: transition, interfaceState: (chatController as! ChatControllerImpl).presentationInterfaceState)
+     }
+     
++    private func updateLocalSavedTags(params: Params) {
++        let key = JerkgramLocalSavedTagsRenderKey(revision: self.localRevision,
++            selectedId: params.interfaceState.historyFilter?.localSavedTagId,
++            theme: ObjectIdentifier(params.interfaceState.theme), strings: ObjectIdentifier(params.interfaceState.strings),
++            width: params.width, leftInset: params.leftInset, rightInset: params.rightInset, available: self.localService != nil)
++        guard self.localRenderGate.update(key) else { return }
++        self.promoView?.removeFromSuperview(); self.promoView = nil
++        for view in self.itemViews.values { view.isHidden = true }
++        for button in self.localButtons { button.removeFromSuperview() }
++        self.localButtons.removeAll()
++        let strings = JerkgramSavedTagsStrings(params.interfaceState.strings)
++        var x = params.leftInset + 12.0
++        let selected = params.interfaceState.historyFilter?.localSavedTagId
++        func add(_ title: String, selected: Bool = false, action: @escaping () -> Void, longAction: (() -> Void)? = nil) {
++            let button = LocalButton(frame: .zero)
++            button.setTitle(title, for: .normal)
++            button.setTitleColor(params.interfaceState.theme.list.itemAccentColor, for: .normal)
++            button.backgroundColor = params.interfaceState.theme.list.itemAccentColor.withAlphaComponent(selected ? 0.22 : 0.08)
++            button.accessibilityLabel = title
++            button.accessibilityTraits = selected ? [.button, .selected] : [.button]
++            button.action = action; button.longAction = longAction
++            button.sizeToFit()
++            button.frame = CGRect(x: x, y: 5.0, width: min(240.0, max(40.0, button.bounds.width)), height: 30.0)
++            x += button.frame.width + 8.0
++            self.scrollView.addSubview(button); self.localButtons.append(button)
++        }
++        add(strings.text("＋ Tags", "＋ Теги"), action: { [weak self] in
++            guard let self, self.localService != nil, let controller = self.interfaceInteraction?.chatController() else { return }
++            controller.present(jerkgramSavedTagsController(context: self.context), in: .window(.root))
++        })
++        for tag in self.localTags {
++            add("\(tag.name) · \(tag.count)", selected: selected == tag.id, action: { [weak self] in
++                guard let self, self.localService != nil else { return }
++                self.interfaceInteraction?.updateHistoryFilter { filter in
++                    return filter?.localSavedTagId == tag.id ? nil : ChatPresentationInterfaceState.HistoryFilter(localSavedTagId: tag.id)
++                }
++            }, longAction: { [weak self] in
++                guard let self, self.localService != nil, let controller = self.interfaceInteraction?.chatController() else { return }
++                controller.present(jerkgramSavedTagsController(context: self.context), in: .window(.root))
++            })
++        }
++        // Explicit cloud domain retains the official entitlement behavior.
++        add(strings.text("Cloud tags", "Облачные теги"), action: { [weak self] in
++            guard let self else { return }
++            self.showingCloudTags = true
++            self.interfaceInteraction?.updateHistoryFilter { _ in nil }
++            self.update(transition: .immediate)
++        })
++        self.scrollView.frame = CGRect(x: 0, y: 0, width: params.width, height: 40.0)
++        self.scrollView.contentSize = CGSize(width: x + params.rightInset, height: 40.0)
++    }
++
+     private func update(params: Params, transition: ContainedViewLayoutTransition) {
++        if self.localEligible && params.interfaceState.hasLocalSavedTags && !self.showingCloudTags {
++            self.updateLocalSavedTags(params: params)
++            return
++        }
++        self.localRenderGate.invalidate()
++        for button in self.localButtons { button.removeFromSuperview() }
++        self.localButtons.removeAll()
++        for view in self.itemViews.values { view.isHidden = false }
++
+         let panelHeight: CGFloat = 40.0
+         
+         let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0)
+@@ -574,6 +707,17 @@
+         
+         var contentSize = CGSize(width: 0.0, height: panelHeight)
+         contentSize.width += containerInsets.left
++        if self.localEligible && params.interfaceState.hasLocalSavedTags {
++            let button = LocalButton(frame: CGRect(x: contentSize.width, y: 5.0, width: 86.0, height: 30.0))
++            button.setTitle(JerkgramSavedTagsStrings(params.interfaceState.strings).title, for: .normal)
++            button.setTitleColor(params.interfaceState.theme.list.itemAccentColor, for: .normal)
++            button.action = { [weak self] in
++                guard let self else { return }
++                self.showingCloudTags = false; self.update(transition: .immediate)
++            }
++            self.scrollView.addSubview(button); self.localButtons.append(button)
++            contentSize.width += 98.0
++        }
+         
+         var validIds: [MessageReaction.Reaction] = []
+         
+--- a/submodules/TelegramUI/Sources/ChatTagSearchInputPanelNode.swift
++++ b/submodules/TelegramUI/Sources/ChatTagSearchInputPanelNode.swift
+@@ -172,8 +172,8 @@
+             })
+         }
+         
+-        if let historyFilter = params.interfaceState.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag) {
+-            let tag = historyFilter.customTag
++        if let historyFilter = params.interfaceState.historyFilter, let cloudTag = historyFilter.customTag, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: cloudTag) {
++            let tag = cloudTag
+             
+             if let current = self.tagMessageCount, current.tag == tag {
+             } else {
+--- a/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift
++++ b/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift
+@@ -7,14 +7,14 @@
+ import TelegramPresentationData
+ import TelegramUIPreferences
+ import AccountContext
++import ChatPresentationInterfaceState
+ import ItemListUI
+-import ChatListUI
+-
+-// This is a separate local domain. No reaction buffers, Premium flags or chat
+-// presentation/history state are used to represent a local tag.
++import PresentationDataUtils
++
++// Local catalogue and assignment sheet. Filtered results stay in native chat bubbles.
+ struct JerkgramSavedTagsStrings {
+     let ru: Bool
+-    init(_ strings: PresentationStrings) { self.ru = strings.baseLanguageCode.hasPrefix("ru") }
++    init(_ strings: PresentationStrings) { self.ru = strings.jerkgram.languageCode.hasPrefix("ru") }
+     func text(_ en: String, _ ru: String) -> String { return self.ru ? ru : en }
+     var title: String { return self.text("Local tags", "Локальные теги") }
+     var locality: String {
+@@ -40,12 +40,12 @@
+ }
+ 
+ private enum JerkgramSavedTagsAction: Equatable {
+-    case create, save, cancel, clear, earlier, later, retry
+-    case tag(String), unavailable(MessageId)
++    case create, save, cancel, retry
++    case tag(String)
+ }
+ 
+ private struct JerkgramSavedTagsEntry: ItemListNodeEntry {
+-    enum Kind: Equatable { case text, action, input, message }
++    enum Kind: Equatable { case text, action, input }
+     let stableId: String
+     let index: Int
+     let section: ItemListSectionId
+@@ -53,13 +53,12 @@
+     let title: String
+     let value: String
+     let action: JerkgramSavedTagsAction?
+-    let message: Message?
+ 
+     static func < (lhs: Self, rhs: Self) -> Bool { return lhs.index < rhs.index }
+     static func == (lhs: Self, rhs: Self) -> Bool {
+         return lhs.stableId == rhs.stableId && lhs.index == rhs.index && lhs.section == rhs.section
+             && lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.value == rhs.value
+-            && lhs.action == rhs.action && lhs.message === rhs.message
++            && lhs.action == rhs.action
+     }
+     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
+         let session = arguments as! JerkgramSavedTagsSession
+@@ -70,29 +69,13 @@
+             return ItemListDisclosureItem(presentationData: presentationData, title: self.title, enabled: self.action != nil, label: self.value, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: self.action.map { action in { [weak session] in session?.perform(action) } })
+         case .input:
+             return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: self.title, textColor: presentationData.theme.list.itemPrimaryTextColor), text: self.value, placeholder: self.title, type: .regular(capitalization: true, autocorrection: false), returnKeyType: .done, clearType: .always, maxLength: 64, enabled: session.canEdit, sectionId: self.section, textUpdated: { [weak session] text in session?.updateDraft(text) }, action: { [weak session] in session?.perform(.save) })
+-        case .message:
+-            // Exactly the existing native result row. Never create a Message for
+-            // an unavailable indexed entry or navigate to a forward's source ID.
+-            let message = self.message!
+-            let presentation = session.presentation
+-            let chatPresentation = ChatListPresentationData(theme: presentation.theme, fontSize: presentation.listsFontSize, strings: presentation.strings, dateTimeFormat: presentation.dateTimeFormat, nameSortOrder: presentation.nameSortOrder, nameDisplayOrder: presentation.nameDisplayOrder, disableAnimations: false)
+-            var peers: [EnginePeer.Id: EnginePeer] = [:]
+-            if let peer = message.peers[message.id.peerId] { peers[peer.id] = EnginePeer(peer) }
+-            return ChatListItem(presentationData: chatPresentation, context: session.context,
+-                chatListLocation: .savedMessagesChats(peerId: session.context.account.peerId), filterData: nil,
+-                index: .forum(pinnedIndex: .none, timestamp: message.timestamp, threadId: message.threadId ?? session.context.account.peerId.toInt64(), namespace: message.id.namespace, id: message.id.id),
+-                content: .peer(ChatListItemContent.PeerData(messages: [EngineMessage(message)], peer: EngineRenderedPeer(peerId: message.id.peerId, peers: peers, associatedMedia: [:]), threadInfo: nil, combinedReadState: nil, isRemovedFromTotalUnreadCount: false, presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, hasUnseenPollVotes: false, draftState: nil, mediaDraftContentType: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: true, hasFailedMessages: false, forumTopicData: nil, topForumTopicItems: [], autoremoveTimeout: nil, storyState: nil, requiresPremiumForMessaging: false, displayAsTopicList: false, tags: [])),
+-                editing: false, hasActiveRevealControls: false, selected: false, header: nil, enabledContextActions: nil, hiddenOffset: false, interaction: session.interaction)
++
+         }
+     }
+ }
+ 
+ private final class JerkgramSavedTagsSession {
+     private enum SheetColor: Equatable { case accent, destructive }
+-    struct Request {
+-        let cursor: LocalSavedTagsCursor?
+-        let direction: LocalSavedTagsDirection
+-    }
+     let context: AccountContext
+     let selectedIds: [MessageId]
+     weak var controller: ItemListController?
+@@ -101,29 +84,16 @@
+     private var serial = 0
+     private var visible = false
+     private var generation: UInt64 = 0
+-    private var filterGeneration: UInt64 = 0
+-    private var requestGeneration: UInt64 = 0
+     private var summaryGeneration: UInt64 = 0
+-    private var navigationGeneration: UInt64 = 0
+     private var service: LocalSavedTagsService?
+-    private var provider: LocalSavedTagsPageProvider?
+     private let accounts = MetaDisposable()
+     private let catalogueSubscription = MetaDisposable()
+     private let summarySubscription = MetaDisposable()
+-    private let pageSubscription = MetaDisposable()
+     private let mutationSubscription = MetaDisposable()
+-    private let navigationSubscription = MetaDisposable()
+     private var tags: [LocalSavedTag] = []
+     private var revision: Int64?
+-    private var selectedTag: String?
+-    private var content: LocalSavedTagsContentPage?
+-    // Only request metadata for currently supplied windows, at most 135 IDs.
+-    // Retrying an older unavailable row repeats its exact store-issued page.
+-    private var rowRequests: [MessageId: Request] = [:]
+-    private var lastRequest = Request(cursor: nil, direction: .earlier)
+     private var summary: LocalSavedTagsSelectionSummary?
+     private var mutating = false
+-    private var loading = false
+     private var editing = false
+     private var editingTag: String?
+     private var draft = ""
+@@ -164,21 +134,14 @@
+     func stop() {
+         self.visible = false
+         self.generation &+= 1
+-        self.filterGeneration &+= 1
+-        self.requestGeneration &+= 1
+         self.summaryGeneration &+= 1
+-        self.navigationGeneration &+= 1
+         self.accounts.set(nil)
+         self.catalogueSubscription.set(nil)
+         self.summarySubscription.set(nil)
+-        self.pageSubscription.set(nil)
+         self.mutationSubscription.set(nil)
+-        self.navigationSubscription.set(nil)
+-        self.provider?.dispose(); self.provider = nil
+         self.service?.dispose(); self.service = nil
+-        self.content = nil; self.rowRequests.removeAll()
+         self.summary = nil; self.revision = nil; self.tags.removeAll()
+-        self.loading = false; self.mutating = false
++        self.mutating = false
+     }
+     private func observeCatalogue() {
+         guard let service = self.service else { return }
+@@ -191,9 +154,7 @@
+                 guard self.revision != catalogue.revision else { return }
+                 self.revision = catalogue.revision
+                 self.tags = catalogue.tags
+-                if let tag = self.selectedTag, !catalogue.tags.contains(where: { $0.id == tag }) { self.selectedTag = nil }
+                 self.refreshSummary()
+-                self.replaceFilter()
+             }
+             self.changed()
+         }))
+@@ -215,50 +176,6 @@
+             self.changed()
+         }))
+     }
+-    private func replaceFilter() {
+-        self.filterGeneration &+= 1
+-        self.requestGeneration &+= 1
+-        self.pageSubscription.set(nil)
+-        self.provider?.dispose(); self.provider = nil
+-        self.content = nil; self.rowRequests.removeAll(); self.loading = false
+-        guard let tag = self.selectedTag, let service = self.service else { return }
+-        self.provider = service.makePageProvider(tagId: tag)
+-        self.request(Request(cursor: nil, direction: .earlier))
+-    }
+-    private func request(_ request: Request, mayRestart: Bool = true) {
+-        guard let provider = self.provider else { return }
+-        self.requestGeneration &+= 1
+-        let generation = self.generation, filterGeneration = self.filterGeneration, requestGeneration = self.requestGeneration
+-        let tag = self.selectedTag
+-        self.pageSubscription.set(nil)
+-        self.lastRequest = request
+-        self.loading = true; self.error = nil
+-        self.changed()
+-        self.pageSubscription.set((provider.request(cursor: request.cursor, direction: request.direction) |> deliverOnMainQueue).start(next: { [weak self] event in
+-            // This final fence is after the asynchronous main-queue hop. The
+-            // Core publication fence cannot retract an already queued UI event.
+-            guard let self, self.visible, self.generation == generation,
+-                self.filterGeneration == filterGeneration, self.requestGeneration == requestGeneration,
+-                self.selectedTag == tag else { return }
+-            switch event {
+-            case .progress: self.loading = true
+-            case let .result(content):
+-                self.loading = false
+-                self.content = content // Replace; never append a growing history.
+-                let retainedIds = Set(content.windows.flatMap { $0.map { $0.entry.id } })
+-                self.rowRequests = self.rowRequests.filter { retainedIds.contains($0.key) }
+-                for row in content.rows { self.rowRequests[row.entry.id] = request }
+-            case let .failure(error):
+-                self.loading = false
+-                self.error = error
+-                if error == .invalidPage {
+-                    self.provider?.reset(); self.content = nil; self.rowRequests.removeAll()
+-                    if mayRestart { self.request(Request(cursor: nil, direction: .earlier), mayRestart: false); return }
+-                }
+-            }
+-            self.changed()
+-        }))
+-    }
+     private func run<T>(_ signal: Signal<Result<T, LocalSavedTagsError>, NoError>, success: @escaping () -> Void = {}) {
+         guard !self.mutating else { return }
+         self.mutating = true; self.error = nil; self.notice = nil
+@@ -288,30 +205,20 @@
+             let saved: () -> Void = { [weak self] in self?.editing = false; self?.editingTag = nil; self?.draft = "" }
+             if let tag = self.editingTag { self.run(service.rename(tagId: tag, name: self.draft), success: saved) }
+             else { self.run(service.create(name: self.draft), success: saved) }
+-        case .clear: self.selectedTag = nil; self.error = nil; self.replaceFilter(); self.changed()
+-        case .earlier:
+-            if !self.loading, let cursor = self.content?.earlier { self.request(Request(cursor: cursor, direction: .earlier)) }
+-        case .later:
+-            if !self.loading, let cursor = self.content?.later { self.request(Request(cursor: cursor, direction: .later)) }
+         case .retry:
+-            if self.revision == nil {
+-                self.observeCatalogue(); self.refreshSummary()
+-            } else if self.selectedTag != nil {
+-                if self.provider == nil { self.replaceFilter() }
+-                else { self.request(self.error == .invalidPage ? Request(cursor: nil, direction: .earlier) : self.lastRequest) }
+-            } else { self.observeCatalogue(); self.refreshSummary() }
++            if self.revision == nil { self.observeCatalogue() }
++            self.refreshSummary(); self.changed()
+         case let .tag(id): self.tagMenu(id)
+-        case let .unavailable(id): self.unavailableMenu(id)
+         }
+     }
+     private func sheet(_ rows: [(String, SheetColor, () -> Void)]) {
+         guard let controller = self.controller else { return }
+         let sheet = ActionSheetController(presentationData: self.presentation)
+-        let generation = self.generation, filterGeneration = self.filterGeneration
++        let generation = self.generation
+         sheet.setItemGroups([ActionSheetItemGroup(items: rows.map { title, color, action in
+             ActionSheetButtonItem(title: title, color: color == .destructive ? .destructive : .accent, action: { [weak self, weak sheet] in
+                 sheet?.dismissAnimated()
+-                guard let self, self.visible, self.generation == generation, self.filterGeneration == filterGeneration, !self.mutating else { return }
++                guard let self, self.visible, self.generation == generation, !self.mutating else { return }
+                 action()
+             })
+         }), ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentation.strings.Common_Cancel, color: .accent, action: { [weak sheet] in sheet?.dismissAnimated() })])])
+@@ -336,10 +243,6 @@
+                 }))
+             }
+         }
+-        rows.append((strings.text("Show messages", "Показать сообщения"), .accent, { [weak self] in
+-            guard let self else { return }
+-            self.selectedTag = id; self.error = nil; self.replaceFilter(); self.changed()
+-        }))
+         rows.append((strings.text("Rename", "Переименовать"), .accent, { [weak self] in
+             guard let self else { return }
+             self.editing = true; self.editingTag = id; self.draft = tag.name; self.changed()
+@@ -348,60 +251,17 @@
+             guard let self else { return }
+             self.sheet([(strings.text("Delete tag and its local assignments", "Удалить тег и его локальные назначения"), .destructive, { [weak self] in
+                 guard let self, let service = self.service else { return }
+-                self.run(service.delete(tagId: id), success: { [weak self] in
+-                    guard let self else { return }
+-                    if self.selectedTag == id { self.selectedTag = nil; self.replaceFilter() }
+-                })
++                self.run(service.delete(tagId: id))
+             })])
+         }))
+         self.sheet(rows)
+     }
+-    private func unavailableMenu(_ id: MessageId) {
+-        guard let row = self.content?.windows.joined().first(where: { $0.entry.id == id }), row.message == nil else { return }
+-        let strings = self.strings
+-        var rows: [(String, SheetColor, () -> Void)] = []
+-        if let request = self.rowRequests[id] {
+-            rows.append((strings.text("Retry this page", "Повторить загрузку этой страницы"), .accent, { [weak self] in self?.request(request) }))
+-        }
+-        rows.append((strings.text("Open in Saved Messages", "Открыть в Избранном"), .accent, { [weak self] in self?.open(id) }))
+-        rows.append((strings.text("Remove this local tag", "Убрать этот локальный тег"), .destructive, { [weak self] in
+-            guard let self, let tag = self.selectedTag, let service = self.service else { return }
+-            self.run(service.remove(tagId: tag, entries: [row.entry]))
+-        }))
+-        self.sheet(rows)
+-    }
+-    func open(_ id: MessageId) {
+-        guard self.visible, id.peerId == self.context.account.peerId,
+-            let navigationController = self.controller?.navigationController as? NavigationController else { return }
+-        self.navigationGeneration &+= 1
+-        let generation = self.generation, filterGeneration = self.filterGeneration, navigationGeneration = self.navigationGeneration
+-        // Native navigation requires the real self EnginePeer, not a PeerId.
+-        // One bounded local engine read on tap; no per-cell lookup or fake peer.
+-        self.navigationSubscription.set((self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)) |> deliverOnMainQueue).start(next: { [weak self] peer in
+-            guard let self, self.visible, self.generation == generation,
+-                self.filterGeneration == filterGeneration, self.navigationGeneration == navigationGeneration else { return }
+-            guard let peer, peer.id == self.context.account.peerId else {
+-                self.error = .unavailable; self.changed(); return
+-            }
+-            // .peer targets full Saved history. Native useExisting first switches
+-            // a reused Saved sub-dialog to nil thread with this message subject.
+-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: .message(id: .id(id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: true))
+-        }))
+-    }
+-    lazy var interaction: ChatListNodeInteraction = {
+-        return ChatListNodeInteraction(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer,
+-            activateSearch: {}, peerSelected: { _, _, _, _, _ in }, disabledPeerSelected: { _, _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in },
+-            messageSelected: { [weak self] _, _, message, _ in self?.open(message.id) },
+-            groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in }, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in },
+-            activateChatPreview: { _, _, _, gesture, _ in gesture?.cancel() }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openPremiumGift: { _, _ in }, openPremiumManagement: {}, openActiveSessions: {}, openBirthdaySetup: {}, performActiveSessionAction: { _, _ in }, performBotConnectionReviewAction: { _, _ in }, openChatFolderUpdates: {}, hideChatFolderUpdates: {}, openStories: { _, _ in }, openStarsTopup: { _ in }, editPeer: { _ in }, openWebApp: { _ in }, openPhotoSetup: {}, openAdInfo: { _, _ in }, openAccountFreezeInfo: {}, openUrl: { _ in })
+-    }()
+-
+     func render(_ presentation: PresentationData) -> (ItemListControllerState, (ItemListNodeState, JerkgramSavedTagsSession)) {
+         self.presentation = presentation
+         let strings = self.strings
+         var entries: [JerkgramSavedTagsEntry] = []
+-        func add(_ id: String, _ section: ItemListSectionId, _ kind: JerkgramSavedTagsEntry.Kind, _ title: String, value: String = "", action: JerkgramSavedTagsAction? = nil, message: Message? = nil) {
+-            entries.append(JerkgramSavedTagsEntry(stableId: id, index: entries.count, section: section, kind: kind, title: title, value: value, action: action, message: message))
++        func add(_ id: String, _ section: ItemListSectionId, _ kind: JerkgramSavedTagsEntry.Kind, _ title: String, value: String = "", action: JerkgramSavedTagsAction? = nil) {
++            entries.append(JerkgramSavedTagsEntry(stableId: id, index: entries.count, section: section, kind: kind, title: title, value: value, action: action))
+         }
+         add("locality", 0, .text, strings.locality)
+         if !self.selectedIds.isEmpty {
+@@ -432,41 +292,10 @@
+                     label = "\(mark) \(count)/\(summary.selectedCount) · \(tag.count)"
+                 } else { label = "… · \(tag.count)" }
+             }
+-            let title = (self.selectedTag == tag.id ? "▸ " : "") + tag.name
++            let title = tag.name
+             add("tag:\(tag.id)", 1, .action, title, value: label, action: self.mutating ? nil : .tag(tag.id))
+         }
+-        if let tagId = self.selectedTag {
+-            let name = self.tags.first(where: { $0.id == tagId })?.name ?? ""
+-            add("filter", 2, .text, strings.text("Local filter: \(name)", "Локальный фильтр: \(name)"))
+-            add("clear", 2, .action, strings.text("Clear local filter", "Сбросить локальный фильтр"), action: self.mutating ? nil : .clear)
+-            add("query", 2, .text, strings.query)
+-            add("bounds", 2, .text, strings.text("45 messages per page; up to 135 visible. Use Older / Newer to reach every tagged message. No automatic prefetch.", "45 сообщений на страницу; до 135 видимых. Кнопки «Старее» / «Новее» позволяют дойти до всех сообщений с тегом. Нет автоматической предзагрузки."))
+-            if self.loading { add("loadingPage", 2, .text, strings.text("Loading messages…", "Загрузка сообщений…")) }
+-            if let content = self.content {
+-                add("newer", 2, .action, strings.text("Newer", "Новее"), action: !self.loading && content.later != nil ? .later : nil)
+-                let rows = content.windows.flatMap { $0 }.sorted { lhs, rhs in
+-                    if lhs.entry.timestamp != rhs.entry.timestamp { return lhs.entry.timestamp > rhs.entry.timestamp }
+-                    return lhs.entry.id > rhs.entry.id
+-                }
+-                if rows.isEmpty { add("emptyFilter", 3, .text, strings.text("No messages with this local tag.", "Нет сообщений с этим локальным тегом.")) }
+-                if rows.contains(where: { $0.message == nil }) {
+-                    add("unavailableInfo", 3, .text, strings.text("Unavailable content keeps its saved ID and date. Tap the row to retry, open Saved Messages, or remove this local tag.", "Недоступный контент сохраняет ID и дату в Избранном. Нажмите строку для повторной загрузки, перехода в Избранное или удаления этого локального тега."))
+-                }
+-                for row in rows {
+-                    let id = String(describing: row.entry.id)
+-                    if let message = row.message {
+-                        add("message:\(id)", 3, .message, "", message: message)
+-                    } else {
+-                        // Different stable identity: ItemList must never update a
+-                        // text/disclosure node as a ChatListItemNode after retry.
+-                        let stamp = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(row.entry.timestamp)), dateStyle: .short, timeStyle: .short)
+-                        add("unavailable:\(id)", 3, .action, strings.text("Unavailable message #\(row.entry.id.id)", "Недоступное сообщение №\(row.entry.id.id)"), value: stamp, action: .unavailable(row.entry.id))
+-                    }
+-                }
+-                add("older", 4, .action, strings.text("Older", "Старее"), action: !self.loading && content.earlier != nil ? .earlier : nil)
+-            }
+-        }
+-        return (ItemListControllerState(presentationData: ItemListPresentationData(presentation), title: .text(strings.title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentation.strings.Common_Back)),
++        return (ItemListControllerState(presentationData: ItemListPresentationData(presentation), title: .text(strings.title), leftNavigationButton: ItemListNavigationButton(content: .icon(.close), style: .regular, enabled: true, action: { [weak self] in self?.controller?.navigationController?.dismiss(animated: true, completion: nil) }), rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentation.strings.Common_Back)),
+             (ItemListNodeState(presentationData: ItemListPresentationData(presentation), entries: entries, style: .blocks, animateChanges: false), self))
+     }
+ }
+@@ -490,5 +319,198 @@
+ }
+ 
+ func jerkgramSavedTagsController(context: AccountContext, selectedMessageIds: [MessageId] = []) -> ViewController {
+-    return JerkgramSavedTagsController(context: context, selectedIds: selectedMessageIds)
+-}
++    let controller = JerkgramSavedTagsController(context: context, selectedIds: selectedMessageIds)
++    let theme = context.sharedContext.currentPresentationData.with { $0.theme }
++    let navigation = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: theme))
++    navigation.setViewControllers([controller], animated: false)
++    return navigation
++}
++
++// All delayed UI clears retain both typed identity and the controller request
++// generation. In particular A → B → A must reject the first A's callback.
++func jerkgramClearingLocalSavedTagsFilter(_ filter: ChatPresentationInterfaceState.HistoryFilter?, expectedId: String?, generation: UInt64, expectedGeneration: UInt64) -> ChatPresentationInterfaceState.HistoryFilter? {
++    guard generation == expectedGeneration, let expectedId, filter?.localSavedTagId == expectedId else { return filter }
++    return nil
++}
++
++// Clear the history override synchronously before replaying a jump. The later
++// interface-state callback is idempotent and cannot restore the previous anchor.
++func jerkgramResolveLocalSavedTagsNavigation(clearHistory: () -> Void, replayLocation: () -> Void, notifyFilterCleared: () -> Void) {
++    clearHistory()
++    replayLocation()
++    notifyFilterCleared()
++}
++
++// Owned by the existing Saved history node. The accepted indexed provider owns
++// the 45-row requests / three-window bound. No chat scan or cloud tag API.
++final class JerkgramLocalSavedTagsHistory {
++    let tagId: String
++    private let context: AccountContext
++    private let service: LocalSavedTagsService
++    private let provider: LocalSavedTagsPageProvider
++    private struct PageRequest {
++        let cursor: LocalSavedTagsCursor?
++        let direction: LocalSavedTagsDirection
++    }
++    private let messageDisposable = MetaDisposable()
++    private var messageGeneration: UInt64 = 0
++    private var observedIds = Set<MessageId>()
++    private var observedMessages: [MessageId: Message] = [:]
++    // Only retained indexed memberships own retry metadata (at most135 IDs).
++    private var rowRequests: [MessageId: PageRequest] = [:]
++    private var lastRequest = PageRequest(cursor: nil, direction: .earlier)
++    private var failedRequest: PageRequest?
++    private var unavailableRequest: PageRequest?
++    private let requestDisposable = MetaDisposable()
++    private let catalogueDisposable = MetaDisposable()
++    private let accountDisposable = MetaDisposable()
++    private let views = Promise<(MessageHistoryView, ViewUpdateType)>()
++    private var generation: UInt64 = 0
++    private var disposed = false
++    private var loading = false
++    private var content: LocalSavedTagsContentPage?
++    private var revision: Int64?
++    private var first = true
++    private var cleared: () -> Void
++    var status: ((String) -> Void)?
++    private var strings: JerkgramSavedTagsStrings {
++        return JerkgramSavedTagsStrings(self.context.sharedContext.currentPresentationData.with { $0.strings })
++    }
++
++    init(context: AccountContext, tagId: String, cleared: @escaping () -> Void) {
++        self.context = context
++        self.tagId = tagId
++        self.cleared = cleared
++        self.service = LocalSavedTagsService(account: context.account)
++        self.provider = self.service.makePageProvider(tagId: tagId)
++        self.publish(loading: true)
++        self.accountDisposable.set((context.sharedContext.activeAccountContexts |> deliverOnMainQueue).start(next: { [weak self] value in
++            guard let self, !self.disposed else { return }
++            guard let primary = value.primary, primary.account.id == context.account.id,
++                primary.account.peerId == context.account.peerId,
++                primary.account.testingEnvironment == context.account.testingEnvironment else {
++                self.dispose(); DispatchQueue.main.async { [weak self] in self?.cleared() }; return
++            }
++        }))
++        self.catalogueDisposable.set((self.service.catalogueUpdates() |> deliverOnMainQueue).start(next: { [weak self] result in
++            guard let self, !self.disposed else { return }
++            switch result {
++            case let .success(catalogue):
++                guard catalogue.tags.contains(where: { $0.id == self.tagId }) else {
++                    self.dispose(); DispatchQueue.main.async { [weak self] in self?.cleared() }; return
++                }
++                guard self.revision != catalogue.revision else { return }
++                self.revision = catalogue.revision
++                self.requestDisposable.set(nil)
++                self.generation &+= 1
++                self.provider.reset(); self.content = nil; self.loading = false
++                self.resetRetainedMessages()
++                self.rowRequests.removeAll(); self.failedRequest = nil; self.unavailableRequest = nil
++                self.request(cursor: nil, direction: .earlier)
++            case .failure:
++                self.status?(self.strings.text("Local tags unavailable. Clear the filter and retry.", "Локальные теги недоступны. Сбросьте фильтр и повторите."))
++            }
++        }))
++    }
++    deinit { self.dispose() }
++    func dispose() {
++        guard !self.disposed else { return }
++        self.disposed = true; self.generation &+= 1
++        self.resetRetainedMessages()
++        self.requestDisposable.dispose(); self.catalogueDisposable.dispose(); self.accountDisposable.dispose()
++        self.provider.dispose(); self.service.dispose()
++    }
++    var signal: Signal<(MessageHistoryView, ViewUpdateType), NoError> { return self.views.get() }
++    private func resetRetainedMessages() {
++        self.messageGeneration &+= 1
++        self.messageDisposable.set(nil)
++        self.observedIds.removeAll(); self.observedMessages.removeAll()
++    }
++    private func observeRetainedMessages() {
++        let rows = self.content?.windows.flatMap { $0 } ?? []
++        let ids = Set(rows.map { $0.entry.id })
++        // Request progress, scrolling, typing and ordinary edits do not rebuild
++        // the subscription. One Postbox view follows the bounded retained set.
++        guard ids != self.observedIds else { return }
++        self.resetRetainedMessages()
++        self.observedIds = ids
++        for row in rows { if let message = row.message { self.observedMessages[row.entry.id] = message } }
++        guard !ids.isEmpty else { return }
++        let messageGeneration = self.messageGeneration
++        let key = PostboxViewKey.messages(ids)
++        self.messageDisposable.set((self.context.account.postbox.combinedView(keys: [key]) |> deliverOnMainQueue).start(next: { [weak self] views in
++            guard let self, !self.disposed, self.messageGeneration == messageGeneration,
++                self.observedIds == ids, let view = views.views[key] as? MessagesView else { return }
++            self.observedMessages = view.messages.filter { ids.contains($0.key) }
++            self.selectUnavailableRetry()
++            self.publish(loading: self.loading, reportUnavailable: false)
++        }))
++    }
++    private func selectUnavailableRetry() {
++        self.unavailableRequest = self.content?.windows.joined().first(where: { self.observedMessages[$0.entry.id] == nil }).flatMap { self.rowRequests[$0.entry.id] }
++    }
++    private func publish(loading: Bool, reportUnavailable: Bool = true) {
++        let rows = self.content?.windows.flatMap { $0 } ?? []
++        let messages = rows.compactMap { self.observedMessages[$0.entry.id] }.sorted { $0.index < $1.index }
++        // Local boundaries are NOT Postbox holes. Only loadBoundary below may
++        // request an adjacent indexed page; ordinary hole filling stays disabled.
++        let view = MessageHistoryView(tag: nil, namespaces: .all,
++            entries: messages.map { MessageHistoryEntry(message: $0, isRead: true, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) },
++            holeEarlier: false, holeLater: false, isLoading: loading && messages.isEmpty)
++        self.views.set(.single((view, self.first ? .Initial : .Generic)))
++        self.first = false
++        let missing = rows.filter { self.observedMessages[$0.entry.id] == nil }.count
++        if reportUnavailable && missing > 0 { self.status?(self.strings.text("\(missing) tagged messages unavailable in this window. Tap Retry; membership is preserved.", "\(missing) сообщений с тегом в этом окне недоступны. Нажмите «Повторить»; назначения тегов сохранены.")) }
++    }
++    private func request(cursor: LocalSavedTagsCursor?, direction: LocalSavedTagsDirection) {
++        guard !self.disposed, !self.loading else { return }
++        self.generation &+= 1
++        let generation = self.generation
++        let request = PageRequest(cursor: cursor, direction: direction)
++        self.lastRequest = request
++        self.loading = true; self.publish(loading: true)
++        self.requestDisposable.set((self.provider.request(cursor: cursor, direction: direction) |> deliverOnMainQueue).start(next: { [weak self] event in
++            guard let self, !self.disposed, self.generation == generation else { return }
++            switch event {
++            case .progress: break
++            case let .result(content):
++                self.content = content; self.loading = false; self.failedRequest = nil
++                let retainedIds = Set(content.windows.flatMap { $0 }.map { $0.entry.id })
++                self.rowRequests = self.rowRequests.filter { retainedIds.contains($0.key) }
++                for row in content.rows { self.rowRequests[row.entry.id] = request }
++                self.observeRetainedMessages()
++                self.selectUnavailableRetry()
++                self.publish(loading: false)
++            case .failure(.invalidPage):
++                self.loading = false; self.content = nil; self.provider.reset()
++                self.resetRetainedMessages(); self.rowRequests.removeAll(); self.unavailableRequest = nil
++                self.failedRequest = PageRequest(cursor: nil, direction: .earlier)
++                self.publish(loading: false)
++                self.status?(self.strings.text("Tags changed while loading. Tap Retry to refresh the local filter.", "Теги изменились во время загрузки. Нажмите «Повторить», чтобы обновить локальный фильтр."))
++            case .failure:
++                self.failedRequest = request
++                self.loading = false; self.publish(loading: false)
++                self.status?(self.strings.text("Local tagged messages could not load. Tap Retry.", "Не удалось загрузить сообщения с локальным тегом. Нажмите «Повторить»."))
++            }
++        }))
++    }
++    @discardableResult func loadBoundary(earlier: Bool) -> Bool {
++        guard !self.disposed, let content = self.content else { return false }
++        if let cursor = earlier ? content.earlier : content.later {
++            self.request(cursor: cursor, direction: earlier ? .earlier : .later)
++            return true
++        }
++        return false
++    }
++    func retry() {
++        guard !self.disposed else { return }
++        let request = self.failedRequest ?? self.unavailableRequest ?? self.lastRequest
++        self.requestDisposable.set(nil); self.generation &+= 1; self.loading = false
++        // Reuse the store-issued page boundary. A nonboundary retry may reseed
++        // the provider's bounded window, but never substitutes the newest page.
++        self.request(cursor: request.cursor, direction: request.direction)
++    }
++    func contains(_ index: MessageIndex) -> Bool {
++        return self.content?.windows.joined().contains(where: { $0.entry.id == index.id }) == true
++    }
++}
