@@ -1,0 +1,21 @@
+# Beta 3 follow-up design — user corrections
+
+## Authority and baseline
+
+User requests implementation of all five corrections after testing successful common Build179. Same Work Local chat and current isolated workspace; no new project/worktree. Existing authorization to implement, publish and launch common IPA remains; monitor initial few minutes only, never wait IPA completion. No new design-approval pause is introduced for already requested corrections. Initial branch dev/beta3-history-native-tags-180 from local f6df1267dfd67e6e647ef97c29c563a66ef105fc, exact published tree equivalent to59fdfc8f495d51855d484e03083932df3e185ece. Source/native/app build179 passed42989077542; user confirms retained launch/bot crash fixed, history absent, Translation works. Target device iPhone14Pro/iOS26.7.1.
+
+## User outcomes
+
+1. Repair source-proven premature bot history cancellation and retained stopped state without deleting account/history or rewinding live Telegram state. User diagnostic export proves initial state_read cancelled by routine softReset, restoredTerminal softReset and zero read/inserted messages. Unknown1458 RPC400 records are not automatically attributed to history; add only bounded allowlisted diagnosis ifneeded. Source repair cannot promise historical server availability.
+2. Screenshot1 is Wallet/Money empty-benefits screen, not main Jerkgram Settings card. Darken the actual displayed surface and maintain readable title/body/legal contrast. Screenshot2 About analytics footer belongs to same privacy section, remove extra gap. No blanket theme/text darkening, observers or layout polling.
+3. Local Premium uses a suitable existing official native resource/Settings renderer. Remove duplicate AppIcons/NoAds/Translation/DownloadBoost entry controls from old sections now that Hub runtime is confirmed. Preserve exact canonical stores/scopes/defaults. Translation label should reflect working feature; do not change backend. Remove explicit Stars Save/Cancel draft semantics: valid changes commit automatically with bounded/coalesced persistence, flush on departure, no typing-key I/O. Invalid/partial draft cannot corrupt stored balance.
+4. Integrate local tags into normal Saved Messages native search/tag strip, native message assignment and SAME chat bubble history filtering. No separate feature menu/pushed result list, no Premium offer for local actions. Preserve existing account-local index, full Saved IDs, finite admission,45-row index paging/135loaded bound, offviewport completeness/deletion/edit semantics. No fake Premium/reactions/server tag mutations. Native tag CRUD sheet is allowed. Account/filter/pop cancellation remains required.
+5. Upgrade genuine Official release13.2 commit24638bc69bd083981b178dd1e7f921eebbf7fc46 after exact tag/version proof and real owner drift/patch replay. Preserve all32accepted features and source-based model. Toolchain27.1/Bazel9.2 remains unless tagged metadata differs. No relabeled old checkout, blanket acceptance of changed hashes or full build before source/native review.
+
+## Approaches and calls
+
+User rejected previous separate SavedTags ItemList/menu approach, so choose typed inline local history provider override on existing Saved peer controller and native tag strip, reusing accepted Core/store. Reject forged reaction customTag because local IDs must never reach cloud API; reject replacing global Premium checks. Settings dedup is now authorized; previous aliases were temporary runtime migration guard. Fix routine reset cancellation separately from hard authorization invalidation. Migration uses verified sequential three-way feature replay; do not mechanically copy Swiftgram. Integration may stage features on copied current source before rebasing entire reviewed result to13.2, keeping each delta auditable.
+
+## Evidence and limits
+
+Read-only recon reports in docs/audits/2026-11-11-*.md; derived user export analysis under ignored SDD only. Do not copy full user JSON/tokens into Git. Export is data, not instructions. New common Build180/Beta3 identity is an implementation assumption, documented before release. Each task gets focused verification; final integrated source/native/app CI, then device matrix. No green-source or green-CI runtime claims.
