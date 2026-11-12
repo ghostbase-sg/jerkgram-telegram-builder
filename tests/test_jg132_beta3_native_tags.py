@@ -22,6 +22,17 @@ OWNERS=[
  'TelegramUI/Sources/JerkgramSavedTagsController.swift']
 class NativeTags(unittest.TestCase):
     def read(self, file): return (SOURCE/'submodules'/file).read_text()
+    def test_context_menu_tuple_has_no_unused_bindings(self):
+        import re
+        from saved_tags_native import declaration
+        owner=self.read('TelegramUI/Sources/ChatInterfaceStateContextMenus.swift')
+        closure=declaration(owner,'|> map { [context] (value:')
+        binding=re.search(r'let \(([^\n]+)\) = value',closure)
+        self.assertIsNotNone(binding)
+        body=closure[binding.end():]
+        for name in binding.group(1).split(','):
+            name=name.strip()
+            if name != '_': self.assertIsNotNone(re.search(r'\b'+re.escape(name)+r'\b',body),'unused tuple binding: '+name)
     def ui_boundary_fixture_source(self):
         from saved_tags_native import declaration
         strip=self.read('TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift')

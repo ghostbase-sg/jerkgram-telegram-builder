@@ -1,6 +1,6 @@
 {
   "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
-  "patch_sha256": "34582ff63eb6bb24e556a8e98006ca251adfb06451a20dbe7e7fa91b6c398da6",
+  "patch_sha256": "5b960cb3272e6d6e5168dbc145024535508190afbb8cb509443430a605879d40",
   "owners": {
     "submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift": {
       "before_sha256": "e98cb1de80205c51c39916498551e869a1cf419049e69ffe2d7d78b801389715",
@@ -36,7 +36,7 @@
     },
     "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift": {
       "before_sha256": "b5d71dedb991cc00f4bfe9c46db6600f3cd97162144c99c6577e2640cb9fac1c",
-      "after_sha256": "1526d5a52debd6a3b32a8bc15615356eae936cb8fddc52e54e669c4c1ceea315"
+      "after_sha256": "50f5e15ca3e42e5ccbb1c6bbf0449e8d1a55f65cf26d73c2cccab7b140e8d70c"
     },
     "submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift": {
       "before_sha256": "0342daa6c3c962108ed91374f02aa38a8d26f247a55ad084fdbb1ead0ab27c96",

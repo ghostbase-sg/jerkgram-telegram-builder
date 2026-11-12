@@ -29,7 +29,7 @@
     "submodules/TelegramUI/Sources/ChatControllerNode.swift": "7f29482f3abfcfb2de61d799dca9971f5f1663df3b9f0aa80fe02da5a4866411",
     "submodules/TelegramUI/Sources/ChatControllerUpdateSearch.swift": "3eb562ce0b85c9aaca68817c6f2cfae62833eb9f3a40f06a9f93303956d1df4d",
     "submodules/TelegramUI/Sources/ChatHistoryListNode.swift": "9cfa962faa3bf70e0aff043e15ac87764bd2a3b357eaca4f8f11e413f08cfec6",
-    "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift": "1526d5a52debd6a3b32a8bc15615356eae936cb8fddc52e54e669c4c1ceea315",
+    "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift": "50f5e15ca3e42e5ccbb1c6bbf0449e8d1a55f65cf26d73c2cccab7b140e8d70c",
     "submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift": "c8dd46542de71cbb663720ef6963fd5bf3da6e73d0a5c46d84bc164949ff4ee1",
     "submodules/TelegramUI/Sources/ChatInterfaceTitlePanelNodes.swift": "15bd96a7fd1f62b27e34a2ba50bcbeec18abd9b8c2050307307f496d2d5d8ce7",
     "submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift": "2fdc145dac498020c64da64c944e484d2d8e07ecde435c880e304db37d18ac9c",
