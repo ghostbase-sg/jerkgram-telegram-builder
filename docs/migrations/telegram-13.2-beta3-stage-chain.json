@@ -24,11 +24,11 @@
     {
       "order": 34,
       "name": "beta3-settings-ui",
-      "patch_sha256": "84e88351f77e9041213e79a8c1394240fe6db4603f48964641a6861d3c1700f9",
+      "patch_sha256": "0ed3b0ad804998675e575199f4fb63b8a8be880190d0bf8218e81cd2bddff881",
       "owners": {
         "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
           "before_sha256": "6f9c38a74eee56e07c732d701fa69bf13a974048016240f02af9a729cb7588cf",
-          "after_sha256": "362448e9a2a878ae7061829c700a07db6b9a472c5bf88f02e921e1eee1d1ac6f"
+          "after_sha256": "ac85a79c2af33e95dbf0819e8b63a472b7b07cf45c4c4e6872958acc1fb2f131"
         },
         "submodules/SettingsUI/Sources/Jerkgram/JerkgramStarsEditorController.swift": {
           "before_sha256": "363c5211c231a1a60728fd761a01084e35a563ea2b1a926c81f201ab7d08ae66",

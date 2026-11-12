@@ -368,7 +368,7 @@
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": "b3c0f25f10a233b5730eff6d0e570711ce1a7c7d01eb444968cf34065d93c8c6",
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0",
     "submodules/SettingsUI/Sources/Search/SettingsSearchableItems.swift": "f350b7260d97c2224f712e28e03be5e1bfeaf4ef171335888709cd3abf8554b7",
-    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "362448e9a2a878ae7061829c700a07db6b9a472c5bf88f02e921e1eee1d1ac6f",
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "ac85a79c2af33e95dbf0819e8b63a472b7b07cf45c4c4e6872958acc1fb2f131",
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchive.swift": "1f1ffe4fe5aab205189ebb3303433c4571a014353ebca8439371a592e8e99786",
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": "dfac82d7280037f44147070e474ee05135d4a5d7f44f668094fb2f42537899ce",
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift": "852a35db8f0d0c85443f60d2465d066073b3767c7e476aa24d287f2f6cc8d633",

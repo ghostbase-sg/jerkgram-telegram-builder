@@ -9,6 +9,10 @@ sys.path.insert(0,str(ROOT/'tests'))
 from test_jg131_beta2_bot_codec import declaration
 
 class SettingsFollowup(unittest.TestCase):
+ def test_messages_page_has_no_orphaned_translation_locale_lookup(self):
+  settings=SETTINGS.read_text()
+  messages=settings[settings.index('    if page == .messages {'):settings.index('    if page == .',settings.index('    if page == .messages {')+1)]
+  self.assertNotIn('let isRussian =',messages)
  def test_controls_have_one_canonical_hub_owner(self):
   s=SETTINGS.read_text();s=s[s.index('    if page == .root {'):s.index('    if page == .debugResearch {',s.index('    if page == .root {'))]
   for expression in ['JerkgramSponsoredContentPolicy.preferenceKey','JerkgramTranslationSettings.preferenceKey','JerkgramAppIconAccess.preferenceKey','.downloadBoost(']:

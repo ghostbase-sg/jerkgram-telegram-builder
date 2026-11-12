@@ -14,7 +14,7 @@
   "parent_owners": {
     "Telegram/BUILD": "6f706c3d4ef997327a11ebd49a71d29e527df1daef7f02a7e5126607fb7dbd2d",
     "submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift": "74cdad7bea6b3e1a676f129339220f9cdc5cbfd00168d8a9061974297f66728d",
-    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "362448e9a2a878ae7061829c700a07db6b9a472c5bf88f02e921e1eee1d1ac6f",
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "ac85a79c2af33e95dbf0819e8b63a472b7b07cf45c4c4e6872958acc1fb2f131",
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramStarsEditorController.swift": "79ef6438230912da765a930766bdf55c7be8bc23864e72be2dd16feeff58d905",
     "submodules/TelegramCore/Sources/Account/Account.swift": "62e067d0bc3fbc424fbf2c2b8d121a27b33adca91980f380a3a420bfd1527217",
     "submodules/TelegramCore/Sources/ChatInputContent/ChatInputContentModel.swift": "2603a17b8f4fe579083717dc79a65241d524aeebc769d86137d2e6a083b1f5ef",
