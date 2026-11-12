@@ -22,6 +22,35 @@ OWNERS=[
  'TelegramUI/Sources/JerkgramSavedTagsController.swift']
 class NativeTags(unittest.TestCase):
     def read(self, file): return (SOURCE/'submodules'/file).read_text()
+    def ui_boundary_fixture_source(self):
+        from saved_tags_native import declaration
+        strip=self.read('TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift')
+        owner=self.read('TelegramUI/Sources/JerkgramSavedTagsController.swift')
+        fixture=(BUILDER/'tests/fixtures/beta3_native_tags/ui-boundaries.swift').read_text()
+        for marker,body in [
+            ('EXACT_LOCAL_BUTTON',declaration(strip,'private final class LocalButton: UIButton {')),
+            ('EXACT_LOCAL_TAGS_STORAGE',next(line.strip() for line in strip.splitlines() if 'private var localTags:' in line)),
+            ('EXACT_LOCAL_TAGS_ASSIGNMENT',next(line.strip() for line in strip.splitlines() if 'self.localTags = catalogue.tags' in line)),
+            ('EXACT_FACTORY',declaration(owner,'func jerkgramSavedTagsController(')),
+            ('EXACT_PRESENTATION',declaration(owner,'func jerkgramPresentSavedTagsController('))]:
+            fixture=fixture.replace('/* '+marker+' */',body)
+        return fixture
+    def test_ui_boundary_fixture_assembly(self):
+        source=self.ui_boundary_fixture_source()
+        self.assertNotIn('/* EXACT_',source)
+        display=(SOURCE/'submodules/Display/Source/Navigation/NavigationController.swift').read_text()
+        self.assertIn('open class NavigationController: UINavigationController, ContainableController',display)
+        window=(SOURCE/'submodules/Display/Source/WindowContent.swift').read_text()
+        self.assertIn('public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel',window)
+    def test_actual_ui_boundaries_with_ios_sdk(self):
+        if not shutil.which('xcrun'):
+            if os.environ.get('JG_BETA3_REQUIRE_NATIVE') == '1': self.fail('iOS SDK UI boundary check requires xcrun')
+            self.skipTest('actual UIKit typechecking requires macOS iOS SDK')
+        sdk=subprocess.check_output(['xcrun','--sdk','iphoneos','--show-sdk-path'],text=True).strip()
+        with tempfile.TemporaryDirectory(prefix='beta3-ui-boundaries-') as tmp:
+            path=Path(tmp)/'Boundaries.swift';path.write_text(self.ui_boundary_fixture_source())
+            result=subprocess.run(['xcrun','swiftc','-typecheck','-warnings-as-errors','-swift-version','5','-sdk',sdk,'-target','arm64-apple-ios15.0',str(path)],capture_output=True,text=True,timeout=90)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
     def test_accepted_index_provider_preserved(self):
         for owner in ['Postbox/Sources/LocalSavedTagsTable.swift', 'TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift', 'TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsOperations.swift']:
             self.assertEqual((SOURCE/'submodules'/owner).read_bytes(), (BEFORE/'submodules'/owner).read_bytes(),owner)

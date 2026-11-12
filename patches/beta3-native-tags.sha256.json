@@ -1,6 +1,6 @@
 {
   "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
-  "patch_sha256": "42d83ab39f787e5fd10a17d7b5c7e22556b91d6d347ef8dee066cce343278b8a",
+  "patch_sha256": "34582ff63eb6bb24e556a8e98006ca251adfb06451a20dbe7e7fa91b6c398da6",
   "owners": {
     "submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift": {
       "before_sha256": "e98cb1de80205c51c39916498551e869a1cf419049e69ffe2d7d78b801389715",
@@ -36,11 +36,11 @@
     },
     "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift": {
       "before_sha256": "b5d71dedb991cc00f4bfe9c46db6600f3cd97162144c99c6577e2640cb9fac1c",
-      "after_sha256": "3545dc06619077de15e1e92ae8f8038bfe678067459fd3362f78c03d4ab393b3"
+      "after_sha256": "1526d5a52debd6a3b32a8bc15615356eae936cb8fddc52e54e669c4c1ceea315"
     },
     "submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift": {
       "before_sha256": "0342daa6c3c962108ed91374f02aa38a8d26f247a55ad084fdbb1ead0ab27c96",
-      "after_sha256": "59245a4b40bee7dee9a304bf1c2e10dc6063061c0b195a80ccbaebed5c4f93dd"
+      "after_sha256": "c8dd46542de71cbb663720ef6963fd5bf3da6e73d0a5c46d84bc164949ff4ee1"
     },
     "submodules/TelegramUI/Sources/ChatInterfaceTitlePanelNodes.swift": {
       "before_sha256": "34bd4954c7afa0f6e8afddc1399a34789763e33c661328cf2a5e10592d59c9cd",
@@ -48,7 +48,7 @@
     },
     "submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift": {
       "before_sha256": "f0e781e47a34a8ecbd7f0739c95cc58375c8e2b8808c9939a7f7d0055842af0e",
-      "after_sha256": "853de3017f1ab131d787c1e1ed732db7b52ff8332cc9cb34898fcab73d5470f5"
+      "after_sha256": "2fdc145dac498020c64da64c944e484d2d8e07ecde435c880e304db37d18ac9c"
     },
     "submodules/TelegramUI/Sources/ChatTagSearchInputPanelNode.swift": {
       "before_sha256": "863e6fce9f80da836030831698cef2c3e216194ee95b961dba546ebc142a142b",
@@ -56,7 +56,7 @@
     },
     "submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift": {
       "before_sha256": "4e385ef57684034fb80a82bd7e95a4008aebaacb3926ebf81116ef002459c1ae",
-      "after_sha256": "bc71dd2d4803179068909f1c5a94b6e831ca6b3b830a1ec3aa6617942b0870b8"
+      "after_sha256": "d8ef42917dea12db31e7ffaa9ae0586c932e04f4cae98cb0868d320aee92ee58"
     }
   },
   "parent_owners": {

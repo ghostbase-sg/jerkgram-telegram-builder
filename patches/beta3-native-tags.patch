@@ -411,12 +411,22 @@
                      self.chatHistoryLocationValue = ChatHistoryLocationInput(content: locationInput, id: self.takeNextHistoryLocationId())
 --- a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
 +++ b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
-@@ -1003,7 +1003,7 @@
+@@ -963,7 +963,8 @@
+     
+     return dataSignal
+     |> deliverOnMainQueue
+-    |> map { [context] data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer -> ContextController.Items in
++    |> map { [context] (value: (MessageContextMenuData, [EngineMessage.Id: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?, EnginePeer?)) -> ContextController.Items in
++        let (data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer) = value
+         let isPremium = accountPeer?.isPremium ?? false
+ 
+         var actions: [ContextMenuItem] = []
+@@ -1003,7 +1004,7 @@
                  ?? (selectAll ? messages.map { $0.id } : [message.id])
              actions.append(.action(ContextMenuActionItem(text: JerkgramSavedTagsStrings(chatPresentationInterfaceState.strings).title, icon: { _ in nil }, action: { controller, _ in
                  controller?.dismiss(completion: {
 -                    controllerInteraction.navigationController()?.pushViewController(jerkgramSavedTagsController(context: context, selectedMessageIds: localTagIds))
-+                    controllerInteraction.navigationController()?.present(jerkgramSavedTagsController(context: context, selectedMessageIds: localTagIds), in: .window(.root))
++                    jerkgramPresentSavedTagsController(context: context, selectedMessageIds: localTagIds)
                  })
              })))
          }
@@ -427,7 +437,7 @@
      if state.chatLocation.peerId == context.account.peerId, state.subject != .scheduledMessages {
          panel.localTagsAction = { ids in
 -            interaction?.navigationController()?.pushViewController(jerkgramSavedTagsController(context: context, selectedMessageIds: ids))
-+            interaction?.navigationController()?.present(jerkgramSavedTagsController(context: context, selectedMessageIds: ids), in: .window(.root))
++            jerkgramPresentSavedTagsController(context: context, selectedMessageIds: ids)
          }
      } else {
          panel.localTagsAction = nil
@@ -482,7 +492,7 @@
  final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode, ASScrollViewDelegate {
      private struct Params: Equatable {
          var width: CGFloat
-@@ -443,12 +464,38 @@
+@@ -443,12 +464,41 @@
      private var itemViews: [MessageReaction.Reaction: ItemView] = [:]
      private var promoView: PromoView?
      
@@ -495,9 +505,12 @@
 +            self.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.held(_:))))
 +            self.titleLabel?.font = Font.medium(14.0)
 +            self.layer.cornerRadius = 14.0
-+            self.contentEdgeInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
 +        }
 +        required init?(coder: NSCoder) { preconditionFailure() }
++        override func sizeThatFits(_ size: CGSize) -> CGSize {
++            let fitted = super.sizeThatFits(size)
++            return CGSize(width: fitted.width + 20.0, height: fitted.height + 8.0)
++        }
 +        @objc private func pressed() { self.action?() }
 +        @objc private func held(_ gesture: UILongPressGestureRecognizer) { if gesture.state == .began { self.longAction?() } }
 +    }
@@ -505,7 +518,7 @@
 +    private var localService: LocalSavedTagsService?
 +    private let localCatalogue = MetaDisposable()
 +    private let localAccounts = MetaDisposable()
-+    private var localTags: [LocalSavedTag] = []
++    private var localTags: [(id: String, name: String, count: Int32)] = []
 +    private var localRevision: Int64?
 +    private var localRenderGate = JerkgramLocalSavedTagsRenderGate()
 +    private var localButtons: [LocalButton] = []
@@ -521,7 +534,7 @@
          
          self.scrollView = ScrollView(frame: CGRect())
          
-@@ -472,6 +519,29 @@
+@@ -472,6 +522,29 @@
          
          self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
          
@@ -531,7 +544,7 @@
 +            self.localCatalogue.set((service.catalogueUpdates() |> deliverOnMainQueue).start(next: { [weak self] result in
 +                guard let self, self.localService != nil else { return }
 +                if case let .success(catalogue) = result {
-+                    self.localTags = catalogue.tags
++                    self.localTags = catalogue.tags.map { (id: $0.id, name: $0.name, count: $0.count) }
 +                    self.localRevision = catalogue.revision
 +                    self.update(transition: .immediate)
 +                }
@@ -551,7 +564,7 @@
          let tagsAndFiles: Signal<([MessageReaction.Reaction: Int], [Int64: TelegramMediaFile]), NoError> = context.engine.data.subscribe(
              TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: chatLocation.threadId)
          )
-@@ -542,6 +612,7 @@
+@@ -542,6 +615,7 @@
      
      deinit {
          self.itemsDisposable?.dispose()
@@ -559,7 +572,7 @@
      }
      
      private func update(transition: ContainedViewLayoutTransition) {
-@@ -566,7 +637,68 @@
+@@ -566,7 +640,68 @@
          return self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, transition: transition, interfaceState: (chatController as! ChatControllerImpl).presentationInterfaceState)
      }
      
@@ -590,8 +603,8 @@
 +            self.scrollView.addSubview(button); self.localButtons.append(button)
 +        }
 +        add(strings.text("＋ Tags", "＋ Теги"), action: { [weak self] in
-+            guard let self, self.localService != nil, let controller = self.interfaceInteraction?.chatController() else { return }
-+            controller.present(jerkgramSavedTagsController(context: self.context), in: .window(.root))
++            guard let self, self.localService != nil, self.interfaceInteraction?.chatController() != nil else { return }
++            jerkgramPresentSavedTagsController(context: self.context)
 +        })
 +        for tag in self.localTags {
 +            add("\(tag.name) · \(tag.count)", selected: selected == tag.id, action: { [weak self] in
@@ -600,8 +613,8 @@
 +                    return filter?.localSavedTagId == tag.id ? nil : ChatPresentationInterfaceState.HistoryFilter(localSavedTagId: tag.id)
 +                }
 +            }, longAction: { [weak self] in
-+                guard let self, self.localService != nil, let controller = self.interfaceInteraction?.chatController() else { return }
-+                controller.present(jerkgramSavedTagsController(context: self.context), in: .window(.root))
++                guard let self, self.localService != nil, self.interfaceInteraction?.chatController() != nil else { return }
++                jerkgramPresentSavedTagsController(context: self.context)
 +            })
 +        }
 +        // Explicit cloud domain retains the official entitlement behavior.
@@ -628,7 +641,7 @@
          let panelHeight: CGFloat = 40.0
          
          let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0)
-@@ -574,6 +706,17 @@
+@@ -574,6 +709,17 @@
          
          var contentSize = CGSize(width: 0.0, height: panelHeight)
          contentSize.width += containerInsets.left
@@ -1011,17 +1024,23 @@
              (ItemListNodeState(presentationData: ItemListPresentationData(presentation), entries: entries, style: .blocks, animateChanges: false), self))
      }
  }
-@@ -490,5 +319,197 @@
+@@ -489,6 +318,202 @@
+     deinit { self.session.stop() }
  }
  
- func jerkgramSavedTagsController(context: AccountContext, selectedMessageIds: [MessageId] = []) -> ViewController {
+-func jerkgramSavedTagsController(context: AccountContext, selectedMessageIds: [MessageId] = []) -> ViewController {
 -    return JerkgramSavedTagsController(context: context, selectedIds: selectedMessageIds)
 -}
++func jerkgramSavedTagsController(context: AccountContext, selectedMessageIds: [MessageId] = []) -> NavigationController {
 +    let controller = JerkgramSavedTagsController(context: context, selectedIds: selectedMessageIds)
 +    let theme = context.sharedContext.currentPresentationData.with { $0.theme }
 +    let navigation = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: theme))
 +    navigation.setViewControllers([controller], animated: false)
 +    return navigation
++}
++
++func jerkgramPresentSavedTagsController(context: AccountContext, selectedMessageIds: [MessageId] = []) {
++    context.sharedContext.mainWindow?.present(jerkgramSavedTagsController(context: context, selectedMessageIds: selectedMessageIds), on: .root)
 +}
 +
 +// All delayed UI clears retain both typed identity and the controller request
