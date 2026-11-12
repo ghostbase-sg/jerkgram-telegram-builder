@@ -127,6 +127,17 @@ def baseline_source_view(source):
 
 def is_present(source):
     """A final-stage fragment routes corruption through this chain's verifier."""
+    # Some removals restore genuine upstream bytes, which also occur before
+    # the old entry point is introduced. An exact baseline prefix wins over
+    # that coincidental individual owner match; mixed inputs still fail closed.
+    from jg132_baseline import boundary
+    try:
+        boundary(source)
+    except RuntimeError as error:
+        if str(error) != 'Mixed/corrupt132baseline boundary; refusing source':
+            raise
+    else:
+        return False
     values = manifest(STAGES[-1])
     actual = _actual(source, values['owners'])
     return any(row['after_sha256'] is not None and actual[name] == row['after_sha256'] for name, row in values['owners'].items())
