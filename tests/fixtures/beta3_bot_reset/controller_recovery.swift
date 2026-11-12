@@ -1,6 +1,13 @@
 // Exact production controller/storage reject callbacks and terminal writes from
 // the predecessor after preparation persisted a recovered generation.
 do {
+    let h = Host()
+    h.transaction.state = AuthorizedAccountState(peerId: account, isTestingEnvironment: false,
+        state: .init(pts: 51, qts: 3, date: 17, seq: 2))
+    check(botBridgeObservedLive(transaction: h.transaction) == BotBridgeCursor(pts: 51, qts: 3, date: 17, seq: 2),
+        "observed live cursor uses the account state")
+}
+do {
     let h = Host(); h.start(); h.queue.drain()
     var old = h.progress; old.terminal = .softReset
     h.transaction.progress = PreferencesEntry(old)

@@ -72,8 +72,26 @@ def diagnostics_main():
 def controller_main():
     # Reuse established boundary facades and tests, extracting current owners.
     source = (CORE / 'State/JerkgramBotBridgeHistory.swift').read_text()
+    account_state = (CORE / 'SyncCore/SyncCore_AuthorizedAccountState.swift').read_text()
+    if 'public let state: State?' not in account_state:
+        raise AssertionError('Current authorized account state no longer exposes the live cursor')
     old = ROOT / 'tests/fixtures/botbridge1'
     shared = (old / 'storage.swift').read_text().split('/* REAL_STORAGE */')[0].replace('/* REAL_POLICY */', codec.policy(source))
+    # The older storage fixture predates live-state observation. Extend only the
+    # assembled Beta3 boundary with the same four cursor fields as 13.2.
+    prior = 'struct AuthorizedAccountState { let peerId: PeerId; let isTestingEnvironment: Bool }'
+    current = '''struct AuthorizedAccountState {
+    struct State { let pts: Int32; let qts: Int32; let date: Int32; let seq: Int32 }
+    let peerId: PeerId
+    let isTestingEnvironment: Bool
+    let state: State?
+    init(peerId: PeerId, isTestingEnvironment: Bool, state: State? = nil) {
+        self.peerId = peerId; self.isTestingEnvironment = isTestingEnvironment; self.state = state
+    }
+}'''
+    if shared.count(prior) != 1:
+        raise AssertionError('Historical storage boundary changed')
+    shared = shared.replace(prior, current, 1)
     anchors = ['struct BotBridgeHistoryEvent', 'private func botBridgeValidatedAccount(',
         'private func botBridgeReadProgress(', 'func jerkgramPrepareBotBridgeHistory(',
         'private func botBridgeWriteProgress(', 'func botBridgeObservedLive(', 'private func botBridgeCursor(',
