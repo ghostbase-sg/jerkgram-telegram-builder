@@ -3,8 +3,18 @@ from pathlib import Path
 import importlib.util
 import tempfile
 import unittest
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
+
+
+def apply_fixture(stage, source):
+    from jg132_baseline import enabled
+    if enabled():
+        from jg132_source_fixtures import apply_exact_delta_fixture
+        return apply_exact_delta_fixture(stage, source)
+    return stage.apply_performance_followup(source)
 
 class PerformanceFollowupStageTests(unittest.TestCase):
     def test_atomic_apply_restore_and_refuse_unknown_owners(self):
@@ -24,15 +34,19 @@ class PerformanceFollowupStageTests(unittest.TestCase):
             bad = list(parents)[-1]
             (target / bad).write_bytes(parents[bad] + b'\n// unknown input\n')
             before = {n: (target/n).read_bytes() for n in parents}
-            with self.assertRaises(RuntimeError): stage.apply_performance_followup(target)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, target)
             self.assertEqual(before, {n: (target/n).read_bytes() for n in parents})
             (target / bad).write_bytes(parents[bad])
-            stage.apply_performance_followup(target)
+            # Owner-only fixtures are not genuine upstream checkouts.
+            from jg132_baseline import enabled
+            if enabled():
+                with self.assertRaises(RuntimeError): stage.apply_performance_followup(target)
+            apply_fixture(stage, target)
             stage.verify_performance_followup(target)
             for n, data in parents.items():
                 self.assertEqual(stage.parent_bytes(n, (target/n).read_bytes()), data)
                 self.assertEqual((target/n).read_bytes(), (source/n).read_bytes())
-            with self.assertRaises(RuntimeError): stage.apply_performance_followup(target)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, target)
             (target / bad).write_bytes((target / bad).read_bytes() + b'\n// unknown output\n')
             with self.assertRaises(RuntimeError): stage.verify_performance_followup(target)
 
