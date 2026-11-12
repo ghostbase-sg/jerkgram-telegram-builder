@@ -76,7 +76,7 @@ def controller_main():
     shared = (old / 'storage.swift').read_text().split('/* REAL_STORAGE */')[0].replace('/* REAL_POLICY */', codec.policy(source))
     anchors = ['struct BotBridgeHistoryEvent', 'private func botBridgeValidatedAccount(',
         'private func botBridgeReadProgress(', 'func jerkgramPrepareBotBridgeHistory(',
-        'private func botBridgeWriteProgress(', 'private func botBridgeCursor(',
+        'private func botBridgeWriteProgress(', 'func botBridgeObservedLive(', 'private func botBridgeCursor(',
         'private struct BotBridgeHistoryPage', 'private func botBridgePage(',
         'private func botBridgeReplyPeerIds(', 'private func importBotBridgeHistoryPage(',
         'private final class BotBridgePageLease', 'final class BotBridgeHistoryController']
@@ -135,7 +135,9 @@ class ResetRepair(unittest.TestCase):
             self.assertIn('self.operationDisposable.set(nil)', manager)
         self.assertIn('let _ = (signal |> deliverOn(self.queue)).start(completed:', manager)
         self.assertNotIn('/* REAL_', diagnostics_main())
-        self.assertNotIn('/* REAL_', controller_main())
+        controller = controller_main()
+        self.assertNotIn('/* REAL_', controller)
+        self.assertIn(declaration((CORE / 'State/JerkgramBotBridgeHistory.swift').read_text(), 'func botBridgeObservedLive('), controller)
 
     def test_current_target_codec_inputs_are_exact(self):
         evidence = json.loads((FIX / 'PROVENANCE.json').read_text())

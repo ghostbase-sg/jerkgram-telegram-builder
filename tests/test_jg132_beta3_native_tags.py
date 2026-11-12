@@ -116,6 +116,7 @@ class NativeTags(unittest.TestCase):
         self.assertNotIn('/* EXACT_',source)
         from saved_tags_native import declaration
         self.assertIn(declaration(self.read('TelegramUI/Sources/JerkgramSavedTagsController.swift'),'final class JerkgramLocalSavedTagsHistory {'),source)
+        self.assertIn('self.observedMessages = messages.filter { ids.contains($0.key) }.mapValues { $0._asMessage() }',source)
         self.assertIn('ordinary unchanged-metadata caption edit stayed stale',source)
         self.assertIn('unavailable older page retry jumped to newest/nil cursor',source)
     def test_actual_full_coordinator_native(self):
@@ -135,7 +136,7 @@ class NativeTags(unittest.TestCase):
             # production coordinator; the same fixture must reject each one.
             original=self.coordinator_fixture_source()
             mutations=[
-                ('stale-edit', 'self.observedMessages = view.messages.filter { ids.contains($0.key) }', '// regression: retained message snapshots never refresh', 'ordinary unchanged-metadata caption edit stayed stale'),
+                ('stale-edit', 'self.observedMessages = messages.filter { ids.contains($0.key) }.mapValues { $0._asMessage() }', '// regression: retained message snapshots never refresh', 'ordinary unchanged-metadata caption edit stayed stale'),
                 ('newest-retry', 'let request = self.failedRequest ?? self.unavailableRequest ?? self.lastRequest', 'let request = PageRequest(cursor: nil, direction: .earlier)', 'unavailable older page retry jumped to newest/nil cursor')]
             for name,before,after,expected in mutations:
                 self.assertIn(before,original)
