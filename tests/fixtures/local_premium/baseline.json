@@ -15,5 +15,14 @@
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift": "fc71c063661ef363716332cf69561612bde4cdc34e719c956366252d38b84585",
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": "dfac82d7280037f44147070e474ee05135d4a5d7f44f668094fb2f42537899ce",
     "submodules/TelegramUI/Sources/SharedAccountContext.swift": "18fb6c66d7c073c75e0b9f356d015decb3e27e31634a3fc90cc4827d4bd4013c"
+  },
+  "ported_132_unchanged_owners": {
+    "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0",
+    "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": "b3c0f25f10a233b5730eff6d0e570711ce1a7c7d01eb444968cf34065d93c8c6",
+    "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f",
+    "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b",
+    "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift": "cf985904dcd2d687bc42fb22701296bc30e7cad4483b4b573beec8a93998dbaf",
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": "dfac82d7280037f44147070e474ee05135d4a5d7f44f668094fb2f42537899ce",
+    "submodules/TelegramUI/Sources/SharedAccountContext.swift": "1f4c01e1ffbdb0d2fd5f753c7ab392880abd3406e3b2b095133cf84e5494bd7a"
   }
 }

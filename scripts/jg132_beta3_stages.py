@@ -13,7 +13,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM = '24638bc69bd083981b178dd1e7f921eebbf7fc46'
-STAGES = ('beta3-bot-recovery', 'beta3-settings-ui', 'beta3-native-tags')
+STAGES = ('beta3-bot-recovery', 'beta3-settings-ui', 'beta3-native-tags', 'beta3-performance-wave2a1')
 
 
 def digest(data):

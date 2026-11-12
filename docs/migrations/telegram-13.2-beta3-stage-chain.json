@@ -110,6 +110,21 @@
           "after_sha256": "bc71dd2d4803179068909f1c5a94b6e831ca6b3b830a1ec3aa6617942b0870b8"
         }
       }
+    },
+    {
+      "order": 36,
+      "name": "beta3-performance-wave2a1",
+      "patch_sha256": "6f097488279d9ca53b50b36c639ac7f23aebf0f9bbbb92652efcc0afbc497926",
+      "owners": {
+        "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift": {
+          "before_sha256": "2f4c9fe63a12c317c26cfbf4752456bf9b4a380815e9c55bd63dae6543349b89",
+          "after_sha256": "814d41ade1ad68a87cd463b8e4b53f8aa07e64b6ee112918a71831518e8c5fc9"
+        },
+        "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift": {
+          "before_sha256": "98ea6e77026408c7d0535abdd536615aca2f72d9e1a8a22c121e8dfb7d267423",
+          "after_sha256": "e561fc6727d01a0cde4745bd3e283958baa8df7c12fd049397d0f92ed81a808e"
+        }
+      }
     }
   ],
   "selected_inputs": 435,

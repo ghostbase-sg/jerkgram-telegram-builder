@@ -3,6 +3,15 @@ from pathlib import Path
 import json,os,subprocess,sys,tempfile,unittest
 ROOT=Path(__file__).resolve().parents[1]
 class Integration(unittest.TestCase):
+ def test_four_stage_ledger_includes_performance_port(self):
+  sys.path.insert(0,str(ROOT/'scripts'))
+  import jg132_beta3_stages as stages
+  ledger=json.loads((ROOT/'docs/migrations/telegram-13.2-beta3-stage-chain.json').read_text())
+  self.assertEqual([row['name'] for row in ledger['followups']],list(stages.STAGES))
+  self.assertEqual([row['order'] for row in ledger['followups']],[33,34,35,36])
+  for row in ledger['followups']:
+   actual=stages.manifest(row['name'])
+   self.assertEqual((row['patch_sha256'],row['owners']),(actual['patch_sha256'],actual['owners']))
  def test_earlier_native_owner_does_not_mark_baseline_as_beta3(self):
   sys.path.insert(0,str(ROOT/'scripts'))
   import jg132_baseline as baseline
@@ -15,7 +24,7 @@ class Integration(unittest.TestCase):
      # Removing the old custom entry restores one genuine native owner to
      # upstream bytes, so that file already equals Beta3 at an early prefix.
      if order==18:
-      m=stages.manifest(stages.STAGES[-1])
+      m=stages.manifest('beta3-native-tags')
       self.assertTrue(any(stages.digest((prefix/n).read_bytes())==row['after_sha256'] for n,row in m['owners'].items() if (prefix/n).is_file()))
      self.assertFalse(stages.is_present(prefix))
  def test_common_identity_and_final_gate_order(self):

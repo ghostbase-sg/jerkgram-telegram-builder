@@ -1,0 +1,40 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "6f097488279d9ca53b50b36c639ac7f23aebf0f9bbbb92652efcc0afbc497926",
+  "owners": {
+    "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift": {
+      "before_sha256": "2f4c9fe63a12c317c26cfbf4752456bf9b4a380815e9c55bd63dae6543349b89",
+      "after_sha256": "814d41ade1ad68a87cd463b8e4b53f8aa07e64b6ee112918a71831518e8c5fc9"
+    },
+    "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift": {
+      "before_sha256": "98ea6e77026408c7d0535abdd536615aca2f72d9e1a8a22c121e8dfb7d267423",
+      "after_sha256": "e561fc6727d01a0cde4745bd3e283958baa8df7c12fd049397d0f92ed81a808e"
+    }
+  },
+  "parent_owners": {
+    "Telegram/BUILD": "6f706c3d4ef997327a11ebd49a71d29e527df1daef7f02a7e5126607fb7dbd2d",
+    "submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift": "74cdad7bea6b3e1a676f129339220f9cdc5cbfd00168d8a9061974297f66728d",
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": "362448e9a2a878ae7061829c700a07db6b9a472c5bf88f02e921e1eee1d1ac6f",
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramStarsEditorController.swift": "79ef6438230912da765a930766bdf55c7be8bc23864e72be2dd16feeff58d905",
+    "submodules/TelegramCore/Sources/Account/Account.swift": "62e067d0bc3fbc424fbf2c2b8d121a27b33adca91980f380a3a420bfd1527217",
+    "submodules/TelegramCore/Sources/ChatInputContent/ChatInputContentModel.swift": "2603a17b8f4fe579083717dc79a65241d524aeebc769d86137d2e6a083b1f5ef",
+    "submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift": "e9129ed44bd2e4910ad793c6173e761b480d027df3edfa06a100cf53b52923db",
+    "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": "f010394ae2479faa7f28453057efcabaf80b40b23784bca569dad8eaa2c2226a",
+    "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": "0be50eeba6e27aa909e4ae8e4f2c4409d86e53efbc56ab2722fc21948e898aa3",
+    "submodules/TelegramUI/Components/Wallet/WalletScreen/Sources/WalletScreen.swift": "d24f9f18dda6894b0f6177a7d0e072c2a55df94654345130d15438948f6cef00",
+    "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift": "63f12e98692b291088a46ce3ff2887c78b56809f299ce16b4290ba949a45323e",
+    "submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift": "ad70c0f7b77d0fb24a93a41c402a09cbdabad55b6a205b93764aac382480ad87",
+    "submodules/TelegramUI/Sources/Chat/UpdateChatPresentationInterfaceState.swift": "613d7330bc7317ccf0ad59e88db5aa596b89f5c9a7b85bc14f217bfdd18e9646",
+    "submodules/TelegramUI/Sources/ChatController.swift": "dd23213ae0672f4ff7a7f77e80c7bd716d1a392acd61ec942a71bd77d9b18442",
+    "submodules/TelegramUI/Sources/ChatControllerNode.swift": "7f29482f3abfcfb2de61d799dca9971f5f1663df3b9f0aa80fe02da5a4866411",
+    "submodules/TelegramUI/Sources/ChatControllerUpdateSearch.swift": "3eb562ce0b85c9aaca68817c6f2cfae62833eb9f3a40f06a9f93303956d1df4d",
+    "submodules/TelegramUI/Sources/ChatHistoryListNode.swift": "9cfa962faa3bf70e0aff043e15ac87764bd2a3b357eaca4f8f11e413f08cfec6",
+    "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift": "3545dc06619077de15e1e92ae8f8038bfe678067459fd3362f78c03d4ab393b3",
+    "submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift": "59245a4b40bee7dee9a304bf1c2e10dc6063061c0b195a80ccbaebed5c4f93dd",
+    "submodules/TelegramUI/Sources/ChatInterfaceTitlePanelNodes.swift": "15bd96a7fd1f62b27e34a2ba50bcbeec18abd9b8c2050307307f496d2d5d8ce7",
+    "submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift": "853de3017f1ab131d787c1e1ed732db7b52ff8332cc9cb34898fcab73d5470f5",
+    "submodules/TelegramUI/Sources/ChatTagSearchInputPanelNode.swift": "ab7c92cfdeebaf8e93fdf550238e512eb4c099a3d3c1885e0a11f038d6aafdbe",
+    "submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift": "bc71dd2d4803179068909f1c5a94b6e831ca6b3b830a1ec3aa6617942b0870b8",
+    "submodules/TextFormat/Sources/ChatInputContentConversion.swift": "1aa9a94c71eace86c4162b48c59a48afb3b2ae777a85ef0d6c8a035052e14333"
+  }
+}

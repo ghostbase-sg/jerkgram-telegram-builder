@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TREE = Path(os.environ.get('JG_LOCAL_PREMIUM_SOURCE', ROOT.parent / 'jerkgram-next/beta2/local-premium/source'))
 FIXTURES = ROOT / 'tests/fixtures/local_premium'
 BASELINE = json.loads((FIXTURES / 'baseline.json').read_text())
+UPSTREAM_132 = '24638bc69bd083981b178dd1e7f921eebbf7fc46'
 SETTINGS = 'submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift'
 STRINGS = 'submodules/TelegramPresentationData/Sources/JerkgramStrings.swift'
 
@@ -94,7 +95,12 @@ class LocalPremiumContracts(unittest.TestCase):
             self.assertEqual(digest(body(self.source, declaration)), expected, declaration)
         setters = self.source.split('updateBool: { key, value in', 1)[1].split('}, openPage:', 1)[0]
         self.assertEqual(digest(setters), BASELINE['setters'])
-        for owner, expected in BASELINE['unchanged_owners'].items():
+        try:
+            source_head = subprocess.check_output(['git', '-C', str(TREE), 'rev-parse', 'HEAD'], text=True, stderr=subprocess.DEVNULL).strip()
+        except subprocess.CalledProcessError:
+            source_head = os.environ.get('JG_LOCAL_PREMIUM_UPSTREAM', '')
+        owners = BASELINE['ported_132_unchanged_owners'] if source_head == UPSTREAM_132 else BASELINE['unchanged_owners']
+        for owner, expected in owners.items():
             self.assertEqual(hashlib.sha256((TREE / owner).read_bytes()).hexdigest(), expected, owner)
 
     def test_ru_en_and_translation_status_in_both_entry_points(self):

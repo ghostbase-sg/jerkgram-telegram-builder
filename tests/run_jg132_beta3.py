@@ -27,7 +27,7 @@ def main():
         env = dict(os.environ, JG_BETA3_SOURCE=str(source), JG_BETA3_BEFORE=str(before), JG13_SOURCE=str(source), JG_BETA3_BOT_CORE=str(source / 'submodules/TelegramCore/Sources'))
         if required:
             env['JG_BETA3_REQUIRE_NATIVE'] = '1'
-        for name in ('test_jg132_beta3_stages.py', 'test_jg132_beta3_integration.py', 'test_jg132_backend_fixture.py', 'test_jg132_bot_reset_recovery.py', 'test_jg132_settings_followup.py', 'test_jg132_wallet_surface.py', 'test_jg132_beta3_native_tags.py'):
+        for name in ('test_jg132_beta3_stages.py', 'test_jg132_beta3_integration.py', 'test_jg132_backend_fixture.py', 'test_jg132_bot_reset_recovery.py', 'test_jg132_settings_followup.py', 'test_jg132_wallet_surface.py', 'test_jg132_beta3_native_tags.py', 'test_jg132_beta3_performance.py'):
             path = ROOT / 'tests' / name
             if not path.is_file():
                 failures.append('required suite absent: ' + name)
