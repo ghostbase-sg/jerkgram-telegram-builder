@@ -1,0 +1,330 @@
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -814,8 +814,8 @@
+     let background: UInt32
+ 
+     switch name {
+-    case "Item List/Icons/Premium":
+-        return PresentationResourcesSettings.premium
++    case "Item List/Icons/Gram":
++        return PresentationResourcesSettings.ton
+     case "Jerkgram/Settings/Airplane":
+         background = 0x53606A
+     case "Chat/Context Menu/Eye":
+@@ -2137,11 +2137,9 @@
+             .toggle(0, 4, GhostBaseKey.showRegistration, strings.registrationDate, state.showRegistration),
+             .header(1, strings.basicFunctions),
+             .valueDisclosure(1, 50, strings.starsBalance, strings.starsOverrideSummary(state.localStarsEnabled, balance), nil, .stars),
+-            .toggle(1, 51, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
+-            .info(1, strings.removeSponsoredHint),
+             .header(2, strings.backup),
+             .disclosure(2, 1, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup),
+-            .disclosure(2, 2, strings.localPremium, "Item List/Icons/Premium", .localPremium)
++            .disclosure(2, 2, strings.localPremium, "Item List/Icons/Gram", .localPremium)
+         ]
+     }
+ 
+@@ -2154,7 +2152,7 @@
+             .info(1, strings.downloadBoostHint),
+             .header(2, strings.messages),
+             .toggle(2, 1, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
+-            .toggle(2, 2, JerkgramTranslationSettings.preferenceKey, strings.translationNeedsWork, state.enhancedTranslation),
++            .toggle(2, 2, JerkgramTranslationSettings.preferenceKey, strings.localTranslation, state.enhancedTranslation),
+             .info(2, strings.localPremiumScopeHint)
+         ]
+     }
+@@ -2248,9 +2246,6 @@
+             .header(5, strings.blockedUsers),
+             .toggle(5, 1, GhostBaseKey.hideBlockedMessages, strings.hideBlockedMessages, state.hideBlockedMessages),
+             .toggle(5, 2, GhostBaseKey.hideBlockedReactions, strings.hideBlockedReactions, state.hideBlockedReactions),
+-            .header(6, isRussian ? "Перевод" : "Translation"),
+-            .toggle(6, 1, JerkgramTranslationSettings.preferenceKey, strings.translationNeedsWork, state.enhancedTranslation),
+-            .info(6, isRussian ? "Использует текстовый перевод Telegram и системный перевод при необходимости. Не предоставляет Telegram Premium." : "Uses Telegram text translation with system translation when needed. Does not provide Telegram Premium."),
+         ]
+     }
+ 
+@@ -2276,8 +2271,6 @@
+             .toggle(0, 2, GhostBaseKey.oneTimeScreenRecording, strings.oneTimeScreenRecording, state.oneTimeScreenRecording),
+             .toggle(0, 3, GhostBaseKey.oneTimeSave, strings.oneTimeMedia, state.oneTimeSave),
+             .toggle(0, 4, GhostBaseKey.storySave, strings.storySave, state.storySave),
+-            .downloadBoost(0, 5, state.downloadBoost),
+-            .info(0, strings.downloadBoostHint)
+         ]
+     }
+ 
+@@ -2300,7 +2293,6 @@
+                 strings.showRamUnderClock,
+                 state.showRamUnderClock
+             ),
+-            .toggle(1, 8, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
+             .info(1, strings.hidePhoneHint)
+         ]
+     }
+@@ -2327,7 +2319,7 @@
+             .aboutValue(1, 3, strings.telegramBase, JerkgramReleaseIdentity.telegramBase),
+             .header(2, strings.privacy),
+             .telemetryToggle(2, 1, strings.anonymousAnalytics, jerkgramTelemetryEnabled()),
+-            .info(3, strings.anonymousAnalyticsDescription),
++            .info(2, strings.anonymousAnalyticsDescription),
+         ]
+     }
+ 
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramStarsEditorController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramStarsEditorController.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import Dispatch
+ import Display
+ import SwiftSignalKit
+ import TelegramPresentationData
+@@ -94,18 +95,74 @@
+ private func jerkgramIsValidStarsDraft(_ text: String) -> Bool {
+     let value = text.replacingOccurrences(of: ",", with: ".")
+     guard value.count <= 20, value.filter({ $0 == "." }).count <= 1 else { return false }
+-    return value.allSatisfy { $0.isNumber || $0 == "." || $0 == " " || $0 == "\u{00a0}" }
++    return value.allSatisfy { ("0"..."9").contains(String($0)) || $0 == "." || $0 == " " || $0 == "\u{00a0}" }
+ }
+ 
+ private func jerkgramSanitizeStarsDraft(_ text: String) -> String {
+-    let compact = text.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: ".")
+-    guard jerkgramIsValidStarsDraft(compact) else { return "0" }
+-    return compact.isEmpty ? "0" : compact
++    return text.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: ".")
++}
++
++private func jerkgramSavedStarsAmount(_ text: String) -> String? {
++    let value = text.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: ".")
++    guard !value.isEmpty, value.count <= 20, !value.hasSuffix("."),
++        value.allSatisfy({ ("0"..."9").contains(String($0)) || $0 == "." }) else { return nil }
++    let parts = value.split(separator: ".", omittingEmptySubsequences: false)
++    guard parts.count <= 2, let whole = Int64(parts[0].isEmpty ? "0" : String(parts[0])), whole >= 0 else { return nil }
++    return String(whole) + (parts.count == 2 ? "." + String(parts[1].prefix(9)) : "")
+ }
+ 
+ private func jerkgramStarsPreset(_ current: String, delta: Int64) -> String {
+     let whole = current.split(separator: ".", maxSplits: 1).first.flatMap { Int64($0) } ?? 0
+-    return String(max(0, whole + delta))
++    let (next, overflow) = whole.addingReportingOverflow(delta)
++    return String(overflow ? (delta >= 0 ? Int64.max : 0) : max(0, next))
++}
++
++private final class JerkgramStarsAutosave {
++    private var saved: JerkgramStarsDraftState
++    private var latest: JerkgramStarsDraftState
++    private var cancelPending: (() -> Void)?
++    private var generation: UInt64 = 0
++    private let commit: (JerkgramStarsDraftState) -> Void
++    private let schedule: (@escaping () -> Void) -> (() -> Void)
++
++    init(initial: JerkgramStarsDraftState, commit: @escaping (JerkgramStarsDraftState) -> Void, schedule: @escaping (@escaping () -> Void) -> (() -> Void) = { action in
++        let item = DispatchWorkItem(block: action)
++        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: item)
++        return { item.cancel() }
++    }) {
++        self.saved = initial
++        self.latest = initial
++        self.commit = commit
++        self.schedule = schedule
++    }
++
++    func update(_ draft: JerkgramStarsDraftState) {
++        let next = JerkgramStarsDraftState(enabled: draft.enabled, amount: jerkgramSavedStarsAmount(draft.amount) ?? self.latest.amount)
++        guard next != self.latest else { return }
++        self.latest = next
++        self.generation &+= 1
++        self.cancelPending?()
++        self.cancelPending = nil
++        guard next != self.saved else { return }
++        let generation = self.generation
++        self.cancelPending = self.schedule { [weak self] in
++            guard let self, self.generation == generation else { return }
++            self.flush()
++        }
++    }
++
++    func flush() {
++        self.generation &+= 1
++        self.cancelPending?()
++        self.cancelPending = nil
++        guard self.latest != self.saved else { return }
++        self.saved = self.latest
++        self.commit(self.saved)
++    }
++
++    deinit {
++        self.flush()
++    }
+ }
+ 
+ private func jerkgramCommitStarsDraft(accountPeerId: Int64, state: JerkgramStarsDraftState) {
+@@ -124,8 +181,11 @@
+     let defaults = UserDefaults.standard
+     let initial = JerkgramStarsDraftState(
+         enabled: (defaults.object(forKey: scopedEnabled) as? Bool) ?? defaults.bool(forKey: jerkgramStarsEnabledKey),
+-        amount: (defaults.string(forKey: scopedAmount) ?? defaults.string(forKey: jerkgramStarsAmountKey)).map(jerkgramSanitizeStarsDraft) ?? "0"
++        amount: (defaults.string(forKey: scopedAmount) ?? defaults.string(forKey: jerkgramStarsAmountKey)).flatMap(jerkgramSavedStarsAmount) ?? "0"
+     )
++    let autosave = JerkgramStarsAutosave(initial: initial, commit: { value in
++        jerkgramCommitStarsDraft(accountPeerId: accountPeerId, state: value)
++    })
+     let stateValue = Atomic(value: initial)
+     let statePromise = ValuePromise(initial, ignoreRepeated: true)
+     var controller: ItemListController?
+@@ -137,6 +197,7 @@
+             return current
+         }
+         statePromise.set(value)
++        autosave.update(value)
+     }
+ 
+     let arguments = JerkgramStarsEditorArguments(
+@@ -151,14 +212,6 @@
+         let strings = presentationData.strings.jerkgram
+         let amount = jerkgramSanitizeStarsDraft(state.amount)
+         let status = strings.starsOverrideSummary(state.enabled, amount)
+-        let dirty = state != initial
+-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+-            let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
+-        })
+-        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Save), style: .bold, enabled: dirty, action: {
+-            jerkgramCommitStarsDraft(accountPeerId: accountPeerId, state: stateValue.with { $0 })
+-            let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
+-        })
+         let entries: [JerkgramStarsEditorEntry] = [
+             .preview(1, amount, status),
+             .toggle(2, strings.localStarsBalance, state.enabled),
+@@ -171,8 +224,8 @@
+         return (
+             ItemListControllerState(
+                 presentationData: ItemListPresentationData(presentationData), title: .text(strings.starsBalance),
+-                leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton,
+-                backNavigationButton: nil
++                leftNavigationButton: nil, rightNavigationButton: nil,
++                backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back)
+             ),
+             (ItemListNodeState(
+                 presentationData: ItemListPresentationData(presentationData), entries: entries,
+@@ -181,5 +234,6 @@
+         )
+     }
+     controller = ItemListController(context: context, state: signal)
++    controller?.willDisappear = { _ in autosave.flush() }
+     return controller!
+ }
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -979,10 +979,10 @@
+ }
+ 
+ public enum JerkgramReleaseIdentity {
+-    public static let displayVersion = "1.2.0 Beta 2"
+-    public static let technicalVersion = "1.2.0-beta.2"
+-    public static let build = "179"
+-    public static let telegramBase = "13.1.2"
++    public static let displayVersion = "1.2.0 Beta 3"
++    public static let technicalVersion = "1.2.0-beta.3"
++    public static let build = "180"
++    public static let telegramBase = "13.2"
+ 
+     public static var aboutText: String {
+         return "Jerkgram Version \(displayVersion)\nBuild \(build)\nTelegram Base \(telegramBase)"
+@@ -1033,10 +1033,11 @@
+ public extension JerkgramStrings {
+     var localPremium: String { self.languageCode == "ru" ? "Локальный Premium" : "Local Premium" }
+     var localPremiumMedia: String { self.languageCode == "ru" ? "Медиа" : "Media" }
++    var localTranslation: String { self.languageCode == "ru" ? "Перевод" : "Translation" }
+     var translationNeedsWork: String { self.languageCode == "ru" ? "Перевод · Требует доработки" : "Translation · Needs work" }
+     var localPremiumScopeHint: String {
+         self.languageCode == "ru"
+-            ? "Эти локальные возможности не предоставляют Telegram Premium. Иконки действуют на всём устройстве; остальные настройки относятся к текущему аккаунту. Перевод требует доработки."
+-            : "These local features do not grant Telegram Premium. App Icons apply to this device; the other settings apply to the current account. Translation needs work."
+-    }
+-}
++            ? "Эти локальные возможности не предоставляют Telegram Premium. Иконки действуют на всём устройстве; остальные настройки относятся к текущему аккаунту."
++            : "These local features do not grant Telegram Premium. App Icons apply to this device; the other settings apply to the current account."
++    }
++}
+--- a/submodules/TelegramUI/Components/Wallet/WalletScreen/Sources/WalletScreen.swift
++++ b/submodules/TelegramUI/Components/Wallet/WalletScreen/Sources/WalletScreen.swift
+@@ -803,6 +803,7 @@
+         private lazy var giftStickers = WalletGiftStickerCoordinator(host: self, scrollView: self.scrollView, grid: self.collectiblesSection)
+         private let emptyTransactionsInfo = ComponentView<Empty>()
+         private let emptyTransactionsFooter = ComponentView<Empty>()
++        private let emptyTransactionsSurfaceView = UIView()
+         private let accountProtectionIcon = renderSettingsIcon(
+             name: "Item List/Icons/Warning",
+             backgroundColors: [UIColor(rgb: 0xff453a)]
+@@ -3321,6 +3322,10 @@
+                 self.selectedSection = .transactions
+             }
+             let hasEmptyTransactions = self.selectedSection == .transactions && transactions.isEmpty
++            let hasEmptyTransactionsSurface = hasEmptyTransactions && (environment.controller()?.jerkgramSettingsSurfaceActive ?? false)
++            if !hasEmptyTransactionsSurface {
++                self.emptyTransactionsSurfaceView.removeFromSuperview()
++            }
+ 
+             let headerLayout = self.updateHeader(
+                 component: component,
+@@ -3757,9 +3762,11 @@
+                 }
+                 self.hideSection(self.transactionsSection, transition: transition)
+ 
+-                let titleColor = environment.theme.actionSheet.primaryTextColor
+-                let textColor = environment.theme.actionSheet.secondaryTextColor
+-                let accentColor = environment.theme.list.itemAccentColor
++                // The inherited Settings theme clears the page background. Give
++                // only the benefits and terms an opaque surface over that image.
++                let titleColor = hasEmptyTransactionsSurface ? UIColor(rgb: 0xffffff) : environment.theme.actionSheet.primaryTextColor
++                let textColor = hasEmptyTransactionsSurface ? UIColor(rgb: 0xd1d1d6) : environment.theme.actionSheet.secondaryTextColor
++                let accentColor = hasEmptyTransactionsSurface ? UIColor(rgb: 0x64b5ff) : environment.theme.list.itemAccentColor
+                 let emptyItems: [AnyComponentWithIdentity<Empty>] = [
+                     AnyComponentWithIdentity(
+                         id: "instantTransfers",
+@@ -3861,7 +3868,7 @@
+                         }
+                     )),
+                     environment: {},
+-                    containerSize: CGSize(width: cardWidth, height: 10000.0)
++                    containerSize: CGSize(width: max(0.0, cardWidth - (hasEmptyTransactionsSurface ? 32.0 : 0.0)), height: 10000.0)
+                 )
+                 let emptyTransactionsFooterOriginY = max(
+                     contentHeight + 24.0,
+@@ -3892,6 +3899,27 @@
+                     )
+                 }
+                 contentHeight = emptyTransactionsFooterOriginY + emptyTransactionsFooterSize.height
++
++                if hasEmptyTransactionsSurface {
++                    self.emptyTransactionsSurfaceView.isUserInteractionEnabled = false
++                    self.emptyTransactionsSurfaceView.layer.cornerRadius = 24.0
++                    let surfaceTransition: ComponentTransition = self.emptyTransactionsSurfaceView.superview == nil ? .immediate : contentLayoutTransition
++                    if self.emptyTransactionsSurfaceView.superview == nil {
++                        self.scrollView.insertSubview(self.emptyTransactionsSurfaceView, at: 0)
++                    }
++                    surfaceTransition.setBackgroundColor(view: self.emptyTransactionsSurfaceView, color: UIColor(rgb: 0x1c1c1e))
++                    // Wallet empty surface frame
++                    surfaceTransition.setFrame(
++                        view: self.emptyTransactionsSurfaceView,
++                        frame: CGRect(
++                            x: environment.safeInsets.left + sideInset,
++                            y: emptyTransactionsOriginY - 20.0,
++                            width: cardWidth,
++                            height: contentHeight - emptyTransactionsOriginY + 36.0
++                        )
++                    )
++                    contentHeight += 16.0
++                }
+                 
+                 transition.setBackgroundColor(view: self, color: environment.theme.list.plainBackgroundColor)
+             }
+--- a/Telegram/BUILD
++++ b/Telegram/BUILD
+@@ -633,7 +633,7 @@
+ <plist version="1.0">
+ <dict>
+     <key>CFBundleShortVersionString</key>
+-    <string>13.1.2</string>
++    <string>13.2</string>
+ </dict>
+ </plist>
+ PLIST
