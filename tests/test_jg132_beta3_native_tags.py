@@ -88,7 +88,8 @@ class NativeTags(unittest.TestCase):
     def test_retained_content_observation_and_exact_retry(self):
         owner=self.read('TelegramUI/Sources/JerkgramSavedTagsController.swift')
         history=owner.split('final class JerkgramLocalSavedTagsHistory {')[1]
-        self.assertIn('combinedView(keys: [key])',history)
+        self.assertIn('self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Messages(ids: ids))',history)
+        self.assertNotIn('.postbox',history)
         self.assertIn('self.messageGeneration == messageGeneration',history)
         self.assertIn('self.observedIds == ids',history)
         self.assertIn('self.failedRequest ?? self.unavailableRequest ?? self.lastRequest',history)
@@ -98,10 +99,12 @@ class NativeTags(unittest.TestCase):
     def coordinator_fixture_source(self):
         from saved_tags_native import declaration
         service=self.read('TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift')
+        engine=self.read('TelegramCore/Sources/TelegramEngine/Data/MessagesData.swift')
         history=self.read('TelegramUI/Sources/JerkgramSavedTagsController.swift')
         fixture=(BUILDER/'tests/fixtures/beta3_native_tags/coordinator-native.swift').read_text()
         content='\n'.join(declaration(service,a) for a in ['public struct LocalSavedTagsContentRow {','public struct LocalSavedTagsContentPage {','public enum LocalSavedTagsPageEvent {'])
         for token,body in [
+            ('/* EXACT_ENGINE_MESSAGES_ITEM */',declaration(engine,'public struct Messages: TelegramEngineDataItem, PostboxViewDataItem {')),
             ('/* EXACT_CONTENT_TYPES */',content),
             ('/* EXACT_DELIVERY */',declaration(service,'final class LocalSavedTagsDelivery {')),
             ('/* EXACT_PAGE_PROVIDER */',declaration(service,'public final class LocalSavedTagsPageProvider {')),

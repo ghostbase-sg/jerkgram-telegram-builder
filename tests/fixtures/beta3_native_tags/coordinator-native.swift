@@ -89,7 +89,8 @@ struct MessageHistoryView {
     init(tag: Int?, namespaces: Namespaces, entries: [MessageHistoryEntry], holeEarlier: Bool, holeLater: Bool, isLoading: Bool) { self.entries = entries }
 }
 enum PostboxViewKey: Hashable { case messages(Set<MessageId>) }
-final class MessagesView { let messages: [MessageId: Message]; init(_ messages: [MessageId: Message]) { self.messages = messages } }
+protocol PostboxView {}
+final class MessagesView: PostboxView { let messages: [MessageId: Message]; init(_ messages: [MessageId: Message]) { self.messages = messages } }
 struct CombinedView { let views: [PostboxViewKey: Any] }
 final class Postbox {
     struct Observation { let ids: Set<MessageId>; let pipe: Pipe<CombinedView> }
@@ -129,7 +130,45 @@ final class SharedContext {
     var activeAccountContexts: Signal<AccountContexts, NoError> { return self.accounts.signal() }
     let currentPresentationData = Holder(PresentationData())
 }
-final class AccountContext { let account = Account(); let sharedContext = SharedContext() }
+public protocol TelegramEngineDataItem { associatedtype Result }
+protocol PostboxViewDataItem { associatedtype Result; var key: PostboxViewKey { get }; func extract(view: PostboxView) -> Result }
+public final class EngineMessage {
+    public typealias Id = MessageId
+    private let message: Message
+    public init(_ message: Message) { self.message = message }
+    func _asMessage() -> Message { return self.message }
+}
+public enum TelegramEngine {
+    public enum EngineData {
+        public enum Item {
+            public enum Messages {
+                /* EXACT_ENGINE_MESSAGES_ITEM */
+            }
+        }
+    }
+}
+// Engine subscription boundary: the exact upstream item above supplies its
+// single batched key and extraction. Postbox and delivery remain deterministic.
+final class EngineDataBoundary {
+    let postbox: Postbox
+    init(_ postbox: Postbox) { self.postbox = postbox }
+    func subscribe(_ item: TelegramEngine.EngineData.Item.Messages.Messages) -> Signal<[MessageId: EngineMessage], NoError> {
+        return Signal { subscriber in
+            self.postbox.combinedView(keys: [item.key]).start(next: { view in
+                subscriber.putNext(item.extract(view: view.views[item.key] as! PostboxView))
+            })
+        }
+    }
+}
+final class EngineBoundary {
+    let data: EngineDataBoundary
+    init(_ postbox: Postbox) { self.data = EngineDataBoundary(postbox) }
+}
+final class AccountContext {
+    let account = Account()
+    let sharedContext = SharedContext()
+    lazy var engine = EngineBoundary(self.account.postbox)
+}
 struct JerkgramSavedTagsStrings {
     init(_ strings: PresentationStrings) {}
     func text(_ en: String, _ ru: String) -> String { return en }

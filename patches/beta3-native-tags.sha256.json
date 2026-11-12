@@ -1,6 +1,6 @@
 {
   "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
-  "patch_sha256": "71f2f98165b3e5f0440aee9650ac125c370efba3471962ee1daf23d5828a3a00",
+  "patch_sha256": "42d83ab39f787e5fd10a17d7b5c7e22556b91d6d347ef8dee066cce343278b8a",
   "owners": {
     "submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift": {
       "before_sha256": "e98cb1de80205c51c39916498551e869a1cf419049e69ffe2d7d78b801389715",
@@ -48,7 +48,7 @@
     },
     "submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift": {
       "before_sha256": "f0e781e47a34a8ecbd7f0739c95cc58375c8e2b8808c9939a7f7d0055842af0e",
-      "after_sha256": "ac2d9e8ea0cee24b19224d68ab4c7df8534c560006e1507fbcfb1365d4cae171"
+      "after_sha256": "853de3017f1ab131d787c1e1ed732db7b52ff8332cc9cb34898fcab73d5470f5"
     },
     "submodules/TelegramUI/Sources/ChatTagSearchInputPanelNode.swift": {
       "before_sha256": "863e6fce9f80da836030831698cef2c3e216194ee95b961dba546ebc142a142b",
@@ -56,7 +56,7 @@
     },
     "submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift": {
       "before_sha256": "4e385ef57684034fb80a82bd7e95a4008aebaacb3926ebf81116ef002459c1ae",
-      "after_sha256": "44d7a8bfaf8e7da6ee50330a6558b5d9c435f181c4f8dd2197a147d80abe94ca"
+      "after_sha256": "bc71dd2d4803179068909f1c5a94b6e831ca6b3b830a1ec3aa6617942b0870b8"
     }
   },
   "parent_owners": {

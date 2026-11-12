@@ -62,8 +62,8 @@ class PortableCopyStageTests(unittest.TestCase):
 
     def apply_fixture(self):
         from jg132_baseline import enabled,apply_stage
-        if enabled() and not self.genuine_132:
-            return apply_stage(self.source,"jg13-portable-copy",require_head=False)
+        if enabled():
+            return apply_stage(self.source,"jg13-portable-copy",require_head=self.genuine_132)
         return self.stage.apply_portable_copy(self.source)
 
     def test_parent_apply_final_hashes_and_repeat_refusal(self):
