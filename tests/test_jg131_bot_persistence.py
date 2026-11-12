@@ -3,14 +3,18 @@ import os, unittest, shutil, subprocess, tempfile
 from pathlib import Path
 ROOT=Path(os.environ.get('JG_BOT_SOURCE',Path(__file__).resolve().parents[1]/'work/swiftgram-src'))
 CORE='submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift'
+from test_jg131_botbridge1_history import is_migrated_132
+SPLIT=is_migrated_132(ROOT)
+HOOKS='submodules/TelegramCore/Sources/State/Sync/JerkgramStateHooks.swift' if SPLIT else CORE
 class BotReplayTests(unittest.TestCase):
  def test_bot_metadata_never_uses_user_only_dialog_rpc(self):
-  s=(ROOT/CORE).read_text()
-  body=s.split('private func resolveMissingPeerChatInfos(',1)[1].split('var missingPeers:',1)[0]
+  name='submodules/TelegramCore/Sources/State/Sync/SyncResolve.swift' if SPLIT else CORE
+  s=(ROOT/name).read_text()
+  body=s.split('func resolveMissingPeerChatInfos(',1)[1].split('var missingPeers:',1)[0]
   self.assertIn('jerkgramIsBotAccount(accountPeerId:',body)
   self.assertIn('return .single((state, false))',body)
  def test_received_messages_get_local_inclusion_without_moving_archive_or_cutoff(self):
-  s=(ROOT/CORE).read_text()
+  s=(ROOT/HOOKS).read_text()
   self.assertIn('func jerkgramIncludeBotMessagePeers',s)
   f=s.split('// JG174 bot persistence begin',1)[1].split('// JG174 bot persistence end',1)[0]
   self.assertIn('transaction.messageExists(id: id)',f)
@@ -18,11 +22,16 @@ class BotReplayTests(unittest.TestCase):
   self.assertIn('minTimestamp: nil',f)
   self.assertIn('shouldExcludePeerFromChatList',f)
   self.assertNotIn('getDifference',f)
-  replay=s.split('func replayFinalState(',1)[1]
+  if SPLIT:
+   replay=(ROOT/'submodules/TelegramCore/Sources/State/Sync/StateReplay+Messages.swift').read_text().split('func applyAddMessages(',1)[1].split('func apply',1)[0]
+   self.assertIn('if case .UpperHistoryBlock = location',replay)
+  else: replay=s.split('func replayFinalState(',1)[1]
   self.assertLess(replay.index('transaction.addMessages(messages, location: location)'),replay.index('jerkgramIncludeBotMessagePeers('))
- @unittest.skipUnless(shutil.which('swiftc'), 'Swift compiler unavailable; production replay helper fixture requires macOS CI')
  def test_actual_replay_helper_preserves_history_archive_pins_and_account_boundaries(self):
-  source=(ROOT/CORE).read_text().split('// JG174 bot persistence begin\n',1)[1].split('// JG174 bot persistence end',1)[0]
+  if not shutil.which('swiftc'):
+   if os.environ.get('JG_BETA3_REQUIRE_NATIVE') == '1' or os.environ.get('JG_BOT_REQUIRE_NATIVE') == '1': self.fail('Required native bot replay helper gate needs macOS Swift')
+   self.skipTest('Swift compiler unavailable; production replay helper fixture requires macOS CI')
+  source=(ROOT/HOOKS).read_text().split('// JG174 bot persistence begin\n',1)[1].split('// JG174 bot persistence end',1)[0]
   with tempfile.TemporaryDirectory() as d:
    p=Path(d)/'main.swift';p.write_text('import Foundation\n'+MOCKS+source+FIXTURE)
    subprocess.run(['swiftc',str(p),'-o',d+'/check'],check=True)

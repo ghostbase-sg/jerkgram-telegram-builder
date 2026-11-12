@@ -1,7 +1,8 @@
 diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index 1567968..2c24b17 100644
 --- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
 +++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
-@@ -2253,12 +2253,11 @@
+@@ -2253,12 +2253,11 @@ private func ghostBaseSettingsEntries(
              .toggle(0, 3, GhostBaseKey.oneTimeSave, strings.oneTimeMedia, state.oneTimeSave),
              .toggle(0, 4, GhostBaseKey.storySave, strings.storySave, state.storySave),
              .downloadBoost(0, 5, state.downloadBoost),
@@ -15,7 +16,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          return [
              .header(0, strings.profileBackground),
              .toggle(0, 1, GhostBaseKey.glassEnabled, strings.profileBackgroundEffect, state.glassEnabled),
-@@ -2278,8 +2277,7 @@
+@@ -2278,8 +2277,7 @@ private func ghostBaseSettingsEntries(
                  state.showRamUnderClock
              ),
              .toggle(1, 8, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
@@ -26,9 +27,10 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      }
  
 diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+index b841202..5f37659 100644
 --- a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
 +++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
-@@ -69,6 +69,122 @@
+@@ -69,6 +69,122 @@ struct BotBridgeHistoryProgress: Codable, Equatable {
          self.generation = generation
      }
  
@@ -151,7 +153,7 @@ diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swif
      var isValid: Bool {
          guard schema == 1, !generation.isEmpty, generation.utf8.count <= 64,
              reservedPages >= 0, reservedPages <= 32, committedPages >= 0, committedPages <= reservedPages,
-@@ -222,7 +338,7 @@
+@@ -222,7 +338,7 @@ private let botBridgeHistoryKey: ValueBoxKey = {
  func jerkgramRenewBotBridgeGeneration(transaction: Transaction, recordId: Int64, user: TelegramUser, testing: Bool) {
      guard user.botInfo != nil else { return }
      let progress = BotBridgeHistoryProgress(owner: recordId, peer: user.id.toInt64(), testing: testing, generation: UUID().uuidString)
@@ -160,7 +162,7 @@ diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swif
  }
  
  private func botBridgeValidatedAccount(transaction: Transaction, accountPeerId: PeerId, testing: Bool) -> Bool {
-@@ -263,7 +379,7 @@
+@@ -263,7 +379,7 @@ func botBridgeObservedLive(transaction: Transaction) -> BotBridgeCursor? {
  }
  
  private func botBridgeWriteProgress(_ progress: BotBridgeHistoryProgress, transaction: Transaction) {
@@ -170,9 +172,10 @@ diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swif
  
  private func botBridgeCursor(_ state: Api.updates.State) -> (BotBridgeCursor, Int32) {
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
+index 4f092fe..4e5fcfb 100644
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
-@@ -6,6 +6,8 @@
+@@ -6,6 +6,8 @@ internal import TelegramApi
  
  // BEGIN JERKGRAM DEFAULT FOLDER FOUNDATION
  public enum JerkgramDefaultFolderSettings {
@@ -181,7 +184,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
      public static let preferenceKey = "jerkgram.UnlockDefaultChatFolder"
      public static let changed = Notification.Name("JerkgramDefaultFolderPolicyChanged")
      private static let lock = NSLock()
-@@ -25,7 +27,7 @@
+@@ -25,7 +27,7 @@ public enum JerkgramDefaultFolderSettings {
      public static func snapshot(accountPeerId: Int64) -> (enabled: Bool, generation: UInt64) {
          lock.lock(); defer { lock.unlock() }
          let current = value(accountPeerId)
@@ -190,7 +193,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
      }
      public static func enabled(accountPeerId: Int64) -> Bool { return snapshot(accountPeerId: accountPeerId).enabled }
      public static func generation(accountPeerId: Int64) -> UInt64 { return snapshot(accountPeerId: accountPeerId).generation }
-@@ -42,7 +44,7 @@
+@@ -42,7 +44,7 @@ public enum JerkgramDefaultFolderSettings {
  // Pure policy is shared by presentation, both reorder surfaces and transaction cleanup.
  public enum JerkgramFolderOrder {
      public static func startupReady(enabled: Bool, premium: Bool?, localRead: Bool) -> Bool {
@@ -199,7 +202,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
      }
      public static func bounded(_ ids: [Int32]) -> [Int32] {
          var result: [Int32] = []
-@@ -57,7 +59,7 @@
+@@ -57,7 +59,7 @@ public enum JerkgramFolderOrder {
          return result
      }
      public static func effective(native: [Int32], saved: [Int32], allowed: Set<Int32>, active: Bool) -> [Int32] {
@@ -208,7 +211,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
          let movable = [Int32(0)] + native.filter { $0 != 0 && allowed.contains($0) }
          let movableSet = Set(movable)
          var result = bounded(saved).filter { movableSet.contains($0) }
-@@ -84,7 +86,7 @@
+@@ -84,7 +86,7 @@ public enum JerkgramFolderOrder {
          return result
      }
      public static func proposalIsCurrent(enabled: Bool, premium: Bool?, generation: UInt64, proposedGeneration: UInt64) -> Bool {
@@ -217,7 +220,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
      }
  }
  
-@@ -1288,6 +1290,7 @@
+@@ -1288,6 +1290,7 @@ func _internal_updateJerkgramChatListFilterOrder(account: Account, ids: [Int32],
      return account.viewTracker.hiddenChatListFilterIds |> take(1) |> mapToSignal { hiddenIds in
          return account.postbox.transaction { transaction -> [ChatListFilter] in
              let state = _internal_currentChatListFiltersState(transaction: transaction)
@@ -225,7 +228,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
              let policy = JerkgramDefaultFolderSettings.snapshot(accountPeerId: account.peerId.toInt64())
              let premium = transaction.getPeer(account.peerId)?.isPremium
              let configuration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
-@@ -1310,6 +1313,7 @@
+@@ -1310,6 +1313,7 @@ func _internal_updateJerkgramChatListFilterOrder(account: Account, ids: [Int32],
  }
  
  private func jerkgramPruneDefaultFolderOrder(transaction: Transaction, old: [ChatListFilter], new: [ChatListFilter]) {
@@ -234,9 +237,10 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
            let saved = transaction.getPreferencesEntry(key: PreferencesKeys.jerkgramDefaultFolderOrder)?.get(JerkgramDefaultFolderOrder.self) else { return }
      let ids = JerkgramFolderOrder.pruned(saved: saved.ids, old: old.map { $0.id }, new: new.map { $0.id })
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+index 2f490cc..ec6d5a3 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -251,8 +251,8 @@
+@@ -275,8 +275,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          self.ghostBaseProfileMetricsSettings = GhostBaseProfileMetricsSettings.load()
          self.headerNode.updateJerkgramVisualState(settings: settings)
          self.paneContainerNode.updateJerkgramVisualState(glassEnabled: glassEnabled, revision: revision)
@@ -247,7 +251,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
          }
          for sectionNode in self.editingSections.values {
              sectionNode.updateJerkgramVisualState(glassEnabled: glassEnabled)
-@@ -5868,6 +5868,7 @@
+@@ -5936,6 +5936,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                      self.scrollNode.insertSubnode(sectionNode, belowSubnode: self.paneContainerNode)
                      wasAdded = true
                  }
@@ -256,9 +260,10 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
                  if wasAdded && transition.isAnimated && (self.isSettings || self.isMyProfile) && !self.state.isEditing {
                      sectionNode.alpha = 0.0
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+index e063a60..693e4af 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
-@@ -7,6 +7,7 @@
+@@ -7,6 +7,7 @@ import TelegramPresentationData
  
  final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
      private var ghostBaseGlassEnabled: Bool
@@ -266,7 +271,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
      private let backgroundNode: ASDisplayNode
      private let topSeparatorNode: ASDisplayNode
      private let bottomSeparatorNode: ASDisplayNode
-@@ -38,8 +39,9 @@
+@@ -38,8 +39,9 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
          self.addSubnode(self.bottomSeparatorNode)
      }
      
@@ -277,7 +282,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
      }
  
      func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
-@@ -47,7 +49,7 @@
+@@ -47,7 +49,7 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
              let isDark = presentationData.theme.overallDarkAppearance
              self.backgroundNode.backgroundColor = UIColor(
                  white: isDark ? 0.0 : 1.0,

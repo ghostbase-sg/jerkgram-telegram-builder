@@ -6,14 +6,26 @@ UIKit behavior, or SQLite persistence. Those remain the explicit native gate.
 from pathlib import Path
 import hashlib, os, shutil, sys, tempfile, unittest
 from saved_tags_native import declaration
+from test_jg131_botbridge1_history import is_migrated_132, assert_migrated_owner, migrated_parent_text
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('JG_SAVED_TAGS_SOURCE', ROOT.parent/'jerkgram-next/beta2/saved-tags/source' if (ROOT.parent/'jerkgram-next/beta2/saved-tags/source').is_dir() else ROOT/'work/swiftgram-src'))
 CORE = SOURCE/'submodules/TelegramCore/Sources'
 class CoreContracts(unittest.TestCase):
     def test_store_is_frozen(self):
         for name, digest in [('LocalSavedTagsTable.swift','4281a7927d2cc8d345e9eb34ecbbce89f0cb1a8afc05922568ccbaadf4b66f91'),('Postbox.swift','47cfba511a142f076bb207bddc02475551b7f773ea980b3aee00708cfbc38cd8')]:
-            self.assertEqual(hashlib.sha256((SOURCE/'submodules/Postbox/Sources'/name).read_bytes()).hexdigest(),digest)
+            if name == 'Postbox.swift' and is_migrated_132(SOURCE): assert_migrated_owner(self,SOURCE,'submodules/Postbox/Sources/Postbox.swift')
+            else: self.assertEqual(hashlib.sha256((SOURCE/'submodules/Postbox/Sources'/name).read_bytes()).hexdigest(),digest)
     def test_semantic_hooks_precede_retention_and_use_raw_global_ids(self):
+        if is_migrated_132(SOURCE):
+            body=(CORE/'State/Sync/StateReplay+Messages.swift').read_text()
+            for anchor,call in [('func applyDeleteMessagesWithGlobalIds(', '_internal_removeLocalSavedTagsGlobalIds(transaction: transaction, ids: ids)'),('func applyDeleteMessages(', '_internal_removeLocalSavedTagsMessages(transaction: transaction, ids: ids)')]:
+                section=declaration(body,anchor)
+                self.assertIn(call,section)
+                self.assertLess(section.index(call),section.index('let ghostBase'))
+            section=declaration(body,'func applyUpdateMinAvailableMessage(')
+            self.assertIn('_internal_removeLocalSavedTagsRange',section)
+            self.assertLess(section.index('_internal_removeLocalSavedTagsRange'),section.index('transaction.deleteMessagesInRange'))
+            return
         body=(CORE/'State/AccountStateManagementUtils.swift').read_text()
         for case, call in [('DeleteMessagesWithGlobalIds(ids)', '_internal_removeLocalSavedTagsGlobalIds(transaction: transaction, ids: ids)'), ('DeleteMessages(ids)', '_internal_removeLocalSavedTagsMessages(transaction: transaction, ids: ids)')]:
             section=body.split('case let .'+case+':')[-1].split('case let .')[0]
@@ -65,6 +77,14 @@ class CoreContracts(unittest.TestCase):
             self.assertNotIn('/* EXACT_',core)
             self.assertIn('SQLiteFixtureValueBox', (folder/'main.swift').read_text())
     def test_retention_and_history_bodies_preserved(self):
+        if is_migrated_132(SOURCE):
+            name='submodules/TelegramCore/Sources/State/Sync/StateReplay+Messages.swift'
+            current=(SOURCE/name).read_text(); before=migrated_parent_text(SOURCE,name,32)
+            for anchor in ['func applyDeleteMessagesWithGlobalIds(', 'func applyDeleteMessages(']:
+                old=declaration(before,anchor); new=declaration(current,anchor)
+                new='\n'.join(line for line in new.split('\n') if '_internal_removeLocalSavedTags' not in line and 'localSavedTagsAlreadyRemoved:' not in line)
+                self.assertEqual(old,new)
+            return
         current=(CORE/'State/AccountStateManagementUtils.swift').read_text()
         before_path=Path(os.environ.get('JG_SAVED_TAGS_BEFORE',SOURCE.parent/'before'))/'submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift'
         if not before_path.is_file(): self.skipTest('Historical parent comparison needs JG_SAVED_TAGS_BEFORE; local staged proof recorded separately')

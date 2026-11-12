@@ -33,7 +33,7 @@ class SavedTagsIntegration(unittest.TestCase):
         self.assertNotIn('composed source gates PASS', result.stdout)
 
     def test_chain_and_common_release_have_one_required_composed_gate(self):
-        chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
+        chain = json.loads((ROOT / 'docs/migrations/telegram-13.2-stage-chain.json').read_text())
         self.assertEqual((len(chain), chain[-1]['order'], chain[-1]['stage']), (32, 32, 'jg131-saved-tags'))
         manifest = json.loads((ROOT / 'patches/jg131-saved-tags.sha256.json').read_text())
         self.assertEqual(len(manifest['owners']), 12)
@@ -51,13 +51,13 @@ class SavedTagsIntegration(unittest.TestCase):
             for stage in stages[:-1]:
                 self.assertNotIn('tests/run_jg131_' + stage + '.py --require-native', source)
         config = json.loads((ROOT / 'jerkgram-migration.json').read_text())
-        self.assertEqual((config['build_number'], config['artifact_suffix']), (179, 'BETA2'))
+        self.assertEqual((config['build_number'], config['artifact_suffix']), (180, 'BETA3'))
         workflow = (ROOT / '.github/workflows/build.yml').read_text()
         self.assertIn('needs: source-preflight', workflow)
         self.assertIn('      - dev/beta2-local-premium-tags-179', workflow)
         self.assertNotIn('BETA2-RECOVERY', workflow)
         for suffix in ('.ipa', '.json'):
-            self.assertIn('artifacts/Jerkgram-1.2.0-Build179-BETA2' + suffix, workflow)
+            self.assertIn('artifacts/Jerkgram-1.2.0-Build180-BETA3' + suffix, workflow)
 
     def test_partial_tags_cannot_fall_back_to_hub(self):
         self.assertTrue((ROOT / 'scripts/materialize_jg131_saved_tags.py').exists(), 'Saved Tags materializer missing')
@@ -72,7 +72,7 @@ class SavedTagsIntegration(unittest.TestCase):
             first.parent.mkdir()
             first.write_bytes(data)
             with patch.object(verifier, 'SOURCE', source), patch.object(tags, 'manifest', return_value={'owners': owners}):
-                with self.assertRaisesRegex(RuntimeError, 'Saved Tags output changed'):
+                with self.assertRaisesRegex(RuntimeError, '(?:Saved Tags output changed|Mixed/corrupt132baseline boundary)'):
                     verifier.main()
 
     def test_runner_propagates_native_source_and_exact_parent_to_all_children(self):

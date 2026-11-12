@@ -1,0 +1,215 @@
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index 36f0503..322531c 100644
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -481,6 +481,7 @@ private enum JerkgramSettingsCommitQueue {
+ 
+ private func jerkgramStateValues(_ state: GhostBaseSettingsState) -> [String: JerkgramSettingValue] {
+     return [
++        JerkgramSponsoredContentPolicy.preferenceKey: .bool(state.removeSponsored),
+         JerkgramDownloadBoostSettings.preferenceKey: .string(state.downloadBoost),
+         GhostBaseKey.profileEnabled: .bool(state.profileEnabled),
+         GhostBaseKey.showIds: .bool(state.showIds),
+@@ -537,6 +538,7 @@ private func jerkgramPersistChangedSettings(
+     current: GhostBaseSettingsState
+ ) {
+     defer { JerkgramHotSettings.invalidate() }
++    JerkgramSponsoredContentPolicy.update(accountPeerId: accountPeerId, enabled: current.removeSponsored)
+     JerkgramDownloadBoostSettings.update(accountPeerId: accountPeerId, rawValue: current.downloadBoost)
+     let oldValues = previous.map(jerkgramStateValues) ?? [:]
+     let newValues = jerkgramStateValues(current)
+@@ -580,6 +582,7 @@ private func jerkgramPersistChangedSettings(
+         GhostBaseKey.stickerActivity,
+         GhostBaseKey.gameActivity,
+         GhostBaseKey.emojiActivity,
++        JerkgramSponsoredContentPolicy.preferenceKey,
+         JerkgramDownloadBoostSettings.preferenceKey,
+     ]).union(JerkgramHotSettings.keys)
+     let defaults = UserDefaults.standard
+@@ -661,6 +664,7 @@ struct GhostBaseSettingsState: Equatable {
+     var showEditHistory: Bool
+     var hideBlockedMessages: Bool
+     var hideBlockedReactions: Bool
++    var removeSponsored: Bool = false
+     var downloadBoost: String = "off"
+     var sendTextStyle: String
+ 
+@@ -713,6 +717,7 @@ struct GhostBaseSettingsState: Equatable {
+             showEditHistory: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.showEditHistory, defaultValue: true),
+             hideBlockedMessages: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedMessages, defaultValue: true),
+             hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: true),
++            removeSponsored: JerkgramSponsoredContentPolicy.readStoredValue(accountPeerId: accountPeerId),
+             downloadBoost: JerkgramDownloadBoostSettings.readStoredMode(accountPeerId: accountPeerId).rawValue,
+             sendTextStyle: jerkgramScopedString(accountPeerId: accountPeerId, key: 
+                 ghostBaseSendTextStyleKey,
+@@ -2091,6 +2096,8 @@ private func ghostBaseSettingsEntries(
+             .toggle(0, 4, GhostBaseKey.showRegistration, strings.registrationDate, state.showRegistration),
+             .header(1, strings.basicFunctions),
+             .valueDisclosure(1, 50, strings.starsBalance, strings.starsOverrideSummary(state.localStarsEnabled, balance), nil, .stars),
++            .toggle(1, 51, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
++            .info(1, strings.removeSponsoredHint),
+             .header(2, strings.backup),
+             .disclosure(2, 1, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup)
+         ]
+@@ -3841,6 +3848,8 @@ private func ghostBaseSettingsPageController(
+                     forKey: GhostBaseKey.hideOwnPhone
+                 )
+ 
++            case JerkgramSponsoredContentPolicy.preferenceKey:
++                updated.removeSponsored = value
+             case GhostBaseKey.chatSave:
+                 updated.chatSave = value
+             case GhostBaseKey.chatCopy:
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift
+index a8e5b04..46c8323 100644
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift
+@@ -216,7 +216,8 @@ private class AdMessagesHistoryContextImpl {
+             return true
+         }
+ 
+-        func toMessage(peerId: PeerId, transaction: Transaction) -> Message? {
++        func toMessage(peerId: PeerId, transaction: Transaction, removeSponsored: Bool) -> Message? {
++            guard JerkgramSponsoredContentPolicy.shouldDisplay(isSponsored: self.messageType == .sponsored, removeSponsored: removeSponsored) else { return nil }
+             var attributes: [MessageAttribute] = []
+ 
+             let mappedMessageType: AdMessageAttribute.MessageType
+@@ -316,6 +317,7 @@ private class AdMessagesHistoryContextImpl {
+     private let account: Account
+     private let peerId: EnginePeer.Id
+     private let messageId: EngineMessage.Id?
++    private let removeSponsored: Bool
+ 
+     private let maskAsSeenDisposables = DisposableDict<Data>()
+ 
+@@ -448,6 +450,8 @@ private class AdMessagesHistoryContextImpl {
+         self.account = account
+         self.peerId = peerId
+         self.messageId = messageId
++        let removeSponsored = JerkgramSponsoredContentPolicy.removeSponsored(accountPeerId: account.peerId.toInt64())
++        self.removeSponsored = removeSponsored
+ 
+         self.stateValue = State(interPostInterval: nil, messages: [])
+ 
+@@ -457,7 +461,7 @@ private class AdMessagesHistoryContextImpl {
+                 if let cachedState = cachedState, cachedState.timestamp >= Int32(Date().timeIntervalSince1970) - 5 * 60 {
+                     return account.postbox.transaction { transaction -> State in
+                         return State(interPostInterval: cachedState.interPostInterval, messages: cachedState.messages.compactMap { message -> Message? in
+-                            return message.toMessage(peerId: peerId, transaction: transaction)
++                            return message.toMessage(peerId: peerId, transaction: transaction, removeSponsored: removeSponsored)
+                         })
+                     }
+                 } else {
+@@ -486,6 +490,7 @@ private class AdMessagesHistoryContextImpl {
+         let accountPeerId = self.account.peerId
+         let account = self.account
+         let messageId = self.messageId
++        let removeSponsored = self.removeSponsored
+         
+         let signal: Signal<(interPostInterval: Int32?, startDelay: Int32?, betweenDelay: Int32?, messages: [Message]), NoError> = account.postbox.transaction { transaction -> Api.InputPeer? in
+             return transaction.getPeer(peerId).flatMap(apiInputPeer)
+@@ -571,7 +576,7 @@ private class AdMessagesHistoryContextImpl {
+                         }
+                         
+                         return (postsBetween, startDelay, betweenDelay, parsedMessages.compactMap { message -> Message? in
+-                            return message.toMessage(peerId: peerId, transaction: transaction)
++                            return message.toMessage(peerId: peerId, transaction: transaction, removeSponsored: removeSponsored)
+                         })
+                     case .sponsoredMessagesEmpty:
+                         return (nil, nil, nil, [])
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift
+index bf1d38a..89afe4d 100644
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift
+@@ -39,6 +39,7 @@ public class AdPeer: Equatable {
+ }
+ 
+ func _internal_searchAdPeers(account: Account, query: String) -> Signal<[AdPeer], NoError> {
++    if JerkgramSponsoredContentPolicy.removeSponsored(accountPeerId: account.peerId.toInt64()) { return .single([]) }
+     return account.network.request(Api.functions.contacts.getSponsoredPeers(q: query))
+     |> map(Optional.init)
+     |> `catch` { _ in
+diff --git a/submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift b/submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift
+new file mode 100644
+index 0000000..855758f
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift
+@@ -0,0 +1,38 @@
++import Foundation
++
++// A local per-account capability. Never modifies Telegram Premium or API flags.
++public enum JerkgramSponsoredContentPolicy {
++    public static let preferenceKey = "jerkgram.SponsoredContent.Remove"
++    private static let lock = NSLock()
++    private static var accounts: [Int64: Bool] = [:]
++
++    public static func scopedKey(accountPeerId: Int64) -> String {
++        return "jerkgram.account.\(accountPeerId).setting.\(self.preferenceKey)"
++    }
++
++    public static func readStoredValue(accountPeerId: Int64) -> Bool {
++        // A new account must not inherit another account's active projection.
++        return UserDefaults.standard.bool(forKey: self.scopedKey(accountPeerId: accountPeerId))
++    }
++
++    public static func removeSponsored(accountPeerId: Int64) -> Bool {
++        self.lock.lock()
++        defer { self.lock.unlock() }
++        if let value = self.accounts[accountPeerId] { return value }
++        let value = self.readStoredValue(accountPeerId: accountPeerId)
++        if self.accounts.count >= 32 { self.accounts.removeAll(keepingCapacity: true) }
++        self.accounts[accountPeerId] = value
++        return value
++    }
++
++    public static func update(accountPeerId: Int64, enabled: Bool) {
++        self.lock.lock()
++        defer { self.lock.unlock() }
++        if self.accounts.count >= 32 && self.accounts[accountPeerId] == nil { self.accounts.removeAll(keepingCapacity: true) }
++        self.accounts[accountPeerId] = enabled
++    }
++
++    static func shouldDisplay(isSponsored: Bool, removeSponsored: Bool) -> Bool {
++        return !isSponsored || !removeSponsored
++    }
++}
+diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+index 01c86ca..5973ac8 100644
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -12,6 +12,8 @@ public enum JerkgramStringKey: String, CaseIterable {
+     case messages
+     case protectedContent
+     case mediaAndStories
++    case removeSponsored
++    case removeSponsoredHint
+     case downloadBoost
+     case downloadBoostOff
+     case downloadBoostMedium
+@@ -177,6 +179,8 @@ public struct JerkgramStrings {
+     public var ghostMode: String { self.text(.ghostMode) }
+     public var messages: String { self.text(.messages) }
+     public var protectedContent: String { self.text(.protectedContent) }
++    public var removeSponsored: String { self.text(.removeSponsored) }
++    public var removeSponsoredHint: String { self.text(.removeSponsoredHint) }
+     public var downloadBoost: String { self.text(.downloadBoost) }
+     public var downloadBoostOff: String { self.text(.downloadBoostOff) }
+     public var downloadBoostMedium: String { self.text(.downloadBoostMedium) }
+@@ -397,6 +401,8 @@ public struct JerkgramStrings {
+         .ghostMode: "Ghost Mode",
+         .messages: "Messages",
+         .protectedContent: "Protected Content",
++        .removeSponsored: "Remove Sponsored Messages",
++        .removeSponsoredHint: "Hides Telegram sponsored messages and sponsored search results. This does not change your Telegram Premium status. Reopen the chat or media viewer, or refresh search after changing this setting.",
+         .downloadBoost: "Download Boost",
+         .downloadBoostOff: "Off",
+         .downloadBoostMedium: "Medium",
+@@ -535,6 +541,8 @@ public struct JerkgramStrings {
+         .ghostMode: "Режим призрака",
+         .messages: "Сообщения",
+         .protectedContent: "Защищённый контент",
++        .removeSponsored: "Убирать рекламу",
++        .removeSponsoredHint: "Скрывает рекламные сообщения Telegram и рекламу в поиске. Не изменяет статус Telegram Premium. После изменения переоткройте чат или просмотр медиа либо обновите поиск.",
+         .downloadBoost: "Ускорение загрузки",
+         .downloadBoostOff: "Выкл.",
+         .downloadBoostMedium: "Среднее",

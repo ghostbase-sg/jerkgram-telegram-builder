@@ -125,9 +125,12 @@ def read_manifest():
 def canonical(name, text):
     if name == STRINGS:
         c = json.loads((ROOT / 'jerkgram-migration.json').read_text())
+        from jg132_baseline import enabled, baseline_identity
+        if enabled(): c = baseline_identity()
         for key, old, new in [('displayVersion','1.0.2',c['product_display_version']),('technicalVersion','1.0.2',c['product_technical_version']),('build','138',str(c['build_number'])),('telegramBase','12.9.2',c['upstream_new_version'])]:
             text = text.replace(f'public static let {key} = "{new}"', f'public static let {key} = "{old}"')
-        text = re.sub(r'public static let build = "\d+"', 'public static let build = "138"', text)
+        if not enabled():
+            text = re.sub(r'public static let build = "\d+"', 'public static let build = "138"', text)
     return text
 
 def transform(name, text):
@@ -175,6 +178,9 @@ def verify_boost(source):
     return {n: {'after_sha256': v['after_sha256']} for n,v in m['owners'].items()}
 
 def apply_boost(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg13-download-boost')
     source = Path(source); m = read_manifest(); check_locks(source,m); outputs = {}
     for name, values in m['owners'].items():
         p = source/name

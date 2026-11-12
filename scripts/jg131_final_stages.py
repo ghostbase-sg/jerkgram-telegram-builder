@@ -30,6 +30,9 @@ def _check_pins():
             raise RuntimeError('Final-stage upstream pin changed')
 
 def apply_final_stages(source):
+    from jg132_baseline import enabled, apply_range
+    if enabled():
+        return apply_range(source, 19, 24)
     _check_pins()
     # Validate every independent parent before the first stage mutates a file.
     seen = set()

@@ -1,10 +1,10 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
-  "patch_sha256": "0dab43126da5fd172fa7e8088c99c46451ab3bc6dbe14bb47dd87636e5f7326b",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "64db16928e5e7134962a0ffaebc02855949904cc59f658a95551b6df6d29c5e9",
   "owners": {
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift": {
-      "before_sha256": "83c3693a0e0fb59d14f9321a11224166cd6a5cbd14f80f4985d3766e6e198ce0",
-      "after_sha256": "7d125f8e3c372324693c726364ead0fc1f3d22ca3046761161e31c4b6ac62c93"
+      "before_sha256": "ed7484fea8146271581fb8572a8a92585bfd9ca5fb9d1f072e291f7e63c8e8c8",
+      "after_sha256": "3bfede3c778dfe3830a61dfafa3be4ae0350d191a4934406ed7804e3fafd3c94"
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenOpenPeerInfoContextMenu.swift": {
       "before_sha256": "261b05c8e77f8e26a042cae0c5c6d8132f497546a581be87f020f90ad583fd56",
@@ -23,5 +23,5 @@
       "after_sha256": "21bfd31d49bf71985fd9a6371219c0379c169ec5ffc0c465f7280a328043d59c"
     }
   },
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json"
 }

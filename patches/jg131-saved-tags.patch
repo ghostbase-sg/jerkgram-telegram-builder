@@ -1,5 +1,6 @@
 diff --git a/submodules/Postbox/Sources/LocalSavedTagsTable.swift b/submodules/Postbox/Sources/LocalSavedTagsTable.swift
 new file mode 100644
+index 0000000..606d854
 --- /dev/null
 +++ b/submodules/Postbox/Sources/LocalSavedTagsTable.swift
 @@ -0,0 +1,496 @@
@@ -500,10 +501,11 @@ new file mode 100644
 +    }
 +}
 diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sources/Postbox.swift
+index ea69f94..742b98e 100644
 --- a/submodules/Postbox/Sources/Postbox.swift
 +++ b/submodules/Postbox/Sources/Postbox.swift
-@@ -31,6 +31,67 @@
-         self.postbox = postbox
+@@ -43,6 +43,67 @@ public final class Transaction {
+         self.postbox?.addAfterCommitAction(f)
      }
      
 +    // BEGIN LOCAL SAVED TAGS TRANSACTION API
@@ -570,7 +572,7 @@ diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sourc
      public func keychainEntryForKey(_ key: String) -> Data? {
          assert(self.queue.isCurrent())
  
-@@ -1864,6 +1925,7 @@
+@@ -1983,6 +2044,7 @@ final class PostboxImpl {
      let peerOperationLogTable: PeerOperationLogTable
      let timestampBasedMessageAttributesTable: TimestampBasedMessageAttributesTable
      let timestampBasedMessageAttributesIndexTable: TimestampBasedMessageAttributesIndexTable
@@ -578,7 +580,7 @@ diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sourc
      let preferencesTable: PreferencesTable
      let orderedItemListTable: OrderedItemListTable
      let orderedItemListIndexTable: OrderedItemListIndexTable
-@@ -1976,6 +2038,9 @@
+@@ -2100,6 +2162,9 @@ final class PostboxImpl {
          self.peerOperationLogMetadataTable = PeerOperationLogMetadataTable(valueBox: self.valueBox, table: PeerOperationLogMetadataTable.tableSpec(29), useCaches: useCaches)
          self.peerMergedOperationLogIndexTable = PeerMergedOperationLogIndexTable(valueBox: self.valueBox, table: PeerMergedOperationLogIndexTable.tableSpec(30), useCaches: useCaches, metadataTable: self.peerOperationLogMetadataTable)
          self.peerOperationLogTable = PeerOperationLogTable(valueBox: self.valueBox, table: PeerOperationLogTable.tableSpec(31), useCaches: useCaches, metadataTable: self.peerOperationLogMetadataTable, mergedIndexTable: self.peerMergedOperationLogIndexTable)
@@ -588,7 +590,7 @@ diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sourc
          self.preferencesTable = PreferencesTable(valueBox: self.valueBox, table: PreferencesTable.tableSpec(35), useCaches: useCaches)
          self.orderedItemListIndexTable = OrderedItemListIndexTable(valueBox: self.valueBox, table: OrderedItemListIndexTable.tableSpec(37), useCaches: useCaches)
          self.orderedItemListTable = OrderedItemListTable(valueBox: self.valueBox, table: OrderedItemListTable.tableSpec(38), useCaches: useCaches, indexTable: self.orderedItemListIndexTable)
-@@ -2045,6 +2110,7 @@
+@@ -2169,6 +2234,7 @@ final class PostboxImpl {
          tables.append(self.peerOperationLogTable)
          tables.append(self.timestampBasedMessageAttributesTable)
          tables.append(self.timestampBasedMessageAttributesIndexTable)
@@ -596,63 +598,65 @@ diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sourc
          tables.append(self.preferencesTable)
          tables.append(self.orderedItemListTable)
          tables.append(self.orderedItemListIndexTable)
-diff --git a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
---- a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
-+++ b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
-@@ -4760,6 +4760,7 @@
-             case let .DeleteEphemeralMessages(peerId, ids):
-                 deleteEphemeralMessages(transaction: transaction, peerId: peerId, ids: ids)
-             case let .DeleteMessagesWithGlobalIds(ids):
-+                _internal_removeLocalSavedTagsGlobalIds(transaction: transaction, ids: ids)
-                 let ghostBaseMessageIds = transaction.messageIdsForGlobalIds(ids)
-                 let ghostBaseSaveDeleted = ghostBaseMessageIds.allSatisfy { id in
-                     JerkgramRetentionRuntime.shouldCapture(
-@@ -4875,6 +4876,7 @@
-                 }
-                 deletedMessageIds.append(contentsOf: ids.map { .global($0) })
-             case let .DeleteMessages(ids):
-+                _internal_removeLocalSavedTagsMessages(transaction: transaction, ids: ids)
-                 let ghostBaseSaveDeleted = ids.allSatisfy { id in
-                     JerkgramRetentionRuntime.shouldCapture(
-                         accountPeerId: accountPeerId.toInt64(),
-@@ -4973,6 +4975,7 @@
-                         transaction: transaction,
-                         mediaBox: mediaBox,
-                         ids: ids,
-+                        localSavedTagsAlreadyRemoved: true,
-                         manualAddMessageThreadStatsDifference: {
-                             id, add, remove in
-                             addMessageThreadStatsDifference(
-@@ -4992,6 +4995,7 @@
-                     contentsOf: ids.map { .messageId($0) }
-                 )
-             case let .UpdateMinAvailableMessage(id):
-+                _internal_removeLocalSavedTagsRange(transaction: transaction, peerId: id.peerId, namespaces: .just(Set([id.namespace])), scope: LocalSavedTagsDeletionScope(maxId: id.id))
-                 if let message = transaction.getMessage(id) {
-                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
-                 }
-@@ -5024,6 +5028,7 @@
-                     invalidateGroupStats.insert(Namespaces.PeerGroup.archive)
-                 }
-             case let .EditMessage(id, message):
-+                let localSavedTagsPrevious = id.peerId == accountPeerId && id.namespace == Namespaces.Message.Cloud ? transaction.getMessage(id) : nil
-                 var generatedEvent: (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)?
-                 transaction.updateMessage(id, update: { previousMessage in
-                     let peers: [PeerId:Peer] = previousMessage.peers.reduce([:], { current, value in
-@@ -5116,6 +5121,9 @@
-                     
-                     return .update(mergedMessage.withUpdatedAttributes(updatedAttributes))
-                 })
-+                if let previous = localSavedTagsPrevious, let current = transaction.getMessage(id), previous.timestamp != current.timestamp || previous.threadId != current.threadId {
-+                    _ = transaction.updateLocalSavedTagsMetadata(selfPeerId: accountPeerId, messages: [LocalSavedTagMessage(id: current.id, timestamp: current.timestamp, threadId: current.threadId)])
-+                }
-                 if let generatedEvent = generatedEvent {
-                     addedReactionEvents.append(generatedEvent)
-                 }
+diff --git a/submodules/TelegramCore/Sources/State/Sync/StateReplay+Messages.swift b/submodules/TelegramCore/Sources/State/Sync/StateReplay+Messages.swift
+index 93defca..efc9abe 100644
+--- a/submodules/TelegramCore/Sources/State/Sync/StateReplay+Messages.swift
++++ b/submodules/TelegramCore/Sources/State/Sync/StateReplay+Messages.swift
+@@ -364,6 +364,7 @@ extension ReplayContext {
+     }
+     
+     func applyDeleteMessagesWithGlobalIds(_ ids: [Int32]) {
++        _internal_removeLocalSavedTagsGlobalIds(transaction: transaction, ids: ids)
+         let ghostBaseMessageIds = transaction.messageIdsForGlobalIds(ids)
+         let ghostBaseSaveDeleted = ghostBaseMessageIds.allSatisfy { id in
+             JerkgramRetentionRuntime.shouldCapture(
+@@ -481,6 +482,7 @@ extension ReplayContext {
+     }
+     
+     func applyDeleteMessages(_ ids: [MessageId]) {
++        _internal_removeLocalSavedTagsMessages(transaction: transaction, ids: ids)
+         let ghostBaseSaveDeleted = ids.allSatisfy { id in
+             JerkgramRetentionRuntime.shouldCapture(
+                 accountPeerId: accountPeerId.toInt64(),
+@@ -579,6 +581,7 @@ extension ReplayContext {
+                 transaction: transaction,
+                 mediaBox: mediaBox,
+                 ids: ids,
++                localSavedTagsAlreadyRemoved: true,
+                 manualAddMessageThreadStatsDifference: {
+                     id, add, remove in
+                     self.addMessageThreadStatsDifference(
+@@ -600,6 +603,7 @@ extension ReplayContext {
+     }
+     
+     func applyUpdateMinAvailableMessage(_ id: MessageId) {
++        _internal_removeLocalSavedTagsRange(transaction: transaction, peerId: id.peerId, namespaces: .just(Set([id.namespace])), scope: LocalSavedTagsDeletionScope(maxId: id.id))
+         if let message = transaction.getMessage(id) {
+             updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
+         }
+@@ -613,6 +617,7 @@ extension ReplayContext {
+     }
+     
+     func applyEditMessage(_ id: MessageId, _ message: StoreMessage) {
++        let localSavedTagsPrevious = id.peerId == accountPeerId && id.namespace == Namespaces.Message.Cloud ? transaction.getMessage(id) : nil
+         var generatedEvent: (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)?
+         transaction.updateMessage(id, update: { previousMessage in
+             let peers: [PeerId:Peer] = previousMessage.peers.reduce([:], { current, value in
+@@ -705,6 +710,9 @@ extension ReplayContext {
+ 
+             return .update(mergedMessage.withUpdatedAttributes(updatedAttributes))
+         })
++        if let previous = localSavedTagsPrevious, let current = transaction.getMessage(id), previous.timestamp != current.timestamp || previous.threadId != current.threadId {
++            _ = transaction.updateLocalSavedTagsMetadata(selfPeerId: accountPeerId, messages: [LocalSavedTagMessage(id: current.id, timestamp: current.timestamp, threadId: current.threadId)])
++        }
+         transaction.recordMessageEdit(message)
+         if let generatedEvent = generatedEvent {
+             addedReactionEvents.append(generatedEvent)
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift
+index bebe164..e2df51a 100644
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessages.swift
-@@ -39,7 +39,10 @@
+@@ -39,7 +39,10 @@ func _internal_deleteEphemeralReplacements(transaction: Transaction, anchorIds:
      }
  }
  
@@ -664,7 +668,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessa
      var resourceIds: [MediaResourceId] = []
      if deleteMedia {
          for id in ids {
-@@ -306,6 +309,7 @@
+@@ -306,6 +309,7 @@ func _internal_deleteReaction(account: Account, messageId: MessageId, authorId:
  }
  
  func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, threadId: Int64?, namespaces: MessageIdNamespaces) {
@@ -672,7 +676,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessa
      if peerId.namespace == Namespaces.Peer.SecretChat {
          var resourceIds: [MediaResourceId] = []
          transaction.withAllMessages(peerId: peerId, { message in
-@@ -321,6 +325,7 @@
+@@ -321,6 +325,7 @@ func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId
  }
  
  func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, threadId: Int64?, minTimestamp: Int32, maxTimestamp: Int32, namespaces: MessageIdNamespaces) {
@@ -682,6 +686,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/DeleteMessa
          transaction.withAllMessages(peerId: peerId, { message in
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsLifecycle.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsLifecycle.swift
 new file mode 100644
+index 0000000..ca7971a
 --- /dev/null
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsLifecycle.swift
 @@ -0,0 +1,36 @@
@@ -723,6 +728,7 @@ new file mode 100644
 +}
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsOperations.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsOperations.swift
 new file mode 100644
+index 0000000..2d0b42f
 --- /dev/null
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsOperations.swift
 @@ -0,0 +1,42 @@
@@ -770,6 +776,7 @@ new file mode 100644
 +}
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift
 new file mode 100644
+index 0000000..89772ab
 --- /dev/null
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift
 @@ -0,0 +1,296 @@
@@ -1070,9 +1077,10 @@ new file mode 100644
 +    }
 +}
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode/Sources/ChatMessageSelectionInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode/Sources/ChatMessageSelectionInputPanelNode.swift
+index 944d47d..3a7c75f 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode/Sources/ChatMessageSelectionInputPanelNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode/Sources/ChatMessageSelectionInputPanelNode.swift
-@@ -185,6 +185,16 @@
+@@ -191,6 +191,16 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
      private let shareButton: GlassButtonView
      private let tagButton: GlassButtonView
      private let tagEditButton: GlassButtonView
@@ -1089,7 +1097,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPane
      
      private let reactionOverlayContainer: ChatMessageSelectionInputPanelNodeViewForOverlayContent
      
-@@ -246,6 +256,12 @@
+@@ -252,6 +262,12 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
          self.tagEditButton.isAccessibilityElement = true
          self.tagEditButton.accessibilityLabel = strings.VoiceOver_MessageSelectionButtonTag
          
@@ -1102,7 +1110,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPane
          self.reactionOverlayContainer = ChatMessageSelectionInputPanelNodeViewForOverlayContent()
          
          super.init()
-@@ -257,6 +273,7 @@
+@@ -263,6 +279,7 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
          self.view.addSubview(self.shareButton)
          self.view.addSubview(self.tagButton)
          self.view.addSubview(self.tagEditButton)
@@ -1110,7 +1118,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPane
          
          self.viewForOverlayContent = self.reactionOverlayContainer
          
-@@ -269,6 +286,7 @@
+@@ -275,6 +292,7 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
          self.forwardButton.button.addTarget(self, action: #selector(self.forwardButtonPressed), for: .touchUpInside)
          self.forwardWithoutAuthorButton.button.addTarget(self, action: #selector(self.forwardWithoutAuthorButtonPressed), for: .touchUpInside)
          self.shareButton.button.addTarget(self, action: #selector(self.shareButtonPressed), for: .touchUpInside)
@@ -1118,7 +1126,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPane
          self.tagButton.button.addTarget(self, action: #selector(self.tagButtonPressed), for: .touchUpInside)
          self.tagEditButton.button.addTarget(self, action: #selector(self.tagButtonPressed), for: .touchUpInside)
      }
-@@ -277,6 +295,12 @@
+@@ -283,6 +301,12 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
          self.canDeleteMessagesDisposable.dispose()
      }
      
@@ -1131,7 +1139,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPane
      private func updateActions() {
          self.forwardButton.isEnabled = self.selectedMessages.count != 0
          self.forwardWithoutAuthorButton.isEnabled = self.selectedMessages.count != 0
-@@ -566,7 +590,7 @@
+@@ -572,7 +596,7 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
              tagButton = self.tagEditButton
          }
          
@@ -1140,7 +1148,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPane
          if self.reportButton.isHidden {
              if let tagButton {
                  buttons = [
-@@ -624,6 +648,13 @@
+@@ -630,6 +654,13 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
              }
          }
          
@@ -1155,9 +1163,10 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPane
          
          let availableWidth = width - leftInset - rightInset
 diff --git a/submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift b/submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift
+index 46ffa1d..fbbf0a6 100644
 --- a/submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift
 +++ b/submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAction.swift
-@@ -502,7 +502,24 @@
+@@ -502,7 +502,24 @@ extension ChatControllerImpl {
                  }
              })
          case .search:
@@ -1184,16 +1193,13 @@ diff --git a/submodules/TelegramUI/Sources/Chat/ChatControllerNavigationButtonAc
              if self.attemptNavigation({}) {
                  self.dismiss()
 diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+index 40c7038..e318e9f 100644
 --- a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
 +++ b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
-@@ -989,6 +989,19 @@
+@@ -995,6 +995,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
+             })))
+         }
  
-                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: true))
-                     }
-+                })
-+            })))
-+        }
-+
 +        // Use current Saved IDs. Album context and an active batch retain every
 +        // selected ID; never substitute an original forward or minimum album ID.
 +        if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId,
@@ -1203,13 +1209,18 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 
 +            actions.append(.action(ContextMenuActionItem(text: JerkgramSavedTagsStrings(chatPresentationInterfaceState.strings).title, icon: { _ in nil }, action: { controller, _ in
 +                controller?.dismiss(completion: {
 +                    controllerInteraction.navigationController()?.pushViewController(jerkgramSavedTagsController(context: context, selectedMessageIds: localTagIds))
-                 })
-             })))
-         }
++                })
++            })))
++        }
++
+         var isPinnedMessages = false
+         if case .pinnedMessages = chatPresentationInterfaceState.subject {
+             isPinnedMessages = true
 diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
+index 043ce4a..d1bcefa 100644
 --- a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
 +++ b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
-@@ -30,6 +30,19 @@
+@@ -31,6 +31,19 @@ func chatInputFormulaRenderResult(context: RichTextFormulaRenderContext) -> Rich
      )
  }
  
@@ -1229,7 +1240,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift b
  func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, chatControllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
      if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
          return (nil, nil)
-@@ -80,10 +93,12 @@
+@@ -81,10 +94,12 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                  currentPanel.selectedMessages = selectionState.selectedIds
                  currentPanel.chatControllerInteraction = chatControllerInteraction
                  currentPanel.interfaceInteraction = interfaceInteraction
@@ -1242,7 +1253,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift b
                  panel.context = context
                  panel.selectedMessages = selectionState.selectedIds
                  panel.chatControllerInteraction = chatControllerInteraction
-@@ -135,10 +150,12 @@
+@@ -136,10 +151,12 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                  currentPanel.selectedMessages = selectionState.selectedIds
                  currentPanel.chatControllerInteraction = chatControllerInteraction
                  currentPanel.interfaceInteraction = interfaceInteraction
@@ -1257,6 +1268,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift b
                  panel.chatControllerInteraction = chatControllerInteraction
 diff --git a/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift b/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift
 new file mode 100644
+index 0000000..43abb2b
 --- /dev/null
 +++ b/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift
 @@ -0,0 +1,494 @@

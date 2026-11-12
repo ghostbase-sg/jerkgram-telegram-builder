@@ -1,5 +1,5 @@
 diff --git a/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift b/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift
-index bcc7809..a4627ed 100644
+index cf556d2..35b7796 100644
 --- a/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift
 +++ b/submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift
 @@ -148,6 +148,11 @@ public class ItemListInfoItem: InfoListItem, ItemListItem {
@@ -15,7 +15,7 @@ index bcc7809..a4627ed 100644
      private let topStripeNode: ASDisplayNode
      private let bottomStripeNode: ASDisplayNode
 diff --git a/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift b/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift
-index a0906a6..076b44f 100644
+index fd3d280..67add27 100644
 --- a/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift
 +++ b/submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift
 @@ -31,169 +31,6 @@ import GlassBarButtonComponent
@@ -188,7 +188,7 @@ index a0906a6..076b44f 100644
  
  final class GiftOptionsScreenComponent: Component {
      typealias EnvironmentType = ViewControllerComponentContainer.Environment
-@@ -254,7 +91,6 @@ final class GiftOptionsScreenComponent: Component {
+@@ -299,7 +136,6 @@ final class GiftOptionsScreenComponent: Component {
          case limited
          case inStock
          case resale
@@ -196,7 +196,7 @@ index a0906a6..076b44f 100644
          case stars(Int64)
          case transfer
          
-@@ -271,7 +107,7 @@ final class GiftOptionsScreenComponent: Component {
+@@ -316,7 +152,7 @@ final class GiftOptionsScreenComponent: Component {
              case -4:
                  self = .resale
              case -5:
@@ -205,7 +205,7 @@ index a0906a6..076b44f 100644
              default:
                  self = .stars(rawValue)
              }
-@@ -289,8 +125,6 @@ final class GiftOptionsScreenComponent: Component {
+@@ -334,8 +170,6 @@ final class GiftOptionsScreenComponent: Component {
                  return -3
              case .resale:
                  return -4
@@ -214,7 +214,7 @@ index a0906a6..076b44f 100644
              case let .stars(stars):
                  return stars
              }
-@@ -387,8 +221,6 @@ final class GiftOptionsScreenComponent: Component {
+@@ -432,8 +266,6 @@ final class GiftOptionsScreenComponent: Component {
                                          return true
                                      }
                                  }
@@ -223,7 +223,7 @@ index a0906a6..076b44f 100644
                              case .transfer:
                                  break
                              }
-@@ -790,14 +622,6 @@ final class GiftOptionsScreenComponent: Component {
+@@ -851,14 +683,6 @@ final class GiftOptionsScreenComponent: Component {
                          var isLoading = false
                          switch gift {
                          case let .generic(gift):
@@ -238,7 +238,7 @@ index a0906a6..076b44f 100644
  
                              if let _ = gift.soldOut {
                                  if let availability = gift.availability, availability.resale > 0 {
-@@ -1836,21 +1660,6 @@ final class GiftOptionsScreenComponent: Component {
+@@ -1903,21 +1727,6 @@ final class GiftOptionsScreenComponent: Component {
                      title: strings.Gift_Options_Gift_Filter_AllGifts
                  ))
                  
@@ -260,7 +260,7 @@ index a0906a6..076b44f 100644
                  
                  if hasTransferGifts {
                      tabSelectorItems.append(TabSelectorComponent.Item(
-@@ -2018,22 +1827,6 @@ final class GiftOptionsScreenComponent: Component {
+@@ -2085,22 +1894,6 @@ final class GiftOptionsScreenComponent: Component {
                  ),
                  availableProducts,
                  context.engine.payments.cachedStarGifts(),
@@ -283,7 +283,7 @@ index a0906a6..076b44f 100644
                  self.starGiftsContext.state
              ).start(next: {
                  [weak self]
-@@ -2041,7 +1834,6 @@ final class GiftOptionsScreenComponent: Component {
+@@ -2108,7 +1901,6 @@ final class GiftOptionsScreenComponent: Component {
                  disallowedGifts,
                  availableProducts,
                  starGifts,
@@ -291,7 +291,7 @@ index a0906a6..076b44f 100644
                  profileGiftsState in
                  guard let self else {
                      return
-@@ -2122,11 +1914,7 @@ final class GiftOptionsScreenComponent: Component {
+@@ -2189,11 +1981,7 @@ final class GiftOptionsScreenComponent: Component {
                  var filteredStarGifts: [StarGift]?
  
                  if let starGifts {
@@ -573,10 +573,10 @@ index b66b13f..05a5622 100644
          
          transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index 478f9dc..00ea0b1 100644
+index 7d054be..b814cb5 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -212,6 +212,9 @@ enum TopicsLimitedReason {
+@@ -236,6 +236,9 @@ final class PeerInfoScrollNode: ASScrollNode {
  }
  
  final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
@@ -586,7 +586,7 @@ index 478f9dc..00ea0b1 100644
      weak var controller: PeerInfoScreenImpl?
      
      let context: AccountContext
-@@ -7159,6 +7162,16 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+@@ -7231,6 +7234,16 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
          super.present(controller, in: context, with: arguments, blockInteraction: blockInteraction, completion: completion)
      }
      
@@ -618,7 +618,7 @@ index 8742d2d..039dd03 100644
                  itemHeight = PresentationResourcesItemList.withGhostBaseGlassCornerFillerSuppressed {
                      itemNode.update(context: context, width: width, safeInsets: safeInsets, presentationData: presentationData, item: item, topItem: topItem, bottomItem: bottomItem, hasCorners: hasCorners, transition: itemTransition)
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
-index ada73eb..5d3da52 100644
+index 6e3d7c2..41e68de 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
 @@ -128,7 +128,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat

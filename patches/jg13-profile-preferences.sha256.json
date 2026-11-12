@@ -1,11 +1,11 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
   "regression_locks": {
-    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
-    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa",
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
-    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
   },
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
@@ -23,12 +23,14 @@
       ]
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift": {
-      "before_sha256": "9f2f8eb1e9cf5c07c51a83c025b474c8a314bc0d122b9c4d575584951ca27442",
-      "after_sha256": "025ff4c0f4ac38e2bf90cf568fae518e00ebb8433cb6ea86c95d140b21143b7f",
+      "before_sha256": "3a2d2d9e2ac24baac834ecd33828ad27e8d5fc4ac205b101812533c7a1e36655",
+      "after_sha256": "6ad86f23f33ad130de4cddae5eb53093c212dbcc6680130f20855bd70419d090",
       "survival_functions": [
         "emojiTapGesture",
         "tapGesture",
         "update",
+        "updateAccessibility",
+        "updateAccessibilityArea",
         "updateFromParams",
         "updateStoryView",
         "updateTransitionFraction"
@@ -91,12 +93,13 @@
       ]
     },
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift": {
-      "before_sha256": "fa3cb8c732e98d91f971a0b5199ca2ca59734b1c57d18ca88496d0dbcec20c6d",
-      "after_sha256": "9767f87e0699f99d330dcdbd2aceb07bb085b9960740d35428ec16c7a88a556a",
+      "before_sha256": "999476e61c4bf178d4a8671c454b1f063570d27d459440247bd6d5eb37eec532",
+      "after_sha256": "68b46874ece197aa966875e8460551f94918aef472475b00d1551ed782d48ebc",
       "survival_functions": [
         "actionButtonPressed",
         "addToAvatarTransitionSurface",
         "avatarTransitionArguments",
+        "bandCenteredOrigin",
         "buttonPressed",
         "didLoad",
         "handlePhoneLongPress",
@@ -106,13 +109,15 @@
         "invokeDisplayGiftInfo",
         "invokeDisplayPremiumIntro",
         "point",
+        "profileMusic",
         "subtitleBackgroundPressed",
         "update",
         "updateAvatarIsHidden",
         "updateAvatarMask",
-        "updateIsAvatarExpanded"
+        "updateIsAvatarExpanded",
+        "walletBalanceCutoutIcon"
       ]
     }
   },
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json"
 }

@@ -17,7 +17,7 @@ def fixture():
     factory = source[start:end]
     start = source.index("        self.rotated = rotated", source.index("nextClientId += 1"))
     selection = source[start:source.index("        super.init()", start)]
-    return r'''import Foundation
+    result = r'''import Foundation
 protocol ChatHistoryListViewBackend: AnyObject { var rotated: Bool { get set } }
 final class CoreListChatHistoryBackend: ChatHistoryListViewBackend { var rotated = false }
 final class ListViewImpl: ChatHistoryListViewBackend { var rotated = false }
@@ -55,6 +55,49 @@ for rotated in [false, true] {
 }
 print("PASS: 8 actual backend-selection cases; UIKit/device performance not tested")
 '''
+    if "scrollTrace: Bool" in factory:
+        backend = OWNER.parents[3] / "submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift"
+        text = backend.read_text()
+        start = text.index("public func makeCoreListChatHistoryBackend(")
+        brace = text.index("{", start)
+        end, depth = brace + 1, 1
+        while depth:
+            depth += (text[end] == "{") - (text[end] == "}")
+            end += 1
+        public_factory = text[start:end]
+        support = r'''enum CoreListScrollTrace {
+    static var isEnabled = false
+    static var sink: ((String) -> Void)?
+    static func log(_ line: String) { if isEnabled { sink?(line) } }
+    static func flush() {}
+}
+enum WindowTouchRelease { static var trace: ((String) -> Void)? }
+final class Logger { static let shared = Logger(); func log(_ category: String, _ line: String) {} }
+'''
+        result = result.replace("protocol ChatHistoryListViewBackend:", "public protocol ChatHistoryListViewBackend:")
+        result = result.replace("struct Experimental { var coreListChatBackend: Bool }", "struct Experimental { var coreListChatBackend: Bool; var coreListScrollTrace: Bool }")
+        result = result.replace("init(rotated: Bool, debug: Bool, kill: Bool)", "init(rotated: Bool, debug: Bool, kill: Bool, trace: Bool)")
+        result = result.replace("Experimental(coreListChatBackend: debug)", "Experimental(coreListChatBackend: debug, coreListScrollTrace: trace)")
+        result = result.replace("final class ChatHistoryListNodeImpl {", support + public_factory + "\nfinal class ChatHistoryListNodeImpl {")
+        result = result[:result.index("for rotated in [false, true]")] + r'''for rotated in [false, true] {
+    for debug in [false, true] {
+        for kill in [false, true] {
+            for trace in [false, true] {
+                let node = ChatHistoryListNodeImpl(rotated: rotated, debug: debug, kill: kill, trace: trace)
+                let expected = debug && !kill
+                precondition(node.usesCoreListBackend == expected)
+                precondition((node.listView is CoreListChatHistoryBackend) == expected)
+                precondition((node.listView is ListViewImpl) == !expected)
+                precondition(node.listView.rotated == rotated)
+                if expected { precondition(CoreListScrollTrace.isEnabled == trace) }
+            }
+        }
+    }
+}
+print("PASS: 16 actual13.2 factory/selection/trace cases; UIKit/device separate")
+'''
+    return result
+
 
 def main():
     with tempfile.TemporaryDirectory() as directory:

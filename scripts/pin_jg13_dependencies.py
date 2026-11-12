@@ -18,6 +18,13 @@ def git(*args, cwd=None):
 
 def main(verify=False):
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
+    if config["upstream_new_sha"] == "24638bc69bd083981b178dd1e7f921eebbf7fc46":
+        assert git("rev-parse", "HEAD") == config["upstream_new_sha"], "Wrong genuine13.2head"
+        assert not git("ls-tree", "HEAD", "submodules/rlottie"), "Obsolete rlottie unexpectedly present"
+        assert PATH not in config.get("dependency_overrides", {}), "Obsolete rlottie override"
+        assert git("ls-tree", "HEAD", "submodules/tlottie/tlottie").split()[:3] == ["160000", "commit", "92df98dc209bc39b1e567ec74a8c86a0af5239de"]
+        print("Official13.2dependency contract VERIFIED; rlottie removed upstream, tlottie unchanged; runtime separate")
+        return
     assert git("rev-parse", "HEAD") == config["upstream_new_sha"], "Upstream pin changed"
     assert git("ls-tree", "HEAD", PATH).split()[2] == ORIGINAL, "Original gitlink changed"
     exception = config["dependency_overrides"][PATH]

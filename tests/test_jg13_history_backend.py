@@ -1,10 +1,13 @@
 """Exercise backend selection changes against real materialized history source."""
 import importlib.util
+import os
+import sys
 from pathlib import Path
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT / "scripts"))
 OWNER = "submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
 
 class BackendTests(unittest.TestCase):
@@ -18,7 +21,7 @@ class BackendTests(unittest.TestCase):
 
     def test_real_owner_selects_existing_listview_and_restores_exactly(self):
         m = self.module()
-        current = (ROOT / "work/swiftgram-src" / OWNER).read_text()
+        current = (Path(os.environ.get("JG13_SOURCE",ROOT / "work/swiftgram-src")) / OWNER).read_text()
         parent = m.restore(current) if "// Jerkgram: use the established asynchronous ListView backend by default." in current else current
         updated = m.transform(parent)
         self.assertIn("var useCoreListBackend = false", updated)

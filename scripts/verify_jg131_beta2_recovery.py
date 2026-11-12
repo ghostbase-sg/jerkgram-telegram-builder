@@ -11,6 +11,13 @@ def verify_source(source):
     source = Path(source)
     verify_recovery(source)
     config = json.loads((ROOT/'jerkgram-migration.json').read_text())
+    from jg132_baseline import enabled
+    if enabled():
+        # This predecessor is intentionally the frozen Build179 boundary.
+        # The Beta3 successor verifies the current release identity separately.
+        config = dict(config, product_display_version='1.2.0 Beta 2',
+                      product_technical_version='1.2.0-beta.2', build_number=179,
+                      upstream_new_version='13.1.2')
     strings = (source/'submodules/TelegramPresentationData/Sources/JerkgramStrings.swift').read_text()
     for key, value in (('displayVersion', config['product_display_version']), ('technicalVersion', config['product_technical_version']), ('build', str(config['build_number'])), ('telegramBase', config['upstream_new_version'])):
         if strings.count(f'public static let {key} = "{value}"') != 1:

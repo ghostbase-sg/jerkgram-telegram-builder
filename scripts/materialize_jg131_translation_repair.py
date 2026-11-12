@@ -13,7 +13,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / 'patches/jg131-translation-repair.patch'
 MANIFEST = ROOT / 'patches/jg131-translation-repair.sha256.json'
-UPSTREAM = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
+UPSTREAM = '24638bc69bd083981b178dd1e7f921eebbf7fc46'
 
 
 def digest(data):
@@ -55,6 +55,9 @@ def is_applied(source):
 
 
 def apply_repair(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg131-translation-repair')
     source = Path(source).resolve()
     owners = manifest()['owners']
     actual = _actual(source, owners)

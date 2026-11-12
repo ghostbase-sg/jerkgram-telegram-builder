@@ -33,6 +33,9 @@ def without_app_icons(text):
     return text
 
 def apply_release_ui(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled():
+        return apply_stage(source, 'jg13-release-ui')
     m = read_manifest()
     target = Path(source) / OWNER
     text = target.read_text()

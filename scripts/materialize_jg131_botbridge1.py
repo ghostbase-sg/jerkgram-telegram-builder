@@ -13,7 +13,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / 'patches/jg131-botbridge1.patch'
 MANIFEST = ROOT / 'patches/jg131-botbridge1.sha256.json'
-UPSTREAM = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
+UPSTREAM = '24638bc69bd083981b178dd1e7f921eebbf7fc46'
 
 
 def digest(data):
@@ -21,6 +21,9 @@ def digest(data):
 
 
 def manifest():
+    from jg132_baseline import enabled, stage_manifest
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return stage_manifest("jg131-botbridge1")
     values = json.loads(MANIFEST.read_text())
     if values['upstream_sha'] != UPSTREAM:
         raise RuntimeError('BOTBRIDGE1 upstream pin changed')
@@ -55,6 +58,9 @@ def is_applied(source):
 
 
 def apply_botbridge(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg131-botbridge1')
     source = Path(source).resolve()
     owners = manifest()['owners']
     actual = _actual(source, owners)

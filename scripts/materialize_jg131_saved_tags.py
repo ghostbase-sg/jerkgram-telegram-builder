@@ -13,7 +13,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / 'patches/jg131-saved-tags.patch'
 MANIFEST = ROOT / 'patches/jg131-saved-tags.sha256.json'
-UPSTREAM = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
+UPSTREAM = '24638bc69bd083981b178dd1e7f921eebbf7fc46'
 
 
 def digest(data):
@@ -70,6 +70,9 @@ def is_present(source):
 
 
 def apply_tags(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg131-saved-tags')
     source = Path(source).resolve()
     values = manifest()
     _verify_parent_context(source, values)

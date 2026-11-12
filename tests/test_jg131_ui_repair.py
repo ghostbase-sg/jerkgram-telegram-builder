@@ -1,5 +1,7 @@
 """Regression checks for shared card backgrounds, profile masks and Swift capture compatibility."""
 import importlib.util
+import os
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -7,7 +9,8 @@ import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'work/swiftgram-src'
+sys.path.insert(0,str(ROOT / "scripts"))
+SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 
 class UIRepairTests(unittest.TestCase):
     def stage(self):
@@ -18,10 +21,18 @@ class UIRepairTests(unittest.TestCase):
         spec.loader.exec_module(stage)
         return stage
 
+    def apply_fixture(self,stage,target):
+        from jg132_baseline import enabled
+        if enabled():
+            from jg132_source_fixtures import apply_exact_delta_fixture
+            return apply_exact_delta_fixture(stage,target)
+        return stage.apply_ui_repair(target)
+
     def test_restored_components_equal_official_source(self):
         stage = self.stage()
         for name in stage.CARD_OWNERS:
-            expected = subprocess.check_output(['git', 'show', 'HEAD:' + name], cwd=SOURCE)
+            from jg132_source_fixtures import official_bytes
+            expected = official_bytes(SOURCE,name)
             actual = (SOURCE / name).read_bytes()
             if name.endswith('TextFieldNode.swift'):
                 text = actual.decode()
@@ -55,12 +66,12 @@ class UIRepairTests(unittest.TestCase):
             parent = path.read_bytes()
             path.write_bytes(parent + b'\n// unexpected change\n')
             before = {n: (target / n).read_bytes() for n in m['owners']}
-            with self.assertRaises(RuntimeError): stage.apply_ui_repair(target)
+            with self.assertRaises(RuntimeError): self.apply_fixture(stage,target)
             self.assertEqual(before, {n: (target / n).read_bytes() for n in m['owners']})
             path.write_bytes(parent)
-            stage.apply_ui_repair(target)
+            self.apply_fixture(stage,target)
             stage.verify_ui_repair(target)
-            with self.assertRaises(RuntimeError): stage.apply_ui_repair(target)
+            with self.assertRaises(RuntimeError): self.apply_fixture(stage,target)
             path.write_bytes(path.read_bytes() + b'\n// unexpected change\n')
             with self.assertRaises(RuntimeError): stage.verify_ui_repair(target)
 

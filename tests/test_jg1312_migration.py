@@ -1,16 +1,16 @@
-"""Active source contracts belong to the genuine official 13.1.2 parent."""
+"""Active source contracts belong to the genuine official 13.2 parent; historical filename retained."""
 from pathlib import Path
 import hashlib
 import json
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET = '279f89e4d4f63f17227bf877dc3d8990f22ecd58'
+TARGET = '24638bc69bd083981b178dd1e7f921eebbf7fc46'
 
 
 class Migration1312(unittest.TestCase):
     def test_active_manifests_share_target_and_chain_proof(self):
-        chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
+        chain = json.loads((ROOT / 'docs/migrations/telegram-13.2-stage-chain.json').read_text())
         self.assertEqual(len(chain), 32)
         stages = {s['stage']: s for s in chain}
         for p in (ROOT / 'patches').glob('jg13*.sha256.json'):
@@ -24,7 +24,7 @@ class Migration1312(unittest.TestCase):
                 self.assertEqual(m['patch_sha256'], stages[name]['regenerated_patch_sha256'])
 
     def test_botbridge_chain_owners_match_terminal_manifest(self):
-        chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
+        chain = json.loads((ROOT / 'docs/migrations/telegram-13.2-stage-chain.json').read_text())
         stage = next(s for s in chain if s['stage'] == 'jg131-botbridge1')
         manifest = json.loads((ROOT / 'patches/jg131-botbridge1.sha256.json').read_text())
 
@@ -34,7 +34,7 @@ class Migration1312(unittest.TestCase):
             self.assertEqual(stage['owners'][path]['after'], owner['after_sha256'], path)
 
     def test_recovery_chain_owners_match_terminal_manifest(self):
-        chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
+        chain = json.loads((ROOT / 'docs/migrations/telegram-13.2-stage-chain.json').read_text())
         stage = next(s for s in chain if s['stage'] == 'jg131-beta2-recovery')
         manifest = json.loads((ROOT / 'patches/jg131-beta2-recovery.sha256.json').read_text())
         self.assertEqual(stage['stage'], 'jg131-beta2-recovery')
@@ -47,7 +47,7 @@ class Migration1312(unittest.TestCase):
     def test_prepare_asserts_target_version_and_tlottie_gitlink(self):
         prepare = (ROOT / 'scripts/prepare_source_official.sh').read_text()
         self.assertIn('EXPECTED_COMMIT="' + TARGET + '"', prepare)
-        self.assertIn("versions['app'] == '13.1.2'", prepare)
+        self.assertIn("versions['app'] == '13.2'", prepare)
         self.assertIn('92df98dc209bc39b1e567ec74a8c86a0af5239de', prepare)
         self.assertIn('submodules/tlottie/tlottie', prepare)
 

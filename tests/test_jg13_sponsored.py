@@ -10,6 +10,14 @@ SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 
+
+def apply_fixture(stage,source):
+    from jg132_baseline import enabled
+    if enabled():
+        from jg132_source_fixtures import apply_exact_delta_fixture
+        return apply_exact_delta_fixture(stage,source)
+    return stage.apply_sponsored(source)
+
 class SponsoredStageTests(unittest.TestCase):
     def test_exact_sponsored_stage(self):
         self.assertTrue((ROOT / 'scripts/materialize_jg13_sponsored.py').exists(), 'Sponsored-only stage missing')
@@ -36,13 +44,13 @@ class SponsoredStageTests(unittest.TestCase):
             original = target.read_bytes()
             target.write_bytes(original + b'\n// parent tamper\n')
             before = {n: (source/n).read_bytes() for n in names}
-            with self.assertRaises(RuntimeError): stage.apply_sponsored(source)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, source)
             self.assertEqual(before, {n: (source/n).read_bytes() for n in names})
             self.assertFalse((source/stage.POLICY).exists())
             target.write_bytes(original)
-            stage.apply_sponsored(source)
+            apply_fixture(stage, source)
             stage.verify_sponsored(source)
-            with self.assertRaises(RuntimeError): stage.apply_sponsored(source)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, source)
             for name in set(m['owners']) | set(m['locks']):
                 p = source/name; original = p.read_bytes()
                 p.write_bytes(original + b'\n// final tamper\n')

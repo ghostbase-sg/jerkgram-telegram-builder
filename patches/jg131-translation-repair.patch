@@ -1,8 +1,8 @@
 diff --git a/submodules/AccountContext/Sources/AccountContext.swift b/submodules/AccountContext/Sources/AccountContext.swift
-index 8a5d1da..dd76423 100644
+index b6d2c19..5bbf8cd 100644
 --- a/submodules/AccountContext/Sources/AccountContext.swift
 +++ b/submodules/AccountContext/Sources/AccountContext.swift
-@@ -1707,7 +1707,8 @@ public protocol SharedAccountContext: AnyObject {
+@@ -1791,7 +1791,8 @@ public protocol SharedAccountContext: AnyObject {
          mode: TextProcessingScreenMode,
          inputText: ComposedRichMessage,
          copyResult: ((ComposedRichMessage) -> Void)?,
@@ -12,7 +12,7 @@ index 8a5d1da..dd76423 100644
      ) async -> ViewController
      func makeCreateBotScreen(
          context: AccountContext,
-@@ -2234,3 +2235,9 @@ public extension SharedAccountContext {
+@@ -2328,3 +2329,9 @@ public extension SharedAccountContext {
          return self.makeWalletScreen(context: context, opensCollectibles: false)
      }
  }
@@ -23,9 +23,10 @@ index 8a5d1da..dd76423 100644
 +    }
 +}
 diff --git a/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift b/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
+index 270a8d9..952396e 100644
 --- a/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
 +++ b/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
-@@ -567,7 +567,8 @@
+@@ -583,7 +583,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                                  let undoController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: true, animateInAsReplacement: false, appearance: UndoOverlayController.Appearance(isBlurred: true), action: { _ in true })
                                  self.controllerInteraction?.presentController(undoController, nil)
                              },
@@ -35,7 +36,7 @@ diff --git a/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
                          )
  
                          //self.actionSheet = translateController
-@@ -1005,7 +1006,7 @@
+@@ -1021,7 +1022,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
              }
              if let translateToLanguage, mediaSubject == nil && !text.isEmpty {
                  for attribute in message.attributes {
@@ -45,9 +46,10 @@ diff --git a/submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift
                          entities = attribute.entities
                          break
 diff --git a/submodules/GalleryUI/Sources/GalleryController.swift b/submodules/GalleryUI/Sources/GalleryController.swift
+index c7e86bb..75f2a36 100644
 --- a/submodules/GalleryUI/Sources/GalleryController.swift
 +++ b/submodules/GalleryUI/Sources/GalleryController.swift
-@@ -316,7 +316,7 @@
+@@ -316,7 +316,7 @@ public func galleryItemForEntry(
              if entry.mediaSubject == nil {
                  if let translateToLanguage, !text.isEmpty {
                      for attribute in message.attributes {
@@ -56,7 +58,7 @@ diff --git a/submodules/GalleryUI/Sources/GalleryController.swift b/submodules/G
                              text = attribute.text
                              entities = attribute.entities
                              break
-@@ -392,7 +392,7 @@
+@@ -403,7 +403,7 @@ public func galleryItemForEntry(
              if entry.mediaSubject == nil {
                  if let translateToLanguage, !text.isEmpty {
                      for attribute in message.attributes {
@@ -66,9 +68,10 @@ diff --git a/submodules/GalleryUI/Sources/GalleryController.swift b/submodules/G
                              entities = attribute.entities
                              break
 diff --git a/submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift b/submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift
+index 367ea90..a5943d8 100644
 --- a/submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift
 +++ b/submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift
-@@ -428,7 +428,8 @@
+@@ -428,7 +428,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                              let tooltipController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false })
                                              parentController?.present(tooltipController, in: .window(.root))
                                          },
@@ -79,9 +82,10 @@ diff --git a/submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift b/sub
                                      parentController?.present(controller, in: .window(.root))
                                  }
 diff --git a/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift b/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
+index b17788a..e3a5a37 100644
 --- a/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
 +++ b/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
-@@ -465,7 +465,7 @@
+@@ -465,7 +465,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                          
                                          if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
                                              var messageText = message.text
@@ -90,7 +94,7 @@ diff --git a/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
                                                  messageText = translation.text
                                              }
                                              
-@@ -501,7 +501,7 @@
+@@ -501,7 +501,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                  case let .TextUrl(url):
                                      var messageText = message.text
                                      var entity = entity
@@ -100,9 +104,10 @@ diff --git a/submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift
                                          if entities.count == translation.entities.count, let index = entities.firstIndex(of: entity), index < translation.entities.count {
                                              entity = translation.entities[index]
 diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index 276ba10..c755bd9 100644
 --- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
 +++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
-@@ -507,6 +507,7 @@
+@@ -507,6 +507,7 @@ private func jerkgramStateValues(_ state: GhostBaseSettingsState) -> [String: Je
      return [
          JerkgramSponsoredContentPolicy.preferenceKey: .bool(state.removeSponsored),
          JerkgramDownloadBoostSettings.preferenceKey: .string(state.downloadBoost),
@@ -110,7 +115,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          GhostBaseKey.profileEnabled: .bool(state.profileEnabled),
          GhostBaseKey.showIds: .bool(state.showIds),
          GhostBaseKey.showDCs: .bool(state.showDCs),
-@@ -586,6 +587,9 @@
+@@ -586,6 +587,9 @@ private func jerkgramPersistChangedSettings(
      if changes[JerkgramSponsoredContentPolicy.preferenceKey] != nil {
          JerkgramSponsoredContentPolicy.update(accountPeerId: accountPeerId, enabled: current.removeSponsored)
      }
@@ -120,7 +125,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      if changes[JerkgramDownloadBoostSettings.preferenceKey] != nil {
          JerkgramDownloadBoostSettings.update(accountPeerId: accountPeerId, rawValue: current.downloadBoost)
      }
-@@ -674,6 +678,7 @@
+@@ -674,6 +678,7 @@ struct GhostBaseSettingsState: Equatable {
      var hideBlockedReactions: Bool
      var removeSponsored: Bool = false
      var downloadBoost: String = "off"
@@ -128,7 +133,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      var sendTextStyle: String
  
      var deletedPortableReplies: Bool
-@@ -733,6 +738,7 @@
+@@ -733,6 +738,7 @@ struct GhostBaseSettingsState: Equatable {
              hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
              removeSponsored: JerkgramSponsoredContentPolicy.readStoredValue(accountPeerId: accountPeerId),
              downloadBoost: JerkgramDownloadBoostSettings.readStoredMode(accountPeerId: accountPeerId).rawValue,
@@ -136,7 +141,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
              sendTextStyle: jerkgramScopedString(accountPeerId: accountPeerId, key: 
                  ghostBaseSendTextStyleKey,
                  defaultValue: "normal", allowLegacyFallback: allowLegacyFallback
-@@ -2161,6 +2167,7 @@
+@@ -2161,6 +2167,7 @@ private func ghostBaseSettingsEntries(
      }
  
      if page == .messages {
@@ -144,7 +149,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          return [
              .header(0, strings.deletedMessages),
              .toggle(0, 1, GhostBaseKey.saveDeleted, strings.saveDeletedMessages, state.saveDeleted),
-@@ -2210,7 +2217,11 @@
+@@ -2210,7 +2217,11 @@ private func ghostBaseSettingsEntries(
          
              .header(5, strings.blockedUsers),
              .toggle(5, 1, GhostBaseKey.hideBlockedMessages, strings.hideBlockedMessages, state.hideBlockedMessages),
@@ -157,7 +162,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      }
  
      if page == .protectedContent {
-@@ -3767,6 +3778,8 @@
+@@ -3767,6 +3778,8 @@ private func ghostBaseSettingsPageController(
              switch key {
              case JerkgramAppIconAccess.preferenceKey:
                  UserDefaults.standard.set(value, forKey: JerkgramAppIconAccess.preferenceKey)
@@ -167,9 +172,10 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
                  updated.profileEnabled = value
              case GhostBaseKey.showIds:
 diff --git a/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift b/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift
---- a/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift
-+++ b/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift
-@@ -436,8 +436,8 @@
+index 4e37c08..005cee8 100644
+--- a/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift	
++++ b/submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift	
+@@ -436,8 +436,8 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
          }
          
          let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
@@ -180,7 +186,7 @@ diff --git a/submodules/SettingsUI/Sources/Language Selection/LocalizationListCo
          
          switch translationConfiguration.manual {
          case .enabled, .alternative:
-@@ -478,7 +478,7 @@
+@@ -478,7 +478,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
              }
              
              let isPremium = peer?.isPremium ?? false
@@ -190,9 +196,10 @@ diff --git a/submodules/SettingsUI/Sources/Language Selection/LocalizationListCo
              var entries: [LanguageListEntry] = []
              var activeLanguageCode: String?
 diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift
+index a43b43d..0f023ea 100644
 --- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift
 +++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift
-@@ -25,6 +25,7 @@
+@@ -25,6 +25,7 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
      public let text: String
      public let entities: [MessageTextEntity]
      public let toLang: String
@@ -200,7 +207,7 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
      public let jerkgramUnavailable: Bool
      public let jerkgramSourceFingerprint: String?
      private let jerkgramSourceLock = NSLock()
-@@ -32,8 +33,10 @@
+@@ -32,8 +33,10 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
      private var jerkgramCachedValidity = false
  
      // One weak immutable-message cache avoids hashing on every bubble layout.
@@ -213,7 +220,7 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
          self.jerkgramSourceLock.lock()
          if self.jerkgramCachedMessage === message {
              let value = self.jerkgramCachedValidity
-@@ -67,12 +70,14 @@
+@@ -67,12 +70,14 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
          toLang: String,
          instantPage: InstantPage? = nil,
          jerkgramSourceFingerprint: String? = nil,
@@ -229,7 +236,7 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
          self.jerkgramUnavailable = jerkgramUnavailable
          self.additional = additional
          self.pollSolution = pollSolution
-@@ -85,6 +90,7 @@
+@@ -85,6 +90,7 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
          self.additional = decoder.decodeObjectArrayWithDecoderForKey("additional")
          self.toLang = decoder.decodeStringForKey("toLang", orElse: "")
          self.jerkgramSourceFingerprint = decoder.decodeOptionalStringForKey("jg174source")
@@ -237,7 +244,7 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
          self.jerkgramUnavailable = decoder.decodeBoolForKey("jg174unavailable", orElse: false)
          self.pollSolution = decoder.decodeObjectForKey("pollSolution") as? Additional
          self.instantPage = decoder.decodeObjectForKey("ipage", decoder: { InstantPage(decoder: $0) }) as? InstantPage
-@@ -94,6 +100,7 @@
+@@ -94,6 +100,7 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
          encoder.encodeString(self.text, forKey: "text")
          encoder.encodeObjectArray(self.entities, forKey: "entities")
          encoder.encodeString(self.toLang, forKey: "toLang")
@@ -245,7 +252,7 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
          encoder.encodeBool(self.jerkgramUnavailable, forKey: "jg174unavailable")
          if let fingerprint = self.jerkgramSourceFingerprint { encoder.encodeString(fingerprint, forKey: "jg174source") }
          else { encoder.encodeNil(forKey: "jg174source") }
-@@ -112,6 +119,7 @@
+@@ -112,6 +119,7 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
      }
  
      public static func ==(lhs: TranslationMessageAttribute, rhs: TranslationMessageAttribute) -> Bool {
@@ -254,9 +261,10 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessag
          if lhs.jerkgramSourceFingerprint != rhs.jerkgramSourceFingerprint { return false }
          if lhs.text != rhs.text {
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift
+index 5414fdc..c1e2233 100644
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift
-@@ -859,8 +859,12 @@
+@@ -934,8 +934,12 @@ public extension TelegramEngine {
              }
          }
          
@@ -272,13 +280,13 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEng
          
          public func togglePeerMessagesTranslationHidden(peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
+index 0a8b17e..530bb6d 100644
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
-@@ -3,6 +3,282 @@
- import SwiftSignalKit
+@@ -4,6 +4,282 @@ import SwiftSignalKit
  internal import TelegramApi
  import MtProtoKit
-+
+ 
 +// Account policy is hydrated by the canonical GhostBase settings owner on activation.
 +// Kept here because this source owner is already present in TelegramCore's build inputs.
 +public enum JerkgramTranslationSettings {
@@ -554,10 +562,11 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
 +    return jerkgramEnhancedTexts(account: account, texts: [(text, entities)], fromLang: fromLang, toLang: toLang, allowLocalDownloads: allowLocalDownloads, localOnly: localOnly)
 +    |> map { $0.first }
 +}
- 
++
  public enum ComposedRichMessage: Equatable {
      /// Structured content → a rich message (`RichTextMessageAttribute(instantPage:)`, sent with `text: ""`).
-@@ -216,10 +492,10 @@
+     case rich(instantPage: InstantPage)
+@@ -217,10 +493,10 @@ func _internal_translateTexts(network: Network, texts: [(String, [MessageTextEnt
      }
  }
  
@@ -570,7 +579,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
      }
      return combineLatest(signals)
      |> ignoreValues
-@@ -227,6 +503,14 @@
+@@ -228,6 +504,14 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
  
  public protocol ExperimentalInternalTranslationService: AnyObject {
      func translate(texts: [AnyHashable: String], fromLang: String, toLang: String) -> Signal<[AnyHashable: String]?, NoError>
@@ -585,23 +594,20 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
  }
  
  public var engineExperimentalInternalTranslationService: ExperimentalInternalTranslationService?
-@@ -302,37 +586,32 @@
+@@ -303,37 +587,32 @@ public func jerkgramTranslationSourceFingerprint(_ message: Message) -> String {
          encoder.encodeBool(audio.isPending, forKey: "pending")
      }
      encoder.encodeBool((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted ?? false, forKey: "deleted")
 -    return "apple-v1:" + sha256Digest(encoder.makeData()).map { String(format: "%02x", $0) }.joined()
--}
--
++    return "source-v2:" + sha256Digest(encoder.makeData()).map { String(format: "%02x", $0) }.joined()
+ }
+ 
 -public func jerkgramLocalTranslationIsCurrent(_ translation: TranslationMessageAttribute, message: Message, toLang: String) -> Bool {
 -    return translation.toLang == toLang && !translation.jerkgramUnavailable && translation.jerkgramSourceFingerprint != nil && translation.isValidForMessage(message)
--}
--public func jerkgramLocalTranslationUnavailable(_ message: Message, toLang: String?) -> Bool {
-+    return "source-v2:" + sha256Digest(encoder.makeData()).map { String(format: "%02x", $0) }.joined()
-+}
-+
 +public func jerkgramLocalTranslationIsCurrent(_ translation: TranslationMessageAttribute, message: Message, toLang: String, accountPeerId: Int64? = nil) -> Bool {
 +    return translation.toLang == toLang && !translation.jerkgramUnavailable && translation.jerkgramSourceFingerprint != nil && translation.isValidForMessage(message, accountPeerId: accountPeerId)
-+}
+ }
+-public func jerkgramLocalTranslationUnavailable(_ message: Message, toLang: String?) -> Bool {
 +public func jerkgramLocalTranslationUnavailable(_ message: Message, toLang: String?, accountPeerId: Int64? = nil) -> Bool {
      guard let toLang,
            let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute else { return false }
@@ -627,20 +633,19 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
 -        if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute,
 -           !audio.isPending, !audio.text.isEmpty { return nil }
 -        return [message.text]
--    }
--    if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute,
--       !audio.isPending, !audio.text.isEmpty { return [audio.text] }
--    return nil
 +    if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute, !audio.isPending, !audio.text.isEmpty {
 +        guard message.text.isEmpty else { return nil }
 +        return [(audio.text, [])]
-+    }
+     }
+-    if let audio = message.attributes.first(where: { $0 is AudioTranscriptionMessageAttribute }) as? AudioTranscriptionMessageAttribute,
+-       !audio.isPending, !audio.text.isEmpty { return [audio.text] }
+-    return nil
 +    guard !message.text.isEmpty else { return nil }
 +    return [(message.text, message.textEntitiesAttribute?.entities ?? [])]
  }
  
  public func jerkgramTranslationSourceMatches(_ original: Message, _ current: Message) -> Bool {
-@@ -341,58 +620,33 @@
+@@ -342,58 +621,33 @@ public func jerkgramTranslationSourceMatches(_ original: Message, _ current: Mes
      return jerkgramTranslationSourceFingerprint(original) == jerkgramTranslationSourceFingerprint(current)
  }
  
@@ -716,7 +721,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
                      return .update(StoreMessage(id: current.id, customStableId: nil, globallyUniqueId: current.globallyUniqueId, groupingKey: current.groupingKey, threadId: current.threadId, timestamp: current.timestamp, flags: StoreMessageFlags(current.flags), tags: current.tags, globalTags: current.globalTags, localTags: current.localTags, forwardInfo: current.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: current.author?.id, text: current.text, attributes: attributes, media: current.media))
                  })
                  return stored
-@@ -404,20 +658,19 @@
+@@ -405,20 +659,19 @@ private func jerkgramTranslateLocalMessages(account: Account, messages: [Message
      return combineLatest(signals)
      |> castError(TranslationError.self)
      |> mapToSignal { outcomes -> Signal<Void, TranslationError> in
@@ -725,9 +730,8 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
      }
  }
 -// JG174 local message translation end
--
+ 
 -private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool, tone: TranslationTone = .neutral) -> Signal<Void, TranslationError> {
-+
 +
 +private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool, enhanced: Bool = false, tone: TranslationTone = .neutral) -> Signal<Void, TranslationError> {
      return account.postbox.transaction { transaction -> (Api.InputPeer?, [Message]) in
@@ -743,7 +747,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.s
          guard let inputPeer = inputPeer else {
              return .never()
 diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
-index 65d818d..2ce15b1 100644
+index 5832de0..c1f661e 100644
 --- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
 +++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
 @@ -1014,8 +1014,8 @@ public extension JerkgramStrings {
@@ -758,9 +762,10 @@ index 65d818d..2ce15b1 100644
      var localTranslationRetry: String { self.languageCode == "ru" ? "Повторить перевод" : "Retry Translation" }
  }
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
+index 186e00f..ecb33d8 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift
-@@ -768,7 +768,7 @@
+@@ -786,7 +786,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                              if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty && arguments.incoming {
                                  isTranslating = true
                                  for attribute in arguments.message.attributes {
@@ -769,7 +774,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNod
                                          textString = NSAttributedString(string: attribute.text, font: textFont, textColor: messageTheme.primaryTextColor)
                                          isTranslating = false
                                          break
-@@ -1500,7 +1500,7 @@
+@@ -1557,7 +1557,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
          guard let arguments = self.arguments else {
              return
          }
@@ -779,9 +784,10 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNod
          let titleRects = (self.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []).map { self.textNode.view.convert($0, to: self.textClippingNode.view) }
          rects.append(titleRects)
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
+index b6cb41c..f6ed2e0 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift
-@@ -2794,7 +2794,7 @@
+@@ -2790,7 +2790,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                  if let poll, let translateToLanguage = item.associatedData.translateToLanguage, !poll.text.isEmpty && incoming {
                      isTranslating = true
                      for attribute in item.message.attributes {
@@ -790,7 +796,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentN
                              pollTitleText = attribute.text
                              pollTitleEntities = attribute.entities
                              pollOptions = attribute.additional
-@@ -3504,7 +3504,7 @@
+@@ -3500,7 +3500,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
          guard let item = self.item else {
              return
          }
@@ -800,9 +806,10 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentN
          let titleRects = (self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []).map { self.textNode.textNode.view.convert($0, to: self.view) }
          rects.append(titleRects)
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
+index 7fb3819..f6bf5bf 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
-@@ -475,7 +475,7 @@
+@@ -513,7 +513,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                  // A rich message's translation is a page, not text to show in place of the quote.
                  if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty, arguments.quote?.quote.richText == nil {
                      for attribute in message.attributes {
@@ -812,9 +819,10 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sour
                              messageEntities = attribute.entities
                              break
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift b/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift
+index 4b152cd..156c4c7 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift
-@@ -429,7 +429,7 @@
+@@ -416,7 +416,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                  messageEntities = summary.entities
                                  isTranslating = false
                                  isSummaryApplied = true
@@ -823,7 +831,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentN
                                  rawText = attribute.text
                                  messageEntities = attribute.entities
                                  if !isSummarized {
-@@ -1285,7 +1285,7 @@
+@@ -1276,7 +1276,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
              return
          }
          let preservesOtherLoading = showTextAsPlaceholder || item.controllerInteraction.summarizedMessageIds.contains(item.message.id)
@@ -833,9 +841,10 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentN
          if isTranslating, !rects.isEmpty {
              if showTextAsPlaceholder {
 diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift
+index 4a71a9a..3a7c1af 100644
 --- a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift
 +++ b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift
-@@ -50,6 +50,7 @@
+@@ -49,6 +49,7 @@ final class TextProcessingContentComponent: Component {
      let mode: TextProcessingScreen.Mode
      let previewIconFile: TelegramMediaFile?
      let styles: [TextProcessingScreen.Style]
@@ -843,7 +852,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
      let inputText: ComposedRichMessage
      let initialEditState: TextProcessingScreen.EditState?
      let ignoredTranslationLanguages: [String]
-@@ -71,6 +72,7 @@
+@@ -70,6 +71,7 @@ final class TextProcessingContentComponent: Component {
          previewIconFile: TelegramMediaFile?,
          styles: [TextProcessingScreen.Style],
          inputText: ComposedRichMessage,
@@ -851,7 +860,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          initialEditState: TextProcessingScreen.EditState?,
          ignoredTranslationLanguages: [String],
          shouldDisplayStyleNotice: Bool,
-@@ -89,6 +91,7 @@
+@@ -88,6 +90,7 @@ final class TextProcessingContentComponent: Component {
          self.context = context
          self.mode = mode
          self.previewIconFile = previewIconFile
@@ -859,7 +868,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          self.inputText = inputText
          self.initialEditState = initialEditState
          self.ignoredTranslationLanguages = ignoredTranslationLanguages
-@@ -828,6 +831,7 @@
+@@ -828,6 +831,7 @@ final class TextProcessingContentComponent: Component {
              switch self.currentMode {
              case .translate:
                  contentExternalState = self.translateState
@@ -867,7 +876,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                  contentComponent = AnyComponent(TextProcessingTranslateContentComponent(
                      context: component.context,
                      theme: theme,
-@@ -1311,6 +1315,7 @@
+@@ -1311,6 +1315,7 @@ private final class TextProcessingSheetComponent: Component {
      let mode: TextProcessingScreen.Mode
      let ignoredTranslationLanguages: [String]
      let initialStyles: [TextProcessingScreen.Style]
@@ -875,7 +884,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
      let inputText: ComposedRichMessage
      let initialEditState: TextProcessingScreen.EditState?
      let shouldDisplayStyleNotice: Bool
-@@ -1324,6 +1329,7 @@
+@@ -1324,6 +1329,7 @@ private final class TextProcessingSheetComponent: Component {
          ignoredTranslationLanguages: [String],
          initialStyles: [TextProcessingScreen.Style],
          inputText: ComposedRichMessage,
@@ -883,7 +892,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          initialEditState: TextProcessingScreen.EditState?,
          shouldDisplayStyleNotice: Bool,
          previewIconFile: TelegramMediaFile?,
-@@ -1334,6 +1340,7 @@
+@@ -1334,6 +1340,7 @@ private final class TextProcessingSheetComponent: Component {
          self.mode = mode
          self.ignoredTranslationLanguages = ignoredTranslationLanguages
          self.initialStyles = initialStyles
@@ -891,7 +900,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          self.inputText = inputText
          self.initialEditState = initialEditState
          self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
-@@ -1752,6 +1759,7 @@
+@@ -1752,6 +1759,7 @@ private final class TextProcessingSheetComponent: Component {
                          previewIconFile: component.previewIconFile,
                          styles: self.styles,
                          inputText: component.inputText,
@@ -899,7 +908,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                          initialEditState: component.initialEditState,
                          ignoredTranslationLanguages: component.ignoredTranslationLanguages,
                          shouldDisplayStyleNotice: component.shouldDisplayStyleNotice,
-@@ -2294,13 +2302,14 @@
+@@ -2297,13 +2305,14 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
          theme: PresentationTheme? = nil,
          mode: Mode,
          inputText: ComposedRichMessage,
@@ -915,7 +924,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          let rawStyles = await (localTranslation ? .single([]) : context.engine.messages.composeAIMessageStyles()).get()
          var styles: [Style] = []
          let resolvedEmojiFiles: [Int64: TelegramMediaFile] = await context.engine.stickers.resolveInlineStickersLocal(fileIds: Array(Set(rawStyles.compactMap({ style in
-@@ -2379,6 +2388,7 @@
+@@ -2382,6 +2391,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
                  ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                  initialStyles: styles,
                  inputText: inputText,
@@ -924,9 +933,10 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                  shouldDisplayStyleNotice: shouldDisplayStyleNotice,
                  previewIconFile: previewIconFile,
 diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift
+index 0f89d56..6aa0037 100644
 --- a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift
 +++ b/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift
-@@ -15,7 +15,6 @@
+@@ -15,7 +15,6 @@ import Markdown
  import PlainButtonComponent
  import TextFieldComponent
  
@@ -934,7 +944,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
  
  enum LocalizedLanguageNameKind {
      case neutral
-@@ -90,6 +89,7 @@
+@@ -90,6 +89,7 @@ final class TextProcessingTranslateContentComponent: Component {
          }
          var isProcessingUpdated: ((Bool) -> Void)?
          
@@ -942,7 +952,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          fileprivate(set) var localTranslationError = false
          fileprivate(set) var nonPremiumFloodTriggered: Bool = false {
              didSet {
-@@ -203,6 +203,7 @@
+@@ -203,6 +203,7 @@ final class TextProcessingTranslateContentComponent: Component {
          
          private var processDisposable: Disposable?
          private var localTranslationGeneration = 0
@@ -950,7 +960,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          
          override init(frame: CGRect) {
              self.separatorLayer = SimpleLayer()
-@@ -213,6 +214,17 @@
+@@ -213,6 +214,17 @@ final class TextProcessingTranslateContentComponent: Component {
              super.init(frame: frame)
              
              self.layer.addSublayer(self.separatorLayer)
@@ -968,7 +978,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
          }
          
          required init?(coder: NSCoder) {
-@@ -220,12 +232,13 @@
+@@ -220,12 +232,13 @@ final class TextProcessingTranslateContentComponent: Component {
          }
          
          deinit {
@@ -983,7 +993,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
              if self.window == nil {
                  self.localTranslationGeneration += 1
                  self.processDisposable?.dispose()
-@@ -252,16 +265,18 @@
+@@ -252,16 +265,18 @@ final class TextProcessingTranslateContentComponent: Component {
              }
              
              if let result = component.externalState.result, (result.text == nil || force), self.processDisposable == nil {
@@ -1005,7 +1015,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                      } else {
                          // Preserve rich originals; do not send unsupported content to cloud AI.
                          signal = .fail(.generic)
-@@ -269,7 +284,10 @@
+@@ -269,7 +284,10 @@ final class TextProcessingTranslateContentComponent: Component {
                      self.processDisposable = (signal |> deliverOnMainQueue).start(next: { [weak self] translated in
                          guard let self, self.localTranslationGeneration == generation,
                                let component = self.component, component.inputText == source,
@@ -1017,7 +1027,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                          component.externalState.isProcessing = false
                          if let translated {
                              component.externalState.result = (target, .plain(text: translated.0, entities: translated.1), [])
-@@ -278,7 +296,10 @@
+@@ -278,7 +296,10 @@ final class TextProcessingTranslateContentComponent: Component {
                      }, error: { [weak self] _ in
                          guard let self, self.localTranslationGeneration == generation,
                                let component = self.component, component.inputText == source,
@@ -1029,7 +1039,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                          component.externalState.isProcessing = false
                          component.externalState.localTranslationError = true
                          if !self.isUpdating { self.state?.updated(transition: .spring(duration: 0.4)) }
-@@ -389,7 +410,8 @@
+@@ -389,7 +410,8 @@ final class TextProcessingTranslateContentComponent: Component {
                      plainText = instantPage.plainText
                  }
  
@@ -1039,7 +1049,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                  let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
                  languageRecognizer.reset()
                          
-@@ -404,7 +426,7 @@
+@@ -404,7 +426,7 @@ final class TextProcessingTranslateContentComponent: Component {
              self.component = component
              self.state = state
              if let previousComponent, previousComponent.inputText != component.inputText,
@@ -1048,7 +1058,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                  self.beginTranslationIfNecessary(reset: true, force: true)
              }
              
-@@ -656,7 +678,7 @@
+@@ -656,7 +678,7 @@ final class TextProcessingTranslateContentComponent: Component {
                  )))
              }
              
@@ -1057,7 +1067,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                  if component.externalState.localTranslationError {
                      let retry = "[\(component.strings.jerkgram.localTranslationRetry)](retry)"
                      component.externalState.sectionFooter = AnyComponentWithIdentity(id: "local_translation_retry", component: AnyComponent(MultilineTextComponent(
-@@ -791,7 +813,7 @@
+@@ -791,7 +813,7 @@ final class TextProcessingTranslateContentComponent: Component {
              
              var displayEmojify = false
              if isTranslate {
@@ -1066,7 +1076,7 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
              } else if case let .stylize(isComposeWithAI) = component.mode, !isComposeWithAI {
                  displayEmojify = true
              }
-@@ -808,7 +830,7 @@
+@@ -808,7 +830,7 @@ final class TextProcessingTranslateContentComponent: Component {
                          guard let self, let component = self.component, let result = component.externalState.result else {
                              return
                          }
@@ -1076,9 +1086,10 @@ diff --git a/submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextP
                                  return
                              }
 diff --git a/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift b/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift
+index d136aab..392a60a 100644
 --- a/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift
 +++ b/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift
-@@ -179,7 +179,7 @@
+@@ -179,7 +179,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
          let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
          self.closeButton.frame = CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize)
          
@@ -1087,7 +1098,7 @@ diff --git a/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sour
              self.moreButton.isHidden = false
              self.closeButton.isHidden = true
          } else {
-@@ -213,7 +213,7 @@
+@@ -213,7 +213,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
          }
          let isPremium = info.isPremium
          
@@ -1096,7 +1107,7 @@ diff --git a/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sour
          if case let .channel(channel) = info.peer, channel.flags.contains(.autoTranslateEnabled) {
              translationAvailable = true
          }
-@@ -232,7 +232,7 @@
+@@ -232,7 +232,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
          
          let isPremium = info.isPremium
          
@@ -1106,9 +1117,10 @@ diff --git a/submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sour
              translationAvailable = true
          }
 diff --git a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift b/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+index 8c9524d..b6e5972 100644
 --- a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
 +++ b/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
-@@ -4621,7 +4621,7 @@
+@@ -4622,7 +4622,7 @@ extension ChatControllerImpl {
                  break
              }
  
@@ -1117,7 +1129,7 @@ diff --git a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.sw
                  presentTranslateScreen(
                      context: self.context,
                      text: text.string,
-@@ -4659,6 +4659,7 @@
+@@ -4660,6 +4660,7 @@ extension ChatControllerImpl {
                              }
                          }),
                          inputText: .plain(text: text.string, entities: entities),
@@ -1126,9 +1138,10 @@ diff --git a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.sw
                          translateChat: nil
                      ))
 diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/TelegramUI/Sources/ChatController.swift
+index f91e857..7c7e4a4 100644
 --- a/submodules/TelegramUI/Sources/ChatController.swift
 +++ b/submodules/TelegramUI/Sources/ChatController.swift
-@@ -4527,7 +4527,7 @@
+@@ -4607,7 +4607,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                              break
                          }
                          
@@ -1137,7 +1150,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/Tel
                              presentTranslateScreen(
                                  context: context,
                                  text: text.string,
-@@ -4555,6 +4555,7 @@
+@@ -4635,6 +4635,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                  context: self.context,
                                  mode: .translate(fromLanguage: language, applyResult: nil),
                                  inputText: .plain(text: text.string, entities: entities ?? []),
@@ -1146,9 +1159,10 @@ diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/Tel
                                      guard let self else {
                                          return
 diff --git a/submodules/TelegramUI/Sources/ChatControllerContentData.swift b/submodules/TelegramUI/Sources/ChatControllerContentData.swift
+index 6c51364..b37f381 100644
 --- a/submodules/TelegramUI/Sources/ChatControllerContentData.swift
 +++ b/submodules/TelegramUI/Sources/ChatControllerContentData.swift
-@@ -2230,13 +2230,14 @@
+@@ -2230,13 +2230,14 @@ extension ChatControllerImpl {
                          isPremium,
                          isHidden,
                          hasAutoTranslate,
@@ -1167,9 +1181,10 @@ diff --git a/submodules/TelegramUI/Sources/ChatControllerContentData.swift b/sub
                              |> map { translationState -> ChatPresentationTranslationState? in
                                  if let translationState, !translationState.fromLang.isEmpty && (translationState.fromLang != baseLanguageCode || translationState.isEnabled) {
 diff --git a/submodules/TelegramUI/Sources/ChatControllerNode.swift b/submodules/TelegramUI/Sources/ChatControllerNode.swift
+index b420bb4..33d6f55 100644
 --- a/submodules/TelegramUI/Sources/ChatControllerNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatControllerNode.swift
-@@ -4994,6 +4994,7 @@
+@@ -5101,6 +5101,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                      }
                  ),
                  inputText: composedInputText,
@@ -1178,9 +1193,10 @@ diff --git a/submodules/TelegramUI/Sources/ChatControllerNode.swift b/submodules
                      guard let self, let controller = self.controller else {
                          return
 diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+index a26c768..f2dc634 100644
 --- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
-@@ -1155,9 +1155,15 @@
+@@ -1120,9 +1120,15 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                  }))
              }
          }
@@ -1198,7 +1214,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
                  if name == UIApplication.willResignActiveNotification { self.cancelJerkgramTranslations() }
                  else if self.isInHierarchy {
                      self.translationProcessingManager.process?(Set(self.jerkgramVisibleTranslationIds.map { MessageAndThreadId(messageId: $0, threadId: nil) }))
-@@ -2162,7 +2168,9 @@
+@@ -2065,7 +2071,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
              audioTranscriptionSuggestion |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_audioTranscriptionSuggestion"),
              promises |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_promises"),
              topicAuthorId |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_topicAuthorId"),
@@ -1209,7 +1225,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
              maxReadStoryId |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_maxReadStoryId"),
              recommendedChannels |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_recommendedChannels"),
              audioTranscriptionTrial |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_audioTranscriptionTrial"),
-@@ -2406,7 +2414,7 @@
+@@ -2309,7 +2317,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                  )
                  
                  var translateToLanguage: (fromLang: String, toLang: String)?
@@ -1218,7 +1234,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
                      var languageCode = translationState.toLang ?? chatPresentationData.strings.baseLanguageCode
                      let rawSuffix = "-raw"
                      if languageCode.hasSuffix(rawSuffix) {
-@@ -3254,7 +3262,7 @@
+@@ -3231,7 +3239,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                              guard message.author?.id != self.context.account.peerId else {
                                  continue
                              }
@@ -1227,7 +1243,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
                                  continue
                              }
                              if !message.text.isEmpty || message.richText != nil {
-@@ -3275,7 +3283,7 @@
+@@ -3252,7 +3260,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                                  guard message.author?.id != self.context.account.peerId else {
                                      continue
                                  }
@@ -1237,9 +1253,10 @@ diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodule
                                  }
                                  if !message.text.isEmpty || message.richText != nil {
 diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+index f15cbe2..40c7038 100644
 --- a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
 +++ b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
-@@ -678,7 +678,7 @@
+@@ -680,7 +680,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                          }
                          if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
                              storeMessageTextInPasteboard(summary.text, entities: summary.entities)
@@ -1248,7 +1265,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 
                              storeMessageTextInPasteboard(translation.text, entities: translation.entities)
                          } else {
                              storeMessageTextInPasteboard(message.text, entities: messageEntities)
-@@ -1473,7 +1473,7 @@
+@@ -1482,7 +1482,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                          }
                                          if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
                                              storeMessageTextInPasteboard(summary.text, entities: summary.entities)
@@ -1257,7 +1274,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 
                                              storeMessageTextInPasteboard(translation.text, entities: translation.entities)
                                          } else {
                                              storeMessageTextInPasteboard(messageText, entities: messageEntities)
-@@ -1571,7 +1571,7 @@
+@@ -1580,7 +1580,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                          }
                          if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
                              text = summary.text
@@ -1266,7 +1283,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 
                              text = translation.text
                          }
                          
-@@ -2468,7 +2468,7 @@
+@@ -2517,7 +2517,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                              }
                              if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
                                  storeMessageTextInPasteboard(summary.text, entities: summary.entities)
@@ -1276,9 +1293,10 @@ diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift 
                              } else {
                                  storeMessageTextInPasteboard(message.text, entities: messageEntities)
 diff --git a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift b/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
+index 932eef6..09894a4 100644
 --- a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
-@@ -522,7 +522,7 @@
+@@ -522,7 +522,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
          }
          
          if currentTranslateToLanguageUpdated || messageUpdated, let message = interfaceState.pinnedMessage?.message {
@@ -1287,7 +1305,7 @@ diff --git a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
              } else if let translateToLanguage {
                  self.translationDisposable.set(translateMessageIds(context: self.context, messageIds: [message.id], fromLang: translateToLanguage.fromLang, toLang: translateToLanguage.toLang).startStrict())
              }
-@@ -856,7 +856,7 @@
+@@ -856,7 +856,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
              
              if let translateToLanguage = translateToLanguage, !text.isEmpty {
                  for attribute in message.attributes {
@@ -1297,10 +1315,10 @@ diff --git a/submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift
                          messageEntities = attribute.entities
                          break
 diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
-index 8596f88..26c5036 100644
+index 794f938..7d5beb3 100644
 --- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
 +++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
-@@ -4872,13 +4872,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
+@@ -5249,13 +5249,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
          mode: TextProcessingScreenMode,
          inputText: ComposedRichMessage,
          copyResult: ((ComposedRichMessage) -> Void)?,
@@ -1318,9 +1336,10 @@ index 8596f88..26c5036 100644
              translateChat: translateChat
          )
 diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/TranslateUI/Sources/ChatTranslation.swift
+index 6fc7c3f..ebd6a88 100644
 --- a/submodules/TranslateUI/Sources/ChatTranslation.swift
 +++ b/submodules/TranslateUI/Sources/ChatTranslation.swift
-@@ -134,9 +134,26 @@
+@@ -232,9 +232,26 @@ public func updateChatTranslationStateInteractively(engine: TelegramEngine, peer
      }
  }
  
@@ -1350,7 +1369,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
  
  public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, onLocalFailure: (() -> Void)? = nil) -> Signal<Never, NoError> {
      return context.account.postbox.transaction { transaction -> Signal<Never, NoError> in
-@@ -146,7 +163,7 @@
+@@ -244,7 +261,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
              if let message = transaction.getMessage(messageId) {
                  if let replyAttribute = message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute, let replyMessage = message.associatedMessages[replyAttribute.messageId] {
                      if !replyMessage.text.isEmpty {
@@ -1359,7 +1378,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                          } else {
                              if !messageIdsSet.contains(replyMessage.id) {
                                  messageIdsToTranslate.append(replyMessage.id)
-@@ -158,7 +175,7 @@
+@@ -256,7 +273,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
                  guard message.author?.id != context.account.peerId else {
                      continue
                  }
@@ -1368,7 +1387,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                      continue
                  }
                  
-@@ -192,7 +209,8 @@
+@@ -290,7 +307,8 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
          }
          
          let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
@@ -1378,7 +1397,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
          switch translationConfiguration.auto {
          case .system:
              if #available(iOS 18.0, *) {
-@@ -201,15 +219,15 @@
+@@ -299,21 +317,21 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
          default:
              break
          }
@@ -1394,10 +1413,26 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
  
 -public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?) -> Signal<ChatTranslationState?, NoError> {
 +public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?, forcePredict: Bool = false) -> Signal<ChatTranslationState?, NoError> {
+     let sharesPeerChoice = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+     |> map { peer -> Bool in
+         return chatTranslationSharesPeerChoice(peer: peer)
+     }
+     
+-    return chatTranslationLocationState(context: context, peerId: peerId, threadId: threadId)
++    return chatTranslationLocationState(context: context, peerId: peerId, threadId: threadId, forcePredict: forcePredict)
+     |> mapToSignal { state -> Signal<ChatTranslationState?, NoError> in
+         guard let state else {
+             return .single(nil)
+@@ -333,7 +351,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id,
+     |> distinctUntilChanged
+ }
+ 
+-private func chatTranslationLocationState(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?) -> Signal<ChatTranslationState?, NoError> {
++private func chatTranslationLocationState(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?, forcePredict: Bool = false) -> Signal<ChatTranslationState?, NoError> {
      if peerId.id == EnginePeer.Id.Id._internalFromInt64Value(777000) {
          return .single(nil)
      }
-@@ -235,7 +253,7 @@
+@@ -359,7 +377,7 @@ private func chatTranslationLocationState(context: AccountContext, peerId: Engin
              context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AutoTranslateEnabled(id: peerId))
          )
          |> mapToSignal { settings, autoTranslateEnabled in
@@ -1406,7 +1441,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                  return .single(nil)
              }
              
-@@ -253,7 +271,7 @@
+@@ -377,7 +395,7 @@ private func chatTranslationLocationState(context: AccountContext, peerId: Engin
              |> mapToSignal { cached in
                  let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                  if let cached, let timestamp = cached.timestamp, cached.baseLang == baseLang && currentTime - timestamp < 60 * 60 {
@@ -1415,7 +1450,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                          return .single(cached)
                      } else {
                          return .single(nil)
-@@ -283,34 +301,16 @@
+@@ -407,34 +425,16 @@ private func chatTranslationLocationState(context: AccountContext, peerId: Engin
                                              count += 1
                                          }
                                      } else {
@@ -1428,9 +1463,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
 -                                                return true
 -                                            default:
 -                                                return false
-+                                            case .Pre, .Code, .Url, .Email, .Mention, .Hashtag, .BotCommand: return true
-+                                            default: return false
-                                             }
+-                                            }
 -                                        }) {
 -                                            entities = entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound })
 -                                            var ranges: [Range<String.Index>] = []
@@ -1439,7 +1472,9 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
 -                                                    continue
 -                                                }
 -                                                ranges.append(text.index(text.startIndex, offsetBy: entity.range.lowerBound) ..< text.index(text.startIndex, offsetBy: entity.range.upperBound))
--                                            }
++                                            case .Pre, .Code, .Url, .Email, .Mention, .Hashtag, .BotCommand: return true
++                                            default: return false
+                                             }
 -                                            for range in ranges {
 -                                                if range.upperBound < text.endIndex {
 -                                                    text.removeSubrange(range)
@@ -1458,7 +1493,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                                          languageRecognizer.processString(text)
                                          let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 4)
                                          languageRecognizer.reset()
-@@ -319,7 +319,6 @@
+@@ -443,7 +443,6 @@ private func chatTranslationLocationState(context: AccountContext, peerId: Engin
                                          if let language = filteredLanguages.first {
                                              let fromLang = normalizeTranslationLanguage(language.key.rawValue)
                                              if loggingEnabled && !["en", "ru"].contains(fromLang) && !dontTranslateLanguages.contains(fromLang) {
@@ -1466,7 +1501,7 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                                                  Logger.shared.log("ChatTranslation", "Recognized as: \(fromLang), other hypotheses: \(hypotheses.map { $0.key.rawValue }.joined(separator: ",")) ")
                                              }
                                              fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + message.text.count
-@@ -343,6 +342,7 @@
+@@ -467,6 +466,7 @@ private func chatTranslationLocationState(context: AccountContext, peerId: Engin
                                  }
                              }
                              let fromLang = mostFrequent?.0 ?? ""
@@ -1475,9 +1510,10 @@ diff --git a/submodules/TranslateUI/Sources/ChatTranslation.swift b/submodules/T
                                  Logger.shared.log("ChatTranslation", "Ended with: \(fromLang)")
                              }
 diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/TranslateUI/Sources/Translate.swift
+index 1ceca21..d0dae4c 100644
 --- a/submodules/TranslateUI/Sources/Translate.swift
 +++ b/submodules/TranslateUI/Sources/Translate.swift
-@@ -172,7 +172,7 @@
+@@ -172,7 +172,7 @@ public func normalizeTranslationLanguage(_ code: String) -> String {
  }
  
  public func canTranslateChats(context: AccountContext) -> Bool {
@@ -1486,7 +1522,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
      let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
      var chatTranslationAvailable = true
      switch translationConfiguration.auto {
-@@ -207,7 +207,7 @@
+@@ -207,7 +207,7 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
          break
      }
      
@@ -1495,21 +1531,32 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
          
      if #available(iOS 12.0, *) {
          if context.sharedContext.immediateExperimentalUISettings.disableLanguageRecognition {
-@@ -522,28 +522,43 @@
+@@ -522,28 +522,43 @@ public final class ExperimentalInternalTranslationServiceImpl: ExperimentalInter
      }
  }
  
 -public var jerkgramLocalTranslationAvailable: Bool {
 -    if #available(iOS 18.0, *) { return true }
 -    return false
--}
--
++public func jerkgramEnhancedTranslationEnabled(context: AccountContext) -> Bool {
++    return JerkgramTranslationSettings.enabled(accountPeerId: context.account.peerId.toInt64())
+ }
+ 
 -// Native Translate uses this adapter only; unrelated cloud AI actions stay unchanged.
 -public func jerkgramTranslateText(context: AccountContext, text: String, fromLang: String?, toLang: String) -> Signal<(String, [MessageTextEntity])?, TelegramCore.TranslationError> {
 -    guard #available(iOS 18.0, *), !text.isEmpty else { return .fail(.textIsEmpty) }
 -    if engineExperimentalInternalTranslationService == nil, let hostView = context.sharedContext.mainWindow?.hostView {
 -        engineExperimentalInternalTranslationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
--    }
++public func jerkgramTranslationPolicyChanges(context: AccountContext) -> Signal<UInt64, NoError> {
++    return Signal { subscriber in
++        let accountPeerId = context.account.peerId.toInt64()
++        let observer = NotificationCenter.default.addObserver(forName: Notification.Name("JerkgramTranslationPolicyChanged"), object: nil, queue: nil) { notification in
++            guard notification.object as? Int64 == accountPeerId else { return }
++            subscriber.putNext(JerkgramTranslationSettings.generation(accountPeerId: accountPeerId))
++        }
++        subscriber.putNext(JerkgramTranslationSettings.generation(accountPeerId: accountPeerId))
++        return ActionDisposable { NotificationCenter.default.removeObserver(observer) }
+     }
 -    guard let service = engineExperimentalInternalTranslationService as? ExperimentalInternalTranslationServiceImpl else { return .fail(.generic) }
 -    let recognizer = NLLanguageRecognizer()
 -    recognizer.processString(String(text.prefix(512)))
@@ -1520,21 +1567,6 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 -    |> mapToSignal { result -> Signal<(String, [MessageTextEntity])?, TelegramCore.TranslationError> in
 -        guard let translated = result?[key], !translated.isEmpty else { return .fail(.generic) }
 -        return .single((translated, []))
--    }
-+public func jerkgramEnhancedTranslationEnabled(context: AccountContext) -> Bool {
-+    return JerkgramTranslationSettings.enabled(accountPeerId: context.account.peerId.toInt64())
-+}
-+
-+public func jerkgramTranslationPolicyChanges(context: AccountContext) -> Signal<UInt64, NoError> {
-+    return Signal { subscriber in
-+        let accountPeerId = context.account.peerId.toInt64()
-+        let observer = NotificationCenter.default.addObserver(forName: Notification.Name("JerkgramTranslationPolicyChanged"), object: nil, queue: nil) { notification in
-+            guard notification.object as? Int64 == accountPeerId else { return }
-+            subscriber.putNext(JerkgramTranslationSettings.generation(accountPeerId: accountPeerId))
-+        }
-+        subscriber.putNext(JerkgramTranslationSettings.generation(accountPeerId: accountPeerId))
-+        return ActionDisposable { NotificationCenter.default.removeObserver(observer) }
-+    }
 +}
 +
 +// Selection translation uses the same bounded route as chat translation. Real
@@ -1556,7 +1588,7 @@ diff --git a/submodules/TranslateUI/Sources/Translate.swift b/submodules/Transla
 +        }, completed: {
 +            subscriber.putCompletion()
 +        })
-+    }
+     }
 +    |> runOn(Queue.mainQueue())
  }
  

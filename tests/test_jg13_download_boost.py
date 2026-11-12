@@ -9,6 +9,14 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 
+
+def apply_fixture(stage,source):
+    from jg132_baseline import enabled
+    if enabled():
+        from jg132_source_fixtures import apply_exact_delta_fixture
+        return apply_exact_delta_fixture(stage,source)
+    return stage.apply_boost(source)
+
 class DownloadBoostTests(unittest.TestCase):
     def test_bounded_stage_exists_and_verifies_real_source(self):
         self.assertTrue((ROOT / 'scripts/materialize_jg13_download_boost.py').exists(), 'Download Boost stage is missing')
@@ -32,9 +40,9 @@ class DownloadBoostTests(unittest.TestCase):
                     if restored is None: continue
                     data = restored.encode()
                 target.write_bytes(data)
-            stage.apply_boost(source)
+            apply_fixture(stage, source)
             stage.verify_boost(source)
-            with self.assertRaises(RuntimeError): stage.apply_boost(source)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, source)
             for name in set(m['owners']) | set(m['locks']):
                 target = source / name
                 original = target.read_bytes()

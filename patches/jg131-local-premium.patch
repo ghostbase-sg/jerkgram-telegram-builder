@@ -1,7 +1,8 @@
 diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index 2c24b17..6429663 100644
 --- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
 +++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
-@@ -16,8 +16,10 @@
+@@ -16,8 +16,10 @@ import BuildConfig
  // Opt-in refresh callback owner. The existing capture owns the session lifetime.
  private final class JerkgramDiagnosticSettingsController: ItemListController {
      var diagnosticRoute = "settingsSubpage"
@@ -12,7 +13,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.diagnosticRoute, owner: self)
      }
      override func viewDidAppear(_ animated: Bool) {
-@@ -812,6 +814,8 @@
+@@ -812,6 +814,8 @@ private func jerkgramSettingsMenuIcon(
      let background: UInt32
  
      switch name {
@@ -21,7 +22,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      case "Jerkgram/Settings/Airplane":
          background = 0x53606A
      case "Chat/Context Menu/Eye":
-@@ -847,6 +851,7 @@
+@@ -847,6 +851,7 @@ private func jerkgramSettingsMenuIcon(
  private enum GhostBaseSettingsPage: Equatable {
      case root
      case dataAndBackup
@@ -29,7 +30,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      case stars
      case home
      case ghostMode
-@@ -863,6 +868,8 @@
+@@ -863,6 +868,8 @@ private enum GhostBaseSettingsPage: Equatable {
              return "Jerkgram"
          case .dataAndBackup:
              return "Data and Backup"
@@ -38,7 +39,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          case .stars:
              return "Stars"
          case .home:
-@@ -891,6 +898,8 @@
+@@ -891,6 +898,8 @@ private enum GhostBaseSettingsPage: Equatable {
              return strings.settingsTitle
          case .dataAndBackup:
              return strings.dataAndBackup
@@ -47,7 +48,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          case .stars:
              return strings.starsBalance
          case .home:
-@@ -2131,7 +2140,22 @@
+@@ -2131,7 +2140,22 @@ private func ghostBaseSettingsEntries(
              .toggle(1, 51, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
              .info(1, strings.removeSponsoredHint),
              .header(2, strings.backup),
@@ -71,7 +72,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          ]
      }
  
-@@ -2225,7 +2249,7 @@
+@@ -2225,7 +2249,7 @@ private func ghostBaseSettingsEntries(
              .toggle(5, 1, GhostBaseKey.hideBlockedMessages, strings.hideBlockedMessages, state.hideBlockedMessages),
              .toggle(5, 2, GhostBaseKey.hideBlockedReactions, strings.hideBlockedReactions, state.hideBlockedReactions),
              .header(6, isRussian ? "Перевод" : "Translation"),
@@ -80,7 +81,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
              .info(6, isRussian ? "Использует текстовый перевод Telegram и системный перевод при необходимости. Не предоставляет Telegram Premium." : "Uses Telegram text translation with system translation when needed. Does not provide Telegram Premium."),
          ]
      }
-@@ -2967,13 +2991,17 @@
+@@ -2967,13 +2991,17 @@ private func ghostBaseSettingsPageController(
      let statePromise = ValuePromise(initialState, ignoreRepeated: false)
      let stateValue = Atomic(value: initialState)
      let accountPeerId = context.account.peerId.toInt64()
@@ -103,7 +104,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      )
      // Retain the import observer through the controller's existing state
      // subscription without changing the arity or closure shape of whatever
-@@ -4011,6 +4039,7 @@
+@@ -4011,6 +4039,7 @@ private func ghostBaseSettingsPageController(
          context: context,
          state: signal
      )
@@ -112,9 +113,10 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      sharePerformanceImpl = { [weak controller] in
          guard let root = controller?.view.window?.rootViewController else { return }
 diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+index c1f661e..3a17770 100644
 --- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
 +++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
-@@ -1028,3 +1028,15 @@
+@@ -1028,3 +1028,15 @@ public extension JerkgramStrings {
      var archiveErrorConflicts: String { self.languageCode == "ru" ? "В архиве найдены конфликты. Выберите способ объединения и повторите импорт." : "The archive contains conflicts. Choose how to merge them and retry the import." }
      var archiveErrorGeneric: String { self.languageCode == "ru" ? "Не удалось обработать архив. Проверьте файл, пароль и свободное место, затем повторите попытку." : "Couldn't process the archive. Check the file, password and free storage, then try again." }
  }

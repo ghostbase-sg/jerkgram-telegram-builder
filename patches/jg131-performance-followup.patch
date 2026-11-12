@@ -1,85 +1,8 @@
-diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
-index d517753..08867b6 100644
---- a/submodules/TelegramCore/Sources/Account/Account.swift
-+++ b/submodules/TelegramCore/Sources/Account/Account.swift
-@@ -1041,6 +1041,7 @@ public enum JerkgramActivityGhostRuntime {
- 
- public enum JerkgramHotSettings {
-     public static let keys: Set<String> = [
-+        "jerkgram.Appearance.MessageSeconds",
-         "jerkgram.GhostMode.ScheduledSend",
-         "jerkgram.Messages.SendTextStyle",
-         "jerkgram.Messages.ShowDeleted",
-diff --git a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
---- a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
-+++ b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
-@@ -140,6 +140,16 @@
-         }
-     }
-     
-+    // One preference snapshot per mapping, rather than one locked lookup per entry.
-+    let ghostBaseShowDeleted = ((JerkgramHotSettings.object(forKey: "jerkgram.Messages.ShowDeleted") as? Bool) ?? true)
-+    let ghostBaseProtectedContentEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
-+    let ghostBaseOneTimeSaveEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
-+
-+    let blockedMessageFilter = JerkgramBlockedReactionPolicy.messageFilterSnapshot(
-+        accountPeerId: context.account.peerId,
-+        chatPeer: chatPeer
-+    )
-+
-     var count = 0
-     loop: for entry in view.entries {
-         var message = entry.message.withAppliedEphemeralReplacementMessage()
-@@ -156,11 +166,7 @@
-         
-         // Presentation-only filtering: Postbox contents stay untouched, so
-         // switching the option off restores the messages immediately.
--        if JerkgramBlockedReactionPolicy.isMessageHidden(
--            accountPeerId: context.account.peerId,
--            chatPeer: chatPeer,
--            message: message
--        ) {
-+        if blockedMessageFilter?.isHidden(authorId: message.author?.id) ?? false {
-             continue loop
-         }
-         
-@@ -224,18 +230,14 @@
-         }
-         
-         if skipViewOnceMedia, let minAutoremoveOrClearTimeout = message.minAutoremoveOrClearTimeout {
--            let ghostBaseOT2KeepViewOnceVisible = (((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
-+            let ghostBaseOT2KeepViewOnceVisible = (ghostBaseProtectedContentEnabled && ghostBaseOneTimeSaveEnabled && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
-             if minAutoremoveOrClearTimeout <= 60 {
--                if ghostBaseOT2KeepViewOnceVisible {
--                    UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "jerkgram.OT2.ViewOnceVisibleKeep.Count") + 1, forKey: "jerkgram.OT2.ViewOnceVisibleKeep.Count")
--                    UserDefaults.standard.set("\(message.id)", forKey: "jerkgram.OT2.LastViewOnceVisibleId")
--                } else {
-+                if !ghostBaseOT2KeepViewOnceVisible {
-                     continue loop
-                 }
-             }
-         }
-         
--        let ghostBaseShowDeleted = ((JerkgramHotSettings.object(forKey: "jerkgram.Messages.ShowDeleted") as? Bool) ?? true)
-         let ghostBaseIsDeleted = ((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted) ?? false
- 
-         if !ghostBaseShowDeleted && ghostBaseIsDeleted {
-diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift b/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
---- a/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
-+++ b/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
-@@ -108,7 +108,7 @@
-     }
-     
-     let ghostBaseMessageSeconds = (
--        UserDefaults.standard.object(
-+        JerkgramHotSettings.object(
-             forKey: "jerkgram.Appearance.MessageSeconds"
-         ) as? Bool
-     ) ?? false
 diff --git a/submodules/JerkgramCore/Sources/JerkgramStore.swift b/submodules/JerkgramCore/Sources/JerkgramStore.swift
+index 5c5657c..32b746f 100644
 --- a/submodules/JerkgramCore/Sources/JerkgramStore.swift
 +++ b/submodules/JerkgramCore/Sources/JerkgramStore.swift
-@@ -687,6 +687,41 @@
+@@ -687,6 +687,41 @@ public final class JerkgramJSONLEventStore: JerkgramEventStore {
  
  // Transaction boundaries call this lightweight serial recorder. The event id
  // is generated once before enqueueing; equal text never participates in identity.
@@ -121,7 +44,7 @@ diff --git a/submodules/JerkgramCore/Sources/JerkgramStore.swift b/submodules/Je
  public enum JerkgramCaptureRecorder {
      private static let queueKey = DispatchSpecificKey<Void>()
      private static let queue: DispatchQueue = {
-@@ -751,6 +786,26 @@
+@@ -751,6 +786,26 @@ public enum JerkgramCaptureRecorder {
          }
      }
  
@@ -148,10 +71,74 @@ diff --git a/submodules/JerkgramCore/Sources/JerkgramStore.swift b/submodules/Je
      public static func record(
          accountPeerId: Int64,
          chatPeerId: Int64,
+diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
+index 488ac23..556d5a8 100644
+--- a/submodules/TelegramCore/Sources/Account/Account.swift
++++ b/submodules/TelegramCore/Sources/Account/Account.swift
+@@ -1041,6 +1041,7 @@ public enum JerkgramActivityGhostRuntime {
+ 
+ public enum JerkgramHotSettings {
+     public static let keys: Set<String> = [
++        "jerkgram.Appearance.MessageSeconds",
+         "jerkgram.GhostMode.ScheduledSend",
+         "jerkgram.Messages.SendTextStyle",
+         "jerkgram.Messages.ShowDeleted",
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift b/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
+index eb0c57d..cb02450 100644
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
+@@ -128,6 +128,33 @@ public enum JerkgramBlockedReactionPolicy {
+         return self.settings(accountPeerId: accountPeerId).hideMessages
+     }
+ 
++    // A history transformation takes one immutable account-scoped value snapshot.
++    // It retains no controller, subscription, or cross-mapping cache.
++    public struct MessageFilterSnapshot {
++        public let accountPeerId: PeerId
++        public let blockedPeerIds: Set<PeerId>
++
++        public init(accountPeerId: PeerId, blockedPeerIds: Set<PeerId>) {
++            self.accountPeerId = accountPeerId
++            self.blockedPeerIds = blockedPeerIds
++        }
++
++        public func isHidden(authorId: PeerId?) -> Bool {
++            guard let authorId, authorId != self.accountPeerId else {
++                return false
++            }
++            return self.blockedPeerIds.contains(authorId)
++        }
++    }
++    // Build175 snapshot end
++
++    public static func messageFilterSnapshot(accountPeerId: PeerId, chatPeer: Peer?) -> MessageFilterSnapshot? {
++        guard self.isGroupChat(chatPeer), self.hideBlockedMessages(accountPeerId: accountPeerId) else {
++            return nil
++        }
++        return MessageFilterSnapshot(accountPeerId: accountPeerId, blockedPeerIds: self.blockedPeerIds(accountPeerId: accountPeerId))
++    }
++
+     public static func isMessageHidden(accountPeerId: PeerId, message: Message) -> Bool {
+         return self.isMessageHidden(
+             accountPeerId: accountPeerId,
+diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift b/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
+index be18524..82bf1e7 100644
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
+@@ -164,7 +164,7 @@ public func stringForMessageTimestampStatus(
+     }
+     
+     let ghostBaseMessageSeconds = (
+-        UserDefaults.standard.object(
++        JerkgramHotSettings.object(
+             forKey: "jerkgram.Appearance.MessageSeconds"
+         ) as? Bool
+     ) ?? false
 diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
+index 67bcdc3..6bcbb48 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
-@@ -66,6 +66,50 @@
+@@ -66,6 +66,50 @@ import RichTextEditorCore
  /// module importing both) to keep `EmojiTextAttachmentView` free of a rich-text-editor dependency.
  extension EmojiTextAttachmentView: @retroactive RichTextEmojiView {}
  
@@ -202,7 +189,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
  private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
  
  public let chatTextInputMinFontSize: CGFloat = 5.0
-@@ -201,6 +245,7 @@
+@@ -211,6 +255,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
      public let textInputNodeClippingContainer: UIView
      public let textInputSeparator: GlassBackgroundView.ContentColorView
      public private(set) var richTextInputNode: ChatRichTextInputNode?
@@ -210,7 +197,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
      private var textInputNodeLayout: (frame: CGRect, insets: UIEdgeInsets)?
      
      public let textInputBackgroundNode: ASImageNode
-@@ -464,6 +509,32 @@
+@@ -503,6 +548,32 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
          }
      }
              
@@ -243,7 +230,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
      public func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, accessoryItems: [ChatTextInputAccessoryItem], animated: Bool) {
          if self.ignoreInputStateUpdates {
              return
-@@ -530,25 +601,29 @@
+@@ -569,25 +640,29 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                  accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                  baseFontSize = chatTextInputBaseFontSize(for: presentationInterfaceState.fontSize)
              }
@@ -291,7 +278,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
              }
  
              self.updatingInputState = false
-@@ -580,25 +655,29 @@
+@@ -619,25 +694,29 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                  accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                  baseFontSize = chatTextInputBaseFontSize(for: presentationInterfaceState.fontSize)
              }
@@ -339,7 +326,7 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
              }
  
              self.updatingInputState = false
-@@ -4041,13 +4120,34 @@
+@@ -4309,13 +4388,34 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
          if let richTextInputNode = self.richTextInputNode, let presentationInterfaceState = self.presentationInterfaceState, let context = self.context {
              let baseFontSize = chatTextInputBaseFontSize(for: presentationInterfaceState.fontSize)
              let fullTranslucency = self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true
@@ -376,40 +363,58 @@ diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Source
              self.interfaceInteraction?.updateInputLanguage({ _ in return self.richTextInputNode?.primaryLanguage })
              self.updateTextNodeText(animated: true)
          }
-diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift b/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
---- a/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
-+++ b/submodules/TelegramCore/Sources/TelegramEngine/Privacy/BlockedPeersContext.swift
-@@ -126,6 +126,33 @@
- 
-     public static func hideBlockedMessages(accountPeerId: PeerId) -> Bool {
-         return self.settings(accountPeerId: accountPeerId).hideMessages
-+    }
-+
-+    // A history transformation takes one immutable account-scoped value snapshot.
-+    // It retains no controller, subscription, or cross-mapping cache.
-+    public struct MessageFilterSnapshot {
-+        public let accountPeerId: PeerId
-+        public let blockedPeerIds: Set<PeerId>
-+
-+        public init(accountPeerId: PeerId, blockedPeerIds: Set<PeerId>) {
-+            self.accountPeerId = accountPeerId
-+            self.blockedPeerIds = blockedPeerIds
-+        }
-+
-+        public func isHidden(authorId: PeerId?) -> Bool {
-+            guard let authorId, authorId != self.accountPeerId else {
-+                return false
-+            }
-+            return self.blockedPeerIds.contains(authorId)
-+        }
-+    }
-+    // Build175 snapshot end
-+
-+    public static func messageFilterSnapshot(accountPeerId: PeerId, chatPeer: Peer?) -> MessageFilterSnapshot? {
-+        guard self.isGroupChat(chatPeer), self.hideBlockedMessages(accountPeerId: accountPeerId) else {
-+            return nil
-+        }
-+        return MessageFilterSnapshot(accountPeerId: accountPeerId, blockedPeerIds: self.blockedPeerIds(accountPeerId: accountPeerId))
+diff --git a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
+index 0b4cefa..23211ca 100644
+--- a/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift
+@@ -168,6 +168,16 @@ func chatHistoryEntriesForView(
+         }
      }
+     
++    // One preference snapshot per mapping, rather than one locked lookup per entry.
++    let ghostBaseShowDeleted = ((JerkgramHotSettings.object(forKey: "jerkgram.Messages.ShowDeleted") as? Bool) ?? true)
++    let ghostBaseProtectedContentEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true)
++    let ghostBaseOneTimeSaveEnabled = ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false)
++
++    let blockedMessageFilter = JerkgramBlockedReactionPolicy.messageFilterSnapshot(
++        accountPeerId: context.account.peerId,
++        chatPeer: chatPeer
++    )
++
+     var count = 0
+     loop: for entry in view.entries {
+         var message = entry.message.withAppliedEphemeralReplacementMessage()
+@@ -184,11 +194,7 @@ func chatHistoryEntriesForView(
+         
+         // Presentation-only filtering: Postbox contents stay untouched, so
+         // switching the option off restores the messages immediately.
+-        if JerkgramBlockedReactionPolicy.isMessageHidden(
+-            accountPeerId: context.account.peerId,
+-            chatPeer: chatPeer,
+-            message: message
+-        ) {
++        if blockedMessageFilter?.isHidden(authorId: message.author?.id) ?? false {
+             continue loop
+         }
+         
+@@ -236,18 +242,14 @@ func chatHistoryEntriesForView(
+         }
+         
+         if skipViewOnceMedia, let minAutoremoveOrClearTimeout = message.minAutoremoveOrClearTimeout {
+-            let ghostBaseOT2KeepViewOnceVisible = (((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.Enabled") as? Bool) ?? true) && ((JerkgramHotSettings.object(forKey: "jerkgram.ProtectedContent.OneTimeSave") as? Bool) ?? false) && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
++            let ghostBaseOT2KeepViewOnceVisible = (ghostBaseProtectedContentEnabled && ghostBaseOneTimeSaveEnabled && message.id.peerId.namespace != Namespaces.Peer.SecretChat)
+             if minAutoremoveOrClearTimeout <= 60 {
+-                if ghostBaseOT2KeepViewOnceVisible {
+-                    UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "jerkgram.OT2.ViewOnceVisibleKeep.Count") + 1, forKey: "jerkgram.OT2.ViewOnceVisibleKeep.Count")
+-                    UserDefaults.standard.set("\(message.id)", forKey: "jerkgram.OT2.LastViewOnceVisibleId")
+-                } else {
++                if !ghostBaseOT2KeepViewOnceVisible {
+                     continue loop
+                 }
+             }
+         }
+         
+-        let ghostBaseShowDeleted = ((JerkgramHotSettings.object(forKey: "jerkgram.Messages.ShowDeleted") as? Bool) ?? true)
+         let ghostBaseIsDeleted = ((message.attributes.first(where: { $0 is GhostBaseMessageAttribute }) as? GhostBaseMessageAttribute)?.isDeleted) ?? false
  
-     public static func isMessageHidden(accountPeerId: PeerId, message: Message) -> Bool {
+         if !ghostBaseShowDeleted && ghostBaseIsDeleted {

@@ -1,12 +1,12 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
   "base_builder_commit": "5ba6add985d6995ca102d4e40d8da66e98f443c1",
   "stage": "BOTBRIDGE1 after exact C",
-  "patch_sha256": "caf968f6071b440ba757977e8eec78f5cef617521c683240230147a36032a5d8",
+  "patch_sha256": "682f8f07ab381476895618caef84807093e94e0aad5cba1e248edef4e7b129ab",
   "owners": {
     "submodules/Postbox/Sources/Postbox.swift": {
-      "before_sha256": "71ce7879969134652ceb1ea82f9fe56670977033d148b50a5fd76bfec716e231",
-      "after_sha256": "c49591f2fc0167b679363ed1587ea3b57d2c675372c47bd0a4efba1451037aa5"
+      "before_sha256": "a0aec2e00029cd01793838e4e28a50df873afc2abd147fad92c160e58f3fe0b1",
+      "after_sha256": "c10dc0b2f035a3cdbd8e64c50251b91a6b7b8945b93a6125e9b0cc22ace09277"
     },
     "submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift": {
       "before_sha256": "215ab9b5f4aab7968ec894c7cd54bdfc9d129ca6d3421438b14cf69b38835430",
@@ -17,32 +17,32 @@
       "after_sha256": "852a35db8f0d0c85443f60d2465d066073b3767c7e476aa24d287f2f6cc8d633"
     },
     "submodules/TelegramCore/Sources/Account/Account.swift": {
-      "before_sha256": "4aa4627a4e70c16bdaf1ceefcb429c4ffaea40759f3258088e88494d51bed7a4",
-      "after_sha256": "90af53fff47956875a48490f1299e6e6c60ed2f92b02ed04aeae6f8a72712fb8"
+      "before_sha256": "99b60be2102e49cba163b0c06186593a3549c9ab3474d2bc6c0f1202272c7484",
+      "after_sha256": "6bd88ee4eb2a7a582c89bcbc869ffd09dd89f50b1ce69339a88526f9b9798a5e"
     },
     "submodules/TelegramCore/Sources/Account/AccountManager.swift": {
-      "before_sha256": "3b895522301c0b0f7aa7245d6217b96a5ad1b9f9ac4d614f5292f73ddcc56d64",
-      "after_sha256": "19e13b217a98cbfae109d220fd38afaea09c5d00b6d4787c4b806b41bcc8ccf6"
+      "before_sha256": "02f35f2d63f0ce4f1b501d4ba81842834fe07d66b052568bcbf9c90c6a2e4910",
+      "after_sha256": "551045b9d2f8e9cf8ddd795ce1a84ab1c251ecfeaecc262fe8d53cdf072b270f"
     },
     "submodules/TelegramCore/Sources/Authorization.swift": {
       "before_sha256": "a183d895fa556c5bee433a8dbe616c40c880af8e137a058f78d0caa3ec5604d4",
       "after_sha256": "92e8fc0730f5eae967dac8eb2fa061c18531d2f4bb134cf9552d722f1584795b"
     },
     "submodules/TelegramCore/Sources/Network/Network.swift": {
-      "before_sha256": "b135376f7db35a77995d2c06dd92d1ba9b6acbe490cd339d8f745307c3ca812e",
-      "after_sha256": "b3523f20406d2c076f29d4f9e46b47a13010f1fe686ceea856ef9ec8bb3b75d6"
+      "before_sha256": "ed034f1d93279c860c514a63925b76b8c3b9df0aaa4e7141d65129d42adc27d6",
+      "after_sha256": "63e008c5f3dc6ead1df0ef244f80b132fb7cda545b9b5d05c949e3fbdf4b6b20"
     },
     "submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift": {
-      "before_sha256": "ab8a7c29995eba1865880e3c5c6be2c367725d773cd8b3f0450d0ce69a040bd8",
-      "after_sha256": "b23dd503a2ea7c17b00198c7f67f591ee4d5594328d2d13011822ee53f5477a6"
+      "before_sha256": "e0d4fc0911a6b0d878fc7eadbaca5c00c56f335e31fbee5c35c56ab2414bc312",
+      "after_sha256": "e844964a1b97e4aa8b99d559cbdc9b729e80232032ed293b2b3edb0b9eaee36b"
     },
-    "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift": {
-      "before_sha256": "92ff02f0b0bc76fca785b3b509cde3389b243313eb4d3617909556c3dbe584e0",
-      "after_sha256": "cd2f1f22a2423bfb9a0996f92c36139f3f3dc5dc8bfbbfc71a11c304f620c3fd"
+    "submodules/TelegramCore/Sources/State/Sync/JerkgramStateHooks.swift": {
+      "before_sha256": "f6808446c28b8d49578ff7fb0350348461469448a29d5040c63686956b520dd2",
+      "after_sha256": "f6808446c28b8d49578ff7fb0350348461469448a29d5040c63686956b520dd2"
     },
     "submodules/TelegramCore/Sources/State/AccountStateManager.swift": {
-      "before_sha256": "f5f92b12adb44f476a0805c1a7f7848b98221e2f36355d58d6ef4102f8d95a97",
-      "after_sha256": "fb253699e027ae7cc0b1352b1e27afd43a8c698bc4c861cf08b963eec5913ceb"
+      "before_sha256": "51f5f20f22bb441c9c3ae13c351c27512b38246b01e680507e5cc39a0e5b0c8f",
+      "after_sha256": "e7b6bad3af2702263075a8e4cd0a9e10aef3c9bb9f306d528936e566794c5961"
     },
     "submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift": {
       "before_sha256": null,
@@ -53,8 +53,8 @@
       "after_sha256": "a5c01bb8c596e5d42c7519b66803fcef31b7600591e3ed0ed2a3050ba97c0ff6"
     },
     "submodules/TelegramCore/Sources/State/PendingMessageManager.swift": {
-      "before_sha256": "e5fd04ed9a3d11f615d9eee5f17fa184768fa1c51ced79103b0068f1ffbc92c2",
-      "after_sha256": "1d1e8df4d65ae4d7f474c87a1e6e89439474e5ae21af723b0c5ebf5bafd43ae7"
+      "before_sha256": "6ba68aa5b13d4aa9a0992edb177da641b0be3b77e286f7d38606e11e0f9a0c28",
+      "after_sha256": "3ab40e509d510e81c7dc462076182bf13a5217da9af86bd92d24f3c223b4ff6b"
     }
   },
   "accepted_task1_patch_sha256": "4ae3ae4143d5b6069199b8d2fd1bdb357e55edb5dbefbac2b9a734a9bba6ad3b",
@@ -65,5 +65,17 @@
     "tests/fixtures/botbridge1/provenance/MODERN-WRITE-PROOF.json": "7339d534bd7bc6ca44865ab6d9815a8b2a68968f5b0dcf09f9dc5cbdec8d26c1",
     "tests/fixtures/botbridge1/provenance/task1.patch": "4ae3ae4143d5b6069199b8d2fd1bdb357e55edb5dbefbac2b9a734a9bba6ad3b",
     "tests/fixtures/botbridge1/provenance/task1.sha256.json": "0f4de3bb875e760eba8f51515e0b1e0e4762033e15aa448ae67960c82a1a1f90"
-  }
+  },
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json",
+  "migration_owner_remap": [
+    {
+      "old": "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift",
+      "new": [
+        "submodules/TelegramCore/Sources/State/Sync/JerkgramStateHooks.swift"
+      ],
+      "reason": [
+        "Stage29 helper visibility already internal since stage21split; behavior unchanged."
+      ]
+    }
+  ]
 }

@@ -1,8 +1,8 @@
 diff --git a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-index b816dcb..521954e 100644
+index 5d4d9d0..83d110b 100644
 --- a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
 +++ b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-@@ -183,6 +183,13 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -188,6 +188,13 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      private let renderSynchronizer: AVSampleBufferRenderSynchronizer
      private var videoRenderer: AVSampleBufferDisplayLayer
      private var secondaryVideoRenderers: [ObjectIdentifier: AVSampleBufferDisplayLayer] = [:]
@@ -16,15 +16,15 @@ index b816dcb..521954e 100644
      private var audioRenderer: AVSampleBufferAudioRenderer?
      
      private var didNotifySentVideoFrames: Bool = false
-@@ -294,6 +301,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
-             self.source = ChunkMediaPlayerDirectFetchSourceImpl(resource: resource)
+@@ -304,6 +311,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+             self.source = source
          }
          
 +        playerNode.secondaryVideoLayersUseRenderSynchronizer = true
          self.updateTimerState()
  
          self.partsStateDisposable = (self.source.partsState
-@@ -319,6 +327,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -329,6 +337,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      }
      
      deinit {
@@ -35,7 +35,7 @@ index b816dcb..521954e 100644
          self.partsStateDisposable?.dispose()
          self.updateTimer?.invalidate()
          self.audioSessionDisposable?.dispose()
-@@ -352,11 +364,36 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -362,11 +374,36 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                  return
              }
              self.updateInternalState()
@@ -72,7 +72,7 @@ index b816dcb..521954e 100644
  
          let updated = Dictionary(uniqueKeysWithValues: layers.map { (ObjectIdentifier($0), $0) })
          for (key, layer) in self.secondaryVideoRenderers where updated[key] == nil {
-@@ -389,8 +426,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -399,8 +436,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
  
      // and let normal seek/reset paths flush renderers only when required.
      private func updateInternalState() {
@@ -85,7 +85,7 @@ index b816dcb..521954e 100644
          }
  
          if self.isSoundEnabled && self.hasSound {
-@@ -898,6 +939,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -920,6 +961,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      }
      
      public func play() {
@@ -775,7 +775,7 @@ index f168490..bd7ef44 100644
              return fallback
          }
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
-index 67afb5a..8ac3f1e 100644
+index 83b6439..f6142e8 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift
 @@ -19,6 +19,7 @@ import GalleryUI
@@ -786,7 +786,7 @@ index 67afb5a..8ac3f1e 100644
      let context: AccountContext
      
      let containerNode: ContextControllerSourceNode
-@@ -193,6 +194,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
+@@ -264,6 +265,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
      }
          
      func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -795,7 +795,7 @@ index 67afb5a..8ac3f1e 100644
          if let videoNode = self.videoNode {
              if case .immediate = transition, fraction == 1.0 {
                  return
-@@ -202,24 +205,30 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
+@@ -273,24 +276,30 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
              // V11O:
              // Fullscreen background and circular avatar share the same
              // is enabled this node must not pause that shared playback.
@@ -827,10 +827,10 @@ index 67afb5a..8ac3f1e 100644
          if let markupNode = self.markupNode {
              if case .immediate = transition, fraction == 1.0 {
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
-index 2423ce7..74e8074 100644
+index ab03b1d..57fe3f4 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
-@@ -65,6 +65,7 @@ let TitleNodeStateRegular = 0
+@@ -89,6 +89,7 @@ let TitleNodeStateRegular = 0
  let TitleNodeStateExpanded = 1
  
  final class PeerInfoHeaderNode: ASDisplayNode {
@@ -838,7 +838,7 @@ index 2423ce7..74e8074 100644
      private var context: AccountContext
      private let ghostBaseProfileGlassSettings: GhostBaseProfileBlurSettings?
      private let isPremiumDisabled: Bool
-@@ -1327,6 +1328,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -1368,6 +1369,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
              
              if self.isSettings, case let .user(user) = peer {
@@ -846,7 +846,7 @@ index 2423ce7..74e8074 100644
                  let hideOwnPhone =
                      (
                          UserDefaults.standard
-@@ -1338,6 +1340,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -1379,6 +1381,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                      )
                      ?? false
  
@@ -855,7 +855,7 @@ index 2423ce7..74e8074 100644
                  var subtitle =
                      hideOwnPhone
                      ? ""
-@@ -1978,9 +1982,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -2019,9 +2023,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              })
          }
          
@@ -867,7 +867,7 @@ index 2423ce7..74e8074 100644
          if additive {
              transition.updateSublayerTransformScaleAdditive(node: self.avatarListNode.avatarContainerNode, scale: avatarScale)
              transition.updateSublayerTransformScaleAdditive(node: self.avatarOverlayNode, scale: avatarScale)
-@@ -2489,6 +2495,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -2533,6 +2539,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              transition.updateFrame(view: self.backgroundBannerView, frame: bannerFrame)
          }
                          
@@ -875,7 +875,7 @@ index 2423ce7..74e8074 100644
          let backgroundCoverSize = self.backgroundCover.update(
              transition: ComponentTransition(transition),
              component: AnyComponent(PeerInfoCoverComponent(
-@@ -2507,6 +2514,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -2551,6 +2558,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
              environment: {},
              containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
          )
@@ -884,10 +884,10 @@ index 2423ce7..74e8074 100644
              // Keep PeerInfoCoverComponent alive so Premium emoji/status, patterns,
              // gifts decorations and badges remain above the fullscreen background.
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index 00ea0b1..a9a48d5 100644
+index b814cb5..7cca926 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -519,6 +519,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -543,6 +543,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          
          super.init()
          if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
@@ -896,7 +896,7 @@ index 00ea0b1..a9a48d5 100644
              self.view.insertSubview(
                  ghostBaseProfileBackgroundView,
                  at: 0
-@@ -2841,6 +2843,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -2900,6 +2902,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
      private var didPreloadShareTheme = false
  
      private func updateData(_ data: PeerInfoScreenData) {
@@ -905,7 +905,7 @@ index 00ea0b1..a9a48d5 100644
          let previousData = self.data
          if !self.didPreloadShareTheme, let peer = data.peer, peer.id != self.context.account.peerId, let addressName = peer.addressName, !addressName.isEmpty {
              self.didPreloadShareTheme = true
-@@ -5671,6 +5675,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5739,6 +5743,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
              self.layoutHeldDuringExpansion = (layout, navigationHeight)
              return
          }
@@ -914,7 +914,7 @@ index 00ea0b1..a9a48d5 100644
          self.validLayout = (layout, navigationHeight)
          if let ghostBaseProfileBackgroundView = self.ghostBaseProfileBackgroundView {
              transition.updateFrame(
-@@ -5744,7 +5750,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5812,7 +5818,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          let sideInsets = peerInfoSideInsets(layout: layout)
          let headerInset = sideInsets.base
          
@@ -924,7 +924,7 @@ index 00ea0b1..a9a48d5 100644
          self.ghostBaseProfileBackgroundView?.refreshAnimatedVideoOwner(
              self.headerNode.avatarListNode.avatarContainerNode.videoNode
          )
-@@ -5761,6 +5769,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5829,6 +5837,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          
          var validRegularSections: [AnyHashable] = []
          if !self.isMediaOnly {
@@ -933,7 +933,7 @@ index 00ea0b1..a9a48d5 100644
              var insets = UIEdgeInsets()
              insets.left += sideInsets.sectionLeft
              insets.right += sideInsets.sectionRight
-@@ -5893,6 +5903,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5961,6 +5971,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
              }
          }
          
@@ -942,7 +942,7 @@ index 00ea0b1..a9a48d5 100644
          let paneContainerSize = CGSize(width: layout.size.width, height: layout.size.height - navigationHeight)
          var restoreContentOffset: CGPoint?
          if additive {
-@@ -6134,6 +6146,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -6202,6 +6214,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          if self.isLentToExpansion {
              return
          }
@@ -951,18 +951,17 @@ index 00ea0b1..a9a48d5 100644
          let offsetY = self.scrollNode.view.contentOffset.y
          
          if self.isSettings, !(self.controller?.movingInHierarchy == true) {
-@@ -6168,7 +6182,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -6236,7 +6250,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                  let sideInsets = peerInfoSideInsets(layout: layout)
                  let headerInset = sideInsets.base
  
--                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
 +                let scrollHeaderTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.scrollHeader)
-+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
+                 let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
 +                if let scrollHeaderTiming { self.ghostBaseProfileBackgroundView?.endPerformanceSpan(.scrollHeader, scrollHeaderTiming) }
              }
              
              let paneAreaExpansionDistance: CGFloat = 32.0
-@@ -6204,7 +6220,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -6272,7 +6288,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
              // iPhone Duo: the panes and tabs stay out of the side strip; the container stays full width.
              let paneSideInsets = peerInfoSideInsets(layout: layout)
              self.paneContainerNode.stripInsets = (paneSideInsets.stripLeft, paneSideInsets.stripRight)

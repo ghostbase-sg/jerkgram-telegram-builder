@@ -55,6 +55,9 @@ def parent_bytes(name, data):
     return result
 
 def apply_ui_repair(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg131-ui-repair')
     source = Path(source).resolve()
     m = read_manifest()
     for name, values in m['owners'].items():

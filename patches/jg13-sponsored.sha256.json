@@ -1,5 +1,5 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
   "owners": {
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift": {
       "before_sha256": "cb2542b2c8d59813db84b1e21e8278caa22f89b880c255a95247c0dc396dc39b",
@@ -18,36 +18,36 @@
       "after_sha256": "9566f0f3a0f29cfec1562fb087379fd112ca245bbcf7938e8f9a997087aa4014"
     },
     "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift": {
-      "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "before_sha256": null,
       "after_sha256": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b"
     }
   },
   "locks": {
-    "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift": "a30f76a86de22b16fc22214cfdee98f10fd1943a8c93bc33e87f113fe7b5b7f9",
-    "submodules/TelegramUI/Sources/ChatHistoryListNode.swift": "74f5caf67badb6f214bf474e34f5c830158ef10333fb84caf8e32bd30af73ee6",
-    "submodules/TelegramUI/Sources/ChatController.swift": "9c8ee8652379ebff12ff78ba323b3326e867fc8c831bd84d338448a2bf72d022",
-    "submodules/TelegramUI/Sources/ChatControllerNode.swift": "bce65215e8bb2840661ba3159a6e7a6d44ce6500fbe34fdaccb1a49a283e7a7b",
-    "submodules/TelegramUI/Sources/ChatControllerContentData.swift": "3726696640613add5b970c50ccb7dbefd7531a27a4ca87cca1049f8b35af252c",
-    "submodules/ChatListUI/Sources/ChatListSearchListPaneNode.swift": "dbd2ad3ea4914b96f59129665b6421fb05a25cff0274f1c50b2778e01c6b9f8f",
-    "submodules/GalleryUI/Sources/Items/UniversalVideoGalleryItem.swift": "08a5b54e03e3aa192682aa2a7f764e8f3f607aa7e6d7398c1a20dd562ff27d12",
+    "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift": "df1c00acb70758d0e7174830f7462b542dc4f2c88ee78b4b4c2e778fc2f82290",
+    "submodules/TelegramUI/Sources/ChatHistoryListNode.swift": "a1f3007ce57ca6a9c6d03dd7f4682f1c4697f4d2fa00efbe8773bf307c537d72",
+    "submodules/TelegramUI/Sources/ChatController.swift": "6bbfdac5e0745660b63cfd05234409cc05d703b4b5aa13388a25c05ed0956f29",
+    "submodules/TelegramUI/Sources/ChatControllerNode.swift": "cde403e01741d72db7a91421b73f4e7cc29f9522b038361cbefb28ea47d708ee",
+    "submodules/TelegramUI/Sources/ChatControllerContentData.swift": "6a47ebf9326f808a1cb52f55f93e1c444a200ac4c4ca89d97d68c730502158b3",
+    "submodules/ChatListUI/Sources/ChatListSearchListPaneNode.swift": "996e3973824cffdd5b4e5cdaa39f734372b5093178265d46e612e6f7b33c5542",
+    "submodules/GalleryUI/Sources/Items/UniversalVideoGalleryItem.swift": "1682aec3e857ed64ea1b7411b5be430dfdf3059f812c87c97277a72a138e78f3",
     "submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift": "f3ccbf0e765d5530c8ad6018e25eba37fa0355c24fc7b6f6b29f3d16d048b8cb",
     "submodules/TelegramCore/Sources/TelegramEngine/Messages/ReportAds.swift": "d445cc07e105e09d9e71c1989fcf5fafc81c61aa21d4ac8995af265dd066e01d",
     "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelAds.swift": "9b522f0764c5b76120ae206774794f284985197cfe8eeedaab629746d39406b6",
     "submodules/TelegramCore/Sources/ApiUtils/AdMessageAttribute.swift": "de20cde1c3c31414aa4fcca92a7e390ec31c02bf6c87b6b69be8507c6d2b9506",
-    "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift": "3ad2df4eab7484e92007fb8ca749b9529b14d62228d8dfa4fae98cebfd023a60",
-    "submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift": "6c3c3b32ca6025fb43e84fc83cae38cf5c92ba32bd6635d5ea287af9b67f507c",
-    "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift": "21bfe0db9f76682b8a2b347c9bfb898e7c8359106da1ccb12634e8ee3c522e04",
-    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": "1f4b4b3c69c529f949b059721c79a002b7fff0dd85df608e0f5f1ef0b82f7737",
-    "submodules/TelegramCore/Sources/Account/Account.swift": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
-    "submodules/TelegramUI/Sources/AppDelegate.swift": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
-    "submodules/TelegramCore/Sources/Network/FetchV2.swift": "b6be8401de499c6d7a5e70c661a39b3120ef8f32f4eb308c4cda7ce96b53bbb9",
+    "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift": "38944b4f8f6197a1bd9429d8092bf8744c05af7c6808e78259ec587cef0a56ea",
+    "submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift": "deef5a1a1d222247b3dc10df65aa3723cb48d182a228323ff2c5082b7f686248",
+    "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift": "d7b86ffd08251f7bd42c437daf7fb2a9c82bae3dd2898271ac81ef1006578fb4",
+    "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": "9af97efc069e59a339f773f393a60bc36c398dc15847d17d843705b28c4dfa05",
+    "submodules/TelegramCore/Sources/Account/Account.swift": "2d05bd76f68c0a6009cf04463ca2bc6d6ec2a03ccbf788743004052606b955ed",
+    "submodules/TelegramUI/Sources/AppDelegate.swift": "925b72fbb80fa60c973326b67b30687c5055634d5dc3e3f590562047bec8ec87",
+    "submodules/TelegramCore/Sources/Network/FetchV2.swift": "2a6e3887faeef68f0069883745a61e89c9ca3da376d039fac1b19e125faeceb1",
     "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f",
-    "submodules/TelegramCore/Sources/Network/Network.swift": "b135376f7db35a77995d2c06dd92d1ba9b6acbe490cd339d8f745307c3ca812e",
-    "submodules/TelegramCore/Sources/Network/MultipartUpload.swift": "d21284ba5a212370db86698dd3b7047169e29017c9e328d7cd70d98ec8594d10",
-    "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4",
-    "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6",
-    "submodules/TelegramCore/BUILD": "438ab68a306e012e79d6f5d1a397a56739b25c36dbc3b1085640b51ca0f7b2bc",
+    "submodules/TelegramCore/Sources/Network/Network.swift": "ed034f1d93279c860c514a63925b76b8c3b9df0aaa4e7141d65129d42adc27d6",
+    "submodules/TelegramCore/Sources/Network/MultipartUpload.swift": "e831102d8c4cf07f162163a2955a1989ff1630eabd273bd28a0b9b84c399b174",
+    "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0",
+    "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": "57ef251f33e31e3a7171cf3fbabb15678e2184c108959d94c1f5217bd177b5b6",
+    "submodules/TelegramCore/BUILD": "fcea11bd24cde0cd4f4a28d7633812d7a661367d3143a42f30a6821b5f1ebf0c",
     "submodules/TelegramApi/Sources/TLObjectSupport.swift": "f237889fa9c20bc36ee58e0e99760a36ac3dd9c58a7e11dd92e44aa06988f33a"
   },
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json"
 }

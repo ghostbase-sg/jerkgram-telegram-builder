@@ -102,6 +102,9 @@ def verify_sponsored(source):
     return {name: {'after_sha256': values['after_sha256']} for name,values in m['owners'].items()}
 
 def apply_sponsored(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg13-sponsored')
     source=Path(source); m=read_manifest(); check_locks(source,m); outputs={}
     for name,values in m['owners'].items():
         p=source/name

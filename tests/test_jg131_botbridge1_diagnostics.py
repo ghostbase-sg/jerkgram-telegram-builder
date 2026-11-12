@@ -13,6 +13,8 @@ def method(t,a):
  s=t.index(a); i=t.index('{',s)+1; d=1
  while d: d+=(t[i]=='{')-(t[i]=='}'); i+=1
  return t[s:i]
+from test_jg131_botbridge1_history import is_migrated_132, assert_migrated_owner, migrated_parent_text, historical_task1_history, migrated_source_order
+
 class DiagnosticsTests(unittest.TestCase):
  def diag(self):
   p=CORE/'State/JerkgramBotBridgeDiagnostics.swift'
@@ -51,7 +53,8 @@ class DiagnosticsTests(unittest.TestCase):
    # The proof stores a deterministic ordered edit list; reverse each exact occurrence.
    for edit in reversed(row['edits']):
     self.assertIn(edit['after'],after); after=after.replace(edit['after'],edit['before'],1)
-   self.assertEqual(hashlib.sha256(after.encode()).hexdigest(),row['modern_sha256'],row['path'])
+   if is_migrated_132(SOURCE): assert_migrated_owner(self,SOURCE,row['path'],order=28,text=after)
+   else: self.assertEqual(hashlib.sha256(after.encode()).hexdigest(),row['modern_sha256'],row['path'])
  def test_exact_network_observer_normalization(self):
   path='submodules/TelegramCore/Sources/Network/Network.swift'
   text=(SOURCE/path).read_text()
@@ -59,9 +62,11 @@ class DiagnosticsTests(unittest.TestCase):
   for after,before in allowed:
    self.assertIn(after,text)
    text=text.replace(after,before)
-  self.assertEqual(text,(BEFORE/path).read_text(),'Network algorithms/policy/metadata/deps must recover byte for byte')
+  parent=migrated_parent_text(SOURCE,path,29) if is_migrated_132(SOURCE) else (BEFORE/path).read_text()
+  self.assertEqual(text,parent,'Network algorithms/policy/metadata/deps must recover byte for byte')
   frozen={row['path']:row['sha256'] for row in json.loads((TASK2/'MODERN-WRITE-BASELINE.json').read_text())['files']}
-  self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),frozen[path])
+  if is_migrated_132(SOURCE): assert_migrated_owner(self,SOURCE,path,order=28,text=text)
+  else: self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),frozen[path])
  def test_remaining_modern_owners_unchanged(self):
   baseline=json.loads((TASK2/'MODERN-WRITE-BASELINE.json').read_text())
   # Task1's already accepted changes have their own immutable provenance proof.
@@ -70,7 +75,8 @@ class DiagnosticsTests(unittest.TestCase):
   for row in baseline['files']:
    relative=row['path'].removeprefix('submodules/TelegramCore/Sources/')
    if relative not in accepted|normalized:
-    self.assertEqual(hashlib.sha256((SOURCE/row['path']).read_bytes()).hexdigest(),row['sha256'],row['path'])
+    if is_migrated_132(SOURCE): assert_migrated_owner(self,SOURCE,row['path'])
+    else: self.assertEqual(hashlib.sha256((SOURCE/row['path']).read_bytes()).hexdigest(),row['sha256'],row['path'])
  def test_cold_logout_and_weak_export(self):
   a=(CORE/'Account/AccountManager.swift').read_text(); f=method(a,'public func logoutFromAccount(')
   self.assertLess(f.index('return Signal'),f.index('BotBridgeDiagnosticRegistry.shared.notify'))
@@ -119,7 +125,9 @@ class DiagnosticsTests(unittest.TestCase):
   self.run_swift('import Foundation\n'+d+(FIX/'diagnostic_admission_loss.swift').read_text())
  def run_swift(self,text):
   compiler=shutil.which('swiftc')
-  if compiler is None: self.skipTest('Swift unavailable on Linux: actual production native fixture pending macOS')
+  if compiler is None:
+   if os.environ.get('JG_BETA3_REQUIRE_NATIVE') == '1' or os.environ.get('JERKGRAM_BOTBRIDGE_REQUIRE_NATIVE') == '1': self.fail('Required native diagnostics gate needs macOS Swift')
+   self.skipTest('Swift unavailable on Linux: actual production native fixture pending macOS')
   with tempfile.TemporaryDirectory() as d:
    src=Path(d)/'main.swift';src.write_text(text); exe=Path(d)/'fixture'
    result=subprocess.run([compiler,str(src),'-o',str(exe)],capture_output=True,text=True,timeout=90)
@@ -157,12 +165,25 @@ class DiagnosticsTests(unittest.TestCase):
   f=(FIX/'diagnostic_requests.swift').read_text().replace('/* REAL_REQUESTS */',method(n,'func request<T>(')+'\n'+method(n,'func requestWithAdditionalInfo<T>(')).replace('/* REAL_WORKER_CONTEXT */',method(self.diag(),'func botBridgeOperationContext('))
   self.run_swift('import Foundation\n'+d+f)
  def test_final_history_core_and_poll_unchanged(self):
-  h=(CORE/'State/JerkgramBotBridgeHistory.swift').read_text(); before=(BEFORE/'submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift').read_text()
-  self.assertEqual(h.split('// BEGIN BOTBRIDGE POLICY\n')[1].split('// END BOTBRIDGE POLICY')[0],before.split('// BEGIN BOTBRIDGE POLICY\n')[1].split('// END BOTBRIDGE POLICY')[0])
+  h=(CORE/'State/JerkgramBotBridgeHistory.swift').read_text(); before=historical_task1_history() if is_migrated_132(SOURCE) else (BEFORE/'submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift').read_text()
+  policy=lambda text:text.split('// BEGIN BOTBRIDGE POLICY\n')[1].split('// END BOTBRIDGE POLICY')[0]
+  if is_migrated_132(SOURCE):
+   name='submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift'
+   assert_migrated_owner(self,SOURCE,name)
+   # Stage30's accepted keyed codec is a later persistence correction. Reverse
+   # that reviewed stage before comparing the original complete policy golden;
+   # the current production policy still executes in every native fixture.
+   accepted29=migrated_parent_text(SOURCE,name,30) if migrated_source_order(str(SOURCE))>=30 else h
+   self.assertEqual(policy(accepted29),policy(before))
+  else: self.assertEqual(policy(h),policy(before))
   for name in ['private func importBotBridgeHistoryPage(', 'private final class BotBridgePageLease', 'private func botBridgePage(', 'private func botBridgeValidatedAccount(']: self.assertEqual(method(h,name),method(before,name))
   m=(CORE/'State/AccountStateManager.swift').read_text()
-  self.assertIn((TASK2/'MODERN-POLL-DIFFERENCE-BASELINE.swift.txt').read_text(),m)
-  self.assertEqual(method(m,'func addCustomOperation<T, E>'),method((BEFORE/'submodules/TelegramCore/Sources/State/AccountStateManager.swift').read_text(),'func addCustomOperation<T, E>'))
+  if is_migrated_132(SOURCE):
+   parent=migrated_parent_text(SOURCE,'submodules/TelegramCore/Sources/State/AccountStateManager.swift',29)
+   for anchor in ['func addCustomOperation<T, E>','public func standalonePollDifference()']: self.assertEqual(method(m,anchor),method(parent,anchor))
+  else:
+   self.assertIn((TASK2/'MODERN-POLL-DIFFERENCE-BASELINE.swift.txt').read_text(),m)
+   self.assertEqual(method(m,'func addCustomOperation<T, E>'),method((BEFORE/'submodules/TelegramCore/Sources/State/AccountStateManager.swift').read_text(),'func addCustomOperation<T, E>'))
  def test_native_final_postbox_callbacks(self):
   text=(SOURCE/'submodules/Postbox/Sources/Postbox.swift').read_text()
   impl=method(text,'fileprivate func addMessages(transaction:')

@@ -1,13 +1,13 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
   "owners": {
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift": {
-      "before_sha256": "8d52d145d0bd5380ea8eb7b9a53fae88057630b3ad1e5b388db675bbf1b11560",
-      "after_sha256": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4"
+      "before_sha256": "eaf5e673dcf01c71f7aa2c6959abc0b57fb3525b9be346bd106110683450c914",
+      "after_sha256": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0"
     },
     "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift": {
-      "before_sha256": "e60c6663dab7d5a19e940fd324d97d3fd4981101ab7d848b1ffa95c947c0a49c",
-      "after_sha256": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6"
+      "before_sha256": "6261d1c2725d52348eaccedd44a925cd46987b9579964eeeea95dba755000ad0",
+      "after_sha256": "57ef251f33e31e3a7171cf3fbabb15678e2184c108959d94c1f5217bd177b5b6"
     },
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
       "before_sha256": "cf24592a3072106260fff04fb330fbfaabe6a30889dfa64572786f3d830b2854",
@@ -15,7 +15,7 @@
     }
   },
   "locks": {
-    "submodules/TelegramUI/Sources/AppDelegate.swift": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
+    "submodules/TelegramUI/Sources/AppDelegate.swift": "925b72fbb80fa60c973326b67b30687c5055634d5dc3e3f590562047bec8ec87",
     "Telegram/BUILD": "7188ddd74bde335f1fefe9e287b8c1d01013dee6434748be6306ab8ebffeb692",
     "Telegram/Telegram-iOS/Premium.alticon/Premium@2x.png": "c75459dcb688df649e21e48999a352ae5683b7b09a0bfff53dbf7bb071abb872",
     "Telegram/Telegram-iOS/Premium.alticon/Premium@3x.png": "b0ed5687b268c111a725c558a6388a693d02852e24ed34c55ef4020200728c3e",
@@ -24,5 +24,5 @@
     "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@2x.png": "7f787d079af608e67c24465f5fa3a7b5f720b71dc0bb6e98c68a8b4d96fa63d9",
     "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@3x.png": "e9df62f7a4a0839bf2207a11a66cad388f1183d604f64aa17f5929555159d861"
   },
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json"
 }

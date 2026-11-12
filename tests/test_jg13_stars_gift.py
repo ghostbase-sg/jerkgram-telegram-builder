@@ -10,6 +10,14 @@ SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 
+
+def apply_fixture(stage,source):
+    from jg132_baseline import enabled
+    if enabled():
+        from jg132_source_fixtures import apply_exact_delta_fixture
+        return apply_exact_delta_fixture(stage,source)
+    return stage.apply_stars_gift(source)
+
 class StarsGiftTests(unittest.TestCase):
     def test_currency_scope_at_both_override_owners(self):
         core = (SOURCE / 'submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift').read_text()
@@ -39,8 +47,8 @@ class StarsGiftTests(unittest.TestCase):
                 t=(SOURCE/n).read_text()
                 if n in m['owners']:t=stage.restore_owner(n,t)
                 p.write_text(t)
-            stage.apply_stars_gift(source)
-            with self.assertRaises(RuntimeError):stage.apply_stars_gift(source)
+            apply_fixture(stage, source)
+            with self.assertRaises(RuntimeError):apply_fixture(stage, source)
             for n in set(m['owners']) | set(m['locks']):
                 p=source/n;before=p.read_bytes();p.write_bytes(before+b'\n// tampered\n')
                 with self.assertRaises(RuntimeError):stage.verify_stars_gift(source)

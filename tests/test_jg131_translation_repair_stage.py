@@ -42,6 +42,10 @@ class RepairStage(unittest.TestCase):
         self.stage = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.stage)
         self.stage.PATCH, self.stage.MANIFEST = self.patch, self.manifest
+        # This is a minimal historical patch-algebra fixture, not an upstream
+        # checkout. Its isolated module instance uses that fixture's own pin.
+        if hasattr(self.stage,"UPSTREAM"):
+            self.stage.UPSTREAM=json.loads(self.manifest.read_text())["upstream_sha"]
 
     def test_apply_and_reapply_are_byte_exact(self):
         self.stage.apply_repair(self.source)

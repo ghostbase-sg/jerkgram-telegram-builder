@@ -1,7 +1,8 @@
 diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sources/Postbox.swift
+index 72585b3..ea69f94 100644
 --- a/submodules/Postbox/Sources/Postbox.swift
 +++ b/submodules/Postbox/Sources/Postbox.swift
-@@ -52,6 +52,16 @@
+@@ -64,6 +64,16 @@ public final class Transaction {
          }
      }
      
@@ -18,7 +19,7 @@ diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sourc
      public func messageExists(id: MessageId) -> Bool {
          if let postbox = self.postbox {
              return postbox.messageHistoryIndexTable.exists(id)
-@@ -2191,7 +2201,7 @@
+@@ -2315,7 +2325,7 @@ final class PostboxImpl {
          metaDisposable.set(disposable)
      }
      
@@ -27,7 +28,7 @@ diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sourc
          var addedMessagesByPeerId: [PeerId: [StoreMessage]] = [:]
          let addResult = self.messageHistoryTable.addMessages(messages: messages, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, processMessages: { messagesByPeerId in
              addedMessagesByPeerId = messagesByPeerId
-@@ -2219,13 +2229,13 @@
+@@ -2343,13 +2353,13 @@ final class PostboxImpl {
                      }
              }
              
@@ -44,9 +45,10 @@ diff --git a/submodules/Postbox/Sources/Postbox.swift b/submodules/Postbox/Sourc
                      f.addOrUpdate(messages: peerMessages, transaction: transaction)
                  }
 diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+index b3dcbe9..9afbdcb 100644
 --- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
 +++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
-@@ -625,3 +625,43 @@
+@@ -625,3 +625,43 @@ private func jerkgramPresentArchiveImportPicker(
      )
      controller.present(picker, in: .window(.root), with: nil)
  }
@@ -91,9 +93,10 @@ diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowControlle
 +    }
 +}
 diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+index f58bc51..d026221 100644
 --- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
 +++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
-@@ -61,7 +61,7 @@
+@@ -61,7 +61,7 @@ private enum JerkgramDataUIEntry: ItemListNodeEntry {
                  disclosureStyle: .none, action: nil
              )
          case let .action(_, _, title, value, action):
@@ -102,7 +105,7 @@ diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupControl
                  return ItemListActionItem(
                      presentationData: presentationData, title: title,
                      kind: .generic, alignment: .center,
-@@ -138,6 +138,12 @@
+@@ -138,6 +138,12 @@ private func jerkgramDataEntries(state: JerkgramDataUIState, strings: JerkgramSt
          .info(2, strings.backupAccountHint(state.configuration.accountPeerId)),
          .info(3, strings.languageCode == "ru" ? "После исключения чат остаётся в списке с уже загруженной перепиской и сведениями. Доступен только просмотр. Включите до исключения." : "After removal, keep the chat in the list with locally loaded history and information. Read-only. Enable before removal."),
      ])
@@ -115,7 +118,7 @@ diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupControl
      return entries
  }
  
-@@ -174,6 +180,8 @@
+@@ -174,6 +180,8 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
                  let current = configuration.accountPolicy.mediaByteLimit
                  configuration.accountPolicy.mediaByteLimit = mediaLimits[(mediaLimits.firstIndex(of: current)! + 1) % mediaLimits.count]
              }
@@ -125,9 +128,10 @@ diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupControl
              if let controller = actionTarget { jerkgramPresentArchiveExport(context: context, controller: controller) }
          case "import":
 diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
+index 3783ba4..ad9bb23 100644
 --- a/submodules/TelegramCore/Sources/Account/Account.swift
 +++ b/submodules/TelegramCore/Sources/Account/Account.swift
-@@ -1356,35 +1356,13 @@
+@@ -1356,35 +1356,13 @@ private func ghostBaseBotSafeRecord(
      Logger.shared.log("BOTSAFE1", value)
  }
  
@@ -164,7 +168,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/
      public let supplementary: Bool
      public let isSupportUser: Bool
      public let postbox: Postbox
-@@ -1617,26 +1595,21 @@
+@@ -1619,26 +1597,21 @@ public class Account {
          self.network.loggedOut = { [weak self] in
              Logger.shared.log("Account", "network logged out")
              if let strongSelf = self {
@@ -195,7 +199,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/
              if ghostBaseBotSafeMode {
                  ghostBaseBotSafeRecord(
                      peerId: peerId,
-@@ -1897,13 +1870,17 @@
+@@ -1899,13 +1872,17 @@ public class Account {
          self.automaticCacheEvictionContext = AutomaticCacheEvictionContext(postbox: postbox, accountManager: accountManager)
  
  
@@ -203,9 +207,6 @@ diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/
 -            Queue.concurrentDefaultQueue().after(1.5) { [weak self] in
 -                self?.stateManager.ghostBaseStartBotShadowHistory()
 -            }
--        }
--
--        
 +        if !supplementary {
 +            self.stateManager.jerkgramStartBotBridgeHistory(recordId: id.int64, admit: { [weak self] generation in
 +                guard let self = self else { return false }
@@ -215,12 +216,13 @@ diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/
 +            }, event: { [weak owner = self.botBridgeDiagnostics] event in
 +                owner?.history(event)
 +            })
-+        }
-+
+         }
+ 
+-        
          /*#if DEBUG
          self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {
              print("debugFetchAllStickers done")
-@@ -1912,6 +1889,8 @@
+@@ -1914,6 +1891,8 @@ public class Account {
      }
      
      deinit {
@@ -229,7 +231,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/
          self.managedContactsDisposable.dispose()
          self.managedStickerPacksDisposable.dispose()
          self.managedServiceViewsDisposable.dispose()
-@@ -1950,6 +1929,8 @@
+@@ -1954,6 +1933,8 @@ public class Account {
      }
      
      public func resetStateManagement() {
@@ -239,9 +241,10 @@ diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/
          self.restartContactManagement()
          self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
 diff --git a/submodules/TelegramCore/Sources/Account/AccountManager.swift b/submodules/TelegramCore/Sources/Account/AccountManager.swift
+index 3c31fba..7801526 100644
 --- a/submodules/TelegramCore/Sources/Account/AccountManager.swift
 +++ b/submodules/TelegramCore/Sources/Account/AccountManager.swift
-@@ -368,7 +368,9 @@
+@@ -369,7 +369,9 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
  
  public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager<TelegramAccountManagerTypes>, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
      Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
@@ -252,7 +255,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/AccountManager.swift b/subm
          transaction.updateRecord(id, { current in
              if alreadyLoggedOutRemotely {
                  return nil
-@@ -389,6 +391,7 @@
+@@ -390,6 +392,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                  return nil
              }
          })
@@ -260,7 +263,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/AccountManager.swift b/subm
      }
  }
  
-@@ -406,6 +409,7 @@
+@@ -407,6 +410,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
              }
          }).start()
          let disposable = accountManager.accountRecords().start(next: { view in
@@ -268,7 +271,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/AccountManager.swift b/subm
              var disposeList: [(AccountRecordId, MetaDisposable)] = []
              var beginList: [(AccountRecordId, [TelegramAccountManagerTypes.Attribute], MetaDisposable)] = []
              let _ = loggedOutAccounts.modify { disposables in
-@@ -445,8 +449,12 @@
+@@ -446,8 +450,12 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                  disposable.dispose()
              }
              for (id, attributes, disposable) in beginList {
@@ -282,7 +285,7 @@ diff --git a/submodules/TelegramCore/Sources/Account/AccountManager.swift b/subm
              }
              
              var validPaths = Set<String>()
-@@ -460,13 +468,12 @@
+@@ -461,13 +469,12 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                  validPaths.insert("\(accountRecordIdPathName(record.id))")
              }
              
@@ -300,9 +303,10 @@ diff --git a/submodules/TelegramCore/Sources/Account/AccountManager.swift b/subm
                      }
                  }
 diff --git a/submodules/TelegramCore/Sources/Authorization.swift b/submodules/TelegramCore/Sources/Authorization.swift
+index f47833f..9e3051b 100644
 --- a/submodules/TelegramCore/Sources/Authorization.swift
 +++ b/submodules/TelegramCore/Sources/Authorization.swift
-@@ -1573,6 +1573,7 @@
+@@ -1573,6 +1573,7 @@ public func ghostBaseAuthorizeBot(
                          }
                      )
                      transaction.setState(state)
@@ -311,9 +315,10 @@ diff --git a/submodules/TelegramCore/Sources/Authorization.swift b/submodules/Te
                      UserDefaults.standard.set(
                          true,
 diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/TelegramCore/Sources/Network/Network.swift
+index d0a36f6..b41621e 100644
 --- a/submodules/TelegramCore/Sources/Network/Network.swift
 +++ b/submodules/TelegramCore/Sources/Network/Network.swift
-@@ -916,6 +916,7 @@
+@@ -916,6 +916,7 @@ public final class Network: NSObject {
      private let rustEngineDisabled: Atomic<Bool>
      private let rustEngineWaitsForWebProxy: Atomic<Bool>
      let mainSession: NetworkEngineSession
@@ -321,7 +326,7 @@ diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/
      let requestService: NetworkEngineRequestService
      let basePath: String
      private let mainSessionDelegate: NetworkMainSessionDelegate
-@@ -1070,6 +1071,7 @@
+@@ -1071,6 +1072,7 @@ public final class Network: NSObject {
              Logger.shared.log("Network", "contextLoggedOut")
              self?.loggedOut?()
          }, contextPermanentKeyUnknown: { [weak self] datacenterId, authKeyId in
@@ -329,7 +334,7 @@ diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/
              self?.permanentKeyUnknown?(datacenterId, authKeyId)
          })
          self.networkHelper = networkHelper
-@@ -1371,9 +1373,11 @@
+@@ -1372,9 +1374,11 @@ public final class Network: NSObject {
          }
      }
      
@@ -343,7 +348,7 @@ diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/
              let request = NetworkEngineRequest(
                  payload: data.1.makeData(),
                  metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag),
-@@ -1388,6 +1392,7 @@
+@@ -1389,6 +1393,7 @@ public final class Network: NSObject {
                  shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, failOnServerErrors: false),
                  dependsOn: networkRequestDependency(tag: tag),
                  acknowledged: {
@@ -351,7 +356,7 @@ diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/
                      if info.contains(.acknowledgement) {
                          subscriber.putNext(.acknowledged)
                      }
-@@ -1401,25 +1406,35 @@
+@@ -1402,25 +1407,35 @@ public final class Network: NSObject {
                      switch result {
                      case let .success(response):
                          if let result = (response.result as! BoxedMessage).body as? T {
@@ -371,19 +376,16 @@ diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/
              )
              
 -            return requestService.add(request)
--        }
--    }
--    
--    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
 +            let disposable = requestService.add(request)
 +            guard let observation = observation else { return disposable }
 +            return ActionDisposable {
 +                observation.cancel()
 +                disposable.dispose()
 +            }
-+        }
-+    }
-+    
+         }
+     }
+     
+-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
 +    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, diagnosticContext: BotBridgeOperationContext? = nil) -> Signal<T, MTRpcError> {
          let requestService = self.requestService
 -        return Signal { [requestService] subscriber in
@@ -393,7 +395,7 @@ diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/
              let request = NetworkEngineRequest(
                  payload: data.1.makeData(),
                  metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag),
-@@ -1439,19 +1454,27 @@
+@@ -1440,19 +1455,27 @@ public final class Network: NSObject {
                      switch result {
                      case let .success(response):
                          if let result = (response.result as! BoxedMessage).body as? T {
@@ -423,9 +425,10 @@ diff --git a/submodules/TelegramCore/Sources/Network/Network.swift b/submodules/
      }
      
 diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift b/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift
+index 9b96619..a2aaf03 100644
 --- a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift
 +++ b/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessage.swift
-@@ -428,6 +428,7 @@
+@@ -428,6 +428,7 @@ private func sendUploadedMessageContent(
          if peerId.namespace == Namespaces.Peer.SecretChat {
              return .fail(StandaloneSendMessagesError(peerId: peerId, reason: .none))
          } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
@@ -433,7 +436,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
              var uniqueId: Int64 = 0
              var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
              var messageEntities: [Api.MessageEntity]?
-@@ -584,7 +585,7 @@
+@@ -584,7 +585,7 @@ private func sendUploadedMessageContent(
                          flags |= 1 << 22
                      }
                  
@@ -442,7 +445,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
                  case let .media(inputMedia, text):
                      if bubbleUpEmojiOrStickersets {
                          flags |= Int32(1 << 15)
-@@ -619,7 +620,7 @@
+@@ -619,7 +620,7 @@ private func sendUploadedMessageContent(
                          flags |= 1 << 22
                      }
                      
@@ -451,7 +454,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
                      |> map(NetworkRequestResult.result)
                  case let .forward(sourceInfo):
                      if topMsgId != nil {
-@@ -630,7 +631,7 @@
+@@ -630,7 +631,7 @@ private func sendUploadedMessageContent(
                      }
                  
                      if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
@@ -460,7 +463,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
                          |> map(NetworkRequestResult.result)
                      } else {
                          sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
-@@ -659,7 +660,7 @@
+@@ -659,7 +660,7 @@ private func sendUploadedMessageContent(
                          }
                      }
  
@@ -469,7 +472,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
                      |> map(NetworkRequestResult.result)
                  case .messageScreenshot:
                      let replyTo: Api.InputReplyTo
-@@ -680,7 +681,7 @@
+@@ -680,7 +681,7 @@ private func sendUploadedMessageContent(
                          replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                      }
                  
@@ -478,7 +481,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
                      |> map(NetworkRequestResult.result)
                  case .secretMedia:
                      assertionFailure()
-@@ -767,6 +768,11 @@
+@@ -767,6 +768,11 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
              // Secret chats cannot be written to from here.
              return .fail(.generic)
          } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
@@ -490,7 +493,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
              var uniqueId: Int64 = Int64.random(in: Int64.min ... Int64.max)
              //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
              var messageEntities: [Api.MessageEntity]?
-@@ -849,7 +855,7 @@
+@@ -849,7 +855,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                          replyTo = .inputReplyToMessage(.init(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                      }
  
@@ -499,7 +502,7 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
                      |> mapError { _ -> StandaloneSendMessageError in
                          return .generic
                      }
-@@ -874,7 +880,7 @@
+@@ -874,7 +880,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                          flags |= 1 << 22
                      }
                  
@@ -508,327 +511,35 @@ diff --git a/submodules/TelegramCore/Sources/PendingMessages/StandaloneSendMessa
                      |> mapError { _ -> StandaloneSendMessageError in
                          return .generic
                      }
-diff --git a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
---- a/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
-+++ b/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
-@@ -3122,7 +3122,7 @@
-     return ghostBaseIsBotAccount(accountPeerId)
- }
- 
--private func jerkgramIncludeBotMessagePeers(transaction: Transaction, accountPeerId: PeerId, messages: [StoreMessage]) {
-+func jerkgramIncludeBotMessagePeers(transaction: Transaction, accountPeerId: PeerId, messages: [StoreMessage]) {
-     guard jerkgramIsBotAccount(accountPeerId: accountPeerId, peer: transaction.getPeer(accountPeerId)) else { return }
-     var visited = Set<PeerId>()
-     for message in messages {
 diff --git a/submodules/TelegramCore/Sources/State/AccountStateManager.swift b/submodules/TelegramCore/Sources/State/AccountStateManager.swift
+index 5bb2aad..cac913e 100644
 --- a/submodules/TelegramCore/Sources/State/AccountStateManager.swift
 +++ b/submodules/TelegramCore/Sources/State/AccountStateManager.swift
-@@ -393,7 +393,8 @@
+@@ -362,6 +362,8 @@ public final class AccountStateManager {
+         
+         let appliedQtsPromise = Promise<Int32?>(nil)
          private let appliedQtsDisposable = MetaDisposable()
-         private let reportMessageDeliveryDisposable = DisposableSet()
-         private let updateEmojiGameInfoDisposable = MetaDisposable()
--        private let ghostBaseBotShadowHistoryDisposable = MetaDisposable()
 +        private let botBridgeStartDisposable = MetaDisposable()
 +        private var botBridgeHistory: BotBridgeHistoryController?
          
-         let updateConfigRequested: (() -> Void)?
-         let isPremiumUpdated: (() -> Void)?
-@@ -437,8 +438,8 @@
+         init(
+             queue: Queue,
+@@ -411,6 +413,8 @@ public final class AccountStateManager {
+             self.updateServiceDisposable.dispose()
              self.appliedQtsDisposable.dispose()
-             self.reportMessageDeliveryDisposable.dispose()
-             self.updateEmojiGameInfoDisposable.dispose()
--            self.ghostBaseBotShadowHistoryDisposable.dispose()
--            GhostBaseBotHistoryGate.set(peerId: self.accountPeerId, active: false)
+             self.accountResetDisposable.dispose()
 +            self.botBridgeStartDisposable.dispose()
 +            self.botBridgeHistory?.cancel(reason: .cancelled)
          }
          
          public func reset() {
-@@ -1559,285 +1560,29 @@
+@@ -769,6 +773,30 @@ public final class AccountStateManager {
              }
          }
-         
--        private struct GhostBaseBotShadowCursor {
--            let state: AuthorizedAccountState.State
--            let slice: Int
--        }
--
--        private func ghostBaseBotShadowPrefix() -> String {
--            return "jerkgram.BotShadow1.\(self.accountPeerId.toInt64())"
--        }
--
--        private func ghostBaseBotShadowSet(_ key: String, _ value: Any) {
--            UserDefaults.standard.set(value, forKey: self.ghostBaseBotShadowPrefix() + "." + key)
--        }
--
--        private func ghostBaseBotShadowRelease() {
--            GhostBaseBotHistoryGate.set(peerId: self.accountPeerId, active: false)
--            UserDefaults.standard.removeObject(forKey: self.ghostBaseBotShadowPrefix() + ".RunningAt")
--        }
--
--        private func ghostBaseBotShadowLoadCursor() -> GhostBaseBotShadowCursor {
--            let defaults = UserDefaults.standard
--            let prefix = self.ghostBaseBotShadowPrefix() + ".Cursor."
--            if defaults.object(forKey: prefix + "pts") != nil {
--                let state = AuthorizedAccountState.State(
--                    pts: Int32(defaults.integer(forKey: prefix + "pts")),
--                    qts: Int32(defaults.integer(forKey: prefix + "qts")),
--                    date: Int32(defaults.integer(forKey: prefix + "date")),
--                    seq: Int32(defaults.integer(forKey: prefix + "seq"))
--                )
--                if state.pts != 0 || state.qts != 0 || state.date != 0 || state.seq != 0 {
--                    return GhostBaseBotShadowCursor(state: state, slice: defaults.integer(forKey: prefix + "slice"))
--                }
--            }
--            // The all-zero cursor exists only in memory and is never written to Postbox.
--            return GhostBaseBotShadowCursor(state: AuthorizedAccountState.State(pts: 0, qts: 0, date: 0, seq: 0), slice: 0)
--        }
--
--        private func ghostBaseBotShadowSaveCursor(_ cursor: GhostBaseBotShadowCursor) {
--            guard cursor.state.pts != 0 || cursor.state.qts != 0 || cursor.state.date != 0 || cursor.state.seq != 0 else {
--                return
--            }
--            let defaults = UserDefaults.standard
--            let prefix = self.ghostBaseBotShadowPrefix() + ".Cursor."
--            defaults.set(Int(cursor.state.pts), forKey: prefix + "pts")
--            defaults.set(Int(cursor.state.qts), forKey: prefix + "qts")
--            defaults.set(Int(cursor.state.date), forKey: prefix + "date")
--            defaults.set(Int(cursor.state.seq), forKey: prefix + "seq")
--            defaults.set(cursor.slice, forKey: prefix + "slice")
--        }
--
--        private func ghostBaseBotShadowClearCursor() {
--            let defaults = UserDefaults.standard
--            let prefix = self.ghostBaseBotShadowPrefix() + ".Cursor."
--            for key in ["pts", "qts", "date", "seq", "slice"] {
--                defaults.removeObject(forKey: prefix + key)
--            }
--        }
--
--        private func ghostBaseBotShadowSafeOperation(_ operation: AccountStateMutationOperation) -> Bool {
--            switch operation {
--            case .AddMessages,
--                 .DeleteMessagesWithGlobalIds,
--                 .DeleteMessages,
--                 .EditMessage,
--                 .UpdateMessagePoll,
--                 .UpdateMessageReactions,
--                 .UpdateMedia,
--                 .MergeApiChats,
--                 .UpdatePeer,
--                 .UpdateCachedPeerData,
--                 .UpdateMessagesPinned,
--                 .MergeApiUsers,
--                 .UpdateMessageImpressionCount,
--                 .UpdateMessageForwardsCount,
--                 .UpdateExtendedMedia,
--                 .UpdateAudioTranscription:
--                return true
--            default:
--                // In particular: never replay UpdateState, channel pts/state, read
--                // state, notification settings, stories, calls or authorization data.
--                return false
--            }
--        }
--
--        private func ghostBaseBotShadowReplay(difference: Api.updates.Difference, cursor: GhostBaseBotShadowCursor) -> Signal<Int, NoError> {
+ 
 +        func jerkgramStartBotBridgeHistory(recordId: Int64, lifetime: BotBridgeLifetime, admit: @escaping (String) -> Bool, event: @escaping (BotBridgeHistoryEvent) -> Void) {
 +            guard self.botBridgeHistory == nil, lifetime.isActive else { return }
-             let accountPeerId = self.accountPeerId
--            let accountManager = self.accountManager
--            let postbox = self.postbox
--            let network = self.network
--            let mediaBox = self.postbox.mediaBox
--            let auxiliaryMethods = self.auxiliaryMethods
--            let messagesRemovedContext = self.messagesRemovedContext
--
--            return postbox.transaction { transaction -> AuthorizedAccountState.State? in
--                return (transaction.getState() as? AuthorizedAccountState)?.state
--            }
--            |> mapToSignal { persistentState -> Signal<Int, NoError> in
--                guard let persistentState else {
--                    return .single(0)
--                }
--                return initialStateWithDifference(
--                    postbox: postbox,
--                    difference: difference,
--                    overrideState: cursor.state,
--                    resetChannelStates: cursor.slice == 0 && cursor.state.pts == 0
--                )
--                |> mapToSignal { initialState -> Signal<Int, NoError> in
--                    return finalStateWithDifference(
--                        accountPeerId: accountPeerId,
--                        postbox: postbox,
--                        network: network,
--                        state: initialState,
--                        difference: difference,
--                        asyncResetChannels: nil,
--                        shouldResetChannels: false
--                    )
--                    |> mapToSignal { finalState -> Signal<Int, NoError> in
--                        var safeFinalState = finalState
--                        safeFinalState.state.operations = safeFinalState.state.operations.filter(self.ghostBaseBotShadowSafeOperation)
--                        safeFinalState.state.state = persistentState
--                        safeFinalState.shouldPoll = false
--                        safeFinalState.incomplete = false
--                        safeFinalState.missingUpdatesFromChannels.removeAll()
--                        safeFinalState.discard = false
--
--                        var messageIds = Set<MessageId>()
--                        var minTimestamps: [PeerId: Int32] = [:]
--                        for operation in safeFinalState.state.operations {
--                            if case let .AddMessages(messages, _) = operation {
--                                for message in messages {
--                                    if case let .Id(id) = message.id {
--                                        messageIds.insert(id)
--                                        minTimestamps[id.peerId] = min(minTimestamps[id.peerId] ?? message.timestamp, message.timestamp)
--                                    }
--                                }
--                            }
--                        }
--
--                        for (resource, data) in safeFinalState.state.preCachedResources {
--                            mediaBox.storeResourceData(resource.id, data: data)
--                        }
--
--                        return postbox.transaction { transaction -> (Int, [DeletedMessageId]) in
--                            let existingIds = transaction.filterStoredMessageIds(messageIds)
--                            guard let replayed = replayFinalState(
--                                accountManager: accountManager,
--                                postbox: postbox,
--                                accountPeerId: accountPeerId,
--                                mediaBox: mediaBox,
--                                encryptionProvider: network.encryptionProvider,
--                                transaction: transaction,
--                                auxiliaryMethods: auxiliaryMethods,
--                                finalState: safeFinalState,
--                                removePossiblyDeliveredMessagesUniqueIds: [:],
--                                ignoreDate: true,
--                                skipVerification: true
--                            ) else {
--                                return (0, [])
--                            }
--                            for (peerId, timestamp) in minTimestamps {
--                                updatePeerChatInclusionWithMinTimestamp(
--                                    transaction: transaction,
--                                    id: peerId,
--                                    minTimestamp: timestamp,
--                                    forceRootGroupIfNotExists: true
--                                )
--                            }
--                            return (max(0, messageIds.count - existingIds.count), replayed.deletedMessageIds)
--                        }
--                        |> map { added, deletedIds in
--                            if !deletedIds.isEmpty {
--                                messagesRemovedContext.addIsMessagesDeletedInteractively(ids: deletedIds)
--                                messagesRemovedContext.addIsMessagesDeletedRemotely(ids: deletedIds)
--                            }
--                            return added
--                        }
--                    }
--                }
--            }
--        }
--
--        private func ghostBaseBotShadowPage(cursor: GhostBaseBotShadowCursor, importedTotal: Int) -> Signal<Bool, NoError> {
--            guard cursor.slice < 96 else {
--                self.ghostBaseBotShadowSet("LastResult", "sliceLimit")
--                self.ghostBaseBotShadowRelease()
--                return .single(false)
--            }
--            self.ghostBaseBotShadowSet("LastRequest", "pts=\(cursor.state.pts) qts=\(cursor.state.qts) date=\(cursor.state.date) seq=\(cursor.state.seq) slice=\(cursor.slice)")
--
--            return self.network.request(
--                Api.functions.updates.getDifference(
--                    flags: 0,
--                    pts: cursor.state.pts,
--                    ptsLimit: nil,
--                    ptsTotalLimit: nil,
--                    date: cursor.state.date,
--                    qts: cursor.state.qts,
--                    qtsLimit: nil
--                ),
--                automaticFloodWait: false
--            )
--            |> map(Optional.init)
--            |> `catch` { error -> Signal<Api.updates.Difference?, NoError> in
--                self.ghostBaseBotShadowSet("LastResult", "rpcError")
--                self.ghostBaseBotShadowSet("LastErrorCode", Int(error.errorCode))
--                self.ghostBaseBotShadowSet("LastError", error.errorDescription ?? "nil")
--                Logger.shared.log("jerkgram.BotShadow1", "getDifference failed \(error.errorCode) \(error.errorDescription ?? "nil")")
--                self.ghostBaseBotShadowRelease()
--                return .single(nil)
--            }
--            |> mapToSignal { difference -> Signal<Bool, NoError> in
--                guard let difference else {
--                    return .single(false)
--                }
--                switch difference {
--                case let .difference(data):
--                    self.ghostBaseBotShadowSet("LastResult", "difference")
--                    self.ghostBaseBotShadowSet("LastMessages", data.newMessages.count)
--                    self.ghostBaseBotShadowSet("LastOtherUpdates", data.otherUpdates.count)
--                    return self.ghostBaseBotShadowReplay(difference: difference, cursor: cursor)
--                    |> map { added in
--                        let total = importedTotal + added
--                        self.ghostBaseBotShadowSet("Imported", total)
--                        self.ghostBaseBotShadowSet("Completed", total > 0)
--                        self.ghostBaseBotShadowClearCursor()
--                        self.ghostBaseBotShadowRelease()
--                        Logger.shared.log("jerkgram.BotShadow1", "final added=\(total)")
--                        return total > 0
--                    }
--                case let .differenceSlice(data):
--                    self.ghostBaseBotShadowSet("LastResult", "differenceSlice")
--                    self.ghostBaseBotShadowSet("LastMessages", data.newMessages.count)
--                    self.ghostBaseBotShadowSet("LastOtherUpdates", data.otherUpdates.count)
--                    return self.ghostBaseBotShadowReplay(difference: difference, cursor: cursor)
--                    |> mapToSignal { added -> Signal<Bool, NoError> in
--                        switch data.intermediateState {
--                        case let .state(state):
--                            let next = GhostBaseBotShadowCursor(
--                                state: AuthorizedAccountState.State(pts: state.pts, qts: state.qts, date: state.date, seq: state.seq),
--                                slice: cursor.slice + 1
--                            )
--                            self.ghostBaseBotShadowSaveCursor(next)
--                            return self.ghostBaseBotShadowPage(cursor: next, importedTotal: importedTotal + added)
--                        }
--                    }
--                case .differenceEmpty:
--                    self.ghostBaseBotShadowSet("LastResult", "differenceEmpty")
--                    self.ghostBaseBotShadowSet("Imported", importedTotal)
--                    if importedTotal > 0 {
--                        self.ghostBaseBotShadowSet("Completed", true)
--                        self.ghostBaseBotShadowClearCursor()
--                    }
--                    self.ghostBaseBotShadowRelease()
--                    return .single(importedTotal > 0)
--                case .differenceTooLong:
--                    self.ghostBaseBotShadowSet("LastResult", "differenceTooLong")
--                    self.ghostBaseBotShadowRelease()
--                    Logger.shared.log("jerkgram.BotShadow1", "differenceTooLong; no state mutation and no dialog RPC")
--                    return .single(false)
--                }
--            }
--        }
--
--        func ghostBaseStartBotShadowHistory() {
--            assert(self.queue.isCurrent())
--            let defaults = UserDefaults.standard
--            let prefix = self.ghostBaseBotShadowPrefix()
--            guard !defaults.bool(forKey: prefix + ".Completed") else {
--                return
--            }
--            let now = Int64(Date().timeIntervalSince1970)
--            let runningAt = Int64(defaults.double(forKey: prefix + ".RunningAt"))
--            guard runningAt == 0 || now - runningAt > 600 else {
--                return
--            }
--            defaults.set(Double(now), forKey: prefix + ".RunningAt")
--            GhostBaseBotHistoryGate.set(peerId: self.accountPeerId, active: true)
--            let cursor = self.ghostBaseBotShadowLoadCursor()
--            self.ghostBaseBotShadowHistoryDisposable.set((self.ghostBaseBotShadowPage(cursor: cursor, importedTotal: 0)
--            |> deliverOn(self.queue)).start())
++            let accountPeerId = self.accountPeerId
 +            self.botBridgeStartDisposable.set((self.postbox.transaction { transaction -> (BotBridgeHistoryProgress, BotBridgeCursor?)? in
 +                guard let progress = jerkgramPrepareBotBridgeHistory(transaction: transaction, owner: recordId, accountPeerId: accountPeerId, lifetime: lifetime) else { return nil }
 +                let live = botBridgeObservedLive(transaction: transaction)
@@ -845,14 +556,15 @@ diff --git a/submodules/TelegramCore/Sources/State/AccountStateManager.swift b/s
 +                controller.start()
 +            }))
 +        }
-+
 +        func jerkgramCancelBotBridgeHistory(reason: BotBridgeHistoryReason) {
 +            self.botBridgeStartDisposable.dispose()
 +            self.botBridgeHistory?.cancel(reason: reason)
-         }
++        }
++
+         public func standalonePollDifference() -> Signal<Bool, NoError> {
+             let queue = self.queue
  
-         private func insertProcessEvents(_ events: AccountFinalStateEvents) {
-@@ -2208,6 +1953,7 @@
+@@ -949,6 +977,7 @@ public final class AccountStateManager {
          }
      }
      
@@ -860,22 +572,16 @@ diff --git a/submodules/TelegramCore/Sources/State/AccountStateManager.swift b/s
      private let impl: QueueLocalObject<Impl>
      
      public let accountPeerId: PeerId
-@@ -2612,12 +2358,19 @@
+@@ -1401,6 +1430,18 @@ public final class AccountStateManager {
          }
      }
      
--    public func ghostBaseStartBotShadowHistory() {
 +    func jerkgramStartBotBridgeHistory(recordId: Int64, admit: @escaping (String) -> Bool = { _ in true }, event: @escaping (BotBridgeHistoryEvent) -> Void = { _ in }) {
 +        let lifetime = self.botBridgeLifetime
-         self.impl.with { impl in
--            impl.ghostBaseStartBotShadowHistory()
--        }
--    }
--    
++        self.impl.with { impl in
 +            impl.jerkgramStartBotBridgeHistory(recordId: recordId, lifetime: lifetime, admit: admit, event: event)
 +        }
 +    }
-+
 +    func jerkgramCancelBotBridgeHistory(reason: BotBridgeHistoryReason) {
 +        // Invalidate before hopping to the manager queue or waiting on Postbox.
 +        self.botBridgeLifetime.cancel()
@@ -887,6 +593,7 @@ diff --git a/submodules/TelegramCore/Sources/State/AccountStateManager.swift b/s
          let reader = BufferReader(Buffer(data: data))
 diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift
 new file mode 100644
+index 0000000..ca8f8e9
 --- /dev/null
 +++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeDiagnostics.swift
 @@ -0,0 +1,587 @@
@@ -1479,6 +1186,7 @@ new file mode 100644
 +}
 diff --git a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
 new file mode 100644
+index 0000000..b841202
 --- /dev/null
 +++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
 @@ -0,0 +1,693 @@
@@ -2176,9 +1884,10 @@ new file mode 100644
 +    }
 +}
 diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
+index 79fcb6e..8a09f66 100644
 --- a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
 +++ b/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
-@@ -1207,6 +1207,7 @@
+@@ -1207,6 +1207,7 @@ public final class PendingMessageManager {
                  
                  return .complete()
              } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
@@ -2186,7 +1895,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                  var isForward = false
                  var hideSendersNames = false
                  var hideCaptions = false
-@@ -1375,7 +1376,7 @@
+@@ -1375,7 +1376,7 @@ public final class PendingMessageManager {
                      } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                          let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
  
@@ -2195,7 +1904,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                      } else {
                          assertionFailure()
                          sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
-@@ -1504,7 +1505,7 @@
+@@ -1504,7 +1505,7 @@ public final class PendingMessageManager {
                          flags |= 1 << 21
                      }
                      
@@ -2204,7 +1913,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                  }
                  
                  return sendMessageRequest
-@@ -1707,6 +1708,7 @@
+@@ -1707,6 +1708,7 @@ public final class PendingMessageManager {
                  PendingMessageManager.sendSecretMessageContent(transaction: transaction, message: message, content: content)
                  return .complete()
              } else if let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {
@@ -2212,7 +1921,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                  var uniqueId: Int64 = 0
                  var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
                  var messageEntities: [Api.MessageEntity]?
-@@ -1901,7 +1903,7 @@
+@@ -1901,7 +1903,7 @@ public final class PendingMessageManager {
                              flags |= 1 << 22
                          }
                      
@@ -2221,7 +1930,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                      case let .media(inputMedia, text):
                          if bubbleUpEmojiOrStickersets {
                              flags |= Int32(1 << 15)
-@@ -1978,7 +1980,7 @@
+@@ -1978,7 +1980,7 @@ public final class PendingMessageManager {
                              flags |= 1 << 22
                          }
                      
@@ -2230,7 +1939,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                          |> map(NetworkRequestResult.result)
                      case let .forward(sourceInfo):
                          var topMsgId: Int32?
-@@ -2027,7 +2029,7 @@
+@@ -2027,7 +2029,7 @@ public final class PendingMessageManager {
                          }
                      
                          if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
@@ -2239,7 +1948,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                              |> map(NetworkRequestResult.result)
                          } else {
                              sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
-@@ -2090,7 +2092,7 @@
+@@ -2090,7 +2092,7 @@ public final class PendingMessageManager {
                              flags |= 1 << 21
                          }
                      
@@ -2248,7 +1957,7 @@ diff --git a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift b
                          |> map(NetworkRequestResult.result)
                      case .messageScreenshot:
                          let replyTo: Api.InputReplyTo
-@@ -2111,7 +2113,7 @@
+@@ -2111,7 +2113,7 @@ public final class PendingMessageManager {
                              replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil, pollOption: nil, quoteRich: nil))
                          }
                      

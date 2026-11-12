@@ -114,6 +114,9 @@ def verify_stars_gift(source):
     return {n:{'after_sha256':v['after_sha256']} for n,v in m['owners'].items()}
 
 def apply_stars_gift(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg13-stars-gift')
     source=Path(source);m=read_manifest();check_locks(source,m);outputs={}
     for n,v in m['owners'].items():
         text=(source/n).read_text()

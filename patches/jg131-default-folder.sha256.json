@@ -1,36 +1,36 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
-  "patch_sha256": "ffeb31549f183c6987709c03bdd9b3a71751b820f1797e63efba2ffe26b48097",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "998603ba41026e8ef6826722760ab4665f720058b793d09f2aa6cf7fec43357a",
   "owners": {
     "submodules/ChatListUI/Sources/ChatListController.swift": {
-      "before_sha256": "17f5a4999771296d8f4209ee12fe9082dd8632fd61500e990e47f090b0eba4bf",
-      "after_sha256": "fdd9d6fbe52f2511533133ae3ad63f1b6b3026b6b3f909ea1ccf68cf16513343"
+      "before_sha256": "4b42716acb93731ec9390586c68d6ca2ae852c01a637172f039c1efe0b7fcac4",
+      "after_sha256": "60031e621db70b80cf86dcd30eb74c9643064b08f152aaab28e90024f48da1c0"
     },
     "submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift": {
       "before_sha256": "86f3057425c7a5d5b87fb05735ad6a56c3c79614f424cac051a1fbb72cfe03b0",
       "after_sha256": "fc2876d762d3bf555f8db29b795ceec536bc2355e03f7b91dd3f1354f0f68959"
     },
     "submodules/ChatListUI/Sources/TabBarChatListFilterController.swift": {
-      "before_sha256": "14e7aee3d1ad800781842696f6889813428291bc02114f912a360f3d689e757b",
-      "after_sha256": "720c8b1e82940d4dbdc58a0e4ab29282bd37e79b539c7cbc4cd433e9644120b6"
+      "before_sha256": "66d3fb43ac6c639859ad76a4b5e7fc5e5dfb30e46e59c958e208e2230f031264",
+      "after_sha256": "1d451bc7d5f4dfd62aa00eca03a34a4450b4c49de24a1440c579630db1da5c5c"
     },
     "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
       "before_sha256": "cf8569161271127ffc7023df5aedeee3dc80fe738a1c69939834d881f33314f6",
       "after_sha256": "2afe952d9bc8b68090c71be8585e7344f79a2e2da2e9873866a0565f2eee6cff"
     },
     "submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift": {
-      "before_sha256": "399c80374233d2ac61503ce036fc67cef33851e184522b97dc2a5a84641319da",
-      "after_sha256": "bbb62b5936d3fda89a82eb11ca6e202073d1840c3b62cf41a972b605cb49f9a1"
+      "before_sha256": "d94f07bbb120812513947a6e41461aedd257cff225bd8b67ec4c48c1575eca6b",
+      "after_sha256": "b75eeaaca8878ae2f9ffbd631abf844d84934e594045d90770ddbd53f58adff4"
     },
     "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift": {
       "before_sha256": "9eff606ea71671f44d826861f70143a98547755b431f9c4e7981e51bc9700a86",
       "after_sha256": "abc02c2154576c70eee28bffae1a98d0b74624ab4b69153b40ed558d4d39b3a4"
     },
     "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift": {
-      "before_sha256": "1f4b4b3c69c529f949b059721c79a002b7fff0dd85df608e0f5f1ef0b82f7737",
-      "after_sha256": "7a7e39fcce525916916a5b51d2243f920b96785b315aedbd3773b10a67dfdaab"
+      "before_sha256": "9af97efc069e59a339f773f393a60bc36c398dc15847d17d843705b28c4dfa05",
+      "after_sha256": "86fb44d7581fc2c4e1ac473a35565ece0e6aae6ac1f2cb295ffbba9100eb769d"
     }
   },
   "historical_feature_parent_task_a_commit": "65a6913995b5a6ee752072fde427dd6ac72c8019",
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json"
 }

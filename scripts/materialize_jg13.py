@@ -23,6 +23,11 @@ def main():
         raise RuntimeError("Wrong upstream SHA; refusing to patch")
     if subprocess.check_output(["git", "status", "--porcelain"], cwd=SOURCE):
         raise RuntimeError("Expected clean upstream before materialization")
+    from jg132_baseline import enabled, apply_range
+    if enabled():
+        apply_range(SOURCE, 1, 8)
+        print('Historical stages1–8 applied on genuine13.2; native evidence separate')
+        return
     patch = reviewed_stable_patch()
     subprocess.run(["git", "apply", "--check", str(patch)], cwd=SOURCE, check=True)
     subprocess.run(["git", "apply", str(patch)], cwd=SOURCE, check=True)

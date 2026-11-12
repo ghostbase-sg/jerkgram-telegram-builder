@@ -1,16 +1,16 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
   "regression_locks": {
-    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
-    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa",
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
-    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
   },
   "owners": {
     "submodules/TelegramCore/Sources/Account/Account.swift": {
-      "before_sha256": "1bd642b1df7e2f38d91de8a2659df986235f5b2dadbf0f2ede8756c1163eb52d",
-      "after_sha256": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
+      "before_sha256": "e874a0f7a84866f590cd8227827bbb5374039397fce9d8fa10946434abc906bb",
+      "after_sha256": "2d05bd76f68c0a6009cf04463ca2bc6d6ec2a03ccbf788743004052606b955ed",
       "survival_functions": [
         "_internal_deletePasskey",
         "_internal_passkeysData",
@@ -71,8 +71,8 @@
       ]
     },
     "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": {
-      "before_sha256": "b674920b7015f7a08362ba6b5fa384e19955e643c15cac745c8f9c901b8a29c0",
-      "after_sha256": "4a875c4487e0326e5bf8dd6256d9b64106bd5bfef7a9399fce9a6ab457226ad6",
+      "before_sha256": "8ec9aece06c45f295cdc7164d47ef350b8d0ce6429f98d1ad6340944b1a13086",
+      "after_sha256": "be5b6e2b62fb7bd233d167d20497f56c3ded457c464c9fba79213142f2c65673",
       "survival_functions": [
         "augmentMediaWithReference",
         "cleanupIfNeeded",
@@ -90,6 +90,8 @@
         "filterMessageAttributesForOutgoingMessage",
         "forwardCopyRequestedAttributes",
         "forwardGroupingKey",
+        "forwardKeepsSenderHeader",
+        "forwardedMediaForLocalEcho",
         "forwardedMessageAttributes",
         "forwardedMessageToBeReuploaded",
         "generateEphemeralOutgoingRandomId",
@@ -116,6 +118,7 @@
         "replyMessageAttributeForEphemeralOutgoingMessage",
         "resendMessages",
         "resentMessageRequestedAttribute",
+        "resentReplySubject",
         "resolvePath",
         "root",
         "safe",
@@ -137,5 +140,5 @@
       "survival_functions": []
     }
   },
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json"
 }

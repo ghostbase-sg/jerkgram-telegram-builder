@@ -4,7 +4,7 @@ ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('JG13_SOURCE',ROOT/'work/swiftgram-src'))
 CORE='submodules/TelegramCore/Sources/Utils/JerkgramPerformanceDiagnostics.swift'
 HISTORY='submodules/TelegramUI/Sources/ChatHistoryListNode.swift'
-BACKEND='submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift'
+BACKEND='submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift'
 class HistoryDetailTests(unittest.TestCase):
     def test_observed_operations_do_not_require_a_slow_event(self):
         s=(SOURCE/CORE).read_text()

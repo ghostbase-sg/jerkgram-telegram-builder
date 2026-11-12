@@ -1,5 +1,18 @@
+diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+index fbb9fb9..6f6dcd4 100644
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
+@@ -178,7 +178,7 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
+                     title: strings.perChatRules
+                 )
+             )
+-            picker.peerSelected = { [weak picker, weak controller] peer, _ in
++            picker.peerSelected = { [weak picker, weak controller = controller] peer, _ in
+                 picker?.dismiss()
+                 controller?.push(jerkgramChatRetentionController(
+                     context: context,
 diff --git a/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift b/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift
-index ea6e0cb..721c9d4 100644
+index 5fc3bf8..f24c21b 100644
 --- a/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift
 +++ b/submodules/TelegramUI/Components/ListSectionComponent/Sources/ListSectionComponent.swift
 @@ -25,8 +25,6 @@ public protocol ListSectionComponentChildRevealView: ListSectionComponentChildVi
@@ -152,7 +165,7 @@ index ea6e0cb..721c9d4 100644
          
          return UpdateResult(
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift
-index acb46b1..04aa18f 100644
+index 87f2332..0354b4c 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderMultiLineTextFieldNode.swift
 @@ -106,14 +106,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
@@ -171,7 +184,7 @@ index acb46b1..04aa18f 100644
              
              let textColor = presentationData.theme.list.itemPrimaryTextColor
              self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
-@@ -173,87 +166,20 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
+@@ -175,87 +168,20 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
          let hasTopCorners = hasCorners && !hasPrevious
          let hasBottomCorners = hasCorners && !hasNext
          
@@ -273,10 +286,10 @@ index acb46b1..04aa18f 100644
          
          return height
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
-index 1504c38..da7fc2e 100644
+index b404536..1b3b4e6 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
-@@ -94,14 +94,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
+@@ -106,14 +106,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
          if self.theme !== presentationData.theme {
              self.theme = presentationData.theme
              
@@ -292,7 +305,7 @@ index 1504c38..da7fc2e 100644
              
              self.textNode.textField.textColor = presentationData.theme.list.itemPrimaryTextColor
              self.textNode.textField.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
-@@ -150,87 +143,20 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
+@@ -165,87 +158,20 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
          let hasTopCorners = hasCorners && !hasPrevious
          let hasBottomCorners = hasCorners && !hasNext
          
@@ -393,16 +406,3 @@ index 1504c38..da7fc2e 100644
          self.maskNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: height))
          
          self.textNode.isUserInteractionEnabled = isEnabled
-diff --git a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
-index fbb9fb9..6f6dcd4 100644
---- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
-+++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift
-@@ -178,7 +178,7 @@ public func jerkgramDataAndBackupController(context: AccountContext) -> ViewCont
-                     title: strings.perChatRules
-                 )
-             )
--            picker.peerSelected = { [weak picker, weak controller] peer, _ in
-+            picker.peerSelected = { [weak picker, weak controller = controller] peer, _ in
-                 picker?.dismiss()
-                 controller?.push(jerkgramChatRetentionController(
-                     context: context,

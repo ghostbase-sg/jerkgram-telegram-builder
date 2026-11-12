@@ -10,6 +10,14 @@ SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 
+
+def apply_fixture(stage,source):
+    from jg132_baseline import enabled
+    if enabled():
+        from jg132_source_fixtures import apply_exact_delta_fixture
+        return apply_exact_delta_fixture(stage,source)
+    return stage.apply_profile_capture(source)
+
 class ProfileCaptureTests(unittest.TestCase):
     def test_profile_capture_exact_delta(self):
         self.assertTrue((ROOT / 'scripts/materialize_jg13_profile_capture.py').exists(), 'Profile capture stage missing')
@@ -27,8 +35,8 @@ class ProfileCaptureTests(unittest.TestCase):
                 text = (SOURCE/name).read_text()
                 if name in m['owners']: text = stage.restore_owner(name,text)
                 p.write_text(text)
-            stage.apply_profile_capture(source)
-            with self.assertRaises(RuntimeError): stage.apply_profile_capture(source)
+            apply_fixture(stage, source)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, source)
             for name in set(m['owners']) | set(m['locks']):
                 p=source/name; before=p.read_bytes(); p.write_bytes(before+b'\n// tamper\n')
                 with self.assertRaises(RuntimeError): stage.verify_profile_capture(source)

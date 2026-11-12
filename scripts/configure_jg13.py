@@ -28,27 +28,34 @@ def replace_once(text, old, new):
 
 def main():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
-    apply_release_ui(SOURCE)
-    apply_icons(SOURCE)
-    apply_boost(SOURCE)
-    apply_sponsored(SOURCE)
-    apply_profile_capture(SOURCE)
-    apply_stars_gift(SOURCE)
-    apply_backend(SOURCE)
-    apply_ui_repair(SOURCE)
-    apply_ui_types(SOURCE)
-    if "--previous-contracts-only" not in __import__("sys").argv:
-        apply_final_stages(SOURCE)
-    p = SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
-    text = p.read_text()
-    for key, old, value in [
-        ("displayVersion", "1.0.2", config["product_display_version"]),
-        ("technicalVersion", "1.0.2", config["product_technical_version"]),
-        ("build", "138", str(config["build_number"])),
-        ("telegramBase", "12.9.2", config["upstream_new_version"]),
-    ]:
-        text = replace_once(text, f'public static let {key} = "{old}"', f'public static let {key} = "{value}"')
-    p.write_text(text)
+    from jg132_baseline import enabled, apply_range
+    baseline132 = enabled()
+    if baseline132:
+        apply_range(SOURCE, 9, 18)
+        if "--previous-contracts-only" not in __import__("sys").argv:
+            apply_range(SOURCE, 19, 24)
+    else:
+        apply_release_ui(SOURCE)
+        apply_icons(SOURCE)
+        apply_boost(SOURCE)
+        apply_sponsored(SOURCE)
+        apply_profile_capture(SOURCE)
+        apply_stars_gift(SOURCE)
+        apply_backend(SOURCE)
+        apply_ui_repair(SOURCE)
+        apply_ui_types(SOURCE)
+        if "--previous-contracts-only" not in __import__("sys").argv:
+            apply_final_stages(SOURCE)
+        p = SOURCE / "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift"
+        text = p.read_text()
+        for key, old, value in [
+            ("displayVersion", "1.0.2", config["product_display_version"]),
+            ("technicalVersion", "1.0.2", config["product_technical_version"]),
+            ("build", "138", str(config["build_number"])),
+            ("telegramBase", "12.9.2", config["upstream_new_version"]),
+        ]:
+            text = replace_once(text, f'public static let {key} = "{old}"', f'public static let {key} = "{value}"')
+        p.write_text(text)
     dst = SOURCE / "build-input/configuration-repository"
     if dst.exists():
         shutil.rmtree(dst)
@@ -60,11 +67,12 @@ def main():
     text += '\ntelegram_bazel_path = "."\ntelegram_use_xcode_managed_codesigning = False\n'
     text = credentials.patch_variables(text, os.environ.get("JERKGRAM_TELEGRAM_API_ID", ""), os.environ.get("JERKGRAM_TELEGRAM_API_HASH", ""))
     p.write_text(text)
-    # Generated VersionInfoPlist is the actual owner for both app and extension versions.
-    p = SOURCE / "Telegram/BUILD"
-    text = p.read_text()
-    text = replace_once(text, '<string>$$version</string>', f'<string>{config["bundle_short_version"]}</string>')
-    p.write_text(text)
+    if not baseline132:
+        # Generated VersionInfoPlist is the actual owner for both app and extension versions.
+        p = SOURCE / "Telegram/BUILD"
+        text = p.read_text()
+        text = replace_once(text, '<string>$$version</string>', f'<string>{config["bundle_short_version"]}</string>')
+        p.write_text(text)
     print(f'Configured Jerkgram {config["product_display_version"]} / Build{config["build_number"]}')
 
 

@@ -86,7 +86,7 @@ class BotBridgeIntegration(unittest.TestCase):
             new.parent.mkdir(parents=True);new.write_text('tampered\n')
             try:
                 final.SOURCE=source
-                with self.assertRaisesRegex(RuntimeError,'BOTBRIDGE1 output changed'):
+                with self.assertRaisesRegex(RuntimeError,'(?:BOTBRIDGE1 output changed|Mixed/corrupt132baseline boundary)'):
                     try:
                         final.main()
                     except OSError as error:

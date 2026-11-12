@@ -76,6 +76,13 @@ def _verify_previous_contracts():
 
 def main():
     global SOURCE
+    from jg132_baseline import enabled, verify_source
+    if enabled():
+        from jg132_beta3_stages import is_present, verify_source as verify_beta3
+        if is_present(SOURCE):
+            return verify_beta3(SOURCE)
+    if enabled():
+        return verify_source(SOURCE)
     final_source = SOURCE
     if "--previous-contracts-only" in sys.argv:
         _verify_previous_contracts()

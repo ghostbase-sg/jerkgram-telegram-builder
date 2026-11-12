@@ -1,16 +1,16 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
   "regression_locks": {
-    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
-    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa",
+    "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
     "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
-    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1"
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
   },
   "owners": {
     "submodules/TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": {
-      "before_sha256": "4a875c4487e0326e5bf8dd6256d9b64106bd5bfef7a9399fce9a6ab457226ad6",
-      "after_sha256": "f17333b7b0b20a725b18530d805e04f1f6c4000a5df1d8df28460eb34cbb2ccd",
+      "before_sha256": "be5b6e2b62fb7bd233d167d20497f56c3ded457c464c9fba79213142f2c65673",
+      "after_sha256": "6299fca129d5bffcde2ada29478dd053914eea7391e5efb61ae0148e62348752",
       "survival_functions": [
         "append",
         "augmentMediaWithReference",
@@ -29,6 +29,8 @@
         "filterMessageAttributesForOutgoingMessage",
         "forwardCopyRequestedAttributes",
         "forwardGroupingKey",
+        "forwardKeepsSenderHeader",
+        "forwardedMediaForLocalEcho",
         "forwardedMessageAttributes",
         "forwardedMessageToBeReuploaded",
         "generateEphemeralOutgoingRandomId",
@@ -56,6 +58,7 @@
         "replyMessageAttributeForEphemeralOutgoingMessage",
         "resendMessages",
         "resentMessageRequestedAttribute",
+        "resentReplySubject",
         "resolvePath",
         "root",
         "safe",
@@ -82,8 +85,8 @@
       "removed_functions": []
     },
     "submodules/TelegramCore/Sources/State/AccountStateManager.swift": {
-      "before_sha256": "4e4bff9ffb0978b41b70053145015dec1cd4448af93b444b89c2eaea29fe1911",
-      "after_sha256": "f5f92b12adb44f476a0805c1a7f7848b98221e2f36355d58d6ef4102f8d95a97",
+      "before_sha256": "4edc944bde3dc1a41d4a03feb9d6a49df6945d5d5475e284924b277db6c404ad",
+      "after_sha256": "51f5f20f22bb441c9c3ae13c351c27512b38246b01e680507e5cc39a0e5b0c8f",
       "survival_functions": [
         "addAsyncResetChannels",
         "addCustomOperation",
@@ -95,42 +98,31 @@
         "addStarRefBotConnectionEvent",
         "addUpdateGroups",
         "addUpdates",
-        "checkChannelOperationsCompletion",
+        "agentSettingsUpdates",
+        "channelResetsEnded",
         "commitSendPendingPaidMessage",
         "extractIncomingCallUpdate",
+        "fetchAndApplyDifference",
+        "finishPollCycle",
         "forceSendPendingPaidMessage",
         "forceSendPendingStarsReaction",
-        "getDelayNotificatonsUntil",
         "getNextId",
-        "ghostBaseBotShadowClearCursor",
-        "ghostBaseBotShadowLoadCursor",
-        "ghostBaseBotShadowPage",
-        "ghostBaseBotShadowPrefix",
-        "ghostBaseBotShadowRelease",
-        "ghostBaseBotShadowReplay",
-        "ghostBaseBotShadowSafeOperation",
-        "ghostBaseBotShadowSaveCursor",
-        "ghostBaseBotShadowSet",
-        "ghostBaseStartBotShadowHistory",
         "injectBotPreviewUpdates",
         "injectStoryUpdates",
-        "insertProcessEvents",
+        "insertDispatchEvents",
         "installedStickerPacksArchived",
         "messagesForNotification",
         "modifyAppUpdateInfo",
         "modifyContactBirthdays",
         "modifyTermsOfServiceUpdate",
+        "noteStoredMessageConfirmationDeletions",
         "notifyAppliedIncomingReadMessages",
+        "notifyConfirmedDeletions",
         "notifyDeletedMessages",
-        "notifyUpdatedStarGiftAuctionMyState",
-        "notifyUpdatedStarGiftAuctionState",
-        "notifyUpdatedStarsBalance",
-        "notifyUpdatedStarsRevenueStatus",
-        "notifyUpdatedTonBalance",
-        "notifyUpdatedWebpages",
         "pollStateUpdateCompletion",
-        "postponePollCompletionOperation",
+        "postponeStateBarrier",
         "processIncomingCallUpdate",
+        "removeFinishedPoll",
         "removePollCompletion",
         "removePossiblyDeliveredMessages",
         "replaceOperations",
@@ -166,7 +158,42 @@
         "jerkgramProtectedResourceData",
         "jerkgramRequiresPortableForward"
       ]
+    },
+    "submodules/TelegramCore/Sources/State/AccountStateEventHub.swift": {
+      "before_sha256": "bd07fa65ab9470b605902cae9157dc3f56c489a1ad33c1aba3663180566aa0dd",
+      "after_sha256": "ee377f6ecd621f4b664f46a983e530c13820ec874ee32b08af08e2b2480eb689",
+      "survival_functions": [
+        "addStarRefBotConnectionEvent",
+        "dispatch",
+        "dispatchAfterNotificationMessages",
+        "modifyAppUpdateInfo",
+        "modifyContactBirthdays",
+        "modifyTermsOfServiceUpdate",
+        "notifyAppliedIncomingReadMessages",
+        "notifyConfirmedDeletions",
+        "notifyDeletedMessages",
+        "notifySignificantStateUpdateCompleted",
+        "notifyUpdatedStarGiftAuctionMyState",
+        "notifyUpdatedStarGiftAuctionState",
+        "notifyUpdatedStarsBalance",
+        "notifyUpdatedStarsRevenueStatus",
+        "notifyUpdatedTonBalance",
+        "notifyUpdatedWebpages",
+        "updatedStarGiftAuctionMyState",
+        "updatedStarGiftAuctionState",
+        "updatedStarsBalance",
+        "updatedStarsRevenueStatus",
+        "updatedTonBalance",
+        "updatedWebpage"
+      ]
     }
   },
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json",
+  "migration_owner_remap": [
+    {
+      "old": "submodules/TelegramCore/Sources/State/AccountStateManager.swift",
+      "new": "submodules/TelegramCore/Sources/State/AccountStateEventHub.swift",
+      "reason": "alerts now belong to actual AccountStateEventHub pipe; manager forwards"
+    }
+  ]
 }

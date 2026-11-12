@@ -15,7 +15,8 @@ HELPER = "submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyTe
 STATE = "submodules/TelegramCore/Sources/State/AccountStateManager.swift"
 UI = "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift"
 CORE_PARENT_OWNERS = {ENQUEUE, HELPER}
-OWNERS = CORE_PARENT_OWNERS | {STATE, UI}
+HUB = "submodules/TelegramCore/Sources/State/AccountStateEventHub.swift"
+OWNERS = CORE_PARENT_OWNERS | {STATE, UI, HUB}
 REMOVED_UI_FUNCTIONS = {
     "jerkgramRequiresPortableForward", "jerkgramPortableForwardBaseMessage",
     "jerkgramProtectedResourceData", "jerkgramPortableForwardMessage",
@@ -23,6 +24,9 @@ REMOVED_UI_FUNCTIONS = {
 
 
 def read_manifest():
+    from jg132_baseline import enabled, stage_manifest
+    if enabled():
+        return stage_manifest("jg13-portable-copy")
     manifest = json.loads(MANIFEST.read_text())
     parent = json.loads((ROOT / "patches/jg13-deleted-reply.sha256.json").read_text())
     stable = json.loads((ROOT / "patches/jg13-stable.product.sha256.json").read_text())

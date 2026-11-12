@@ -1,24 +1,24 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
-  "patch_sha256": "12360a65c13aa745a0760f312b193b1a3456b966b6d968ab94e273e115c4b628",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "391eb8c4ec837bbe2cce3fae19d629189a252a25ae02be364482705bd3fc9a20",
   "owners": {
     "submodules/Display/Source/GhostBaseGlass.swift": {
       "before_sha256": "b9dfae10712fb2a414c2f87f0f800e8df4a9600fb77bde0a6a4a67ace4f63914",
       "after_sha256": "81c72e8adff2784a94ce8dfb699c9e847a309a0e3a4967a262c329ffc5be452c"
     },
     "submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift": {
-      "before_sha256": "500e8f800c9139a84ad40b524ba4fb80879c21c347e643f28738647973fc7433",
-      "after_sha256": "b7d05a2dcabb8c27c904c44c92c25e16a5f9bae1f0c7c62da8cab10968a0c87c"
+      "before_sha256": "5791436ea8bfb0e7999a627bbd71391281d935526cf31074b46042d8a7e8cf26",
+      "after_sha256": "49eb4ac63a3f28b15889ceefec28aba6a1a1134b5016f71d3df1028888a0c195"
     },
     "submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift": {
-      "before_sha256": "315662308a3a838f0099a4f551bf05378928287d2a5e980b92b76108ee714e05",
-      "after_sha256": "bf94fb03bf53a1f9b17f0accdf55c67f7bd43aa422cf6fd27d8895dc6a4ecc14"
+      "before_sha256": "1c4fd916111cca432d57e4a5a631379f69c893426bb59127938fe23d665359c3",
+      "after_sha256": "3c32790442f0b9cba149094de1a5df766e59bd9fc3aa4a5e1c0285dd306afae2"
     },
     "submodules/TelegramPresentationData/Sources/PresentationTheme.swift": {
-      "before_sha256": "29c692dbe5210d458084418f81db352633fc51bd8c55270bda82dfe6055911da",
-      "after_sha256": "6c7a7f5268e349bd37dcba6094b08784a17e80bab3cdd2588cdbe6770a2dcc70"
+      "before_sha256": "b72ee91d628fe103ea88b18b811ca2e7819512379f36a7bcb025684ab6b774e5",
+      "after_sha256": "0460720fe38332286feacd1d4c3e6fa96fe812a511a8ada457ad031dce867c7f"
     }
   },
   "historical_feature_parent_task_b_commit": "fd2f615fb5d93a92556cffce1a7c7ba297f071e5",
-  "migration_parent_evidence": "docs/migrations/telegram-13.1.2-stage-chain.json"
+  "migration_parent_evidence": "docs/migrations/telegram-13.2-stage-chain.json"
 }

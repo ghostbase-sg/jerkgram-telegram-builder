@@ -73,6 +73,8 @@ def canonical_lock(name, data):
     if name == BUILD:
         # configure_jg13 substitutes only this generated bundle version.
         version = json.loads((ROOT / 'jerkgram-migration.json').read_text())['bundle_short_version']
+        from jg132_baseline import enabled, baseline_identity
+        if enabled(): version = baseline_identity()["bundle_short_version"]
         data = data.replace(('<key>CFBundleShortVersionString</key>\n    <string>' + version + '</string>').encode(), b'<key>CFBundleShortVersionString</key>\n    <string>$$version</string>')
     return data
 
@@ -110,6 +112,9 @@ def verify_icons(source):
     return {name: {'after_sha256': values['after_sha256']} for name, values in m['owners'].items()}
 
 def apply_icons(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg13-premium-icons')
     source = Path(source)
     m = read_manifest()
     check_locks(source, m)

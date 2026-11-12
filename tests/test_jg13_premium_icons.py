@@ -11,6 +11,14 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 
+
+def apply_fixture(stage,source):
+    from jg132_baseline import enabled
+    if enabled():
+        from jg132_source_fixtures import apply_exact_delta_fixture
+        return apply_exact_delta_fixture(stage,source)
+    return stage.apply_icons(source)
+
 class PremiumIconsTests(unittest.TestCase):
     def test_three_gates_are_scoped_to_app_icons(self):
         item = (SOURCE / 'submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift').read_text()
@@ -31,9 +39,9 @@ class PremiumIconsTests(unittest.TestCase):
                 if name in manifest['owners']:
                     text = stage.restore_owner(name, text.decode()).encode()
                 target.write_bytes(text)
-            stage.apply_icons(fixture)
+            apply_fixture(stage,fixture)
             stage.verify_icons(fixture)
-            with self.assertRaises(RuntimeError): stage.apply_icons(fixture)
+            with self.assertRaises(RuntimeError): apply_fixture(stage,fixture)
             for name in manifest['owners']:
                 target = fixture / name
                 original = target.read_bytes()

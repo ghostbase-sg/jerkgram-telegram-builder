@@ -80,6 +80,9 @@ def final_profile_owners(source):
     return verify_profile_capture(source)
 
 def apply_profile_capture(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg13-profile-capture')
     source=Path(source); m=read_manifest(); outputs={}
     for n,expected in m['locks'].items():
         if digest((source/n).read_bytes())!=expected: raise RuntimeError('Profile capture regression lock changed: '+n)

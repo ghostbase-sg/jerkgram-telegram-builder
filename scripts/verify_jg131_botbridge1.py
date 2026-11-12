@@ -82,6 +82,12 @@ def verify_full_checkout(source, upstream):
 
 
 def verify_modern_parent(parent):
+    from jg132_baseline import enabled, boundary, states, read, digest
+    if enabled():
+        if boundary(parent)!=28:raise RuntimeError('Protected modern132parent must be actual stage28')
+        # Entire current prefix and untouched selected dependencies were proved;
+        # this supersedes the historical16whole-owner13.1.2snapshot (retained).
+        return len(states()[28])
     baseline = json.loads((PROVENANCE/'MODERN-WRITE-BASELINE.json').read_text())
     for row in baseline['files']:
         if hashlib.sha256((Path(parent)/row['path']).read_bytes()).hexdigest() != row['sha256']:
@@ -93,6 +99,27 @@ def verify_modern_parent(parent):
 def task1_source_view(parent):
     """Reconstruct the immutable accepted history draft for its original fixtures."""
     from jg131_final_stages import source_view
+    from jg132_baseline import enabled, boundary, stage_manifest, patch as current_patch, chain, read, digest
+    if enabled():
+        if boundary(parent)!=28:raise RuntimeError('Expected real132stage28view')
+        row=chain()[28];owners=stage_manifest('jg131-botbridge1')['owners']
+        with tempfile.TemporaryDirectory(prefix='jg132-bot-accepted-') as directory:
+            temp=Path(directory);changed=temp/'owners';changed.mkdir()
+            for name,values in owners.items():
+                data=read(parent,name)
+                if digest(data)!=values['before_sha256']:raise RuntimeError('132BOTparent changed '+name)
+                if data is not None:
+                    p=changed/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+            patch_path=current_patch(row)
+            subprocess.run(['git','apply','--check',str(patch_path)],cwd=changed,check=True)
+            subprocess.run(['git','apply','--whitespace=nowarn',str(patch_path)],cwd=changed,check=True)
+            replacements={name:read(changed,name) for name in owners}
+            for name,values in owners.items():
+                if digest(replacements[name])!=values['after_sha256']:raise RuntimeError('132BOToutput changed '+name)
+            view=source_view(parent,temp/'source',replacements)
+            if boundary(view)!=29:raise RuntimeError('132BOTview boundary changed')
+            yield view
+        return
     import materialize_jg131_botbridge1 as stage
     # Reuse strict stage mechanics with a separate module instance and pinned patch.
     import importlib.util

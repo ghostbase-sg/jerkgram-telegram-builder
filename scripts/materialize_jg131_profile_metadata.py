@@ -41,6 +41,9 @@ def parent_bytes(name, data):
     return result
 
 def apply_profile_metadata(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg131-profile-metadata')
     source = Path(source).resolve()
     m = manifest()
     for n,v in m['owners'].items():

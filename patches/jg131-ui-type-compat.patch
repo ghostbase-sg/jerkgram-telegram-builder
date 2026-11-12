@@ -1,0 +1,22 @@
+diff --git a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift b/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+index 4313300..03d7f22 100644
+--- a/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
++++ b/submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+@@ -131,7 +131,7 @@ import UIKitRuntimeUtils
+ import ChatHistoryListViewBackend
+ 
+ 
+-private func ghostBaseV10NSaveSourcePeerId(_ peerId: PeerId, source: String) {
++private func ghostBaseV10NSaveSourcePeerId(_ peerId: EnginePeer.Id, source: String) {
+     // Retired source-peer diagnostics; no persistence on chat entry.
+ }
+ 
+@@ -4968,7 +4968,7 @@ extension ChatControllerImpl {
+ 
+ private func jerkgramBuild135VisibleUnreadCount(
+     account: Account,
+-    peerId: PeerId?,
++    peerId: EnginePeer.Id?,
+     stockCount: Int
+ ) -> Signal<Int, NoError> {
+     guard stockCount > 0, let peerId else {

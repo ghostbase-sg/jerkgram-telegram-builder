@@ -47,6 +47,9 @@ def verify_backend(source):
     return {m["owner"]: {"after_sha256": m["after_sha256"]}}
 
 def apply_backend(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg13-history-backend')
     m = manifest()
     target = Path(source) / m["owner"]
     updated = transform(target.read_text())

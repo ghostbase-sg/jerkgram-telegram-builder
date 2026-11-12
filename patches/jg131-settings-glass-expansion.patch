@@ -1,11 +1,11 @@
 diff --git a/submodules/Display/Source/GhostBaseGlass.swift b/submodules/Display/Source/GhostBaseGlass.swift
+index 0141260..9ce6547 100644
 --- a/submodules/Display/Source/GhostBaseGlass.swift
 +++ b/submodules/Display/Source/GhostBaseGlass.swift
-@@ -8,6 +8,16 @@
-     }
+@@ -9,6 +9,16 @@ public enum JerkgramSettingsSurfacePolicy {
  }
  // JG170 settings policy end
-+
+ 
 +// JGC material policy begin
 +public enum JerkgramSettingsMaterialPolicy {
 +    public static func active(optIn: Bool, master: Bool, enabled: Bool, reduceTransparency: Bool) -> Bool {
@@ -15,13 +15,15 @@ diff --git a/submodules/Display/Source/GhostBaseGlass.swift b/submodules/Display
 +    public static func cardAlpha(isDark: Bool) -> Double { return isDark ? 0.60 : 0.70 }
 +}
 +// JGC material policy end
- 
++
  // JG176 pure policy begin
  public enum JerkgramVisualPolicy {
+     public static func allowsTransparency(reduceTransparency: Bool) -> Bool { return !reduceTransparency }
 diff --git a/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift b/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift
---- a/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift
-+++ b/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift
-@@ -847,20 +847,20 @@
+index 4ff9c87..381897f 100644
+--- a/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift	
++++ b/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/RecentSessionsController.swift	
+@@ -847,20 +847,20 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
              removeSessionImpl(session.hash, {
                  completion()
              })
@@ -46,9 +48,10 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/Recent Sessions/
      }, removeWebSession: { sessionId in
          removeWebSessionImpl(sessionId)
 diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift b/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
---- a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
-+++ b/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift
-@@ -56,24 +56,44 @@
+index b107a21..4c306ff 100644
+--- a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift	
++++ b/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScreen.swift	
+@@ -56,24 +56,44 @@ private let recentSessionCheckIcon: UIImage = {
      })!.withRenderingMode(.alwaysTemplate)
  }()
  
@@ -93,7 +96,7 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
          if lhs.context !== rhs.context {
              return false
          }
-@@ -293,7 +313,7 @@
+@@ -293,7 +313,7 @@ private final class RecentSessionSheetContent: CombinedComponent {
          return { context in
              let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
              let component = context.component
@@ -102,7 +105,7 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
              let strings = environment.strings
              let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
              let state = context.state
-@@ -1045,16 +1065,20 @@
+@@ -1055,16 +1075,20 @@ private final class RecentSessionSheetComponent: CombinedComponent {
      
      let context: AccountContext
      let subject: RecentSessionScreen.Subject
@@ -124,7 +127,7 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
          if lhs.context !== rhs.context {
              return false
          }
-@@ -1096,6 +1120,7 @@
+@@ -1106,6 +1130,7 @@ private final class RecentSessionSheetComponent: CombinedComponent {
                      content: AnyComponent<EnvironmentType>(RecentSessionSheetContent(
                          context: context.component.context,
                          subject: context.component.subject,
@@ -132,7 +135,7 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
                          cancel: { animate in
                              dismiss(animate)
                          }
-@@ -1141,7 +1166,9 @@
+@@ -1151,7 +1176,9 @@ private final class RecentSessionSheetComponent: CombinedComponent {
                              )
                          )
                      },
@@ -143,7 +146,7 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
                      centeredSize: environment.metrics.widthClass == .regular ? CGSize(width: 414.0, height: 640.0) : nil,
                      animateOut: animateOut
                  ),
-@@ -1189,6 +1216,7 @@
+@@ -1199,6 +1226,7 @@ public class RecentSessionScreen: ViewControllerComponentContainer {
      
      private let context: AccountContext
      private let subject: Subject
@@ -151,7 +154,7 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
      fileprivate let updateAcceptSecretChats: (Bool) -> Void
      fileprivate let updateAcceptIncomingCalls: (Bool) -> Void
      fileprivate let remove: (@escaping () -> Void) -> Void
-@@ -1198,10 +1226,12 @@
+@@ -1208,10 +1236,12 @@ public class RecentSessionScreen: ViewControllerComponentContainer {
          subject: RecentSessionScreen.Subject,
          updateAcceptSecretChats: @escaping (Bool) -> Void,
          updateAcceptIncomingCalls: @escaping (Bool) -> Void,
@@ -165,7 +168,7 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
          self.updateAcceptSecretChats = updateAcceptSecretChats
          self.updateAcceptIncomingCalls = updateAcceptIncomingCalls
          self.remove = remove
-@@ -1210,16 +1240,27 @@
+@@ -1220,16 +1250,27 @@ public class RecentSessionScreen: ViewControllerComponentContainer {
              context: context,
              component: RecentSessionSheetComponent(
                  context: context,
@@ -195,9 +198,10 @@ diff --git a/submodules/SettingsUI/Sources/Privacy and Security/RecentSessionScr
          fatalError("init(coder:) has not been implemented")
      }
 diff --git a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
+index ed243c0..9febd95 100644
 --- a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
 +++ b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
-@@ -1686,7 +1686,7 @@
+@@ -1690,7 +1690,7 @@ extension PresentationTheme {
          JerkgramSettingsThemeCache.lock.lock()
          defer { JerkgramSettingsThemeCache.lock.unlock() }
          if JerkgramSettingsThemeCache.base === self, JerkgramSettingsThemeCache.reduced == reduced, let cached = JerkgramSettingsThemeCache.transformed { return cached }

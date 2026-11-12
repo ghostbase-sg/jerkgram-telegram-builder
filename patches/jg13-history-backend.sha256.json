@@ -1,8 +1,8 @@
 {
-  "upstream_sha": "279f89e4d4f63f17227bf877dc3d8990f22ecd58",
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
   "owner": "submodules/TelegramUI/Sources/ChatHistoryListNode.swift",
-  "before_sha256": "74f5caf67badb6f214bf474e34f5c830158ef10333fb84caf8e32bd30af73ee6",
-  "after_sha256": "6759646b17ed3348867e480015ad9a75c8f6cfb4f0ba989d4e308aa3c22fa9a7",
+  "before_sha256": "a1f3007ce57ca6a9c6d03dd7f4682f1c4697f4d2fa00efbe8773bf307c537d72",
+  "after_sha256": "a188abe3a0ea53875ce62695c015cf793a2d9023dff1fc4db1a4c33aa7058665",
   "old": "        // CoreList is the DEFAULT backend for the rotated history \u2014 the bottom-up chat proper, which is\n        // the only surface it has been built and verified against. `rotated` is `false` by default on\n        // this initializer, so every other list built from it (the overlay audio player's playlist, the\n        // shared-context message list, an embedded chat preview) keeps `ListViewImpl` without naming it.\n        var useCoreListBackend = rotated\n        // The Debug Settings switch keeps its original meaning \u2014 force CoreList on \u2014 which after the\n        // default flip is only reachable for the non-rotated lists above.\n",
   "new": "        // Jerkgram: use the established asynchronous ListView backend by default.\n        // CoreList remains available only through its explicit experimental switch.\n        var useCoreListBackend = false\n"
 }

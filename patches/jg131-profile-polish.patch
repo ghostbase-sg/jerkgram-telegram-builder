@@ -1,7 +1,23 @@
+diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
+index 851047a..da74e21 100644
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
+@@ -104,7 +104,9 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
+         )
+         
+         let textFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
+-        let textColor = presentationData.theme.list.freeTextColor
++        let textColor = GhostBaseGlassStyle.isEnabled
++            ? (presentationData.theme.overallDarkAppearance ? UIColor.white.withAlphaComponent(0.82) : UIColor.black.withAlphaComponent(0.72))
++            : presentationData.theme.list.freeTextColor
+         
+         var text = item.text
+         text = text.replacingOccurrences(of: " >]", with: "\u{00A0}>]")
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
+index 1b3b4e6..a731f1b 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderSingleLineTextFieldNode.swift
-@@ -94,7 +94,6 @@
+@@ -106,7 +106,6 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
          if self.theme !== presentationData.theme {
              self.theme = presentationData.theme
              
@@ -9,7 +25,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
              
              self.textNode.textField.textColor = presentationData.theme.list.itemPrimaryTextColor
              self.textNode.textField.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
-@@ -103,7 +102,17 @@
+@@ -115,7 +114,17 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
              self.clearIconNode.image = PresentationResourcesItemList.itemListClearInputIcon(presentationData.theme)
          }
          
@@ -27,11 +43,12 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
 +        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: placeholderColor)
          if self.textNode.textField.attributedPlaceholder == nil || !self.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
              self.textNode.textField.attributedPlaceholder = attributedPlaceholderText
-             self.textNode.textField.accessibilityHint = attributedPlaceholderText.string
+         }
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
+index 039dd03..74a3f86 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift
-@@ -10,6 +10,7 @@
+@@ -10,6 +10,7 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
      private let backgroundNode: ASDisplayNode
      private let topSeparatorNode: ASDisplayNode
      private let bottomSeparatorNode: ASDisplayNode
@@ -39,7 +56,7 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
      private let itemContainerNode: ASDisplayNode
      
      private var currentItems: [PeerInfoScreenItem] = []
-@@ -148,10 +149,28 @@
+@@ -148,10 +149,28 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
          transition.updateFrame(node: self.itemContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: contentHeight)))
          transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset), size: CGSize(width: width, height: max(0.0, contentWithBackgroundHeight - contentWithBackgroundOffset))))
          if self.ghostBaseGlassEnabled {
@@ -71,9 +88,10 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
          }
          transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
+index c648f39..f8e81b7 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenMultilineInputtem.swift
-@@ -72,11 +72,7 @@
+@@ -72,11 +72,7 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
              // `systemStyle` only controls corners/insets. Supply an explicit
              // tint for this one profile-bio field so the generic `.blocks`
              // renderer cannot replace it with Telegram's opaque list card.
@@ -86,17 +104,3 @@ diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Pe
              text: item.text, placeholder: item.placeholder, maxLength: item.maxLength.flatMap { ItemListMultilineInputItemTextLimit(value: $0, display: true) }, sectionId: 0, style: .blocks, returnKeyType: .done, textUpdated: { updatedText in
              item.textUpdated(updatedText)
          }, action: {
-diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
---- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
-+++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenCommentItem.swift
-@@ -104,7 +104,9 @@
-         )
-         
-         let textFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
--        let textColor = presentationData.theme.list.freeTextColor
-+        let textColor = GhostBaseGlassStyle.isEnabled
-+            ? (presentationData.theme.overallDarkAppearance ? UIColor.white.withAlphaComponent(0.82) : UIColor.black.withAlphaComponent(0.72))
-+            : presentationData.theme.list.freeTextColor
-         
-         var text = item.text
-         text = text.replacingOccurrences(of: " >]", with: "\u{00A0}>]")

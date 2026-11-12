@@ -1,8 +1,8 @@
 diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules/ChatListUI/Sources/ChatListController.swift
-index 5bdff8a..07429fe 100644
+index 1ef2cfa..7634544 100644
 --- a/submodules/ChatListUI/Sources/ChatListController.swift
 +++ b/submodules/ChatListUI/Sources/ChatListController.swift
-@@ -2375,8 +2375,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
+@@ -2445,8 +2445,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
      
      public static var sharedPreviousPowerSavingEnabled: Bool?
      
@@ -17,7 +17,7 @@ index 5bdff8a..07429fe 100644
                  
          if self.powerSavingMonitoringDisposable == nil {
              self.powerSavingMonitoringDisposable = (self.context.sharedContext.automaticMediaDownloadSettings
-@@ -2859,6 +2865,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
+@@ -2929,6 +2935,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
      
      override public func viewWillDisappear(_ animated: Bool) {
          super.viewWillDisappear(animated)
@@ -25,7 +25,7 @@ index 5bdff8a..07429fe 100644
          
          self.chatListDisplayNode.mainContainerNode.updateEnableAdjacentFilterLoading(false)
          
-@@ -3165,6 +3172,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
+@@ -3240,6 +3247,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
      }
      
      override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -40,10 +40,10 @@ index 5bdff8a..07429fe 100644
          
          let wasInVoiceOver = self.validLayout?.inVoiceOver ?? false
 diff --git a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-index 521954e..02162b6 100644
+index 83d110b..e4ed218 100644
 --- a/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
 +++ b/submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift
-@@ -426,6 +426,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -436,6 +436,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
  
      // and let normal seek/reset paths flush renderers only when required.
      private func updateInternalState() {
@@ -52,7 +52,7 @@ index 521954e..02162b6 100644
          let started = self.ghostBaseHadSecondaryOutput ? ProcessInfo.processInfo.systemUptime : nil
          defer {
              self.updateTimerState()
-@@ -1295,6 +1297,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+@@ -1318,6 +1320,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
      }
  
      private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, secondaryVideoTargets: [AVQueuedSampleBufferRendering], loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool, videoRotationAngle: Double?) {
@@ -710,11 +710,48 @@ index 5ecb2f9..2a1196f 100644
 +        return header + "Refresh callbacks measure scheduling opportunities, NOT rendered FPS.\nclient.work combines operations; detail labels identify only slow synchronous spans, not async completion or individual fast-call counts.\noperationsEntered=\(entered) (entry coverage only; inclusive spans overlap)\nroute=\(self.visibleRoute) timingKeysRejected=\(self.timingKeysRejected) routeReleasesIgnored=\(self.routeReleasesIgnored)\n" + refresh + "\n" + measurements + "\n" + operations + "\n" + overflow + "\nslowEvents=\(self.slowEvents) suppressedSlowEvents=\(self.suppressedSlowEvents) limit=\(self.slowEventLimit) nestedSlowEventsSuppressed=\(self.nestedSlowEventsSuppressed)\nRetention: 1Hz sampling; 5s maxima blocks (not averages); details=worst per operation plus separate20s input/other windows, NOT every slow call. Known overflow stages retain samples; unsupported labels are counted as dropped. Inclusive operation spans overlap; do not sum. Timeline sections are grouped, use timestamps.\n--- timeline ---\n" + timeline.joined(separator: "\n")
      }
  }
+diff --git a/submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift b/submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift
+index db09e94..cc414ef 100644
+--- a/submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift
+@@ -1,4 +1,5 @@
+ import UIKit
++import TelegramCore
+ import AsyncDisplayKit
+ import SwiftSignalKit
+ import Display
+@@ -941,6 +942,8 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
+         updateOpaqueState: Any?,
+         completion: @escaping (ListViewDisplayedItemRange) -> Void
+     ) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyCoreTransaction)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         if let updateOpaqueState = updateOpaqueState {
+             self.opaqueTransactionState = updateOpaqueState
+         }
+@@ -2106,6 +2109,8 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
+     }
+ 
+     func update(width: CGFloat, transition: CoreListTransition) -> CGFloat {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyRowLayout)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         self.pendingTransition = transition
+         if self.itemNode == nil || self.contentDirty || abs(width - self.lastWidth) > 0.5 {
+             self.rebuild(width: width)
+@@ -2137,6 +2142,8 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
+     }
+ 
+     private func rebuild(width: CGFloat) {
++        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyRowBuild)
++        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
+         // Full row width plus separate side insets, exactly as ListViewImpl builds these params
+         // (Display/Source/ListView.swift:2384). The alternative — folding the inset into `width` — was
+         // what this did before, and it cannot animate: shrinking the node re-lays its content out at
 diff --git a/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift b/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
-index 852384b..4c46e85 100644
+index 46d9a7f..14f43dc 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
-@@ -368,8 +368,8 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
+@@ -389,8 +389,8 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
          }
          
          let configure = {
@@ -725,16 +762,16 @@ index 852384b..4c46e85 100644
              
              let nodeLayout = node.asyncLayout()
              let (top, bottom, dateAtBottom) = self.merged(with: ChatHistoryItemNeighbors(neighbors), isRotated: self.controllerInteraction.chatIsRotated)
-@@ -384,7 +384,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
+@@ -405,7 +405,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                  }
              }
              
--            let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
-+            let (layout, apply) = JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeCompute) { nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom) }
+-            let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false, hasBubbleAbove: dateAtBottom.hasBubbleAbove, hasBubbleBelow: dateAtBottom.hasBubbleBelow) : dateAtBottom)
++            let (layout, apply) = JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeCompute) { nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false, hasBubbleAbove: dateAtBottom.hasBubbleAbove, hasBubbleBelow: dateAtBottom.hasBubbleBelow) : dateAtBottom) }
              
              node.contentSize = layout.contentSize
              node.insets = layout.insets
-@@ -396,7 +396,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
+@@ -417,7 +417,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
              Queue.mainQueue().async {
                  completion(node, {
                      return (nil, { info in
@@ -743,7 +780,7 @@ index 852384b..4c46e85 100644
                      })
                  })
              }
-@@ -469,7 +469,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
+@@ -540,7 +540,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
      public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
          Queue.mainQueue().async {
              if let nodeValue = node() as? ChatMessageItemView {
@@ -752,12 +789,12 @@ index 852384b..4c46e85 100644
                  
                  let nodeLayout = nodeValue.asyncLayout()
                  
-@@ -488,10 +488,10 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
+@@ -559,10 +559,10 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                          }
                      }
                      
--                    let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
-+                    let (layout, apply) = JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeCompute) { nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom) }
+-                    let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false, hasBubbleAbove: dateAtBottom.hasBubbleAbove, hasBubbleBelow: dateAtBottom.hasBubbleBelow) : dateAtBottom)
++                    let (layout, apply) = JerkgramPerformanceDiagnostics.shared.measureOperation(.historyNodeCompute) { nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false, hasBubbleAbove: dateAtBottom.hasBubbleAbove, hasBubbleBelow: dateAtBottom.hasBubbleBelow) : dateAtBottom) }
                      Queue.mainQueue().async {
                          completion(layout, { info in
 -                            apply(animation, info, false)
@@ -766,10 +803,10 @@ index 852384b..4c46e85 100644
                                  nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
                                  nodeValue.updateSelectionState(animated: false)
 diff --git a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
-index ec2bc59..fb142db 100644
+index 834a34c..67bcdc3 100644
 --- a/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
 +++ b/submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift
-@@ -1642,6 +1642,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
+@@ -1786,6 +1786,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
          deviceMetrics: DeviceMetrics,
          isMediaInputExpanded: Bool
      ) -> CGFloat {
@@ -778,7 +815,7 @@ index ec2bc59..fb142db 100644
          self.isUpdating = true
          defer {
              self.isUpdating = false
-@@ -2009,8 +2011,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
+@@ -2163,8 +2165,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                  // Text Size changed under live content: re-decorate now so the typed text and the typing
                  // attributes take the new size immediately rather than on the next keystroke.
                  let fullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
@@ -791,7 +828,7 @@ index ec2bc59..fb142db 100644
              if self.theme !== interfaceState.theme {
                  updateSendButtonIcon = true
                  
-@@ -4027,6 +4033,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
+@@ -4295,6 +4301,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
      }
      
      public func chatInputTextNodeDidUpdateText() {
@@ -800,7 +837,7 @@ index ec2bc59..fb142db 100644
          if self.ignoreChatInputTextNodeDidUpdateText {
              return
          }
-@@ -5845,6 +5853,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
+@@ -6116,6 +6124,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
      }
      
      @objc func sendButtonPressed() {
@@ -810,10 +847,10 @@ index ec2bc59..fb142db 100644
              let textCount = Int32(self.richTextInputNode?.text.count ?? 0)
              let remainingCount = inputTextMaxLength - textCount
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index a9a48d5..bc2b75b 100644
+index 7cca926..ddf49fe 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -5775,7 +5775,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5843,7 +5843,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
              insets.left += sideInsets.sectionLeft
              insets.right += sideInsets.sectionRight
              
@@ -822,7 +859,7 @@ index a9a48d5..bc2b75b 100644
              
              contentHeight += headerHeight
              if !((self.isSettings || self.isMyProfile) && self.state.isEditing) {
-@@ -5810,7 +5810,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5878,7 +5878,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                          contentHeight -= 16.0
                      }
                  }
@@ -832,7 +869,7 @@ index a9a48d5..bc2b75b 100644
                  let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
                  if additive {
                      transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
-@@ -5822,11 +5823,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5890,11 +5891,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                  } else {
                      transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 0.0 : self.underHeaderContentsAlpha)
                  }
@@ -846,7 +883,7 @@ index a9a48d5..bc2b75b 100644
              var removeRegularSections: [AnyHashable] = []
              for (sectionId, _) in self.regularSections {
                  if !validRegularSections.contains(sectionId) {
-@@ -5849,8 +5852,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5917,8 +5920,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                  }
              }
              
@@ -857,7 +894,7 @@ index a9a48d5..bc2b75b 100644
  
              for (sectionId, sectionItems) in editItems {
                  var insets = UIEdgeInsets()
-@@ -5871,7 +5875,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5939,7 +5943,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                  }
                  
                  let sectionWidth = layout.size.width - insets.left - insets.right
@@ -867,7 +904,7 @@ index a9a48d5..bc2b75b 100644
                  let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
                  
                  if wasAdded {
-@@ -5885,11 +5890,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5953,11 +5958,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                      }
                      transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 1.0 : 0.0)
                  }
@@ -881,7 +918,7 @@ index a9a48d5..bc2b75b 100644
              var removeEditingSections: [AnyHashable] = []
              for (sectionId, _) in self.editingSections {
                  if !validEditingSections.contains(sectionId) {
-@@ -5901,6 +5908,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5969,6 +5976,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                      sectionNode.removeFromSupernode()
                  }
              }
@@ -890,7 +927,7 @@ index a9a48d5..bc2b75b 100644
          }
          
          let panesTiming = self.ghostBaseProfileBackgroundView?.beginPerformanceSpan(.panesAndTail)
-@@ -6140,6 +6149,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -6208,6 +6217,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          self.backgroundColor = color
      }
          
@@ -905,7 +942,7 @@ index a9a48d5..bc2b75b 100644
      private var hasQrButton = false
      fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) {
          // Held with the layout while an expansion has the header's views; the held layout's application runs it.
-@@ -7182,6 +7199,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+@@ -7254,6 +7271,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
      
      override public func viewWillAppear(_ animated: Bool) {
          super.viewWillAppear(animated)
@@ -913,7 +950,7 @@ index a9a48d5..bc2b75b 100644
          self.controllerNode.setGhostBaseProfileBackgroundActive(true)
      }
  
-@@ -7192,6 +7210,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+@@ -7264,6 +7282,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
  
      override public func viewWillDisappear(_ animated: Bool) {
          super.viewWillDisappear(animated)
@@ -921,7 +958,7 @@ index a9a48d5..bc2b75b 100644
  
          self.controllerNode.logoutConfirmationDisposable.set(nil)
          
-@@ -7355,6 +7374,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+@@ -7427,6 +7446,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
      
      override public func viewDidAppear(_ animated: Bool) {
          super.viewDidAppear(animated)
@@ -929,7 +966,7 @@ index a9a48d5..bc2b75b 100644
          
          DispatchQueue.main.async { [weak self] in
              self?.didAppear = true
-@@ -7658,6 +7678,213 @@ func getUserPeer(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signal<Engine
+@@ -7730,6 +7750,213 @@ func getUserPeer(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signal<Engine
      }
  }
  
@@ -1144,10 +1181,10 @@ index a9a48d5..bc2b75b 100644
      let controller: ViewController
      weak var sourceNode: ASDisplayNode?
 diff --git a/submodules/TelegramUI/Sources/ChatController.swift b/submodules/TelegramUI/Sources/ChatController.swift
-index 483c766..636db13 100644
+index 0dff8e2..aca2931 100644
 --- a/submodules/TelegramUI/Sources/ChatController.swift
 +++ b/submodules/TelegramUI/Sources/ChatController.swift
-@@ -7688,6 +7688,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
+@@ -7802,6 +7802,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
      }
      
      override public func loadDisplayNode() {
@@ -1156,7 +1193,7 @@ index 483c766..636db13 100644
          self.loadDisplayNodeImpl()
          self.galleryPresentationContext.view = self.view
          self.galleryPresentationContext.controllersUpdated = { [weak self] _ in
-@@ -7705,6 +7707,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
+@@ -7820,6 +7822,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
          self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemNode in
              itemNode.unreadMessageRangeUpdated()
          }
@@ -1164,26 +1201,26 @@ index 483c766..636db13 100644
                  
          if self.willAppear {
              self.chatDisplayNode.historyNode.refreshPollActionsForVisibleMessages()
-@@ -7872,6 +7875,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
- 
+@@ -7988,6 +7991,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
      override public func viewDidAppear(_ animated: Bool) {
          super.viewDidAppear(animated)
+         self.forwardSideListAppearance(.didAppear, animated: animated)
 +        JerkgramPerformanceDiagnostics.shared.setVisibleRoute("chat", owner: self)
          
          self.didAppear = true
          
-@@ -8379,6 +8383,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
-         super.viewWillDisappear(animated)
+@@ -8501,6 +8505,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
+         self.forwardSideListAppearance(.willDisappear, animated: animated)
  
          self.walletTransferAnimationsVisible = false
 +        JerkgramPerformanceDiagnostics.shared.clearVisibleRoute(owner: self)
          
          if #available(iOS 18.0, *) {
          } else {
-@@ -8516,6 +8521,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
+@@ -8646,6 +8651,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
      }
-     
-     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+ 
+     private func chatContainerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
 +        let jgLayoutStarted = JerkgramPerformanceDiagnostics.shared.isRecording ? ProcessInfo.processInfo.systemUptime : nil
 +        defer {
 +            if let jgLayoutStarted {
@@ -1194,7 +1231,7 @@ index 483c766..636db13 100644
          self.suspendNavigationBarLayout = true
          super.containerLayoutUpdated(layout, transition: transition)
          
-@@ -8586,6 +8598,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
+@@ -8722,6 +8734,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
      }
      
      func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, force: Bool = false, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
@@ -1203,16 +1240,16 @@ index 483c766..636db13 100644
          updateChatPresentationInterfaceStateImpl(
              selfController: self,
              transition: transition,
-@@ -9368,6 +9382,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
+@@ -9522,6 +9536,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
      }
      
-     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
+     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false, presentSchedulePickerInOverlay: Bool = false) {
 +        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.sendEnqueue)
 +        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
          if case let .customChatContents(customChatContents) = self.subject {
              customChatContents.enqueueMessages(messages: messages)
              return
-@@ -9379,6 +9395,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
+@@ -9533,6 +9549,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
  
          let _ = (self.shouldDivertMessagesToScheduled(messages: messages)
          |> deliverOnMainQueue).startStandalone(next: { [weak self] shouldDivert in
@@ -1222,10 +1259,10 @@ index 483c766..636db13 100644
                  return
              }
 diff --git a/submodules/TelegramUI/Sources/ChatControllerNode.swift b/submodules/TelegramUI/Sources/ChatControllerNode.swift
-index 791cf0a..0e3aa00 100644
+index 6bb06b8..b420bb4 100644
 --- a/submodules/TelegramUI/Sources/ChatControllerNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatControllerNode.swift
-@@ -1201,6 +1201,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
+@@ -1289,6 +1289,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
      }
      
      func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat, CGFloat, ContainedViewLayoutTransition) -> Void) {
@@ -1234,7 +1271,7 @@ index 791cf0a..0e3aa00 100644
          let transition: ContainedViewLayoutTransition
          if let _ = self.scheduledAnimateInAsOverlayFromNode {
              transition = .immediate
-@@ -4405,6 +4407,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
+@@ -4510,6 +4512,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
      }
      
      func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -1243,7 +1280,7 @@ index 791cf0a..0e3aa00 100644
          if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
              let dismissStatus = abs(scrollView.contentOffset.y) > 50.0
              if dismissStatus != self.scrollViewDismissStatus {
-@@ -5052,6 +5056,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
+@@ -5159,6 +5163,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
      }
  
      func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, sendWithoutFormatting: Bool = false, completion: @escaping () -> Void = {}) {
@@ -1252,7 +1289,7 @@ index 791cf0a..0e3aa00 100644
          guard let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode else {
              return
          }
-@@ -5482,7 +5488,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
+@@ -5589,7 +5595,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                      }, usedCorrelationId)
                      completion()
                      
@@ -1262,10 +1299,10 @@ index 791cf0a..0e3aa00 100644
                      let ghostBaseScheduledSendEnabled = (JerkgramHotSettings.object(forKey: "jerkgram.GhostMode.ScheduledSend") as? Bool) ?? false
  
 diff --git a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
-index d0c85b5..c5efe13 100644
+index 42046ca..6173268 100644
 --- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
 +++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
-@@ -379,6 +379,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
+@@ -348,6 +348,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
  }
  
  private func mappedChatHistoryViewListTransition(context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, lastHeaderId: Int64, isSavedMusic: Bool, canReorder: Bool, richMessageQueueId: EngineMessage.Id?, animateFromPreviousFilter: Bool, transition: ChatHistoryViewTransition, systemStyle: ItemListSystemStyle) -> ChatHistoryListViewTransition {
@@ -1274,7 +1311,7 @@ index d0c85b5..c5efe13 100644
      return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, isSavedMusic: isSavedMusic, canReorder: canReorder, richMessageQueueId: richMessageQueueId, entries: transition.insertEntries, systemStyle: systemStyle), updateItems: mappedUpdateEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, isSavedMusic: isSavedMusic, canReorder: canReorder, richMessageQueueId: richMessageQueueId, entries: transition.updateEntries, systemStyle: systemStyle), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, animateIn: transition.animateIn, reason: transition.reason, flashIndicators: transition.flashIndicators, animateFromPreviousFilter: animateFromPreviousFilter, pinnedAnchor: transition.pinnedAnchor, keepInPlaceAnchor: transition.keepInPlaceAnchor)
  }
  
-@@ -1213,6 +1215,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -1178,6 +1180,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
          self.beginPresentationDataManagement(updated: updatedPresentationData.signal)
          
          self.listView.visibleContentOffsetChanged = { [weak self] offset, _ in
@@ -1282,8 +1319,8 @@ index d0c85b5..c5efe13 100644
 +            defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
              if let strongSelf = self {
                  strongSelf.contentPositionChanged(offset)
-                 
-@@ -2100,6 +2104,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+                 strongSelf.updateBubblelessSelectionVisibleTops()
+@@ -2003,6 +2007,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
              deviceContactsNumbers |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_deviceContactsNumbers"),
              contentSettings |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_contentSettings")
          ) |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_firstChatHistoryTransition")).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, preferredStoryHighQuality, animatedEmojiAndGiftStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, availableMessageEffects, savedMessageTags, defaultReaction, accountPeer, accountCountry, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers, contentSettings in
@@ -1292,7 +1329,7 @@ index d0c85b5..c5efe13 100644
              let (animatedEmojiStickers, premiumGiftStickers, tonGiftStickers) = animatedEmojiAndGiftStickers
              let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages) = promises
              
-@@ -3137,6 +3143,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -3114,6 +3120,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
      }
      
      private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
@@ -1301,7 +1338,7 @@ index d0c85b5..c5efe13 100644
          let historyView = transactionState.historyView
          var isTopReplyThreadMessageShownValue = false
          var topVisibleMessageRange: ChatTopVisibleMessageRange?
-@@ -4184,10 +4192,20 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -4210,10 +4218,20 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
          }
      }
      
@@ -1322,7 +1359,7 @@ index d0c85b5..c5efe13 100644
          self.hasActiveTransition = true
          let transition = self.enqueuedHistoryViewTransitions.removeFirst()
  
-@@ -4200,8 +4218,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -4226,8 +4244,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             previous.id == transition.historyView.id,
             !previous.originalView.isLoading, previous.originalView.laterId == nil,
             transition.historyView.originalView.laterId == nil {
@@ -1341,7 +1378,7 @@ index d0c85b5..c5efe13 100644
              for entry in transition.historyView.originalView.entries {
                  let message = entry.message
                  guard message.flags.contains(.Incoming), !previousIds.contains(message.id),
-@@ -4435,6 +4461,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -4461,6 +4487,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
          }
  
          let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
@@ -1350,7 +1387,7 @@ index d0c85b5..c5efe13 100644
              if let strongSelf = self {
                  strongSelf.currentAppliedDeleteAnimationCorrelationIds.removeAll()
                  
-@@ -4836,16 +4864,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -4870,16 +4898,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
              if foundCorrelationMessage {
                  self.layoutActionOnViewTransition = nil
                  let (mappedTransition, updateSizeAndInsets) = layoutActionOnViewTransition(transition)
@@ -1370,7 +1407,7 @@ index d0c85b5..c5efe13 100644
                  completion(false, result)
              })
          }
-@@ -4982,6 +5010,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -5016,6 +5044,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
      }
          
      public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, additionalScrollDistance: CGFloat, scrollToTop: Bool, completion: @escaping () -> Void) {
@@ -1379,7 +1416,7 @@ index d0c85b5..c5efe13 100644
          /*if updateSizeAndInsets.insets.top == 83.0 {
              if !transition.isAnimated {
                  assert(true)
-@@ -5000,7 +5030,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -5034,7 +5064,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
              maintainsUnreadItemAlignment = true
          }
          transition.updateFrame(node: self.listView, frame: CGRect(origin: CGPoint(), size: updateSizeAndInsets.size))
@@ -1388,7 +1425,7 @@ index d0c85b5..c5efe13 100644
              completion()
          })
          
-@@ -5218,7 +5248,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -5256,7 +5286,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                                  scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true, hold: .always)
                              }
                              
@@ -1397,7 +1434,7 @@ index d0c85b5..c5efe13 100644
                              break loop
                          }
                      case let .MessageGroupEntry(_, messages, presentationData):
-@@ -5239,7 +5269,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -5277,7 +5307,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                                  scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true, hold: .always)
                              }
                              
@@ -1406,7 +1443,7 @@ index d0c85b5..c5efe13 100644
                              break loop
                          }
                      default:
-@@ -5290,7 +5320,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
+@@ -5328,7 +5358,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                                          item = ListMessageItem(presentationData: presentationData, systemStyle: self.systemStyle, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, translateToLanguage: associatedData.translateToLanguage, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
                                  }
                                  let updateItem = ChatHistoryListViewUpdateItem(index: index, previousIndex: index, stableId: historyView.filteredEntries[i].stableId, item: item, directionHint: nil)
@@ -1415,40 +1452,3 @@ index d0c85b5..c5efe13 100644
                                  break loop
                              }
                          default:
-diff --git a/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift b/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift
-index 8441b1d..079321f 100644
---- a/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift
-+++ b/submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift
-@@ -1,4 +1,5 @@
- import UIKit
-+import TelegramCore
- import AsyncDisplayKit
- import SwiftSignalKit
- import Display
-@@ -862,6 +863,8 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
-         updateOpaqueState: Any?,
-         completion: @escaping (ListViewDisplayedItemRange) -> Void
-     ) {
-+        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyCoreTransaction)
-+        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
-         if let updateOpaqueState = updateOpaqueState {
-             self.opaqueTransactionState = updateOpaqueState
-         }
-@@ -1932,6 +1935,8 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
-     }
- 
-     func update(width: CGFloat, transition: CoreListTransition) -> CGFloat {
-+        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyRowLayout)
-+        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
-         self.pendingTransition = transition
-         if self.itemNode == nil || self.contentDirty || abs(width - self.lastWidth) > 0.5 {
-             self.rebuild(width: width)
-@@ -1963,6 +1968,8 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
-     }
- 
-     private func rebuild(width: CGFloat) {
-+        let jgOperation = JerkgramPerformanceDiagnostics.shared.beginOperation(.historyRowBuild)
-+        defer { JerkgramPerformanceDiagnostics.shared.endOperation(jgOperation) }
-         // Full row width plus separate side insets, exactly as ListViewImpl builds these params
-         // (Display/Source/ListView.swift:2384). The alternative — folding the inset into `width` — was
-         // what this did before, and it cannot animate: shrinking the node re-lays its content out at

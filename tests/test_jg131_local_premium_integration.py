@@ -22,7 +22,7 @@ class LocalPremiumIntegration(unittest.TestCase):
         self.assertIn('Local Premium requires macOS Swift, Clang and xcrun', result.stdout + result.stderr)
 
     def test_chain_and_build_use_exact_hub_after_recovery(self):
-        chain = json.loads((ROOT / 'docs/migrations/telegram-13.1.2-stage-chain.json').read_text())
+        chain = json.loads((ROOT / 'docs/migrations/telegram-13.2-stage-chain.json').read_text())
         stage = next(row for row in chain if row['stage'] == 'jg131-local-premium')
         self.assertEqual(chain[-1]['stage'], 'jg131-saved-tags')
         manifest = json.loads((ROOT / 'patches/jg131-local-premium.sha256.json').read_text())
@@ -47,7 +47,7 @@ class LocalPremiumIntegration(unittest.TestCase):
             first.parent.mkdir()
             first.write_bytes(final_bytes)
             with patch.object(verifier, 'SOURCE', source), patch.object(hub, 'manifest', return_value={'owners': owners}):
-                with self.assertRaisesRegex(RuntimeError, 'Local Premium output changed'):
+                with self.assertRaisesRegex(RuntimeError, '(?:Local Premium output changed|Mixed/corrupt132baseline boundary)'):
                     verifier.main()
 
 

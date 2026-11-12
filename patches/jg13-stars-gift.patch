@@ -1,0 +1,101 @@
+diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift b/submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift
+index cbe734a..b3be540 100644
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Payments/Stars.swift
+@@ -676,7 +676,7 @@ private final class StarsContextImpl {
+     
+     private func updateState(_ state: StarsContext.State) {
+         var state = state
+-        if let ghostBaseBalance = ghostBaseLocalStarsVisualBalance() {
++        if !self.ton, let ghostBaseBalance = ghostBaseLocalStarsVisualBalance() {
+             state.balance = ghostBaseBalance
+         }
+         self._state = state
+diff --git a/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftPagerComponent.swift b/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftPagerComponent.swift
+index cbaa59d..b4d2e2a 100644
+--- a/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftPagerComponent.swift
++++ b/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftPagerComponent.swift
+@@ -187,29 +187,8 @@ final class GiftPagerComponent: Component {
+                 self.isUpdating = false
+             }
+             
+-            let ghostBaseProfileGift =
+-                GhostBaseProfileBlurSettings
+-                    .loadEnabled() != nil
+-                && component.items.contains(
+-                    where: { item in
+-                        if case .profileGift =
+-                            item.subject {
+-
+-                            return true
+-                        } else {
+-                            return false
+-                        }
+-                    }
+-                )
+-
+-            self.dimView.backgroundColor =
+-                UIColor(
+-                    white: 0.0,
+-                    alpha:
+-                        ghostBaseProfileGift
+-                        ? 0.28
+-                        : 0.4
+-                )
++            // Keep the profile grid subdued behind the gift sheet.
++            self.dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
+ 
+             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
+             
+diff --git a/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftViewScreen.swift b/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftViewScreen.swift
+index 210924f..5873f4f 100644
+--- a/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftViewScreen.swift
++++ b/submodules/TelegramUI/Components/Gifts/GiftViewScreen/Sources/GiftViewScreen.swift
+@@ -6397,6 +6397,7 @@ private final class GiftViewSheetContentContainer: Component {
+             transition: ComponentTransition
+         ) -> CGSize {
+             let environmentValue = environment[EnvironmentType.self].value
++            self.backgroundColor = environmentValue.theme.actionSheet.opaqueItemBackgroundColor
+ 
+             self.content.parentState = state
+             let contentSize = self.content.update(
+@@ -6708,14 +6709,6 @@ final class GiftViewSheetComponent: CombinedComponent {
+                 maximumContentHeight = max(0.0, context.availableSize.height - environment.statusBarHeight - 10.0)
+             }
+             
+-            let ghostBaseSheetColor =
+-                environment.theme.actionSheet.opaqueItemBackgroundColor
+-                    .withAlphaComponent(
+-                        environment.theme.overallDarkAppearance
+-                            ? 0.56
+-                            : 0.64
+-                    )
+-
+             let sheet = sheet.update(
+                 component: SheetComponent<EnvironmentType>(
+                     content: AnyComponent<EnvironmentType>(GiftViewSheetContentContainer(
+@@ -6727,10 +6720,7 @@ final class GiftViewSheetComponent: CombinedComponent {
+                     )),
+                     headerContent: headerContent,
+                     style: .glass,
+-                    backgroundColor:
+-                        .color(
+-                            ghostBaseSheetColor
+-                        ),
++                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                     followContentSizeChanges: true,
+                     clipsContent: true,
+                     hasDimView: false,
+diff --git a/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift b/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
+index 3d57cd0..a86b95b 100644
+--- a/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
++++ b/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
+@@ -862,7 +862,7 @@ final class StarsTransactionsScreenComponent: Component {
+                             theme: environment.theme,
+                             strings: environment.strings,
+                             dateTimeFormat: environment.dateTimeFormat,
+-                            count: ghostBaseLocalStarsAmountForDisplay() ?? self.starsState?.balance ?? StarsAmount.zero,
++                            count: (component.starsContext.ton ? nil : ghostBaseLocalStarsAmountForDisplay()) ?? self.starsState?.balance ?? StarsAmount.zero,
+                             currency: component.starsContext.ton ? .ton : .stars,
+                             rate: nil,
+                             actionTitle: component.starsContext.ton ? environment.strings.Ton_WithdrawViaFragment : (withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy),

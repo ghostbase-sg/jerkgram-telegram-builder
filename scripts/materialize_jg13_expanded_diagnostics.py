@@ -21,7 +21,7 @@ OWNERS = {
     'submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift',
     'submodules/TelegramUI/Sources/ChatControllerNode.swift',
     'submodules/TelegramUI/Sources/ChatHistoryListNode.swift',
-    'submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift',
+    'submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift',
     'submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift',
     'submodules/MediaPlayer/Sources/ChunkMediaPlayerV2.swift',
 }

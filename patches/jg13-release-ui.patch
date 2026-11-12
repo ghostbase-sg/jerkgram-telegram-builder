@@ -1,0 +1,18 @@
+diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index 11f62c4..d690024 100644
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -2235,13 +2235,6 @@ private func ghostBaseSettingsEntries(
+             .header(2, strings.privacy),
+             .telemetryToggle(2, 1, strings.anonymousAnalytics, jerkgramTelemetryEnabled()),
+             .info(3, strings.anonymousAnalyticsDescription),
+-            .header(4, "P0 · Диагностика производительности"),
+-            .researchAction(4, 1, "Начать запись (до 10 минут)", "performanceStart"),
+-            .researchAction(4, 2, "Остановить запись", "performanceStop"),
+-            .researchAction(4, 3, "Поделиться отчётом", "performanceShare"),
+-            .researchAction(4, 4, "Копировать отчёт", "performanceCopy"),
+-            .info(4, JerkgramPerformanceDiagnostics.shared.status),
+-            .info(5, "Начните запись, повторите фризы Settings и профилей, затем вернитесь сюда, остановите запись и поделитесь отчётом. CPU: 100% = одно ядро; память: пиковая RSS; GPU не измеряется. Новая запись заменяет предыдущую. После перезапуска приложения отчёт не сохраняется.")
+         ]
+     }
+ 

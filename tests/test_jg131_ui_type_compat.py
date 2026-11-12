@@ -1,6 +1,7 @@
 """Catch Postbox names introduced by product overlays after upstream UI import removal."""
 from pathlib import Path
 import json
+import os
 import re
 import subprocess
 import unittest
@@ -8,7 +9,16 @@ import tempfile
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'work/swiftgram-src'
+sys.path.insert(0,str(ROOT / "scripts"))
+SOURCE = Path(os.environ.get('JG13_SOURCE', ROOT / 'work/swiftgram-src'))
+
+
+def apply_fixture(stage,source):
+    from jg132_baseline import enabled
+    if enabled():
+        from jg132_source_fixtures import apply_exact_delta_fixture
+        return apply_exact_delta_fixture(stage,source)
+    return stage.apply_ui_types(source)
 
 class UITypeCompatibilityTests(unittest.TestCase):
     def test_product_ui_additions_do_not_reintroduce_unimported_postbox_types(self):
@@ -22,7 +32,10 @@ class UITypeCompatibilityTests(unittest.TestCase):
             if re.search(r'^import Postbox\b', source, re.M):
                 continue
             original = subprocess.run(['git', 'show', 'HEAD:' + name], cwd=SOURCE, capture_output=True, text=True)
-            stock = original.stdout if original.returncode == 0 else ''
+            if os.environ.get('JG132_PRISTINE_SOURCE'):
+                from jg132_source_fixtures import official_bytes
+                stock=official_bytes(SOURCE,name).decode()
+            else:stock = original.stdout if original.returncode == 0 else ''
             for symbol in symbols:
                 token = r'(?<![\w.])' + symbol + r'\b'
                 if re.search(token, source) and not re.search(token, stock):
@@ -44,13 +57,13 @@ class UITypeCompatibilityTests(unittest.TestCase):
             path.parent.mkdir(parents=True)
             path.write_text(parent + '\n// unexpected change\n')
             before = path.read_bytes()
-            with self.assertRaises(RuntimeError): stage.apply_ui_types(root)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, root)
             self.assertEqual(path.read_bytes(), before)
             path.write_text(parent)
-            stage.apply_ui_types(root)
+            apply_fixture(stage, root)
             stage.verify_ui_types(root)
             self.assertEqual(path.read_text(), final)
-            with self.assertRaises(RuntimeError): stage.apply_ui_types(root)
+            with self.assertRaises(RuntimeError): apply_fixture(stage, root)
             path.write_text(final + '\n// unexpected change\n')
             with self.assertRaises(RuntimeError): stage.verify_ui_types(root)
 

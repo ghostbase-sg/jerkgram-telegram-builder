@@ -137,10 +137,10 @@ index 99123e5..0141260 100644
 +    }
 +}
 diff --git a/submodules/Display/Source/ViewController.swift b/submodules/Display/Source/ViewController.swift
-index 2cf8838..df564a8 100644
+index 2895ab5..a481437 100644
 --- a/submodules/Display/Source/ViewController.swift
 +++ b/submodules/Display/Source/ViewController.swift
-@@ -170,16 +170,21 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+@@ -175,16 +175,21 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
      }
      // The root Settings screen already owns its native backdrop.
      public var jerkgramSettingsHasOwnBackdrop = false
@@ -165,7 +165,7 @@ index 2cf8838..df564a8 100644
      }
  
      public func jerkgramInheritSettingsSurface(from source: ViewController) {
-@@ -193,28 +198,44 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+@@ -198,28 +203,44 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
              DispatchQueue.main.async { [weak self] in self?.jerkgramRefreshSettingsSurface(invalidateBackdrop: invalidateBackdrop) }
              return
          }
@@ -222,7 +222,7 @@ index 2cf8838..df564a8 100644
          if let layout = self.validLayout, self.isViewLoaded { self.containerLayoutUpdated(layout, transition: .immediate) }
      }
  
-@@ -748,6 +769,13 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+@@ -753,6 +774,13 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
          self.window?.addGlobalPortalHostView(sourceView: sourceView)
      }
      
@@ -236,7 +236,7 @@ index 2cf8838..df564a8 100644
      open override func viewWillDisappear(_ animated: Bool) {
          self.activeInputViewCandidate = findCurrentResponder(self.view)
          
-@@ -755,6 +783,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+@@ -760,6 +788,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
      }
      
      open override func viewDidDisappear(_ animated: Bool) {
@@ -246,7 +246,7 @@ index 2cf8838..df564a8 100644
          self.activeInputView = self.activeInputViewCandidate
          
          super.viewDidDisappear(animated)
-@@ -764,6 +795,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+@@ -769,6 +800,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
      }
      
      open override func viewDidAppear(_ animated: Bool) {
@@ -255,7 +255,7 @@ index 2cf8838..df564a8 100644
          self.jerkgramRefreshSettingsSurface()
          
 diff --git a/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift b/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
-index c7ec28f..be0f212 100644
+index 7465edd..1456680 100644
 --- a/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
 +++ b/submodules/ItemListUI/Sources/Items/ItemListMultilineInputItem.swift
 @@ -346,7 +346,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
@@ -937,7 +937,7 @@ index 676e142..f58bc51 100644
  
  private func jerkgramDataCoreRootURL() -> URL {
 diff --git a/submodules/TelegramCore/Sources/Account/Account.swift b/submodules/TelegramCore/Sources/Account/Account.swift
-index 08867b6..9c37dd1 100644
+index 556d5a8..3783ba4 100644
 --- a/submodules/TelegramCore/Sources/Account/Account.swift
 +++ b/submodules/TelegramCore/Sources/Account/Account.swift
 @@ -1068,6 +1068,11 @@ public enum JerkgramHotSettings {
@@ -953,10 +953,10 @@ index 08867b6..9c37dd1 100644
          precondition(self.keys.contains(key))
          self.lock.lock()
 diff --git a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
-index ef01d2b..cf67b03 100644
+index 0c24b41..ed243c0 100644
 --- a/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
 +++ b/submodules/TelegramPresentationData/Sources/PresentationTheme.swift
-@@ -1681,12 +1681,12 @@ private enum JerkgramSettingsThemeCache {
+@@ -1685,12 +1685,12 @@ private enum JerkgramSettingsThemeCache {
  
  extension PresentationTheme {
      public func jerkgramSettingsSurfaceTheme(enabled: Bool) -> PresentationTheme {
@@ -1234,7 +1234,7 @@ index 6c20544..231a5bd 100644
          self.layer.borderColor = presentationData.theme.list.itemPlainSeparatorColor
              .withAlphaComponent(isDark ? 0.30 : 0.20).cgColor
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift
-index b1401ff..3bb5888 100644
+index 9785611..ce37610 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift
 @@ -25,13 +25,15 @@ private struct GroupsInCommonListTransaction {
@@ -1265,7 +1265,7 @@ index b1401ff..3bb5888 100644
      private let listBackgroundView: UIImageView
      private let listMaskView: UIImageView
  
-@@ -208,6 +212,15 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
+@@ -211,6 +215,15 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
          }
      }
      
@@ -1281,7 +1281,7 @@ index b1401ff..3bb5888 100644
      func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
          let isFirstLayout = self.currentParams == nil
          self.currentParams = (size, isScrollingLockedAtTop, presentationData)
-@@ -278,7 +291,8 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
+@@ -281,7 +294,8 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
          }
  
  
@@ -1291,7 +1291,7 @@ index b1401ff..3bb5888 100644
              self.updatePeers(state: state, presentationData: presentationData)
          }
      }
-@@ -287,7 +301,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
+@@ -290,7 +304,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
          var entries: [GroupsInCommonListEntry] = []
          for peer in state.peers {
              if let peer = peer.peer {
@@ -1371,7 +1371,7 @@ index 659a285..c609418 100644
          }
          
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift
-index 1cb94a9..a75b80a 100644
+index 829942f..7433008 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift
 @@ -285,7 +285,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
@@ -1384,7 +1384,7 @@ index 1cb94a9..a75b80a 100644
      private let listBackgroundView: UIImageView
      private let listMaskView: UIImageView
  
-@@ -422,6 +423,15 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+@@ -425,6 +426,15 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
          }
      }
      
@@ -1400,7 +1400,7 @@ index 1cb94a9..a75b80a 100644
      func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
          let isFirstLayout = self.currentParams == nil
          self.currentParams = (size, isScrollingLockedAtTop)
-@@ -453,11 +463,17 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+@@ -456,11 +466,17 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
              self.backgroundColor = .clear
              self.listNode.backgroundColor = .clear
  
@@ -1423,7 +1423,7 @@ index 1cb94a9..a75b80a 100644
              }
  
              self.ghostBaseGlassEffectView.isHidden = false
-@@ -469,6 +485,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+@@ -472,6 +488,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
              self.listBackgroundView.isHidden = true
              self.listMaskView.isHidden = true
          } else {
@@ -1432,10 +1432,10 @@ index 1cb94a9..a75b80a 100644
              self.ghostBaseGlassEffectView.effect = nil
              self.ghostBaseGlassTintView.backgroundColor = .clear
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
-index 24c1979..e4d800e 100644
+index 835856c..94c5f3d 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
-@@ -72,7 +72,7 @@ let TitleNodeStateExpanded = 1
+@@ -96,7 +96,7 @@ let TitleNodeStateExpanded = 1
  final class PeerInfoHeaderNode: ASDisplayNode {
      weak var ghostBasePerformanceProbe: JerkgramProfilePerformanceProbe?
      private var context: AccountContext
@@ -1444,7 +1444,7 @@ index 24c1979..e4d800e 100644
      private let isPremiumDisabled: Bool
      private weak var controller: PeerInfoScreenImpl?
      private var presentationData: PresentationData?
-@@ -265,7 +265,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -293,7 +293,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
      
      init(context: AccountContext, controller: PeerInfoScreenImpl, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, isMyProfile: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
          self.context = context
@@ -1453,7 +1453,7 @@ index 24c1979..e4d800e 100644
          self.controller = controller
          self.isAvatarExpanded = avatarInitiallyExpanded
          self.isOpenedFromChat = isOpenedFromChat
-@@ -526,6 +526,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
+@@ -573,6 +573,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
          }
      }
      
@@ -1465,7 +1465,7 @@ index 24c1979..e4d800e 100644
          if let entry = entry {
              self.avatarListNode.avatarContainerNode.containerNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift
-index b7616a6..efae871 100644
+index cc0e11a..f817023 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift
 @@ -28,6 +28,8 @@ final class PeerInfoPaneWrapper {
@@ -1494,7 +1494,7 @@ index b7616a6..efae871 100644
      func removeFromContainer() {
          self.node.removeFromSupernode()
          self.node.parentController = nil
-@@ -600,7 +612,8 @@ private final class PeerInfoPendingPane {
+@@ -618,7 +630,8 @@ private final class PeerInfoPendingPane {
  }
  
  final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegate {
@@ -1504,7 +1504,7 @@ index b7616a6..efae871 100644
      private let context: AccountContext
      private let peerId: EnginePeer.Id
      private let chatLocation: ChatLocation
-@@ -677,6 +690,20 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+@@ -695,6 +708,20 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
      
      private let initialPaneKey: PeerInfoPaneKey?
      
@@ -1525,7 +1525,7 @@ index b7616a6..efae871 100644
      init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, chatLocation: ChatLocation, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, isMediaOnly: Bool, initialPaneKey: PeerInfoPaneKey?, initialStoryFolderId: Int64?, initialGiftCollectionId: Int64?, switchToMediaTarget: PeerInfoSwitchToMediaTarget?, ghostBaseGlassEnabled: Bool = false) {
          self.ghostBaseGlassEnabled = ghostBaseGlassEnabled
          self.context = context
-@@ -1160,6 +1187,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+@@ -1178,6 +1205,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                  )
                  self.pendingPanes[key] = pane
                  pane.pane.node.frame = paneFrame
@@ -1533,7 +1533,7 @@ index b7616a6..efae871 100644
                  pane.pane.update(size: paneFrame.size, topInset: topInset + effectiveTabsHeight, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: true, transition: .immediate)
                  let paneNode = pane.pane.node
                  pane.pane.node.tabBarOffsetUpdated = { [weak self, weak paneNode] transition in
-@@ -1176,6 +1204,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+@@ -1194,6 +1222,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
          
          for (key, pane) in self.pendingPanes {
              pane.pane.node.frame = paneFrame
@@ -1541,7 +1541,7 @@ index b7616a6..efae871 100644
              pane.pane.update(size: paneFrame.size, topInset: effectiveTabsHeight + topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: self.currentPaneKey == nil, transition: .immediate)
              
              if pane.isReady {
-@@ -1272,6 +1301,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+@@ -1292,6 +1321,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                          paneCompletion()
                      })
                  }
@@ -1549,8 +1549,8 @@ index b7616a6..efae871 100644
                  pane.update(size: paneFrame.size, topInset: effectiveTabsHeight + topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
              }
          }
-@@ -1455,6 +1485,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
-         for (_, pane) in self.pendingPanes {
+@@ -1486,6 +1516,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
+             pane.pane.node.accessibilityElementsHidden = true
              let paneTransition: ContainedViewLayoutTransition = .immediate
              paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
 +            pane.pane.updateJerkgramVisualState(glassEnabled: self.ghostBaseGlassEnabled, revision: self.jerkgramVisualRevision)
@@ -1558,10 +1558,10 @@ index b7616a6..efae871 100644
          }
          
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-index 4fd8fad..afd7e5e 100644
+index 2d68788..2f490cc 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
-@@ -213,16 +213,74 @@ enum TopicsLimitedReason {
+@@ -237,16 +237,74 @@ final class PeerInfoScrollNode: ASScrollNode {
  }
  
  final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
@@ -1639,7 +1639,7 @@ index 4fd8fad..afd7e5e 100644
      }
      weak var controller: PeerInfoScreenImpl?
      
-@@ -258,8 +316,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -282,8 +340,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
      var regularSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
      var editingSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
      let paneContainerNode: PeerInfoPaneContainerNode
@@ -1651,7 +1651,7 @@ index 4fd8fad..afd7e5e 100644
      var ignoreScrolling: Bool = false
      lazy var hapticFeedback = { HapticFeedback() }()
  
-@@ -495,7 +554,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -519,7 +578,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
          self.sharedMediaFromForumTopic = sharedMediaFromForumTopic
          self.sharedMediaChatLocation = peerInfoSharedMediaChatLocation(peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
          self.ghostBaseProfileMetricsSettings = GhostBaseProfileMetricsSettings.load()
@@ -1660,7 +1660,7 @@ index 4fd8fad..afd7e5e 100644
              self.ghostBaseProfileBackgroundView = GhostBaseProfileBackgroundView(
                  context: context,
                  settings: settings
-@@ -539,7 +598,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -563,7 +622,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                  .requestUpdate = { [weak self] in
  
                  guard
@@ -1669,7 +1669,7 @@ index 4fd8fad..afd7e5e 100644
                      let (
                          layout,
                          navigationHeight
-@@ -5643,7 +5702,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
+@@ -5711,7 +5770,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
  
      func updatePresentationData(_ presentationData: PresentationData) {
          self.presentationData = presentationData
@@ -1680,7 +1680,7 @@ index 4fd8fad..afd7e5e 100644
          self.updateBackgroundColor()
      
          
-@@ -6846,11 +6907,13 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+@@ -6915,11 +6976,13 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
          ))
          
          self._hasGlassStyle = true
@@ -1696,7 +1696,7 @@ index 4fd8fad..afd7e5e 100644
          }
  
          if isSettings || isMyProfile {
-@@ -7081,11 +7144,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+@@ -7153,11 +7216,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                  
                  if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                      strongSelf.controllerNode.updatePresentationData(strongSelf.presentationData)
@@ -1710,7 +1710,7 @@ index 4fd8fad..afd7e5e 100644
                      }
                      
                      if strongSelf.navigationItem.backBarButtonItem != nil {
-@@ -7219,6 +7279,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
+@@ -7291,6 +7351,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
          super.present(controller, in: context, with: arguments, blockInteraction: blockInteraction, completion: completion)
      }
      
@@ -1785,18 +1785,18 @@ index f8e81b7..36a5db5 100644
          } else {
              self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift
-index 286c214..8d2d261 100644
+index 945a638..dad936d 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift
-@@ -29,6 +29,7 @@ import ButtonComponent
- import ContextUI
+@@ -29,6 +29,7 @@ import ContextUI
+ import DustEffect
  
  final class GiftsListView: UIView {
 +    var jerkgramGlassEnabled: Bool?
      private let context: AccountContext
      private let peerId: EnginePeer.Id
      let profileGifts: ProfileGiftsContext
-@@ -426,9 +427,9 @@ final class GiftsListView: UIView {
+@@ -502,9 +503,9 @@ final class GiftsListView: UIView {
              return 0.0
          }
          
@@ -1810,7 +1810,7 @@ index 286c214..8d2d261 100644
          let optionSpacing: CGFloat = 10.0
          let itemsSideInset = params.sideInset + 16.0
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift
-index 8a54fcc..0bbef0a 100644
+index 81522cc..d3f6f99 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoGiftsPaneNode.swift
 @@ -86,7 +86,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
@@ -1823,7 +1823,7 @@ index 8a54fcc..0bbef0a 100644
      private let backgroundNode: ASDisplayNode
      private let scrollNode: ASScrollNode
      private var giftsListView: GiftsListView
-@@ -1456,6 +1457,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
+@@ -1473,6 +1474,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
          self.parentController?.presentInGlobalOverlay(contextController)
      }
      
@@ -1838,7 +1838,7 @@ index 8a54fcc..0bbef0a 100644
      public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
          self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
          self.presentationDataPromise.set(.single(presentationData))
-@@ -1486,6 +1495,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
+@@ -1503,6 +1512,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
          
          let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)
          
@@ -1847,10 +1847,10 @@ index 8a54fcc..0bbef0a 100644
          transition.updateFrame(view: self.giftsListView, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: max(size.height, contentHeight))))
          
 diff --git a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift
-index 57953be..5545013 100644
+index 318a0b4..24eabaa 100644
 --- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift
 +++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/PeerInfoVisualMediaPaneNode.swift
-@@ -1133,7 +1133,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
+@@ -1242,7 +1242,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
      private let contextGestureContainerNode: ContextControllerSourceNode
      private let itemGrid: SparseItemGrid
      private let itemGridBinding: SparseItemGridBindingImpl
@@ -1860,7 +1860,7 @@ index 57953be..5545013 100644
      private let listBackgroundView: UIView
      private let listMaskView: UIImageView
      private let directMediaImageCache: DirectMediaImageCache
-@@ -2213,6 +2214,14 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
+@@ -2345,6 +2346,14 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
          }
      }
      
@@ -1876,10 +1876,10 @@ index 57953be..5545013 100644
          self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
  
 diff --git a/submodules/TelegramUI/Sources/SharedAccountContext.swift b/submodules/TelegramUI/Sources/SharedAccountContext.swift
-index 7f469df..8596f88 100644
+index 0be0d18..794f938 100644
 --- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
 +++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
-@@ -160,82 +160,7 @@ private var testHasInstance = false
+@@ -166,82 +166,7 @@ private var testHasInstance = false
  
  
  private func jerkgramBuild135ProjectAccountSettings(accountPeerId: Int64) {

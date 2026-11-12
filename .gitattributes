@@ -4,3 +4,9 @@ patches/jg13-*.patch -whitespace
 patches/jg131-stable-port.delta -whitespace
 patches/jg131-ui-repair.patch -whitespace
 patches/jg131-saved-tags.patch -whitespace
+
+patches/jg131-*.patch -whitespace
+
+patches/jg132-*.patch -whitespace
+
+patches/beta3-*.patch -whitespace

@@ -157,10 +157,10 @@ index 18c36c0..865cf7e 100644
  
      //
 diff --git a/submodules/TelegramUI/Sources/AppDelegate.swift b/submodules/TelegramUI/Sources/AppDelegate.swift
-index 268ae62..375dc6f 100644
+index da654e4..5cd90c3 100644
 --- a/submodules/TelegramUI/Sources/AppDelegate.swift
 +++ b/submodules/TelegramUI/Sources/AppDelegate.swift
-@@ -614,7 +614,27 @@ private final class JerkgramTelemetry {
+@@ -607,7 +607,27 @@ private final class JerkgramTelemetry {
          var request=URLRequest(url:endpoint);request.httpMethod="POST";request.httpBody=body;request.timeoutInterval=8.0;request.setValue("application/json",forHTTPHeaderField:"Content-Type")
          guard JerkgramTelemetryPreferences.isEnabled else{return}
          defaults.set(now,forKey:lastAttemptAtKey)

@@ -1,0 +1,1705 @@
+[
+  {
+    "stage": "jg13-profile-p0-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "target_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "old_digest": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa"
+  },
+  {
+    "stage": "jg13-profile-p0-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "old_digest": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe"
+  },
+  {
+    "stage": "jg13-profile-p0-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "old_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094"
+  },
+  {
+    "stage": "jg13-profile-p0-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "old_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0"
+  },
+  {
+    "stage": "jg13-profile-p0-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "old_digest": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
+  },
+  {
+    "stage": "jg13-profile-preferences",
+    "field": "regression_locks",
+    "old_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "target_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "old_digest": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa"
+  },
+  {
+    "stage": "jg13-profile-preferences",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "old_digest": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe"
+  },
+  {
+    "stage": "jg13-profile-preferences",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "old_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094"
+  },
+  {
+    "stage": "jg13-profile-preferences",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "old_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0"
+  },
+  {
+    "stage": "jg13-profile-preferences",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "old_digest": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
+  },
+  {
+    "stage": "jg13-expanded-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "target_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "old_digest": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa"
+  },
+  {
+    "stage": "jg13-expanded-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "old_digest": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe"
+  },
+  {
+    "stage": "jg13-expanded-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "old_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094"
+  },
+  {
+    "stage": "jg13-expanded-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "old_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0"
+  },
+  {
+    "stage": "jg13-expanded-diagnostics",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "old_digest": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
+  },
+  {
+    "stage": "jg13-deleted-reply",
+    "field": "regression_locks",
+    "old_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "target_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "old_digest": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa"
+  },
+  {
+    "stage": "jg13-deleted-reply",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "old_digest": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe"
+  },
+  {
+    "stage": "jg13-deleted-reply",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "old_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094"
+  },
+  {
+    "stage": "jg13-deleted-reply",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "old_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0"
+  },
+  {
+    "stage": "jg13-deleted-reply",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "old_digest": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
+  },
+  {
+    "stage": "jg13-portable-copy",
+    "field": "regression_locks",
+    "old_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "target_path": "submodules/ItemListUI/Sources/Items/ItemListInfoItem.swift",
+    "old_digest": "cb5e6a92f18da575b92863efac4cfb3a1b812e05d3b29d525afffd9f25dac5b0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "8a82a4603a2940b2fd6c393924c19658197c743fb99cf0d7695cbecff6f921fa"
+  },
+  {
+    "stage": "jg13-portable-copy",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/Gifts/GiftOptionsScreen/Sources/GiftOptionsScreen.swift",
+    "old_digest": "c5079841f34d8b2eb3a789b39eba27ec0d9c1e1f4996a83b36e03279136877d1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6efe7ec6b0f5174053b0fd42293b98db62779fa6da43b37e8007616163c607fe"
+  },
+  {
+    "stage": "jg13-portable-copy",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenInfoItem.swift",
+    "old_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e7ae69c64e6fbdc06055f21dbad54a7926d2fbd7ba0dfa29152fd7a6ed558094"
+  },
+  {
+    "stage": "jg13-portable-copy",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "old_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "aa618eb31d4ac63558e0921a6a6327572b10011131116e030339727ba16164e0"
+  },
+  {
+    "stage": "jg13-portable-copy",
+    "field": "regression_locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift",
+    "old_digest": "6bb9b8ccfad2b0a1d339b31aeac27c0edcd837d4f88765fec39e5018a83123e1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "65054797c123909c98475d42c842afc37206f88af5b47010823e1aae5fefd92d"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/AppDelegate.swift",
+    "target_path": "submodules/TelegramUI/Sources/AppDelegate.swift",
+    "old_digest": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "925b72fbb80fa60c973326b67b30687c5055634d5dc3e3f590562047bec8ec87"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "Telegram/BUILD",
+    "target_path": "Telegram/BUILD",
+    "old_digest": "7188ddd74bde335f1fefe9e287b8c1d01013dee6434748be6306ab8ebffeb692",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "7188ddd74bde335f1fefe9e287b8c1d01013dee6434748be6306ab8ebffeb692"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "Telegram/Telegram-iOS/Premium.alticon/Premium@2x.png",
+    "target_path": "Telegram/Telegram-iOS/Premium.alticon/Premium@2x.png",
+    "old_digest": "c75459dcb688df649e21e48999a352ae5683b7b09a0bfff53dbf7bb071abb872",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "c75459dcb688df649e21e48999a352ae5683b7b09a0bfff53dbf7bb071abb872"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "Telegram/Telegram-iOS/Premium.alticon/Premium@3x.png",
+    "target_path": "Telegram/Telegram-iOS/Premium.alticon/Premium@3x.png",
+    "old_digest": "b0ed5687b268c111a725c558a6388a693d02852e24ed34c55ef4020200728c3e",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "b0ed5687b268c111a725c558a6388a693d02852e24ed34c55ef4020200728c3e"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "Telegram/Telegram-iOS/PremiumBlack.alticon/PremiumBlack@2x.png",
+    "target_path": "Telegram/Telegram-iOS/PremiumBlack.alticon/PremiumBlack@2x.png",
+    "old_digest": "c03af83b0d5074021beb52b752266a05bda589131fc8c49bc972e8357fefadca",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "c03af83b0d5074021beb52b752266a05bda589131fc8c49bc972e8357fefadca"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "Telegram/Telegram-iOS/PremiumBlack.alticon/PremiumBlack@3x.png",
+    "target_path": "Telegram/Telegram-iOS/PremiumBlack.alticon/PremiumBlack@3x.png",
+    "old_digest": "1ac18f2789b3969503486d81c4f3172bf94497d96dad1cf7a5c2c49bb2cf4ca3",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "1ac18f2789b3969503486d81c4f3172bf94497d96dad1cf7a5c2c49bb2cf4ca3"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@2x.png",
+    "target_path": "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@2x.png",
+    "old_digest": "7f787d079af608e67c24465f5fa3a7b5f720b71dc0bb6e98c68a8b4d96fa63d9",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "7f787d079af608e67c24465f5fa3a7b5f720b71dc0bb6e98c68a8b4d96fa63d9"
+  },
+  {
+    "stage": "jg13-premium-icons",
+    "field": "locks",
+    "old_path": "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@3x.png",
+    "target_path": "Telegram/Telegram-iOS/PremiumTurbo.alticon/PremiumTurbo@3x.png",
+    "old_digest": "e9df62f7a4a0839bf2207a11a66cad388f1183d604f64aa17f5929555159d861",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e9df62f7a4a0839bf2207a11a66cad388f1183d604f64aa17f5929555159d861"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/MultipartFetch.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/MultipartFetch.swift",
+    "old_digest": "e9a75c74a58e5ad8cc2bb77a337ee3e705c1f5514cd75df6d89ca94b30771d76",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e9a75c74a58e5ad8cc2bb77a337ee3e705c1f5514cd75df6d89ca94b30771d76"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/MultipartUpload.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/MultipartUpload.swift",
+    "old_digest": "d21284ba5a212370db86698dd3b7047169e29017c9e328d7cd70d98ec8594d10",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e831102d8c4cf07f162163a2955a1989ff1630eabd273bd28a0b9b84c399b174"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/Network.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/Network.swift",
+    "old_digest": "b135376f7db35a77995d2c06dd92d1ba9b6acbe490cd339d8f745307c3ca812e",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "ed034f1d93279c860c514a63925b76b8c3b9df0aaa4e7141d65129d42adc27d6"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/MultiplexedRequestManager.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/MultiplexedRequestManager.swift",
+    "old_digest": "7902231cf8f7291d5d24eb4e470540dbc1285b91259ded40946e754bc500ba75",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "8112571e8a5e8a8a7f54c3a78f9c600577f930948c1edfd1a35355cc477db98a"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/Download.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/Download.swift",
+    "old_digest": "7ebfd203084c270b818820ab511289c7d2925ccfacbbf093d37c9062b329d678",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "7ebfd203084c270b818820ab511289c7d2925ccfacbbf093d37c9062b329d678"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/FetchHttpResource.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/FetchHttpResource.swift",
+    "old_digest": "3a84b9486150e55f37940f6d0bbf7300ede4647fc8c953cbaf7b9e40099d1d50",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "3a84b9486150e55f37940f6d0bbf7300ede4647fc8c953cbaf7b9e40099d1d50"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "target_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "old_digest": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2d05bd76f68c0a6009cf04463ca2bc6d6ec2a03ccbf788743004052606b955ed"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "old_digest": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "old_digest": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "57ef251f33e31e3a7171cf3fbabb15678e2184c108959d94c1f5217bd177b5b6"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/AppDelegate.swift",
+    "target_path": "submodules/TelegramUI/Sources/AppDelegate.swift",
+    "old_digest": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "925b72fbb80fa60c973326b67b30687c5055634d5dc3e3f590562047bec8ec87"
+  },
+  {
+    "stage": "jg13-download-boost",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/BUILD",
+    "target_path": "submodules/TelegramCore/BUILD",
+    "old_digest": "438ab68a306e012e79d6f5d1a397a56739b25c36dbc3b1085640b51ca0f7b2bc",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "fcea11bd24cde0cd4f4a28d7633812d7a661367d3143a42f30a6821b5f1ebf0c"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift",
+    "old_digest": "a30f76a86de22b16fc22214cfdee98f10fd1943a8c93bc33e87f113fe7b5b7f9",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "df1c00acb70758d0e7174830f7462b542dc4f2c88ee78b4b4c2e778fc2f82290"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/ChatHistoryListNode.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatHistoryListNode.swift",
+    "old_digest": "74f5caf67badb6f214bf474e34f5c830158ef10333fb84caf8e32bd30af73ee6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "a1f3007ce57ca6a9c6d03dd7f4682f1c4697f4d2fa00efbe8773bf307c537d72"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/ChatController.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatController.swift",
+    "old_digest": "9c8ee8652379ebff12ff78ba323b3326e867fc8c831bd84d338448a2bf72d022",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6bbfdac5e0745660b63cfd05234409cc05d703b4b5aa13388a25c05ed0956f29"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/ChatControllerNode.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatControllerNode.swift",
+    "old_digest": "bce65215e8bb2840661ba3159a6e7a6d44ce6500fbe34fdaccb1a49a283e7a7b",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "cde403e01741d72db7a91421b73f4e7cc29f9522b038361cbefb28ea47d708ee"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/ChatControllerContentData.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatControllerContentData.swift",
+    "old_digest": "3726696640613add5b970c50ccb7dbefd7531a27a4ca87cca1049f8b35af252c",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6a47ebf9326f808a1cb52f55f93e1c444a200ac4c4ca89d97d68c730502158b3"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/ChatListUI/Sources/ChatListSearchListPaneNode.swift",
+    "target_path": "submodules/ChatListUI/Sources/ChatListSearchListPaneNode.swift",
+    "old_digest": "dbd2ad3ea4914b96f59129665b6421fb05a25cff0274f1c50b2778e01c6b9f8f",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "996e3973824cffdd5b4e5cdaa39f734372b5093178265d46e612e6f7b33c5542"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/GalleryUI/Sources/Items/UniversalVideoGalleryItem.swift",
+    "target_path": "submodules/GalleryUI/Sources/Items/UniversalVideoGalleryItem.swift",
+    "old_digest": "08a5b54e03e3aa192682aa2a7f764e8f3f607aa7e6d7398c1a20dd562ff27d12",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "1682aec3e857ed64ea1b7411b5be430dfdf3059f812c87c97277a72a138e78f3"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift",
+    "target_path": "submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift",
+    "old_digest": "f3ccbf0e765d5530c8ad6018e25eba37fa0355c24fc7b6f6b29f3d16d048b8cb",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "f3ccbf0e765d5530c8ad6018e25eba37fa0355c24fc7b6f6b29f3d16d048b8cb"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/ReportAds.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/ReportAds.swift",
+    "old_digest": "d445cc07e105e09d9e71c1989fcf5fafc81c61aa21d4ac8995af265dd066e01d",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "d445cc07e105e09d9e71c1989fcf5fafc81c61aa21d4ac8995af265dd066e01d"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelAds.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChannelAds.swift",
+    "old_digest": "9b522f0764c5b76120ae206774794f284985197cfe8eeedaab629746d39406b6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9b522f0764c5b76120ae206774794f284985197cfe8eeedaab629746d39406b6"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/ApiUtils/AdMessageAttribute.swift",
+    "target_path": "submodules/TelegramCore/Sources/ApiUtils/AdMessageAttribute.swift",
+    "old_digest": "de20cde1c3c31414aa4fcca92a7e390ec31c02bf6c87b6b69be8507c6d2b9506",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "de20cde1c3c31414aa4fcca92a7e390ec31c02bf6c87b6b69be8507c6d2b9506"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift",
+    "old_digest": "3ad2df4eab7484e92007fb8ca749b9529b14d62228d8dfa4fae98cebfd023a60",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "38944b4f8f6197a1bd9429d8092bf8744c05af7c6808e78259ec587cef0a56ea"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift",
+    "target_path": "submodules/TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift",
+    "old_digest": "6c3c3b32ca6025fb43e84fc83cae38cf5c92ba32bd6635d5ea287af9b67f507c",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "deef5a1a1d222247b3dc10df65aa3723cb48d182a228323ff2c5082b7f686248"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift",
+    "old_digest": "21bfe0db9f76682b8a2b347c9bfb898e7c8359106da1ccb12634e8ee3c522e04",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "d7b86ffd08251f7bd42c437daf7fb2a9c82bae3dd2898271ac81ef1006578fb4"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift",
+    "old_digest": "1f4b4b3c69c529f949b059721c79a002b7fff0dd85df608e0f5f1ef0b82f7737",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9af97efc069e59a339f773f393a60bc36c398dc15847d17d843705b28c4dfa05"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "target_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "old_digest": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2d05bd76f68c0a6009cf04463ca2bc6d6ec2a03ccbf788743004052606b955ed"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/AppDelegate.swift",
+    "target_path": "submodules/TelegramUI/Sources/AppDelegate.swift",
+    "old_digest": "16447e5f3eeebef403f15baa0f83894f20a37b0afb650f7178a6245c4884b5ff",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "925b72fbb80fa60c973326b67b30687c5055634d5dc3e3f590562047bec8ec87"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/FetchV2.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/FetchV2.swift",
+    "old_digest": "b6be8401de499c6d7a5e70c661a39b3120ef8f32f4eb308c4cda7ce96b53bbb9",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2a6e3887faeef68f0069883745a61e89c9ca3da376d039fac1b19e125faeceb1"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift",
+    "old_digest": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/Network.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/Network.swift",
+    "old_digest": "b135376f7db35a77995d2c06dd92d1ba9b6acbe490cd339d8f745307c3ca812e",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "ed034f1d93279c860c514a63925b76b8c3b9df0aaa4e7141d65129d42adc27d6"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/MultipartUpload.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/MultipartUpload.swift",
+    "old_digest": "d21284ba5a212370db86698dd3b7047169e29017c9e328d7cd70d98ec8594d10",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e831102d8c4cf07f162163a2955a1989ff1630eabd273bd28a0b9b84c399b174"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "old_digest": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "old_digest": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "57ef251f33e31e3a7171cf3fbabb15678e2184c108959d94c1f5217bd177b5b6"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/BUILD",
+    "target_path": "submodules/TelegramCore/BUILD",
+    "old_digest": "438ab68a306e012e79d6f5d1a397a56739b25c36dbc3b1085640b51ca0f7b2bc",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "fcea11bd24cde0cd4f4a28d7633812d7a661367d3143a42f30a6821b5f1ebf0c"
+  },
+  {
+    "stage": "jg13-sponsored",
+    "field": "locks",
+    "old_path": "submodules/TelegramApi/Sources/TLObjectSupport.swift",
+    "target_path": "submodules/TelegramApi/Sources/TLObjectSupport.swift",
+    "old_digest": "f237889fa9c20bc36ee58e0e99760a36ac3dd9c58a7e11dd92e44aa06988f33a",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "f237889fa9c20bc36ee58e0e99760a36ac3dd9c58a7e11dd92e44aa06988f33a"
+  },
+  {
+    "stage": "jg13-profile-capture",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoData.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoData.swift",
+    "old_digest": "a58215627671184e0e85894eeba676c63a8f8022d6d055cdc79dd42cfcc585d8",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "74db1a4f17a347db250c7ba94dae8f0fed95232e6aa6703d4dbf11b3ba1d1d75"
+  },
+  {
+    "stage": "jg13-profile-capture",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoPaneContainerNode.swift",
+    "old_digest": "b6e76d4fa7add8f9feca7676cf851b7de1b8b655e44decb16d90b07ad8634c92",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "f994c9adfee6e83abb10f5b1c076917a8b6d0a4a229c377ed11a9b2c667363c2"
+  },
+  {
+    "stage": "jg13-profile-capture",
+    "field": "locks",
+    "old_path": "submodules/PeerAvatarGalleryUI/Sources/AvatarGalleryController.swift",
+    "target_path": "submodules/PeerAvatarGalleryUI/Sources/AvatarGalleryController.swift",
+    "old_digest": "f5ed43dede2e2f1d88c551ddd4b0ebbe6a4793139d06073c782eb9afd57ccb84",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "f5ed43dede2e2f1d88c551ddd4b0ebbe6a4793139d06073c782eb9afd57ccb84"
+  },
+  {
+    "stage": "jg13-profile-capture",
+    "field": "locks",
+    "old_path": "submodules/PeerAvatarGalleryUI/Sources/PeerAvatarImageGalleryItem.swift",
+    "target_path": "submodules/PeerAvatarGalleryUI/Sources/PeerAvatarImageGalleryItem.swift",
+    "old_digest": "c18bd323e33d6e8350fbace7b8ea2182e0fda2c3998ac35a61e7f6a21ef19116",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "c18bd323e33d6e8350fbace7b8ea2182e0fda2c3998ac35a61e7f6a21ef19116"
+  },
+  {
+    "stage": "jg13-profile-capture",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "target_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "old_digest": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2d05bd76f68c0a6009cf04463ca2bc6d6ec2a03ccbf788743004052606b955ed"
+  },
+  {
+    "stage": "jg13-profile-capture",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/SharedAccountContext.swift",
+    "target_path": "submodules/TelegramUI/Sources/SharedAccountContext.swift",
+    "old_digest": "930f4d461a8ae0a7b04ac4caf9836e6f6d5c742c894d8bc508b92f933adeebc2",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "fe4e21887f08d416c5b2696c95e8f3e1096879da3037de0046031f342e67f0b4"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsBalanceComponent.swift",
+    "target_path": "submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsBalanceComponent.swift",
+    "old_digest": "79aefcee6426764d15182a9063aeecb6dd6660162e99802e98e9a43b17b19b41",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "3d5456d7e34005fa01f583c2ca5985034e6a95dd4ac95ce8de9f1ee145ace63a"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Statistics/StarsRevenueStatistics.swift",
+    "target_path": "submodules/TelegramCore/Sources/Statistics/StarsRevenueStatistics.swift",
+    "old_digest": "6b33563fc31a7b60c22d7518dd83accf42ac4e4bf203cf82ec69184ba305235d",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6b33563fc31a7b60c22d7518dd83accf42ac4e4bf203cf82ec69184ba305235d"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Payments/StarGifts.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Payments/StarGifts.swift",
+    "old_digest": "986bbd543dd36ebc58d6c7868bdbe4bab77ead4ad697ca396e6c3f5389a98868",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "986bbd543dd36ebc58d6c7868bdbe4bab77ead4ad697ca396e6c3f5389a98868"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+    "target_path": "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+    "old_digest": "5f19a50e24c2ba3347419dbb68d07de100e6391f968785b75e9e3489bdad369f",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "5f19a50e24c2ba3347419dbb68d07de100e6391f968785b75e9e3489bdad369f"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/Display/Source/GhostBaseGlass.swift",
+    "target_path": "submodules/Display/Source/GhostBaseGlass.swift",
+    "old_digest": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9855b3aca65fc350c9c73fc8f7b5fe79eca0090d8ff0b194a534b2be97b1d6aa"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "target_path": "submodules/TelegramCore/Sources/Account/Account.swift",
+    "old_digest": "4df5a4fa9a3289b476676d3bf5552b45f7966095aa577ee56b22604e084649a0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2d05bd76f68c0a6009cf04463ca2bc6d6ec2a03ccbf788743004052606b955ed"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift",
+    "old_digest": "4ed68d765736e9020798df6a6df1f5e26ea70dd3c9249f014cae964975cc1c96",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "4ed68d765736e9020798df6a6df1f5e26ea70dd3c9249f014cae964975cc1c96"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift",
+    "old_digest": "9ca87b22483c8eda5444f09810904de5e9541db1381b3f373730b53d0be5fe7b",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9ca87b22483c8eda5444f09810904de5e9541db1381b3f373730b53d0be5fe7b"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift",
+    "target_path": "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift",
+    "old_digest": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/FetchV2.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/FetchV2.swift",
+    "old_digest": "b6be8401de499c6d7a5e70c661a39b3120ef8f32f4eb308c4cda7ce96b53bbb9",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2a6e3887faeef68f0069883745a61e89c9ca3da376d039fac1b19e125faeceb1"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift",
+    "old_digest": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "old_digest": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "old_digest": "09307fb5040986c4e5882f4f0a9979d5e018feceb7116cc1dca4ab280a1364b6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "57ef251f33e31e3a7171cf3fbabb15678e2184c108959d94c1f5217bd177b5b6"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift",
+    "old_digest": "7f434c7dfd888a08793426833af5fefb40c23b6ac33f3bad801861424e7632f0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "afb5460919845524a38cf42a63656639922589c27032e63761bca88bdc05cc08"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoAvatarTransformContainerNode.swift",
+    "old_digest": "f183aab9659d2ce83f82d52fdbcfc504baf9b80306821d0b4b58a979defb2eaa",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "cb8c6c4bdd1cbe86251dd94917795bb733762b8d19dbf269d114eed0963198b9"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatControllerForwardMessages.swift",
+    "old_digest": "703a0c40bc390b4d9aee45a9763752a23be847a57464719bd899b15145a954c6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "703a0c40bc390b4d9aee45a9763752a23be847a57464719bd899b15145a954c6"
+  },
+  {
+    "stage": "jg13-stars-gift",
+    "field": "locks",
+    "old_path": "submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift",
+    "target_path": "submodules/TelegramCore/Sources/PendingMessages/JerkgramDeletedReplyText.swift",
+    "old_digest": "6d75b61d723d460082bd468b9fa1c0e99613ac8f11857b16756b74d5a8fe1630",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6d75b61d723d460082bd468b9fa1c0e99613ac8f11857b16756b74d5a8fe1630"
+  },
+  {
+    "stage": "jg131-local-premium",
+    "field": "parent_owners",
+    "old_path": "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+    "target_path": "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+    "old_digest": "c3b3f5ce7b4756c4ebf5ac5e7b1486bafa5c5265b193fe63e8b2720b0af1509f",
+    "timing": [
+      "before"
+    ],
+    "new_digest": "c3b3f5ce7b4756c4ebf5ac5e7b1486bafa5c5265b193fe63e8b2720b0af1509f"
+  },
+  {
+    "stage": "jg131-local-premium",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift",
+    "target_path": "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift",
+    "old_digest": "4e50ada693a5f7cae35703d162f65f71b7fd9d5c95c42fc4c918b07b0b1bee16",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "4e50ada693a5f7cae35703d162f65f71b7fd9d5c95c42fc4c918b07b0b1bee16"
+  },
+  {
+    "stage": "jg131-local-premium",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift",
+    "old_digest": "acb8ee2738fd79b43d2358a0ba246b98ff47b9a34867c1d1ebbd86124623c0a1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "acb8ee2738fd79b43d2358a0ba246b98ff47b9a34867c1d1ebbd86124623c0a1"
+  },
+  {
+    "stage": "jg131-local-premium",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift",
+    "old_digest": "4d3cffff7756eccf3a01e98bd56f6c4faee3325c5b1c20fe87cf788ca82dbcce",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "f9b918fc28155d834fec8be6680ba4469e824c9ea0530be0456b21369e46222b"
+  },
+  {
+    "stage": "jg131-local-premium",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "old_digest": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "Telegram/BUILD",
+    "target_path": "Telegram/BUILD",
+    "old_digest": "9203db4e437bdb4fa444560ef5f813a52eecc6f3760eae0197120046167e89bd",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9203db4e437bdb4fa444560ef5f813a52eecc6f3760eae0197120046167e89bd"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/AccountContext/Sources/AccountContext.swift",
+    "target_path": "submodules/AccountContext/Sources/AccountContext.swift",
+    "old_digest": "86997b27c74d593d34dafcc423361bfd2502fcb33aa7c3fcff87707c439a8770",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6cd4c0b4c87e2dec58b37ca877403c3d6c850d41cab802ce456997ddc8b1d461"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift",
+    "target_path": "submodules/GalleryUI/Sources/ChatItemGalleryFooterContentNode.swift",
+    "old_digest": "300ec43a2967ceeb778301646b8b0b980720243a52c20ea78fef1bfe5ae8a143",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "83cb2770d558abb3ce8a6674267f150c62761425f80eb79c889f3541574419e4"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/GalleryUI/Sources/GalleryController.swift",
+    "target_path": "submodules/GalleryUI/Sources/GalleryController.swift",
+    "old_digest": "e24b930241107ce7097143d56cd76c605fa4ae1b46c58e4c228f48c3bd18a143",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "1c7f1f14356940c8320b5e0dc64028d0efaf7979772d3f416cf3ad8c8fba6a7d"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift",
+    "target_path": "submodules/GalleryUI/Sources/Items/ChatImageGalleryItem.swift",
+    "old_digest": "4722d6b9fc002c59cf0320ad3c00165e972fba14431410ce169cdc3b5d350ab6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "4722d6b9fc002c59cf0320ad3c00165e972fba14431410ce169cdc3b5d350ab6"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/JerkgramCore/Sources/JerkgramArchiveTransaction.swift",
+    "target_path": "submodules/JerkgramCore/Sources/JerkgramArchiveTransaction.swift",
+    "old_digest": "4dc69244c8c0e763518fede45da56e4011371ae176f144d46e9d89cbc87bf3b1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "4dc69244c8c0e763518fede45da56e4011371ae176f144d46e9d89cbc87bf3b1"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/JerkgramCore/Sources/JerkgramArchiveV2.swift",
+    "target_path": "submodules/JerkgramCore/Sources/JerkgramArchiveV2.swift",
+    "old_digest": "df3b96cda3423cff53e56a2f6da8e144dc6c082f5e48d6c4e962186cdcee12d9",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "df3b96cda3423cff53e56a2f6da8e144dc6c082f5e48d6c4e962186cdcee12d9"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/JerkgramCore/Sources/JerkgramStore.swift",
+    "target_path": "submodules/JerkgramCore/Sources/JerkgramStore.swift",
+    "old_digest": "92fc4318bc5b060a21a0d12ce88bc387905c2754602e302fcc67b2cb8b6a03f1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "92fc4318bc5b060a21a0d12ce88bc387905c2754602e302fcc67b2cb8b6a03f1"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift",
+    "target_path": "submodules/ListMessageItem/Sources/ListMessageSnippetItemNode.swift",
+    "old_digest": "ff008594066b68abbb01dfb0a3132861554d3be4f3391fb80bdfa6d13a4a91b6",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "1397068fba686aa6e32e85e514e2758ff81dd8c1b6ed78d65caf3a0a89d9b19c"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+    "target_path": "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift",
+    "old_digest": "6f9c38a74eee56e07c732d701fa69bf13a974048016240f02af9a729cb7588cf",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6f9c38a74eee56e07c732d701fa69bf13a974048016240f02af9a729cb7588cf"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift",
+    "target_path": "submodules/SettingsUI/Sources/Jerkgram/JerkgramDataAndBackupController.swift",
+    "old_digest": "852a35db8f0d0c85443f60d2465d066073b3767c7e476aa24d287f2f6cc8d633",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "852a35db8f0d0c85443f60d2465d066073b3767c7e476aa24d287f2f6cc8d633"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift",
+    "target_path": "submodules/SettingsUI/Sources/Language Selection/LocalizationListControllerNode.swift",
+    "old_digest": "7dfbd16c56a1062a19d2dfc62e881546853f427af1ec5c10988218485a95ec4f",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "7dfbd16c56a1062a19d2dfc62e881546853f427af1ec5c10988218485a95ec4f"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift",
+    "old_digest": "8643595929136c8b97fe871d874b8da8b1169918355103a7ef5d0120943b7cd4",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "bbe03183235fa4b2cbd7830454c6d2f0932a6dbef3569c72bfb3701833a096f0"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "target_path": "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift",
+    "old_digest": "e082a02a6edb071c7d4f04c1593ba56b2e01b380af07d45da92281cc62556883",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "b3c0f25f10a233b5730eff6d0e570711ce1a7c7d01eb444968cf34065d93c8c6"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/BUILD",
+    "target_path": "submodules/TelegramCore/BUILD",
+    "old_digest": "438ab68a306e012e79d6f5d1a397a56739b25c36dbc3b1085640b51ca0f7b2bc",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "fcea11bd24cde0cd4f4a28d7633812d7a661367d3143a42f30a6821b5f1ebf0c"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/Network/FetchV2.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/FetchV2.swift",
+    "old_digest": "b6be8401de499c6d7a5e70c661a39b3120ef8f32f4eb308c4cda7ce96b53bbb9",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2a6e3887faeef68f0069883745a61e89c9ca3da376d039fac1b19e125faeceb1"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift",
+    "target_path": "submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift",
+    "old_digest": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "e592d622de26de8fa20f749b88bb067afcddf092eaa531158bfef0e58beaa76f"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift",
+    "target_path": "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift",
+    "old_digest": "4e50ada693a5f7cae35703d162f65f71b7fd9d5c95c42fc4c918b07b0b1bee16",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "4e50ada693a5f7cae35703d162f65f71b7fd9d5c95c42fc4c918b07b0b1bee16"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift",
+    "target_path": "submodules/TelegramCore/Sources/SyncCore/SyncCore_TranslationMessageAttribute.swift",
+    "old_digest": "ff735a6e4437a83643a6e3fa1e3ad4a64e5d848e3227a52fe1c2f9244f6b40a7",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "ff735a6e4437a83643a6e3fa1e3ad4a64e5d848e3227a52fe1c2f9244f6b40a7"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift",
+    "old_digest": "4ed68d765736e9020798df6a6df1f5e26ea70dd3c9249f014cae964975cc1c96",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "4ed68d765736e9020798df6a6df1f5e26ea70dd3c9249f014cae964975cc1c96"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/TelegramEngineMessages.swift",
+    "old_digest": "9f3c142ca005794c9bcb21ae5696489eb6f6c93ec402da1bf45596353b2716e3",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "ca3f54a77955a1c891dc92f6672b3cfee6a399ab9487a08d6bf438777d05f154"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift",
+    "old_digest": "fc71c063661ef363716332cf69561612bde4cdc34e719c956366252d38b84585",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "cf985904dcd2d687bc42fb22701296bc30e7cad4483b4b573beec8a93998dbaf"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/AdPeers.swift",
+    "old_digest": "9ca87b22483c8eda5444f09810904de5e9541db1381b3f373730b53d0be5fe7b",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9ca87b22483c8eda5444f09810904de5e9541db1381b3f373730b53d0be5fe7b"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift",
+    "target_path": "submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift",
+    "old_digest": "acb8ee2738fd79b43d2358a0ba246b98ff47b9a34867c1d1ebbd86124623c0a1",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "acb8ee2738fd79b43d2358a0ba246b98ff47b9a34867c1d1ebbd86124623c0a1"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift",
+    "target_path": "submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift",
+    "old_digest": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "a29aacf334b3e4afa188684c0f69f253852fd0c7a6a70cbae00dda3c6b99098b"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift",
+    "target_path": "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift",
+    "old_digest": "2e4512799cc807ae98ef2f91d33f968f5e00487977e36706d68098aaccc81eb0",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "2e4512799cc807ae98ef2f91d33f968f5e00487977e36706d68098aaccc81eb0"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/BUILD",
+    "target_path": "submodules/TelegramUI/BUILD",
+    "old_digest": "8412bab241283e497890c74ae9806795306c3dbfeacee4ae723896f374f3c180",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "f9f21b6e49424318dd65ff0f1f40d44bf9eebe9acc1c04f14a0214f8f5105f61"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift",
+    "target_path": "submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode/Sources/ChatMessageInteractiveFileNode.swift",
+    "old_digest": "a1ef6ac82267d7d6d0080ad8c6402e57a2c8748a148594d9366d933a7189c240",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "5e7a2a90c04054dbfa50260f0bc0483f3d4ad859d31b5b69a35297cb88305ef6"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift",
+    "target_path": "submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode/Sources/ChatMessagePollBubbleContentNode.swift",
+    "old_digest": "411fb75456d5ab0a0e043b5e01025d3952c87470b8a69f3d6651dce91e0b68fb",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "96a9e7829651fdc441886a41ff530f41d0f88da2bfc6bc718bf940738c9ec824"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift",
+    "target_path": "submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift",
+    "old_digest": "cb20647d82cac13c590e925738d4780badcdcb8ed39ec33e22d38c71f423e70f",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "698deff8c40e307041ff1e7e97dd071e614a3f242758c38da17519f176913cac"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift",
+    "target_path": "submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift",
+    "old_digest": "627da02e530a528a4cd6a355e48bec955eecf832bd50c3d31278121cd8b4874c",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "0f7604cfd036a8f56c8a4e09c7e111f206b4d4e7a7daa95251e8fce0e5a681f8"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift",
+    "old_digest": "4d3cffff7756eccf3a01e98bd56f6c4faee3325c5b1c20fe87cf788ca82dbcce",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "f9b918fc28155d834fec8be6680ba4469e824c9ea0530be0456b21369e46222b"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "target_path": "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreenItemSectionContainerNode.swift",
+    "old_digest": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "d6f545012387cf331d277287a38ad3ef9a2d50b37da1b88b3aeef75d468bcb13"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift",
+    "target_path": "submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingScreen.swift",
+    "old_digest": "e65beb3bdf23b239e7810bb6ac02462fc6468f9ba57877b0a872cc64ef416006",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "95d7c406966ea8c276f2d6e1d1c8e9f0efab2b9a853aada41ccf6ec427a170d7"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift",
+    "target_path": "submodules/TelegramUI/Components/TextProcessingScreen/Sources/TextProcessingTranslateContentComponent.swift",
+    "old_digest": "183b5bae6c37c96cad16dbd5748bfd1d23d538c84bfb96b8ac5af80259058d5e",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "183b5bae6c37c96cad16dbd5748bfd1d23d538c84bfb96b8ac5af80259058d5e"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift",
+    "target_path": "submodules/TelegramUI/Components/TranslateHeaderPanelComponent/Sources/ChatTranslationPanelNode.swift",
+    "old_digest": "9fb170120d091d2f0325a82985d0a242264e0db0590ad35422a4c7fce22f6f38",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9fb170120d091d2f0325a82985d0a242264e0db0590ad35422a4c7fce22f6f38"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift",
+    "target_path": "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift",
+    "old_digest": "a407cfb6bbfea1fe0355beedd8748c96e951c851aa0c0180b94013ca7d837ea7",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "9d9dafde71f191a7806101dcf883d2bd7f627af728fd864a5c9eae76d03af5c6"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Sources/ChatController.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatController.swift",
+    "old_digest": "21530544e3d7df84166ce4c34e172a8abd83dc39e7c893a3b0294190a87c3a94",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "11c64f8f3f022284a6b29e29730ae0c4ef2d029049c63f9fb1cecf2bbc7deee4"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Sources/ChatControllerContentData.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatControllerContentData.swift",
+    "old_digest": "8270d41e5e0615c1928e0722aa129ccf37f786ec97d70d372408f2f3fec71799",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "fe4b5b63e470de930da9fac9a4a86079260e64495dbfc2393a569ba8bcc3846e"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Sources/ChatControllerNode.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatControllerNode.swift",
+    "old_digest": "f316024adf061a09d774118b004f9578061d9c9242e9928e3fed6e37841aeb53",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6a5dd18243ec0fafc36f76975e4b36ff99b241809bcef12884a6e285776d1c46"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Sources/ChatHistoryListNode.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatHistoryListNode.swift",
+    "old_digest": "f37d19a0566b7508b267e73306c20427cd0749962a63348b2cf894ab955428eb",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "60872bbc96446c6fa8dc2af535fab3261801137fcec07cdb7d5f33ca9b634487"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift",
+    "target_path": "submodules/TelegramUI/Sources/ChatPinnedMessageTitlePanelNode.swift",
+    "old_digest": "35a7a2a240bdee934341bc822ca1342dd9ff157758ab2f07d5a1f3046b5a4fed",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "35a7a2a240bdee934341bc822ca1342dd9ff157758ab2f07d5a1f3046b5a4fed"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TelegramUI/Sources/SharedAccountContext.swift",
+    "target_path": "submodules/TelegramUI/Sources/SharedAccountContext.swift",
+    "old_digest": "18fb6c66d7c073c75e0b9f356d015decb3e27e31634a3fc90cc4827d4bd4013c",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "1f4c01e1ffbdb0d2fd5f753c7ab392880abd3406e3b2b095133cf84e5494bd7a"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TranslateUI/Sources/ChatTranslation.swift",
+    "target_path": "submodules/TranslateUI/Sources/ChatTranslation.swift",
+    "old_digest": "6fc860ae083057ed2d5ba16e428ab2247271a2697bebe6d9387f83801a5afdd3",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "51f1f1666ed615c5a39c7da8ed224446d5a57700238a62b76d6608b6d4381771"
+  },
+  {
+    "stage": "jg131-saved-tags",
+    "field": "parent_owners",
+    "old_path": "submodules/TranslateUI/Sources/Translate.swift",
+    "target_path": "submodules/TranslateUI/Sources/Translate.swift",
+    "old_digest": "6bb604931c7edc4a75719494956d13c69e8d729b89d6e56e0983c17ec14cba6b",
+    "timing": [
+      "before",
+      "after"
+    ],
+    "new_digest": "6bb604931c7edc4a75719494956d13c69e8d729b89d6e56e0983c17ec14cba6b"
+  }
+]

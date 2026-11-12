@@ -27,6 +27,9 @@ def verify_ui_types(source):
         raise RuntimeError('UI peer-ID compatibility final owner changed')
 
 def apply_ui_types(source):
+    from jg132_baseline import enabled, apply_stage
+    if enabled() and Path(MANIFEST).resolve().parent == (ROOT / "patches").resolve():
+        return apply_stage(source, 'jg131-ui-type-compat')
     m = manifest()
     target = Path(source) / m['owner']
     before = target.read_bytes()

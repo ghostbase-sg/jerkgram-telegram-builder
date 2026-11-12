@@ -1,7 +1,8 @@
 diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules/ChatListUI/Sources/ChatListController.swift
+index 7634544..fcbb7c5 100644
 --- a/submodules/ChatListUI/Sources/ChatListController.swift
 +++ b/submodules/ChatListUI/Sources/ChatListController.swift
-@@ -1289,6 +1289,7 @@
+@@ -1337,6 +1337,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
                              return
                          }
                          
@@ -9,7 +10,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
                          self.chatListDisplayNode.isReorderingFilters = true
                          self.isReorderingTabsValue.set(true)
                          
-@@ -3656,6 +3657,8 @@
+@@ -3731,6 +3732,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
          }
      }
      
@@ -18,7 +19,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
      private var skipTabContainerUpdate = false
      fileprivate func reorderingDonePressed() -> Bool {
          guard let defaultFilters = self.tabContainerData else {
-@@ -3685,6 +3688,9 @@
+@@ -3760,6 +3763,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
              }
          }
          
@@ -28,7 +29,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
          if let reorderedFilterIdsValue, let tabContainerData = self.tabContainerData {
              var entries: [ChatListFilterTabEntry] = []
              for id in reorderedFilterIdsValue {
-@@ -3705,6 +3711,7 @@
+@@ -3780,6 +3786,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
              guard let strongSelf = self else {
                  return
              }
@@ -36,7 +37,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
              strongSelf.skipTabContainerUpdate = false
              strongSelf.chatListDisplayNode.isReorderingFilters = false
              strongSelf.isReorderingTabsValue.set(false)
-@@ -3717,7 +3724,12 @@
+@@ -3792,7 +3799,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
                  strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
              }
          }
@@ -50,7 +51,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
              let _ = (self.context.engine.peers.updateChatListFiltersInteractively { stateFilters in
                  var updatedFilters: [ChatListFilter] = []
                  for id in reorderedFilterIds {
-@@ -4046,19 +4058,17 @@
+@@ -4121,19 +4133,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
      
      private var initializedFilters = false
      private func reloadFilters(firstUpdate: (() -> Void)? = nil) {
@@ -76,7 +77,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
              strongSelf.isPremium = isPremium ?? false
              
              let (_, items) = countAndFilterItems
-@@ -4067,7 +4077,7 @@
+@@ -4142,7 +4152,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
              for (filter, unreadCount, hasUnmutedUnread) in items {
                  switch filter {
                      case .allChats:
@@ -85,7 +86,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
                              filterItems.insert(.all(unreadCount: 0), at: 0)
                          } else {
                              filterItems.append(.all(unreadCount: 0))
-@@ -4094,9 +4104,15 @@
+@@ -4169,9 +4179,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
              
              var selectedEntryId = !strongSelf.initializedFilters ? firstItemEntryId : strongSelf.chatListDisplayNode.mainContainerNode.currentItemFilter
              var resetCurrentEntry = false
@@ -102,7 +103,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
                      var found = false
                      if let index = tabContainerData.0.firstIndex(where: { $0.id == selectedEntryId }) {
                          for i in (0 ..< index - 1).reversed() {
-@@ -4122,7 +4138,7 @@
+@@ -4197,7 +4213,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
                  switch item.0 {
                      case .allChats:
                          hasAllChats = true
@@ -111,7 +112,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
                              availableFilters.insert(.all, at: 0)
                          } else {
                              availableFilters.append(.all)
-@@ -4138,7 +4154,7 @@
+@@ -4213,7 +4229,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController
              
              if isPremium == nil && items.isEmpty {
                  strongSelf.mainReady.set(strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.ready)
@@ -121,9 +122,10 @@ diff --git a/submodules/ChatListUI/Sources/ChatListController.swift b/submodules
                      strongSelf.chatListDisplayNode.mainContainerNode.switchToFilter(id: selectedEntryId, animated: false, completion: { [weak self] in
                          if let strongSelf = self {
 diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift b/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift
+index 6c384a6..41d2ebf 100644
 --- a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift
 +++ b/submodules/ChatListUI/Sources/ChatListFilterPresetListController.swift
-@@ -340,7 +340,13 @@
+@@ -340,7 +340,13 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
      var pushControllerImpl: ((ViewController) -> Void)?
      var presentControllerImpl: ((ViewController) -> Void)?
      
@@ -138,7 +140,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
      |> distinctUntilChanged
      |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
          return .single(filters.map { filter -> (ChatListFilter, Int) in
-@@ -592,7 +598,7 @@
+@@ -592,7 +598,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
      let signal = combineLatest(queue: .mainQueue(),
          context.sharedContext.presentationData,
          statePromise.get(),
@@ -147,7 +149,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
          preferences,
          updatedFilterOrder.get(),
          featuredFilters,
-@@ -602,14 +608,16 @@
+@@ -602,14 +608,16 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
              TelegramEngine.EngineData.Item.ChatList.FiltersDisplayTags()
          )
      )
@@ -167,7 +169,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
          let premiumLimits = allLimits.1
          
          let leftNavigationButton: ItemListNavigationButton?
-@@ -627,7 +635,20 @@
+@@ -627,7 +635,20 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                  let _ = (updatedFilterOrder.get()
                  |> take(1)
                  |> deliverOnMainQueue).startStandalone(next: { [weak updatedFilterOrder] updatedFilterOrderValue in
@@ -189,7 +191,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
                          let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                              var updatedFilters: [ChatListFilter] = []
                              for id in updatedFilterOrderValue {
-@@ -653,11 +674,14 @@
+@@ -653,11 +674,14 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                                  updateState { state in
                                      var state = state
                                      state.isEditing = false
@@ -204,7 +206,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
                          updateState { state in
                              var state = state
                              state.isEditing = false
-@@ -684,7 +708,9 @@
+@@ -684,7 +708,9 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
          }
          
          let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -215,7 +217,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
          let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: focusOnItemTag, initialScrollToItem: scrollToTags ? ListViewScrollToItem(index: entries.count - 1, position: .center(.bottom), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down) : nil, animateChanges: true)
          
          return (controllerState, (listState, arguments))
-@@ -716,6 +742,10 @@
+@@ -716,6 +742,10 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
          controller?.dismiss()
      }
      controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [ChatListFilterPresetListEntry]) -> Signal<Bool, NoError> in
@@ -226,7 +228,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
          let fromEntry = entries[fromIndex]
          guard case let .preset(_, _, _, fromPreset, _, _, _, _, _, _) = fromEntry else {
              return .single(false)
-@@ -771,7 +801,13 @@
+@@ -771,7 +801,13 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                  filters.append(fromPreset)
              }
              
@@ -241,7 +243,7 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
              if initialOrder != updatedOrder {
                  updatedFilterOrder.set(.single(updatedOrder))
                  return .single(true)
-@@ -787,7 +823,7 @@
+@@ -787,7 +823,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
          )
          |> deliverOnMainQueue).start(next: { order, peer in
              let isPremium = peer?.isPremium ?? false
@@ -251,9 +253,10 @@ diff --git a/submodules/ChatListUI/Sources/ChatListFilterPresetListController.sw
  
                  let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 diff --git a/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift b/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift
+index 9a8726c..4092d11 100644
 --- a/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift
 +++ b/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift
-@@ -8,7 +8,7 @@
+@@ -8,7 +8,7 @@ import AccountContext
  import TelegramUIPreferences
  import TelegramCore
  
@@ -262,18 +265,18 @@ diff --git a/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift 
      // A folder never names a secret chat. ChatListFilterPredicate resolves a secret chat's identity
      // to its associated cloud user, so including or excluding the user silently does the same to the
      // secret chat; and a folder can pin one, which ChatListFilterIncludePeers deliberately keeps out
-@@ -17,7 +17,7 @@
+@@ -17,7 +17,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
      //
-     // The association is sampled once per filter change rather than observed: a secret chat created
-     // afterwards is not reflected in the badge until the filters change again or the app restarts.
+     // The folder users' secret chats are observed (`associatedPeerIds`), so one created later is picked up in
+     // the transaction that stores it. A secret chat a folder names keeps the user it was created with.
 -    return context.engine.peers.updatedChatListFilters()
 +    return (filters ?? context.engine.peers.updatedChatListFilters())
      |> distinctUntilChanged
-     |> mapToSignal { filters -> Signal<([ChatListFilter], [EnginePeer.Id: [EnginePeer.Id]], [EnginePeer.Id: EnginePeer.Id]), NoError> in
-         var folderPeerIds = Set<EnginePeer.Id>()
-@@ -314,3 +314,12 @@
-         }
+     |> mapToSignal { filters -> Signal<([ChatListFilter], ChatListFilterBadgeSecretChats), NoError> in
+         var folderUserIds = Set<EnginePeer.Id>()
+@@ -349,3 +349,12 @@ func chatListFilterBadgeCorrection(data: ChatListFilterData, unreadChats: [Engin
      }
+     return (count, unmuted)
  }
 +
 +// Metadata and unread tuples are emitted from the same presentation snapshot.
@@ -285,9 +288,10 @@ diff --git a/submodules/ChatListUI/Sources/TabBarChatListFilterController.swift 
 +    }
 +}
 diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+index c755bd9..1567968 100644
 --- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
 +++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
-@@ -507,6 +507,7 @@
+@@ -507,6 +507,7 @@ private func jerkgramStateValues(_ state: GhostBaseSettingsState) -> [String: Je
      return [
          JerkgramSponsoredContentPolicy.preferenceKey: .bool(state.removeSponsored),
          JerkgramDownloadBoostSettings.preferenceKey: .string(state.downloadBoost),
@@ -295,7 +299,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          JerkgramTranslationSettings.preferenceKey: .bool(state.enhancedTranslation),
          GhostBaseKey.profileEnabled: .bool(state.profileEnabled),
          GhostBaseKey.showIds: .bool(state.showIds),
-@@ -587,6 +588,9 @@
+@@ -587,6 +588,9 @@ private func jerkgramPersistChangedSettings(
      if changes[JerkgramSponsoredContentPolicy.preferenceKey] != nil {
          JerkgramSponsoredContentPolicy.update(accountPeerId: accountPeerId, enabled: current.removeSponsored)
      }
@@ -305,7 +309,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      if changes[JerkgramTranslationSettings.preferenceKey] != nil {
          JerkgramTranslationSettings.update(accountPeerId: accountPeerId, enabled: current.enhancedTranslation)
      }
-@@ -678,6 +682,7 @@
+@@ -678,6 +682,7 @@ struct GhostBaseSettingsState: Equatable {
      var hideBlockedReactions: Bool
      var removeSponsored: Bool = false
      var downloadBoost: String = "off"
@@ -313,7 +317,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
      var enhancedTranslation: Bool = true
      var sendTextStyle: String
  
-@@ -738,6 +743,7 @@
+@@ -738,6 +743,7 @@ struct GhostBaseSettingsState: Equatable {
              hideBlockedReactions: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.hideBlockedReactions, defaultValue: true, allowLegacyFallback: allowLegacyFallback),
              removeSponsored: JerkgramSponsoredContentPolicy.readStoredValue(accountPeerId: accountPeerId),
              downloadBoost: JerkgramDownloadBoostSettings.readStoredMode(accountPeerId: accountPeerId).rawValue,
@@ -321,7 +325,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
              enhancedTranslation: UserDefaults.standard.object(forKey: JerkgramTranslationSettings.scopedKey(accountPeerId: accountPeerId)) as? Bool ?? true,
              sendTextStyle: jerkgramScopedString(accountPeerId: accountPeerId, key: 
                  ghostBaseSendTextStyleKey,
-@@ -2252,6 +2258,7 @@
+@@ -2252,6 +2258,7 @@ private func ghostBaseSettingsEntries(
      }
  
      if page == .appearance {
@@ -329,7 +333,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          return [
              .header(0, strings.profileBackground),
              .toggle(0, 1, GhostBaseKey.glassEnabled, strings.profileBackgroundEffect, state.glassEnabled),
-@@ -2271,7 +2278,8 @@
+@@ -2271,7 +2278,8 @@ private func ghostBaseSettingsEntries(
                  state.showRamUnderClock
              ),
              .toggle(1, 8, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
@@ -339,7 +343,7 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
          ]
      }
  
-@@ -3778,6 +3786,8 @@
+@@ -3778,6 +3786,8 @@ private func ghostBaseSettingsPageController(
              switch key {
              case JerkgramAppIconAccess.preferenceKey:
                  UserDefaults.standard.set(value, forKey: JerkgramAppIconAccess.preferenceKey)
@@ -349,9 +353,10 @@ diff --git a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController
                  updated.enhancedTranslation = value
              case GhostBaseKey.profileEnabled:
 diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift b/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
+index edfc071..16bb1b7 100644
 --- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
 +++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift
-@@ -369,6 +369,11 @@
+@@ -372,6 +372,11 @@ public func applicationSpecificSharedDataKey(_ value: Int32) -> ValueBoxKey {
  }
  
  public struct PreferencesKeys {
@@ -364,13 +369,13 @@ diff --git a/submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift 
          let key = ValueBoxKey(length: 4)
          key.setInt32(0, value: PreferencesKeyValues.globalNotifications.rawValue)
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
+index f8aacb5..4f092fe 100644
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift
-@@ -3,6 +3,117 @@
- import SwiftSignalKit
+@@ -4,6 +4,117 @@ import SwiftSignalKit
  internal import TelegramApi
  
-+
+ 
 +// BEGIN JERKGRAM DEFAULT FOLDER FOUNDATION
 +public enum JerkgramDefaultFolderSettings {
 +    public static let preferenceKey = "jerkgram.UnlockDefaultChatFolder"
@@ -481,10 +486,11 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
 +    }
 +}
 +// END JERKGRAM DEFAULT FOLDER FOUNDATION
- 
++
  public struct ChatListFilterPeerCategories: OptionSet, Hashable {
      public var rawValue: Int32
-@@ -1108,6 +1219,105 @@
+     
+@@ -1108,6 +1219,105 @@ struct ChatListFiltersState: Codable, Equatable {
      }
  }
  
@@ -590,7 +596,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
  func _internal_generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
      while true {
          let id = Int32(2 + arc4random_uniform(255 - 2))
-@@ -1119,6 +1329,7 @@
+@@ -1119,6 +1329,7 @@ func _internal_generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
  
  func _internal_updateChatListFiltersInteractively(postbox: Postbox, _ f: @escaping ([ChatListFilter]) -> [ChatListFilter]) -> Signal<[ChatListFilter], NoError> {
      return postbox.transaction { transaction -> [ChatListFilter] in
@@ -598,7 +604,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
          var updated: [ChatListFilter] = []
          var hasUpdates = false
          transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
-@@ -1134,6 +1345,7 @@
+@@ -1134,6 +1345,7 @@ func _internal_updateChatListFiltersInteractively(postbox: Postbox, _ f: @escapi
              
              return PreferencesEntry(state)
          })
@@ -606,7 +612,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
          if hasUpdates {
              requestChatListFiltersSync(transaction: transaction)
          }
-@@ -1179,6 +1391,7 @@
+@@ -1179,6 +1391,7 @@ func _internal_updateChatListFiltersDisplayTagsInteractively(postbox: Postbox, d
  }
  
  func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f: ([ChatListFilter]) -> [ChatListFilter]) {
@@ -614,7 +620,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
      var hasUpdates = false
      transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
          var state = entry?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
-@@ -1190,6 +1403,7 @@
+@@ -1190,6 +1403,7 @@ func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f:
          state.normalize()
          return PreferencesEntry(state)
      })
@@ -622,7 +628,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
      if hasUpdates {
          requestChatListFiltersSync(transaction: transaction)
      }
-@@ -1257,6 +1471,7 @@
+@@ -1257,6 +1471,7 @@ func _internal_currentChatListFiltersState(transaction: Transaction) -> ChatList
  }
  
  func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersState) -> ChatListFiltersState) -> ChatListFiltersState {
@@ -630,7 +636,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
      var result: ChatListFiltersState?
      transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
          let settings = entry?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
-@@ -1265,6 +1480,7 @@
+@@ -1265,6 +1480,7 @@ func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersS
          result = updated
          return PreferencesEntry(updated)
      })
@@ -639,7 +645,7 @@ diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFilter
  }
  
 diff --git a/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift b/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
-index 8f6e9c4..9361205 100644
+index 832d687..05a5c16 100644
 --- a/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
 +++ b/submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift
 @@ -1168,6 +1168,14 @@ public extension TelegramEngine {
