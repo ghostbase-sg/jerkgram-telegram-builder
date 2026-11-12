@@ -13,9 +13,11 @@ import json
 import os
 import re
 import unittest
+import sys
 from saved_tags_native import declaration
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
 BASE = ROOT.parent / 'jerkgram-next/beta2/saved-tags'
 SOURCE = Path(os.environ.get('JG_SAVED_TAGS_SOURCE', BASE / 'source' if (BASE / 'source').is_dir() else ROOT / 'work/swiftgram-src'))
 UI = SOURCE / 'submodules/TelegramUI'
@@ -29,6 +31,12 @@ OWNERS = {OWNER, PANEL, 'Sources/ChatInterfaceStateContextMenus.swift',
 class SavedTagsUIContracts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from jg132_baseline import enabled, source_boundary_view
+        cls.current_parent=None
+        if enabled():
+            context=source_boundary_view(SOURCE,31)
+            cls.current_parent=context.__enter__()
+            cls.addClassCleanup(context.__exit__,None,None,None)
         cls.controller = (UI / OWNER).read_text()
         cls.panel = (UI / PANEL).read_text()
         cls.inputs = (UI / 'Sources/ChatInterfaceStateInputPanels.swift').read_text()
@@ -64,14 +72,26 @@ class SavedTagsUIContracts(unittest.TestCase):
         self.assertEqual(len(proof['files']), 7)
         for name, digest in proof['files'].items():
             self.assertTrue(name.startswith('submodules/'))
-            self.assertEqual(hashlib.sha256((SOURCE / name).read_bytes()).hexdigest(), digest, name)
+            if self.current_parent is not None:
+                # Store/Core precede the UI within the combined stage32 delta;
+                # new store files do not exist at the stage31 Hub boundary.
+                from jg132_baseline import states
+                remaps=json.loads((ROOT/'patches/jg131-saved-tags.sha256.json').read_text()).get('migration_owner_remap',[])
+                current=next((r['new'] for r in remaps if r['old']==name),[name])
+                if current != [name]:
+                    self.assertFalse((SOURCE/name).exists(),name)
+                for owner in current:
+                    self.assertEqual(hashlib.sha256((SOURCE/owner).read_bytes()).hexdigest(),states()[32][owner],owner)
+            else:
+                self.assertEqual(hashlib.sha256((SOURCE / name).read_bytes()).hexdigest(), digest, name)
         self.assertNotIn('setMessageReactions', self.controller)
         self.assertNotIn('EngineMemoryBuffer', self.controller)
         for forbidden in ('UserDefaults', 'isPremium', 'searchMessages(', 'getMessagesHistory', 'Timer(', 'DispatchQueue.main.sync'):
             self.assertNotIn(forbidden, self.controller)
 
     def test_existing_native_selection_and_cloud_reaction_actions_preserved(self):
-        before = BASE / 'task4-before/submodules/TelegramUI' / PANEL
+        before = (self.current_parent/'submodules/TelegramUI'/PANEL if self.current_parent is not None
+                  else BASE/'task4-before/submodules/TelegramUI'/PANEL)
         if not before.exists():
             self.skipTest('Local historical panel proof unavailable; final staging verifies exact parents separately')
         parent = before.read_text()
@@ -185,9 +205,10 @@ class SavedTagsUIContracts(unittest.TestCase):
         for field in ('stableId', 'index', 'section', 'kind', 'title', 'value', 'action', 'message'):
             self.assertIn('lhs.' + field, equality)
         # Shared chat state has no new fields, copies, or equality branches.
-        before = BASE / 'task4-before/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift'
+        owner='submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift'
+        before=(self.current_parent/owner if self.current_parent is not None else BASE/'task4-before'/owner)
         if before.exists():
-            self.assertEqual(before.read_bytes(), (SOURCE / before.relative_to(BASE / 'task4-before')).read_bytes())
+            self.assertEqual(before.read_bytes(),(SOURCE/owner).read_bytes())
 
 
 if __name__ == '__main__':

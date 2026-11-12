@@ -1,5 +1,6 @@
-import hashlib, json, os, pathlib, shutil, subprocess, tempfile, unittest
+import hashlib, json, os, pathlib, shutil, subprocess, tempfile, unittest, sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]/'scripts'))
 TREE = pathlib.Path(os.environ.get('JERKGRAM_DEFAULT_FOLDER_SOURCE', ROOT / 'jerkgram-telegram-builder/work/swiftgram-src'))
 SOURCE = TREE / 'submodules/TelegramCore/Sources/TelegramEngine/Peers/ChatListFiltering.swift'
 class DefaultFolderPolicy(unittest.TestCase):
@@ -25,7 +26,14 @@ class DefaultFolderPolicy(unittest.TestCase):
             self.assertIn(item['text'], self.read(item['file']), item['file'])
         helper = self.read('ChatListUI/Sources/TabBarChatListFilterController.swift')
         body = helper.split('    |> distinctUntilChanged', 1)[1].split('// Metadata and unread tuples', 1)[0].rstrip()
-        self.assertEqual(hashlib.sha256(body.encode()).hexdigest(), (fixtures / 'unread.sha256').read_text().strip())
+        from jg132_baseline import enabled
+        if enabled():
+            # Compare the current native algorithm with the genuine upstream
+            # file; keep the historical unread fingerprint unchanged below.
+            stock=subprocess.check_output(['git','show','HEAD:submodules/ChatListUI/Sources/TabBarChatListFilterController.swift'],cwd=TREE,text=True)
+            self.assertEqual(body,stock.split('    |> distinctUntilChanged',1)[1].rstrip())
+        else:
+            self.assertEqual(hashlib.sha256(body.encode()).hexdigest(), (fixtures / 'unread.sha256').read_text().strip())
     def test_authoritative_cleanup_and_obsolete_transaction_guard(self):
         source = SOURCE.read_text()
         self.assertEqual(source.count('jerkgramPruneDefaultFolderOrder(transaction: transaction, old:'), 3)

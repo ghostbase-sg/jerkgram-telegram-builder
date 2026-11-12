@@ -8,8 +8,10 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
 TREE = Path(os.environ.get('JG_BETA2_UI_SOURCE', ROOT.parent / 'jerkgram-next/beta2/recovery/source'))
 FIXTURES = ROOT / 'tests/fixtures/beta2_recovery_ui'
 BASELINE = json.loads((FIXTURES / 'baseline.json').read_text())
@@ -41,6 +43,20 @@ def native_source():
 
 
 class Beta2RecoveryUI(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from jg132_baseline import enabled, source_boundary_view
+        cls.current_parent = None
+        if enabled():
+            context=source_boundary_view(TREE,29)
+            cls.current_parent=context.__enter__()
+            cls.addClassCleanup(context.__exit__,None,None,None)
+
+    def expected_unchanged(self,owner):
+        if self.current_parent is not None:
+            return hashlib.sha256((self.current_parent/owner).read_bytes()).hexdigest()
+        return BASELINE['unchanged_owners'][owner]
+
     def test_disabled_policy_covers_all_runtime_boundaries(self):
         source = (TREE / CORE).read_text()
         self.assertTrue('public static let runtimeEnabled = false' in source, 'runtime capability must be disabled')
@@ -93,7 +109,7 @@ class Beta2RecoveryUI(unittest.TestCase):
         for owner in ('submodules/Display/Source/GhostBaseGlass.swift',
                       'submodules/Display/Source/ViewController.swift',
                       'submodules/TelegramPresentationData/Sources/PresentationTheme.swift'):
-            self.assertEqual(hashlib.sha256((TREE / owner).read_bytes()).hexdigest(), BASELINE['unchanged_owners'][owner], owner)
+            self.assertEqual(hashlib.sha256((TREE / owner).read_bytes()).hexdigest(), self.expected_unchanged(owner), owner)
 
     def test_native_folder_consumers_and_storage_stay_exact(self):
         for owner in ('submodules/ChatListUI/Sources/ChatListController.swift',
@@ -101,12 +117,19 @@ class Beta2RecoveryUI(unittest.TestCase):
                       'submodules/ChatListUI/Sources/TabBarChatListFilterController.swift',
                       'submodules/TelegramCore/Sources/TelegramEngine/Peers/TelegramEnginePeers.swift',
                       'submodules/TelegramCore/Sources/SyncCore/SyncCore_Namespaces.swift'):
-            self.assertEqual(hashlib.sha256((TREE / owner).read_bytes()).hexdigest(), BASELINE['unchanged_owners'][owner], owner)
+            self.assertEqual(hashlib.sha256((TREE / owner).read_bytes()).hexdigest(), self.expected_unchanged(owner), owner)
         source = (TREE / CORE).read_text()
         for text, key in ((body(source, 'private struct JerkgramDefaultFolderOrder'), 'storage_type_sha256'),
                           (body(source, 'public static func update(accountPeerId:'), 'cache_update_sha256'),
                           (source.split('func _internal_generateNewChatListFilterId', 1)[1], 'native_core_remainder_sha256')):
-            self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), BASELINE[key], key)
+            expected=BASELINE[key]
+            if self.current_parent is not None:
+                parent=(self.current_parent/CORE).read_text()
+                parts={'storage_type_sha256':lambda:body(parent,'private struct JerkgramDefaultFolderOrder'),
+                       'cache_update_sha256':lambda:body(parent,'public static func update(accountPeerId:'),
+                       'native_core_remainder_sha256':lambda:parent.split('func _internal_generateNewChatListFilterId',1)[1]}
+                expected=hashlib.sha256(parts[key]().encode()).hexdigest()
+            self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), expected, key)
 
     def test_accepted_history_owner_unchanged(self):
         owner = TREE / 'submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift'

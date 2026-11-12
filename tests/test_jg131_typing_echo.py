@@ -101,7 +101,12 @@ class TypingEchoTests(unittest.TestCase):
         import hashlib
         after = self.text().encode()
         before = stage.parent_bytes(PANEL, after)
-        self.assertEqual(hashlib.sha256(before).hexdigest(), 'b024bb02f020dd0a63e45838212d7219e466f0ffb773ab2199751238c2bddb2c', 'panel parent is not the effective Build173 source')
+        from jg132_baseline import enabled
+        # Genuine13.2 rebases the same reviewed policy onto its native panel;
+        # keep the old Build173 fingerprint for the historical source line.
+        expected = ('22124491374d4400f5e128ae3c724d7cb0a81ec1b491ec9ab8bea7378f73a526' if enabled()
+                    else 'b024bb02f020dd0a63e45838212d7219e466f0ffb773ab2199751238c2bddb2c')
+        self.assertEqual(hashlib.sha256(before).hexdigest(), expected, 'panel parent differs from the reviewed source line')
         self.assertEqual(stage.parent_bytes(PANEL, before), before)
 
     def test_provenance_is_scoped_and_bypass_keeps_noncontent_updates(self):
