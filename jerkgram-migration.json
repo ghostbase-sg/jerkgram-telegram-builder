@@ -53,6 +53,7 @@
     "post181-native-appearance-scope",
     "post181-native-policy-import",
     "post182-wave2b1-followup",
-    "post182-wave2b1-identity"
+    "post182-wave2b1-identity",
+    "post182-native-tag-api-compat"
   ]
 }

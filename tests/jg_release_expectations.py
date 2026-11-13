@@ -5,7 +5,7 @@ def candidate_identity(config):
         base = ['post181-performance-wave2a3', 'post181-bot-native-history-send', 'post181-unified-local-premium', 'post181-local-gram-balance', 'post181-stable182-identity']
         accepted = [base, base + ['post181-gram-presentation-completion'], base + ['post181-gram-presentation-completion', 'post181-native-appearance-scope'], base + ['post181-gram-presentation-completion', 'post181-native-appearance-scope', 'post181-native-policy-import']]
         wave2b1 = base + ['post181-gram-presentation-completion', 'post181-native-appearance-scope', 'post181-native-policy-import', 'post182-wave2b1-followup', 'post182-wave2b1-identity']
-        if stable == wave2b1:
+        if stable in (wave2b1, wave2b1 + ['post182-native-tag-api-compat']):
             return ('1.2.0 Stable', '1.2.0', 183, 'STABLE')
         if stable not in accepted:
             raise AssertionError('Unknown Stable182 successor chain')

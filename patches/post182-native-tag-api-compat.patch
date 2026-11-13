@@ -1,0 +1,19 @@
+--- a/submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift
++++ b/submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift
+@@ -3,6 +3,7 @@
+ import Display
+ import AsyncDisplayKit
+ import TelegramPresentationData
++import PresentationDataUtils
+ import ChatPresentationInterfaceState
+ import AccountContext
+ import ComponentFlow
+@@ -727,7 +728,7 @@
+                         .action(ContextMenuActionItem(text: presentation.strings.Chat_ReactionContextMenu_EditTagLabel, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagEditName"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, done in
+                             c?.dismiss(completion: { self?.openLocalTagEditor(id: id) })
+                         })),
+-                        .action(ContextMenuActionItem(text: presentation.strings.Common_Delete, textColor: .destructive, icon: nil, action: { [weak self] _, done in
++                        .action(ContextMenuActionItem(text: presentation.strings.Common_Delete, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, done in
+                             done(.default)
+                             guard let self, let service = self.localService else { return }
+                             self.localMutation.set((service.delete(tagId: id) |> deliverOnMainQueue).start(next: { [weak self] result in

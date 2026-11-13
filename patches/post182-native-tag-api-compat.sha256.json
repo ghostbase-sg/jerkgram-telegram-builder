@@ -1,0 +1,11 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "ab2e0ead4ebad6a6e8bcb4aa9dec05b1cbe8c626778f3c352ecf30a6db61889a",
+  "owners": {
+    "submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift": {
+      "before_sha256": "7508231953d2c966b77cd85ce39fbbc21357b3f0b77acd1207ef4ecd476bf268",
+      "after_sha256": "ca4436ebf87ccdcae70753b392f62306bf5800d08ce55c6ca43fd43f392a229d"
+    }
+  },
+  "baseline_published_commit": "70f6f57a8cefd26b0d35b67f4ee1306fac0bff41"
+}

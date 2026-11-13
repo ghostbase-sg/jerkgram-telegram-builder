@@ -69,6 +69,16 @@ print("Actual profile probe: 1000 OFF spans -> zero timing/record/logger calls; 
 '''
 
 class Followup(unittest.TestCase):
+    def test_tag_alert_and_menu_api_compatibility(self):
+        text=read(TAGS)
+        self.assertIn('import PresentationDataUtils', text)
+        self.assertIn('"//submodules/PresentationDataUtils:PresentationDataUtils"', read('submodules/TelegramUI/BUILD'))
+        error=declaration(text,'private func presentLocalTagError(')
+        self.assertIn('textAlertController(context: self.context', error)
+        local=declaration(text,'private func updateLocalSavedTags(')
+        self.assertNotIn('icon: nil',local)
+        self.assertIn('icon: { _ in nil }',local)
+
     def test_enabled_participates_in_native_entry_diff(self):
         text=read(SETTINGS)
         self.assertIn('case toggle(Int32, Int32, String, String, Bool, enabled: Bool = true)',text)

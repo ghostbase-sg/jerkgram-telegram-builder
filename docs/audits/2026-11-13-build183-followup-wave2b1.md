@@ -72,3 +72,19 @@ the fixture to assert these separately, including immediate OFF fallback and def
 amount edits; the old source contract remains testable. All five new follow-up checks,
 including native Settings enum and profile probe execution, passed in that run.
 Local GRAM source checks pass; native GRAM execution awaits the replacement macOS run.
+
+## TelegramUI compilation repair (14 November)
+
+Run 43502930444 passed the corrected native GRAM matrix and reached real app
+compilation. TelegramUI failed at ChatSearchTitleAccessoryPanelNode.swift:700/730:
+`textAlertController(context:...)` requires the file-scoped PresentationDataUtils
+import; ContextMenuActionItem requires a nonoptional icon closure, even when the
+closure returns nil. The module was already a declared TelegramUI dependency.
+Confirmed the context overload against pinned Official Telegram13.2
+PresentationDataUtils/Sources/AlertTheme.swift. The successor
+`post182-native-tag-api-compat` adds the import and replaces `icon: nil` with
+`icon: { _ in nil }`; all earlier stages remain immutable. Added one regression
+inside the existing follow-up test, no additional pipeline stage or build job.
+Combined local preflight passes; native/app compilation must still be confirmed
+by the replacement CI run. No IPA existed in the failed run because compilation
+stopped before linking/packaging. Previous functional/performance changes retained.
