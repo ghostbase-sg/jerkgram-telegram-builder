@@ -1,6 +1,6 @@
 """Actual replay/controller/codec fixtures; native execution requires macOS."""
 from pathlib import Path
-import os, shutil, subprocess, tempfile, unittest
+import os, re, shutil, subprocess, tempfile, unittest
 import test_jg131_beta2_bot_codec as codec
 import test_jg132_bot_reset_recovery as recovery
 
@@ -23,6 +23,15 @@ def controller():
     return assembled.replace(queue,queue+'\n'+after)+'\n'+(CORE/'State/JerkgramBotReplayPolicy.swift').read_text()+'\n'+(FIX/'history-controller.swift').read_text()
 
 class History(unittest.TestCase):
+    def test_seed_has_nonempty_rpc_fields(self):
+        source=(CORE/'State/JerkgramBotReplayPolicy.swift').read_text()
+        seed=codec.declaration(source,'static func seed(')
+        fields=re.search(r'return BotBridgeCursor\(pts: (\d+), qts: (\d+), date: (\d+), seq: (\d+)\)',seed)
+        self.assertIsNotNone(fields)
+        pts, qts, date, seq=map(int,fields.groups())
+        self.assertGreater(pts,0,'getDifference rejects an empty persistent timestamp')
+        self.assertGreater(date,0,'getDifference rejects DATE_EMPTY')
+
     def test_actual_fixture_assembly(self):
         code=controller()
         self.assertIn(codec.declaration((CORE/'State/JerkgramBotBridgeHistory.swift').read_text(),'final class BotBridgeHistoryController'),code)

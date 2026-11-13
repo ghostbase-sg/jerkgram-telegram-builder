@@ -4,10 +4,10 @@ var progress = fresh()
 require(progress.reserve(now: 1000) == .state, "initial request")
 let live = BotBridgeCursor(pts: 70000, qts: 4, date: 1800000000, seq: 9)
 require(progress.acceptState(live, unread: 0, now: 1001), "read bot admission")
-require(progress.candidate == BotBridgeCursor(pts: 0, qts: 0, date: 0, seq: 0), "full replay must not depend on unread")
+require(progress.candidate == BotBridgeCursor(pts: 1, qts: 0, date: 1, seq: 0), "full replay must not depend on unread")
 for page in 1...32 {
     require(progress.reserve(now: Double(1001 + page)) != nil, "page reservation")
-    require(progress.commit(next: BotBridgeCursor(pts: Int32(page), qts: 0, date: Int32(page), seq: 0), final: false, examined: 1000, inserted: 1000, peers: 0, skipped: 0, unsupported: 0, deletions: 0, missing: 0, now: Double(1001 + page)), "page beyond old 20k ceiling")
+    require(progress.commit(next: BotBridgeCursor(pts: Int32(page + 1), qts: 0, date: Int32(page + 1), seq: 0), final: false, examined: 1000, inserted: 1000, peers: 0, skipped: 0, unsupported: 0, deletions: 0, missing: 0, now: Double(1001 + page)), "page beyond old 20k ceiling")
 }
 require(progress.examined == 32000 && progress.isValid, "32k preserved")
 require(progress.reserve(now: 1034) == nil && progress.terminal == .limit, "bounded window")
@@ -30,4 +30,6 @@ for record in [fresh(), progress, upgraded] {
     guard let entry = PreferencesEntry(record), let decoded = PreferencesEntry(data: entry.data).get(BotBridgeHistoryProgress.self) else { fatalError("Postbox codec") }
     require(decoded == record && decoded.isValid, "actual keyed Postbox roundtrip")
 }
+require(JerkgramBotReplayPolicy.seed(BotBridgeCursor(pts: 0, qts: 0, date: 100, seq: 0)) == nil, "empty live history has no valid nonempty replay seed")
+require(JerkgramBotReplayPolicy.seed(BotBridgeCursor(pts: 100, qts: 0, date: 0, seq: 0)) == nil, "date-empty never dispatched")
 print("PASS post180 real policy and Postbox codec: zero-unread, 32k, resume cursor, no-progress, migration, isolation")

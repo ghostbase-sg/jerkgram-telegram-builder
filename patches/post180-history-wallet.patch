@@ -67,13 +67,11 @@
              insertedPeers >= 0, insertedPeers <= 320000, insertedUsers >= 0, insertedUsers <= 320000, insertedChats >= 0, insertedChats <= 320000, insertedUsers + insertedChats == insertedPeers,
              deleteIdsObserved >= 0, deleteIdsObserved <= 640001,
              skipped >= 0, skipped <= examined, unsupported >= 0, unsupported <= 800000,
-@@ -208,12 +221,17 @@
-         if let original = original {
+@@ -209,11 +222,16 @@
              guard original.isValid, reservedState else { return false }
              if let candidate = candidate {
--                guard candidate.isValid, candidate.pts >= 1, candidate.pts <= original.pts,
+                 guard candidate.isValid, candidate.pts >= 1, candidate.pts <= original.pts,
 -                    candidate.qts == original.qts, candidate.date == original.date, candidate.seq == original.seq,
-+                guard candidate.isValid, candidate.pts >= (historyPolicyVersion == 2 ? 0 : 1), candidate.pts <= original.pts,
 +                    historyPolicyVersion != 2 || candidate == JerkgramBotReplayPolicy.seed(original),
 +                    historyPolicyVersion == 2 || (candidate.qts == original.qts && candidate.date == original.date && candidate.seq == original.seq),
                      let next = next, next.isValid, next.pts >= candidate.pts,
@@ -267,15 +265,15 @@
 @@ -0,0 +1,54 @@
 +import Foundation
 +
-+// Historical retrieval is separate from AuthorizedAccountState. The zero seed
-+// is sent only to the isolated bot difference request, never to the live poller.
++// Historical retrieval is separate from AuthorizedAccountState. The earliest
++// non-empty seed is used only by isolated replay, never by the live poller.
 +enum JerkgramBotReplayPolicy {
 +    static let version: Int32 = 2
 +    static let windowMessages = 160000
 +
 +    static func seed(_ live: BotBridgeCursor) -> BotBridgeCursor? {
-+        guard live.isValid else { return nil }
-+        return BotBridgeCursor(pts: 0, qts: 0, date: 0, seq: 0)
++        guard live.isValid, live.pts >= 1, live.date >= 1 else { return nil }
++        return BotBridgeCursor(pts: 1, qts: 0, date: 1, seq: 0)
 +    }
 +
 +    static func upgrade(_ previous: BotBridgeHistoryProgress, owner: Int64, peer: Int64, testing: Bool, now: Double = Date().timeIntervalSince1970) -> BotBridgeHistoryProgress {

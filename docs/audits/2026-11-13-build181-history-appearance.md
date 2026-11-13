@@ -10,7 +10,7 @@
 
 | Finding | Implementation | Evidence/limits |
 |---|---|---|
-| History seed was `live.pts - unread`, zero unread terminated `.noCandidate`; old terminal records prevented deeper work. | `TelegramCore/State/JerkgramBotReplayPolicy.swift`: v2 isolated zero cursor, one-time upgrade from v1; retain server continuation cursor across bounded32-page/120-second windows. | Actual policy/controller fixtures cover zero unread,24,600 returned messages across2windows,32k policy bound, migration and logout. Native execution pending macOS. Never writes the live authorization cursor. |
+| History seed was `live.pts - unread`, zero unread terminated `.noCandidate`; old terminal records prevented deeper work. | `TelegramCore/State/JerkgramBotReplayPolicy.swift`: v2 isolated earliest non-empty cursor (pts1/date1), one-time upgrade from v1; retain server continuation cursor across bounded32-page/120-second windows. | Actual policy/controller fixtures cover zero unread,24,600 returned messages across2windows,32k policy bound, migration and logout. Native execution pending macOS. Never writes the live authorization cursor. |
 | History network requests occupied `AccountStateManager` custom-operation slot until reply/timeout. | `State/JerkgramBotBridgeHistory.swift` and `State/AccountStateManager.swift`: retain request lease, timeout, authorization/generation fences and serialized Postbox commits; request lifetime independent of live operation queue. | Native fixture asserts live operation completion while history RPC remains pending. Not an iPhone timing measurement. |
 | Wallet benefits/legal panel opaque black. | `WalletScreen.swift`: existing scoped panel `0x1c1c1e`, alpha0.45; text/layout retained. | Visual contrast still requires user device review over actual wallpaper. |
 | Local status/colors require strictly account-local storage and rendering. | `JerkgramLocalAppearanceSettings/Store.swift`: account Postbox key`0x4A470004`, stable recordID/own peer/environment, active context generation, real botInfo guards, keyed Int32/Int64/Bool codec. | Caught and corrected unpublished collision with Saved Tags key`0x4A470003`. No global Premium flag or server setters. |
@@ -28,8 +28,10 @@ Appearance matrix: A enabled/B disabled/C different status/bot excluded; A→B�
 ## Device acceptance still required
 
 1. Bot account: compare oldest visible chat/message dates and total coverage; receive new messages while replay runs, close/reopen and continue pagination. Do not relog or clear local data solely for this test.
-2. Telegram servers control history returned by `updates.getDifference`. A zero cursor does not prove all2025history is available. `messages.getHistory` is user-only; do not claim a server restriction bypass or cloud recovery guarantee.
+2. Telegram servers control history returned by `updates.getDifference`. The earliest non-empty cursor does not prove all2025history is available. Zero pts/date are excluded to avoid documented PERSISTENT_TIMESTAMP_EMPTY/DATE_EMPTY. `messages.getHistory` is user-only; do not claim a server restriction bypass or cloud recovery guarantee.
 3. Wallet legal/benefits readability over light/dark wallpaper; no global theme darkening.
 4. Local Premium → Profile Appearance: native emoji/palette/pattern picker, apply, expiry, reset; self Settings/profile, own chat author/reply/header where native UI shows those fields.
 5. Account A/B/C/bot switch/relaunch/logout matrix; other users and bots visually unchanged. Appearance remains local, not included in existing backups, no cloud sync.
 6. Typing/navigation and sustained use: previous Wave2A.1 remains, but device performance is **NOT VERIFIED**.
+
+Protocol reference: [updates.getDifference](https://core.telegram.org/method/updates.getDifference), errors DATE_EMPTY and PERSISTENT_TIMESTAMP_EMPTY. Server/device acceptance of historical coverage remains pending.

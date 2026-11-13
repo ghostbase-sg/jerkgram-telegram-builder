@@ -17,7 +17,7 @@ do {
 }
 do {
     let h = Host();h.start();h.queue.drain();h.reply(state(100, unread: 0))
-    check(h.network.requests.last?.cursor == BotBridgeCursor(pts: 0, qts: 0, date: 0, seq: 0), "zero unread retrieves history")
+    check(h.network.requests.last?.cursor == BotBridgeCursor(pts: 1, qts: 0, date: 1, seq: 0), "zero unread retrieves history")
     for page in 0..<41 {
         let messages = (1...600).map { apiMessage(Int32(page * 600 + $0)) }
         h.manager.modern()
