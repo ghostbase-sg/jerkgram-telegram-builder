@@ -34,10 +34,7 @@ permissions:
   contents: read
 
 jobs:
-  source-preflight:
-    uses: ./.github/workflows/no-ads-native.yml
   build-probe:
-    needs: source-preflight
     runs-on: xcode-27
     env:
       USE_BAZEL_VERSION: 9.2.0
@@ -63,8 +60,6 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          python3 -m py_compile tests/test_jg13_capture_retention.py tests/run_jg13_capture_retention.py
-          python3 -m py_compile tests/test_jg13_row_detail.py tests/test_jg13_history_detail.py tests/run_jg13_history_bounds.py scripts/materialize_jg13_expanded_diagnostics.py tests/test_jg13_expanded_diagnostics.py tests/run_jg13_expanded_diagnostics.py scripts/materialize_jg13.py scripts/materialize_jg13_profile_p0.py scripts/materialize_jg13_profile_cleanup.py scripts/materialize_jg13_profile_preferences.py scripts/configure_jg13.py scripts/verify_jg13_source.py scripts/package_jg13.py tests/test_jg13_profile_p0.py tests/test_jg13_profile_cleanup.py tests/test_jg13_profile_preferences.py tests/test_jg13_performance_capture.py tests/run_jg13_ping_policy.py tests/run_jg13_followup.py tests/run_jg13_profile_preferences.py
           bash scripts/build_jg13.sh 2>&1 | tee artifacts/build.log
       - name: Upload focused owner diagnostics
         if: always()
@@ -72,6 +67,8 @@ jobs:
         with:
           name: Jerkgram-1.2.0-Build182-STABLE-diagnostics
           path: |
+            artifacts/build.log
+            artifacts/*-RAW-UNVERIFIED.json
             patches/jg131-saved-tags.patch
             patches/jg131-saved-tags.sha256.json
             scripts/materialize_jg131_saved_tags.py
@@ -251,6 +248,24 @@ jobs:
             work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
             work/swiftgram-src/submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift
           if-no-files-found: warn
+      - name: Upload recovery IPA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.2.0-Build182-RAW-UNVERIFIED
+          path: |
+            artifacts/*-RAW-UNVERIFIED.ipa
+            artifacts/*-RAW-UNVERIFIED.json
+          if-no-files-found: ignore
+          retention-days: 90
+      - name: Upload failed packaging candidate
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.2.0-Build182-PACKAGING-FAILED-UNVERIFIED
+          path: artifacts/Jerkgram-1.2.0-Build182-STABLE.ipa
+          if-no-files-found: ignore
+          retention-days: 90
       - name: Upload verified IPA
         if: success()
         uses: actions/upload-artifact@v4

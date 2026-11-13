@@ -1,4 +1,4 @@
-name: Jerkgram 13.2 / Build180 Beta3 source and native regression gate
+name: Jerkgram full historical source and native regression gate
 on:
   push:
     branches: [dev/no-ads-166]

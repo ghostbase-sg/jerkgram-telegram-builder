@@ -1,0 +1,10 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "2fb9109780e81c4e8934f8a9c98c518c67aad8ab2a23ebdfa1b1f7e7718187bf",
+  "owners": {
+    "submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift": {
+      "before_sha256": "e04bc21fed44b5828006617e8542afa84b9c6490118f45e339b99a0c7157f130",
+      "after_sha256": "81d1370709657e9b235e59e03632971eac989dfe907df78fc275e4487f68d709"
+    }
+  }
+}

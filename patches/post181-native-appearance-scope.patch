@@ -1,0 +1,12 @@
+diff --git a/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift b/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift
+--- a/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift
++++ b/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift
+@@ -821,7 +821,7 @@
+                     return .generic
+                 })
+             }
+-            if store.snapshot.emojiUnlocked && resolvedState.changes.contains(.emojiStatus) {
++            if resolvedState.changes.contains(.emojiStatus) {
+                 let signal: Signal<Never, NoError>
+                 if let emojiStatus = resolvedState.emojiStatus {
+                     switch emojiStatus.content {

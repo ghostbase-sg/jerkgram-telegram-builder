@@ -26,6 +26,20 @@ def replace_once(text, old, new):
     return text.replace(old, new, 1)
 
 
+def configure_build_inputs(source, config):
+    dst = source / "build-input/configuration-repository"
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(source / "build-system/example-configuration", dst)
+    (dst / "MODULE.bazel").write_text('module(name = "build_configuration", version = "0.0.0")\n')
+    p = dst / "variables.bzl"
+    text = p.read_text()
+    text = replace_once(text, 'telegram_bundle_id = "ph.telegra.Telegraph"', f'telegram_bundle_id = "{config["bundle_id"]}"')
+    text += '\ntelegram_bazel_path = "."\ntelegram_use_xcode_managed_codesigning = False\n'
+    text = credentials.patch_variables(text, os.environ.get("JERKGRAM_TELEGRAM_API_ID", ""), os.environ.get("JERKGRAM_TELEGRAM_API_HASH", ""))
+    p.write_text(text)
+
+
 def main():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     from jg132_baseline import enabled, apply_range
@@ -56,17 +70,7 @@ def main():
         ]:
             text = replace_once(text, f'public static let {key} = "{old}"', f'public static let {key} = "{value}"')
         p.write_text(text)
-    dst = SOURCE / "build-input/configuration-repository"
-    if dst.exists():
-        shutil.rmtree(dst)
-    shutil.copytree(SOURCE / "build-system/example-configuration", dst)
-    (dst / "MODULE.bazel").write_text('module(name = "build_configuration", version = "0.0.0")\n')
-    p = dst / "variables.bzl"
-    text = p.read_text()
-    text = replace_once(text, 'telegram_bundle_id = "ph.telegra.Telegraph"', f'telegram_bundle_id = "{config["bundle_id"]}"')
-    text += '\ntelegram_bazel_path = "."\ntelegram_use_xcode_managed_codesigning = False\n'
-    text = credentials.patch_variables(text, os.environ.get("JERKGRAM_TELEGRAM_API_ID", ""), os.environ.get("JERKGRAM_TELEGRAM_API_HASH", ""))
-    p.write_text(text)
+    configure_build_inputs(SOURCE, config)
     if not baseline132:
         # Generated VersionInfoPlist is the actual owner for both app and extension versions.
         p = SOURCE / "Telegram/BUILD"

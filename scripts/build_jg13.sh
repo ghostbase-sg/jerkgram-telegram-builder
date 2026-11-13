@@ -1,84 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-python3 scripts/materialize_jg13.py
-python3 scripts/configure_jg13.py --previous-contracts-only
-python3 scripts/verify_jg13_source.py --previous-contracts-only
-python3 -m unittest discover -s tests -p test_jg13_history_backend.py
-python3 -m unittest discover -s tests -p test_jg131_migration.py
-python3 -m unittest discover -s tests -p test_jg131_ui_repair.py
-python3 -m unittest discover -s tests -p test_jg131_ui_type_compat.py
-python3 tests/run_jg131_capture_repair.py
-python3 tests/run_jg13_history_backend.py
-xcrun swiftc -frontend -parse work/swiftgram-src/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
-python3 -m unittest discover -s tests -p test_jg13_stars_gift.py
-python3 tests/run_jg13_stars_gift.py
-python3 -m unittest discover -s tests -p test_jg13_sponsored.py
-python3 -m unittest discover -s tests -p test_jg13_profile_capture.py
-python3 tests/run_jg13_sponsored.py
-python3 -m unittest discover -s tests -p test_jg13_download_boost.py
-python3 tests/run_jg13_download_boost.py
-python3 -m unittest discover -s tests -p test_jg13_premium_icons.py
-python3 tests/run_jg13_premium_icons.py
-python3 -m unittest discover -s tests -p test_jg13_release_ui.py
-python3 tests/run_jg13_ping_policy.py
-python3 -m unittest discover -s tests -p test_jg13_beta_followup.py
-python3 tests/run_jg13_followup.py
-python3 tests/run_jg13_performance_capture.py
-python3 tests/run_jg13_secondary_timebase.py
-python3 tests/run_jg13_profile_preferences.py
-python3 tests/run_jg13_expanded_diagnostics.py
-python3 tests/run_jg13_capture_retention.py
-python3 tests/run_jg13_history_bounds.py
-python3 -m unittest discover -s tests -p 'test_jg13_deleted_reply*.py'
-python3 tests/run_jg13_deleted_reply.py
-python3 -m unittest discover -s tests -p test_jg13_recovery_media.py
-python3 -m unittest discover -s tests -p test_jg13_protected_copy.py
-python3 -m unittest discover -s tests -p test_jg13_forward_routes.py
-python3 -m unittest discover -s tests -p test_jg13_portable_copy_stage.py
-python3 tests/run_jg13_recovery_media.py
-python3 -m unittest discover -s tests -p test_jg13_recovery_cache.py
-python3 tests/run_jg13_recovery_cache.py
-python3 tests/run_jg13_protected_copy.py
-python3 -m unittest discover -s tests -p test_jg13_package_digest.py
-python3 scripts/apply_jg131_final_stages.py
-python3 scripts/verify_jg13_source.py
-python3 -m unittest discover -s tests -p test_jg131_profile_polish.py
-python3 -m unittest discover -s tests -p test_jg131_profile_metadata_stage.py
-python3 -m unittest discover -s tests -p test_jg131_profile_metadata.py
-python3 -m unittest discover -s tests -p test_jg131_excluded_history_stage.py
-python3 -m unittest discover -s tests -p test_jg131_excluded_history.py
-python3 -m unittest discover -s tests -p test_jg131_settings_transparency_stage.py
-python3 -m unittest discover -s tests -p test_jg131_settings_transparency.py
-python3 -m unittest discover -s tests -p test_jg131_final_stages.py
-python3 tests/run_jg131_settings_preferences.py
-python3 -m unittest discover -s tests -p test_jg131_performance_followup_stage.py
-python3 -m unittest discover -s tests -p test_jg131_performance_followup.py
-python3 -m unittest discover -s tests -p test_jg131_chat_visit.py
-python3 -m unittest discover -s tests -p test_jg131_profile_metadata_dc.py
-python3 -m unittest discover -s tests -p test_jg131_settings_visual_followup.py
-python3 -m unittest discover -s tests -p test_jg131_excluded_chat_interactions.py
-python3 tests/run_jg131_build175_regressions.py
-python3 scripts/materialize_jg131_performance_wave1.py
-python3 tests/run_jg131_build176_regressions.py
-python3 scripts/materialize_jg131_translation_repair.py
-python3 tests/run_jg131_translation_repair.py
-python3 scripts/materialize_jg131_default_folder.py
-python3 tests/run_jg131_default_folder.py
-python3 scripts/materialize_jg131_settings_glass_expansion.py
-python3 tests/run_jg131_settings_glass_expansion.py
-python3 scripts/materialize_jg131_botbridge1.py
-python3 scripts/materialize_jg131_beta2_recovery.py
-python3 scripts/materialize_jg131_local_premium.py
-python3 scripts/materialize_jg131_saved_tags.py
-python3 tests/run_jg131_saved_tags.py --require-native --require-full-source
-python3 -m unittest discover -s tests -p 'test_jg1312*.py'
-python3 -m unittest discover -s tests -p test_jg132_migration_projection.py
-python3 scripts/materialize_jg132_beta3.py
-python3 tests/run_jg132_beta3.py --require-native --require-full-source
-python3 scripts/materialize_jg132_post180.py
-python3 tests/run_jg132_post180.py --require-native --require-full-source
-python3 scripts/materialize_jg132_post181.py
+# One exact source projection and one current native/component gate.
+# Exhaustive historical suites remain in no-ads-native.yml (manual regression).
+python3 scripts/materialize_jg132_product.py
 python3 tests/run_jg132_post181.py --require-native --require-full-source
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
@@ -86,6 +11,19 @@ git submodule sync --recursive
 git submodule update --init --recursive --depth 1
 python3 ../../scripts/pin_jg13_dependencies.py --verify
 python3 ../../scripts/prepare_jg13_build_rules.py
+# A build action may emit an IPA before a later action fails. Preserve it too.
+# The freshly cloned source guarantees this cannot pick up an earlier run's IPA.
+compiled_ipa="$PWD/bazel-bin/Telegram/Telegram.ipa"
+recovery_script="$PWD/../../scripts/preserve_jg13_ipa.py"
+preserve_compiled_ipa() {
+  local result=$?
+  trap - EXIT
+  if [ -f "$compiled_ipa" ]; then
+    python3 "$recovery_script" "$compiled_ipa" || true
+  fi
+  exit "$result"
+}
+trap preserve_compiled_ipa EXIT
 "${BAZEL_BIN:-bazelisk}" build \
   -c opt \
   --ios_multi_cpus=arm64 \

@@ -59,6 +59,14 @@ def verify(ipa, config):
         require(main.get("CFBundleIcons", {}).get("CFBundlePrimaryIcon", {}).get("CFBundleIconName") == "JerkgramGlassReveal", "Primary Jerkgram icon lost")
 
 
+def preserve_raw_ipa(compiled, out, artifact_name, config):
+    raw = out / (artifact_name + "-RAW-UNVERIFIED.ipa")
+    shutil.copy2(Path(compiled), raw)
+    raw_report = dict(config, ci_run_id=os.environ.get("GITHUB_RUN_ID"), ci_commit=os.environ.get("GITHUB_SHA"), ipa=raw.name, ipa_sha256=sha256_file(raw), status="RAW COMPILED IPA; PACKAGING AND VERIFICATION NOT PASSED")
+    raw.with_suffix(".json").write_text(json.dumps(raw_report, indent=2) + "\n")
+    return raw
+
+
 def main():
     config = json.loads((ROOT / "jerkgram-migration.json").read_text())
     out = ROOT / "artifacts"
@@ -67,7 +75,10 @@ def main():
     if config.get('artifact_suffix'):
         artifact_name += '-' + config['artifact_suffix']
     ipa = out / (artifact_name + ".ipa")
-    shutil.copy2(Path(sys.argv[1]), ipa)
+    # Keep an untouched compiled archive before any packaging mutates the candidate.
+    # Recovery is diagnostic only: it never bypasses verify() or marks a release valid.
+    raw = preserve_raw_ipa(Path(sys.argv[1]), out, artifact_name, config)
+    shutil.copy2(raw, ipa)
     # Same asset hashes and main-app-only packaging as the proven Build138.
     keychain.package_ipa(ipa)
     picker.package_file_picker(ipa)
