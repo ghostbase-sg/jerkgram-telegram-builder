@@ -62,7 +62,7 @@ public enum SwiftSignalKit {
 }
 public struct PeerId: Hashable { let raw: Int64; public func toInt64() -> Int64 { raw } }
 public protocol Peer: AnyObject { var id: PeerId { get } }
-public struct PeerPeerColor: Equatable { public let rawValue: Int32; public init(rawValue: Int32) { self.rawValue = rawValue } }
+public struct PeerNameColor: Equatable { public let rawValue: Int32; public init(rawValue: Int32) { self.rawValue = rawValue } }
 public enum PeerColor: Equatable { case preset(PeerNameColor) }
 public struct PeerEmojiStatus: Equatable {
     public enum Content: Equatable { case emoji(fileId: Int64) }
