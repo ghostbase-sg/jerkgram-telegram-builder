@@ -1,0 +1,10 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "b1bd2fb9dbc5b72a1f2920f31ba0494e1a15e8c605637fdf56e464713e4999f4",
+  "owners": {
+    "submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift": {
+      "before_sha256": "00a9e4ad3da328a7c3c478f830bc39b0605c93f728cfa1db38754e5236fe238d",
+      "after_sha256": "09bb60a451dca9aa2ce00ddc770eec15dddb994d54d4f8bf68ab3be8373eb6b2"
+    }
+  }
+}

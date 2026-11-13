@@ -3,7 +3,7 @@ def candidate_identity(config):
     stable = config.get('post181_stages', [])
     if stable and 'post181-stable182-identity' in stable:
         base = ['post181-performance-wave2a3', 'post181-bot-native-history-send', 'post181-unified-local-premium', 'post181-local-gram-balance', 'post181-stable182-identity']
-        accepted = [base, base + ['post181-gram-presentation-completion'], base + ['post181-gram-presentation-completion', 'post181-native-appearance-scope']]
+        accepted = [base, base + ['post181-gram-presentation-completion'], base + ['post181-gram-presentation-completion', 'post181-native-appearance-scope'], base + ['post181-gram-presentation-completion', 'post181-native-appearance-scope', 'post181-native-policy-import']]
         if stable not in accepted:
             raise AssertionError('Unknown Stable182 successor chain')
         return ('1.2.0 Stable', '1.2.0', 182, 'STABLE')

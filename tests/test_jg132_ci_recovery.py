@@ -20,6 +20,18 @@ class Recovery(unittest.TestCase):
         self.assertNotIn('store.', server, 'store is declared only in the returning local branch')
         self.assertIn('if resolvedState.changes.contains(.emojiStatus) {', server)
 
+    def test_all_policy_consumers_import_owning_module(self):
+        # Swift imports are file-scoped; imports in another TelegramUI file do not
+        # make a Postbox declaration visible here. Cover all current consumers.
+        consumers = []
+        for file in (SOURCE / 'submodules').rglob('*.swift'):
+            text = file.read_text()
+            if 'JerkgramLocalPremiumPolicy' not in text or 'Postbox/Sources/' in file.as_posix():
+                continue
+            consumers.append(file)
+            self.assertIn('import Postbox', text, str(file.relative_to(SOURCE)))
+        self.assertGreater(len(consumers), 10)
+
     def test_raw_archive_survives_packaging_failure(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

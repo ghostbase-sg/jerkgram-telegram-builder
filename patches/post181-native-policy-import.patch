@@ -1,0 +1,9 @@
+diff --git a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
+--- a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import Postbox
+ import UIKit
+ import AsyncDisplayKit
+ import TelegramCore
