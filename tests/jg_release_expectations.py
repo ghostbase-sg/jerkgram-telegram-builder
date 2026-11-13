@@ -1,8 +1,8 @@
 """Explicit product identity expectations; historical source identities stay pinned."""
 def candidate_identity(config):
     stable = config.get('post181_stages', [])
-    if stable and stable[-1] == 'post181-stable182-identity':
-        if stable != ['post181-performance-wave2a3', 'post181-bot-native-history-send', 'post181-unified-local-premium', 'post181-local-gram-balance', 'post181-stable182-identity']:
+    if stable and 'post181-stable182-identity' in stable:
+        if stable not in (['post181-performance-wave2a3', 'post181-bot-native-history-send', 'post181-unified-local-premium', 'post181-local-gram-balance', 'post181-stable182-identity'], ['post181-performance-wave2a3', 'post181-bot-native-history-send', 'post181-unified-local-premium', 'post181-local-gram-balance', 'post181-stable182-identity', 'post181-gram-presentation-completion']):
             raise AssertionError('Unknown Stable182 successor chain')
         return ('1.2.0 Stable', '1.2.0', 182, 'STABLE')
     stages = config.get('post180_stages', [])

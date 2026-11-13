@@ -15,7 +15,7 @@ if __name__=='__main__':
     verify_source(source)
     env=dict(os.environ,JG_STABLE182_SOURCE=str(source),JERKGRAM_STABLE_BOT_SOURCE=str(source),JG_STABLE182_PREMIUM_SOURCE=str(source))
     if required:env['JG_STABLE182_REQUIRE_NATIVE']='1'
-    for name in ['test_jg132_post181_stages.py','test_jg132_post181_performance.py','test_jg132_stable_bot_history.py','test_jg132_stable_premium_master.py','test_jg132_stable_gram_balance.py']:
+    for name in ['test_jg132_post181_stages.py','test_jg132_post181_performance.py','test_jg132_stable_bot_history.py','test_jg132_stable_premium_master.py','test_jg132_stable_gram_balance.py','test_jg132_stable_gram_presentations.py']:
         subprocess.run([sys.executable,str(ROOT/'tests'/name)],env=env,check=True)
     if shutil.which('xcrun'):
         for name in sorted({n for stage in stages() for n in manifest(stage)['owners'] if n.endswith('.swift')}):

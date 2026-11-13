@@ -23,3 +23,7 @@ No device runtime success claim. No real accounts or wallets touched. All device
 5. About/telemetry show Stable182; Telegram base13.2 unchanged.
 
 See per-task audit files for exact source owners and limitations. Native/CI results will be added only after observed.
+
+## Final user steering: GRAM across all current balance surfaces
+
+A sixth successor `post181-gram-presentation-completion` adds native gift-store balance/menu and shared balance overlay via one account-local scalar presentation stream. This keeps real engine/payment state intact and leaves all prior candidate patches immutable. Full combined source/provenance runner re-run PASS, six required native tests still pending macOS. Original run43428009116 was intentionally cancelled during source-preflight to include this latest request; build-probe did not compile the app. One replacement combined run will use the same Stable182 product identity.
