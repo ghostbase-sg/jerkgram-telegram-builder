@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 3 / Telegram 13.2 / Build180 Common fixes
+name: Jerkgram Build180 / Wave2A2 request lifecycle
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - docs/**
     branches:
+      - perf/build180-wave2a2-request-lifecycle
       - dev/beta3-history-native-tags-180
       - dev/beta2-local-premium-tags-179
       - dev/botbridge1-legacy-history-modern-write
@@ -68,7 +69,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build180-BETA3-diagnostics
+          name: Jerkgram-Build180-Wave2A2-diagnostics
           path: |
             patches/jg131-saved-tags.patch
             patches/jg131-saved-tags.sha256.json
@@ -86,6 +87,12 @@ jobs:
             tests/run_jg132_beta3.py
             scripts/jg132_baseline.py
             scripts/jg132_beta3_stages.py
+            patches/perf180-wave2a2-*
+            scripts/jg132_wave2a2.py
+            scripts/materialize_jg132_wave2a2.py
+            tests/run_jg132_wave2a2.py
+            tests/test_jg132_wave2a2.py
+            tests/fixtures/wave2a2/
             scripts/materialize_jg132_beta3.py
             patches/beta3-*.patch
             patches/beta3-*.sha256.json
@@ -237,7 +244,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build180-BETA3
+          name: Jerkgram-Build180-Wave2A2
           path: |
             artifacts/Jerkgram-1.2.0-Build180-BETA3.ipa
             artifacts/Jerkgram-1.2.0-Build180-BETA3.json

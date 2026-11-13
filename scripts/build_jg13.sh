@@ -76,6 +76,8 @@ python3 -m unittest discover -s tests -p 'test_jg1312*.py'
 python3 -m unittest discover -s tests -p test_jg132_migration_projection.py
 python3 scripts/materialize_jg132_beta3.py
 python3 tests/run_jg132_beta3.py --require-native --require-full-source
+python3 scripts/materialize_jg132_wave2a2.py
+python3 tests/run_jg132_wave2a2.py --require-native --require-full-source
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive
