@@ -109,3 +109,5 @@ jobs:
           python3 tests/run_jg132_beta3.py --require-native --require-full-source
           python3 scripts/materialize_jg132_post180.py
           python3 tests/run_jg132_post180.py --require-native --require-full-source
+          python3 scripts/materialize_jg132_post181.py
+          python3 tests/run_jg132_post181.py --require-native --require-full-source

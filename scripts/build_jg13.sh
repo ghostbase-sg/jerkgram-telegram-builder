@@ -78,6 +78,8 @@ python3 scripts/materialize_jg132_beta3.py
 python3 tests/run_jg132_beta3.py --require-native --require-full-source
 python3 scripts/materialize_jg132_post180.py
 python3 tests/run_jg132_post180.py --require-native --require-full-source
+python3 scripts/materialize_jg132_post181.py
+python3 tests/run_jg132_post181.py --require-native --require-full-source
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive
@@ -91,7 +93,7 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=181 \
+  --define=buildNumber=182 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 # Inspect retained build actions without a second build or target analysis.

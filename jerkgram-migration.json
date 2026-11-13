@@ -11,10 +11,10 @@
   "upstream_new_version": "13.2",
   "product_name": "Jerkgram",
   "product_version": "1.2.0",
-  "product_display_version": "1.2.0 Beta 2",
-  "product_technical_version": "1.2.0-beta.2",
+  "product_display_version": "1.2.0 Stable",
+  "product_technical_version": "1.2.0",
   "bundle_short_version": "13.2",
-  "build_number": 181,
+  "build_number": 182,
   "bundle_id": "com.jerkgram.ios",
   "source_snapshot_sha256": "6499b01ab4a5db475dde15ac7b773643a1d6188d2432b9746dab2adde2a18813",
   "dependency_overrides": {},
@@ -25,7 +25,7 @@
     "recorded_by_builder_commit": "950894f0a44fb8396dc172ceb4f6f4bf739ce8b5",
     "role": "historical source export; not a 13.1.2 archive claim; unused by current materializers"
   },
-  "artifact_suffix": "BETA2",
+  "artifact_suffix": "STABLE",
   "upstream_migration_evidence": {
     "chain": "docs/migrations/telegram-13.2-stage-chain.json",
     "guards": "docs/migrations/telegram-13.2-guard-proof.json",
@@ -44,6 +44,10 @@
     "telegramBase": "13.2"
   },
   "post181_stages": [
-    "post181-performance-wave2a3"
+    "post181-performance-wave2a3",
+    "post181-bot-native-history-send",
+    "post181-unified-local-premium",
+    "post181-local-gram-balance",
+    "post181-stable182-identity"
   ]
 }
