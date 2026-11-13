@@ -67,9 +67,23 @@ def verify_source(source):
         if count != len(stages()):
             raise RuntimeError('Post180 successor chain incomplete')
         verify_build180(before)
-    config = json.loads((ROOT / 'jerkgram-migration.json').read_text())
     identity = (Path(source) / 'submodules/TelegramPresentationData/Sources/JerkgramStrings.swift').read_text()
-    for key, value in [('displayVersion', config['product_display_version']), ('technicalVersion', config['product_technical_version']), ('build', str(config['build_number'])), ('telegramBase', config['upstream_new_version'])]:
+    for key, value in build181_identity().items():
         if f'public static let {key} = "{value}"' not in identity:
             raise RuntimeError('Post180 release identity mismatch: ' + key)
     print('Post180 exact successors and restored GREEN Build180 VERIFIED; device runtime separate', flush=True)
+
+
+def build181_identity():
+    """Frozen GREEN identity is independent of later product metadata."""
+    import re
+    from jg132_beta3_stages import manifest
+    manifest('post180-history-wallet')
+    text = (ROOT / 'patches/post180-history-wallet.patch').read_text()
+    result = {'telegramBase': '13.2'}
+    for key in ('displayVersion', 'technicalVersion', 'build'):
+        values = re.findall(r'^\+    public static let ' + key + r' = "([^"\n]+)"$', text, re.M)
+        if len(values) != 1:
+            raise RuntimeError('Frozen Build181 identity seam changed: ' + key)
+        result[key] = values[0]
+    return result

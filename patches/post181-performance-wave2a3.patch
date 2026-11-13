@@ -1,0 +1,43 @@
+--- a/submodules/JerkgramCore/Sources/JerkgramStore.swift
++++ b/submodules/JerkgramCore/Sources/JerkgramStore.swift
+@@ -107,15 +107,31 @@
+         afterSequence: Int64?,
+         throughSequence: Int64?
+     ) -> [JerkgramTimeMachineIndexRecord] {
+-        return records.lazy.filter { record in
+-            guard record.chatPeerId == chatPeerId else { return false }
+-            if let afterSequence, record.sequence <= afterSequence { return false }
+-            if let throughSequence, record.sequence > throughSequence { return false }
+-            return true
+-        }.sorted { lhs, rhs in
+-            if lhs.sequence != rhs.sequence { return lhs.sequence < rhs.sequence }
+-            return lhs.eventId < rhs.eventId
+-        }
++        // All callers pass one account's recordsByChat bucket. Construction,
++        // index reload and append/merge maintain (sequence, eventId) ordering.
++        // Reuse that ordering and avoid rescanning/sorting an unchanged prefix
++        // on every visit-watermark request. Persistent data is untouched.
++        let lower = afterSequence.map { self.sequenceUpperBound(records, $0) } ?? 0
++        let upper = throughSequence.map { self.sequenceUpperBound(records, $0) } ?? records.count
++        guard lower < upper else { return [] }
++        return Array(records[lower..<upper])
++    }
++
++    private func sequenceUpperBound(
++        _ records: [JerkgramTimeMachineIndexRecord],
++        _ sequence: Int64
++    ) -> Int {
++        var lower = 0
++        var upper = records.count
++        while lower < upper {
++            let middle = lower + (upper - lower) / 2
++            if records[middle].sequence <= sequence {
++                lower = middle + 1
++            } else {
++                upper = middle
++            }
++        }
++        return lower
+     }
+ 
+     public func events(accountPeerId: Int64, chatPeerId: Int64?) throws -> [JerkgramCanonicalEvent] {

@@ -42,5 +42,8 @@
     "technicalVersion": "1.2.0-beta.3",
     "build": "180",
     "telegramBase": "13.2"
-  }
+  },
+  "post181_stages": [
+    "post181-performance-wave2a3"
+  ]
 }
