@@ -129,7 +129,7 @@ let repair = transaction(expected)
 repair.messages[id(20)] = StoreMessage(id: id(20), marker: 900)
 var historicalUser = TelegramUser(id: chat, bot: false, marker: 3)
 historicalUser.accessHash = .personal(444)
-let repairPage = BotBridgeHistoryPage(cursor: cursor, final: true, messages: [api(20)], users: [Api.User(peer: historicalUser)], chats: [], updates: [], encryptedCount: 0)
+private let repairPage = BotBridgeHistoryPage(cursor: cursor, final: true, messages: [api(20)], users: [Api.User(peer: historicalUser)], chats: [], updates: [], encryptedCount: 0)
 let repaired = importBotBridgeHistoryPage(transaction: repair, page: repairPage, expected: expected, accountPeerId: account, removed: removed, now: 1003, lifetime: lifetime, requestGate: BotBridgeOnceGate())!
 precondition(repaired.inserted == 0 && repair.messages[id(20)]!.marker == 900)
 let repairedUser = repair.getPeer(chat) as! TelegramUser
