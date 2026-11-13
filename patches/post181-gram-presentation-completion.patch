@@ -46,6 +46,11 @@
                          if !self.isUpdating {
                              self.componentState?.updated()
                          }
+@@ -172,3 +172,4 @@
+         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+     }
+ }
++
 --- a/submodules/TelegramUI/Components/Gifts/GiftStoreScreen/Sources/GiftStoreScreen.swift
 +++ b/submodules/TelegramUI/Components/Gifts/GiftStoreScreen/Sources/GiftStoreScreen.swift
 @@ -1272,7 +1272,7 @@
@@ -72,6 +77,11 @@
                  
                  var items: [ContextMenuItem] = []
                  
+@@ -1649,3 +1649,4 @@
+         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
+     }
+ }
++
 --- a/submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent/Sources/StarsBalanceOverlayComponent.swift
 +++ b/submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent/Sources/StarsBalanceOverlayComponent.swift
 @@ -91,6 +91,13 @@
@@ -104,3 +114,8 @@
                              if !self.isUpdating {
                                  self.state?.updated()
                              }
+@@ -282,3 +289,4 @@
+         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+     }
+ }
++

@@ -1,6 +1,6 @@
 """All identified native GRAM balance surfaces use one account-local presentation stream."""
 from pathlib import Path
-import os,shutil,subprocess,tempfile,unittest
+import os,shutil,subprocess,tempfile,unittest,json,sys
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('JG_STABLE182_SOURCE',ROOT.parent/'jerkgram-next/stable182-combined'))
 PREFIX='submodules/TelegramUI/Components/'
@@ -13,6 +13,16 @@ def fixture():
     matrix=(ROOT/'tests/fixtures/stable182/gram-signal-matrix.swift').read_text().replace('// ACTUAL_GRAM_SIGNAL',helper)
     return boundaries+'\n'+policy+'\n'+matrix
 class Presentations(unittest.TestCase):
+    def test_native_parent_bytes_match_pinned_official_sources(self):
+        sys.path.insert(0,str(ROOT/'scripts'))
+        from jg132_beta3_stages import manifest,UPSTREAM
+        official=json.loads((ROOT/'tests/fixtures/stable182/gram-native-provenance.json').read_text())
+        self.assertEqual(official['upstream_sha'],UPSTREAM)
+        stage=manifest('post181-gram-presentation-completion')
+        self.assertEqual(set(official['owners']),set(OWNERS))
+        for name,row in official['owners'].items():
+            self.assertEqual(stage['owners'][name]['before_sha256'],row['sha256'],name+' must match official bytes, including EOF')
+
     def test_ui_only_stream_owners_and_lifetime(self):
         for owner in OWNERS:
             text=(SOURCE/owner).read_text()

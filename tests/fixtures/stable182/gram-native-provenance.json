@@ -1,0 +1,20 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "owners": {
+    "submodules/TelegramUI/Components/Gifts/GiftStoreScreen/Sources/BalanceComponent.swift": {
+      "sha256": "8997f49582c8b51e560f5caaf9dc8cc48cdc1325d4b86d147e524a798a7ff631",
+      "git_blob": "c8ac3527887d9c26ec57983ba25c5dc759960ba8",
+      "bytes": 7578
+    },
+    "submodules/TelegramUI/Components/Gifts/GiftStoreScreen/Sources/GiftStoreScreen.swift": {
+      "sha256": "79de32135c6b7a699ffb06b0b758d6fc6153e2031f54bc0345464e620ef37c97",
+      "git_blob": "3b38b6d9c7e6d16d5306e58fe00e3b2ff95cbb7a",
+      "bytes": 79251
+    },
+    "submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent/Sources/StarsBalanceOverlayComponent.swift": {
+      "sha256": "b7b2f9e2f0a01276c01b27e878c04cbd1b3b8699d7abb9decbd8c45c2ca32ffb",
+      "git_blob": "bc8f90430fdb6d4c498d4eafc11d687639608195",
+      "bytes": 13538
+    }
+  }
+}

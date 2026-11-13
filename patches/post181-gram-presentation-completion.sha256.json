@@ -1,21 +1,21 @@
 {
   "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
-  "patch_sha256": "c327f3da7d95a7276a0fdbe4114a7751c337bf8fe7d098d4a0832068b5d60aba",
+  "patch_sha256": "5e9acf0ed51c24aec9ad34a12eefa13dae68b03a35c3693705137dd01147e0e5",
   "owners": {
     "submodules/AccountContext/Sources/JerkgramLocalGramBalanceSignal.swift": {
       "before_sha256": null,
       "after_sha256": "bbe8b3895dcbf579bf6e18b3366dd1ca595978eadfcca13c52de664004a4a071"
     },
     "submodules/TelegramUI/Components/Gifts/GiftStoreScreen/Sources/BalanceComponent.swift": {
-      "before_sha256": "b070b33799137b6affafd680cb583e27e9ff5dff2e2f3001d326d2522be987d0",
+      "before_sha256": "8997f49582c8b51e560f5caaf9dc8cc48cdc1325d4b86d147e524a798a7ff631",
       "after_sha256": "8fc35fd7704ce2ea132ae7f9f845dbefeab18b36a4d6c76349659845f1fb93c1"
     },
     "submodules/TelegramUI/Components/Gifts/GiftStoreScreen/Sources/GiftStoreScreen.swift": {
-      "before_sha256": "32cb8508498660c885b53183c467ec2de51bb1f3bf24a7bbed8116be0366e555",
+      "before_sha256": "79de32135c6b7a699ffb06b0b758d6fc6153e2031f54bc0345464e620ef37c97",
       "after_sha256": "871af776d71d307f6f7698fb7e86256495d61e9a9aca634a10f1bfe21521222b"
     },
     "submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent/Sources/StarsBalanceOverlayComponent.swift": {
-      "before_sha256": "3e332a725d0c6d48c2aed89e3a731d320fd1688a728966439db5fe54fcda8aea",
+      "before_sha256": "b7b2f9e2f0a01276c01b27e878c04cbd1b3b8699d7abb9decbd8c45c2ca32ffb",
       "after_sha256": "59773acd5af2c70506ba6328a00183a2dcd94a73168690dcf84fcd027faa3dd8"
     }
   },
