@@ -30,14 +30,24 @@ func update(_ transform: (inout JerkgramGramDraftState) -> Void) {
 }
 // ACTUAL_CONTROL_ARGUMENTS
 arguments.setEnabled(true)
+let immediateToggle = EXPECT_IMMEDIATE_TOGGLE
+check(writes == (immediateToggle ? 1 : 0), "toggle persistence follows selected source contract")
+if immediateToggle {
+    check(JerkgramLocalGramBalance.visualBalance(accountPeerId: a, defaults: defaults) == 0, "enable immediately publishes explicit zero")
+}
+let writesAfterToggle = writes
 for amount in ["1", "12", "123.456789123"] { arguments.setAmount(amount) }
+check(writes == writesAfterToggle, "typing remains deferred")
 pending.forEach { $0() }
-check(writes == 1, "rapid updates coalesce, canceled stale callbacks ignored")
+check(writes == writesAfterToggle + 1, "rapid amount updates coalesce, canceled stale callbacks ignored")
 check(JerkgramLocalGramBalance.visualBalance(accountPeerId: a, defaults: defaults) == 123_456_789_123, "display saved valid amount")
 arguments.setAmount("invalid")
 autosave.flush()
-check(writes == 1, "invalid input keeps last valid stored amount")
+check(writes == writesAfterToggle + 1, "invalid input keeps last valid stored amount")
 arguments.setEnabled(false)
+if immediateToggle {
+    check(JerkgramLocalGramBalance.visualBalance(accountPeerId: a, defaults: defaults) == nil, "disable immediately restores real presentation")
+}
 autosave.flush()
 check(JerkgramLocalGramBalance.visualBalance(accountPeerId: a, defaults: defaults) == nil, "disable restores real presentation")
 check(JerkgramLocalGramBalance.amount(accountPeerId: a, defaults: defaults) == "123.456789123", "disable retains choice")

@@ -62,3 +62,13 @@ workflow YAML and whitespace checks passed. A second independent review of the
 reduced scope found no blocking issue, confirmed the inactive sentinel is not used
 by rendering logic, and qualified the optimization as stage/summary work only.
 Mandatory native execution and full app build are pending the one published CI run.
+
+## First macOS preflight follow-up
+
+Run 43502204902 stopped before app compilation: the inherited GRAM fixture expected
+one total write after enable plus typing. The selected Build183 control deliberately
+flushes enable immediately, then coalesces typing into a second write. Updated only
+the fixture to assert these separately, including immediate OFF fallback and deferred
+amount edits; the old source contract remains testable. All five new follow-up checks,
+including native Settings enum and profile probe execution, passed in that run.
+Local GRAM source checks pass; native GRAM execution awaits the replacement macOS run.

@@ -19,6 +19,7 @@ def fixture():
     end = editor.index('\n    )', start) + len('\n    )')
     controls = editor[start:end]
     matrix = (ROOT/'tests/fixtures/stable182/gram-matrix.swift').read_text()
+    matrix = matrix.replace('EXPECT_IMMEDIATE_TOGGLE', str('autosave.flush()' in controls).lower())
     wallet = (SOURCE/WALLET).read_text()
     methods = '\n'.join(declaration(wallet, anchor) for anchor in
         ('private func refreshLocalGramBalance(', 'private var displayBalance: Int64?'))
