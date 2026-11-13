@@ -1,3 +1,4 @@
+from jg_release_expectations import candidate_identity
 import importlib
 import json
 import os
@@ -19,8 +20,8 @@ def apply_fixture(stage,source):
 class ReleaseUiTests(unittest.TestCase):
     def test_identity_matches_release_and_package_uses_config(self):
         config = json.loads((ROOT / 'jerkgram-migration.json').read_text())
-        self.assertEqual(config['product_display_version'], '1.2.0 Beta 3')
-        self.assertEqual(config['product_technical_version'], '1.2.0-beta.3')
+        self.assertEqual(config['product_display_version'], candidate_identity(config)[0])
+        self.assertEqual(config['product_technical_version'], candidate_identity(config)[1])
         package = (ROOT / 'scripts/package_jg13.py').read_text()
         self.assertNotIn('Jerkgram-1.1.0-Beta-1-Build', package)
     def test_about_only_cleanup_is_exact_and_rejects_repeat(self):

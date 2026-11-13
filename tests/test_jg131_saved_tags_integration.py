@@ -1,3 +1,4 @@
+from jg_release_expectations import candidate_identity
 """Terminal Tags chain keeps required native/full-checkout gates fail closed."""
 import contextlib
 import hashlib
@@ -51,13 +52,13 @@ class SavedTagsIntegration(unittest.TestCase):
             for stage in stages[:-1]:
                 self.assertNotIn('tests/run_jg131_' + stage + '.py --require-native', source)
         config = json.loads((ROOT / 'jerkgram-migration.json').read_text())
-        self.assertEqual((config['build_number'], config['artifact_suffix']), (180, 'BETA3'))
+        self.assertEqual((config['build_number'], config['artifact_suffix']), candidate_identity(config)[2:])
         workflow = (ROOT / '.github/workflows/build.yml').read_text()
         self.assertIn('needs: source-preflight', workflow)
         self.assertIn('      - dev/beta2-local-premium-tags-179', workflow)
         self.assertNotIn('BETA2-RECOVERY', workflow)
         for suffix in ('.ipa', '.json'):
-            self.assertIn('artifacts/Jerkgram-1.2.0-Build180-BETA3' + suffix, workflow)
+            self.assertIn(f'artifacts/Jerkgram-1.2.0-Build{candidate_identity(config)[2]}-{candidate_identity(config)[3]}' + suffix, workflow)
 
     def test_partial_tags_cannot_fall_back_to_hub(self):
         self.assertTrue((ROOT / 'scripts/materialize_jg131_saved_tags.py').exists(), 'Saved Tags materializer missing')

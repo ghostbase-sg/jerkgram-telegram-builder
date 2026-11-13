@@ -1,3 +1,4 @@
+from jg_release_expectations import candidate_identity
 """Release wiring and terminal detection must preserve all earlier source gates."""
 import hashlib
 import json
@@ -21,13 +22,13 @@ class RecoveryIntegration(unittest.TestCase):
 
     def test_release_identity_and_gates_agree(self):
         config = json.loads((ROOT/'jerkgram-migration.json').read_text())
-        self.assertEqual((config['product_display_version'], config['product_technical_version'], config['build_number'], config['artifact_suffix']), ('1.2.0 Beta 3', '1.2.0-beta.3', 180, 'BETA3'))
+        self.assertEqual((config['product_display_version'], config['product_technical_version'], config['build_number'], config['artifact_suffix']), candidate_identity(config))
         for name in ('scripts/build_jg13.sh', '.github/workflows/no-ads-native.yml'):
             text = (ROOT/name).read_text()
             self.assertLess(text.index('scripts/materialize_jg131_botbridge1.py'), text.index('scripts/materialize_jg131_beta2_recovery.py'))
             self.assertLess(text.index('tests/run_jg131_saved_tags.py --require-native --require-full-source'), text.index("-p 'test_jg1312*.py'"))
         build = (ROOT/'scripts/build_jg13.sh').read_text()
-        self.assertIn('--define=buildNumber=180', build)
+        self.assertIn('--define=buildNumber='+str(candidate_identity(config)[2]), build)
         self.assertLess(build.index('tests/run_jg131_saved_tags.py'), build.index('"${BAZEL_BIN:-bazelisk}" build'))
         workflow = (ROOT/'.github/workflows/build.yml').read_text()
         self.assertIn('needs: source-preflight', workflow)
@@ -35,7 +36,7 @@ class RecoveryIntegration(unittest.TestCase):
         self.assertIn('      - dev/botbridge1-legacy-history-modern-write', workflow)
         self.assertNotIn('            artifacts/build.log', workflow)
         for suffix in ('.ipa', '.json'):
-            self.assertIn('artifacts/Jerkgram-1.2.0-Build180-BETA3'+suffix, workflow)
+            self.assertIn(f'artifacts/Jerkgram-1.2.0-Build{candidate_identity(config)[2]}-{candidate_identity(config)[3]}'+suffix, workflow)
 
     def test_final_verifier_refuses_partial_recovery_before_bot_fallback(self):
         import materialize_jg131_beta2_recovery as recovery

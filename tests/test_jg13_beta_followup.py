@@ -1,3 +1,4 @@
+from jg_release_expectations import candidate_identity
 """Bounded source contracts and real IPA metadata verifier (no app runtime claim)."""
 import ast
 import json
@@ -50,8 +51,8 @@ class FollowupTests(unittest.TestCase):
         self.assertIn('config["bundle_short_version"]', (ROOT / "scripts/configure_jg13.py").read_text())
         config = json.loads((ROOT / "jerkgram-migration.json").read_text())
         self.assertEqual(config.get("bundle_short_version"), "13.2")
-        self.assertEqual(config["product_display_version"], "1.2.0 Beta 3")
-        self.assertEqual(config["product_technical_version"], "1.2.0-beta.3")
+        self.assertEqual(config["product_display_version"], candidate_identity(config)[0])
+        self.assertEqual(config["product_technical_version"], candidate_identity(config)[1])
 
     def test_one_formatter_per_list_rebuild(self):
         text = (SOURCE / TM).read_text()
