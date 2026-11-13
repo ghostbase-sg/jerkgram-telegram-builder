@@ -42,7 +42,7 @@ def codec_sources():
         FIXTURE / 'support/ValueBoxKey.swift']
 
 
-def compile_fixture(folder, optimization, old=False):
+def compile_fixture(folder, optimization, old=False, main_override=None):
     """Full pinned codec, exact supporting declaration, real ObjC hash module."""
     official = FIXTURE / 'official/submodules'
     includes = folder / 'include'
@@ -69,7 +69,7 @@ def compile_fixture(folder, optimization, old=False):
             'private func botBridgeValidatedAccount(', 'private func botBridgeReadProgress(',
             'func jerkgramPrepareBotBridgeHistory(', 'private func botBridgeWriteProgress('])
         main = 'import Foundation\n' + policy(source) + (FIXTURE / 'native.swift').read_text().replace('/* REAL_STORAGE_BOUNDARY */', storage)
-    (folder / 'main.swift').write_text(main)
+    (folder / 'main.swift').write_text(main if main_override is None else main_override)
     sources = codec_sources()
     executable = folder / 'codec'
     command = [shutil.which('swiftc'), '-swift-version', '5', optimization, '-I', str(includes),

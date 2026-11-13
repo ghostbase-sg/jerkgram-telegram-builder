@@ -29,7 +29,10 @@ class Integration(unittest.TestCase):
      self.assertFalse(stages.is_present(prefix))
  def test_common_identity_and_final_gate_order(self):
   c=json.loads((ROOT/'jerkgram-migration.json').read_text())
-  self.assertEqual((c['build_number'],c['artifact_suffix'],c['upstream_new_version']),(180,'BETA3','13.2'))
+  sys.path.insert(0,str(ROOT/'scripts'))
+  from jg132_beta3_stages import build180_identity
+  self.assertEqual(build180_identity(),{'displayVersion':'1.2.0 Beta 3','technicalVersion':'1.2.0-beta.3','build':'180','telegramBase':'13.2'})
+  self.assertEqual(c['upstream_new_version'],'13.2')
   for n in ['scripts/build_jg13.sh','.github/workflows/no-ads-native.yml']:
    s=(ROOT/n).read_text()
    steps=['python3 tests/run_jg131_saved_tags.py --require-native --require-full-source',"python3 -m unittest discover -s tests -p 'test_jg1312*.py'",'python3 scripts/materialize_jg132_beta3.py','python3 tests/run_jg132_beta3.py --require-native --require-full-source']
@@ -37,11 +40,11 @@ class Integration(unittest.TestCase):
    self.assertTrue(all(s.count(v)==1 for v in steps))
   s=(ROOT/'scripts/build_jg13.sh').read_text()
   self.assertLess(s.index('tests/run_jg132_beta3.py'),s.index('"${BAZEL_BIN:-bazelisk}" build'))
-  self.assertIn('--define=buildNumber=180',s)
+  self.assertIn('--define=buildNumber='+str(c['build_number']),s)
   s=(ROOT/'.github/workflows/build.yml').read_text()
   self.assertIn('needs: source-preflight',s)
   self.assertIn('      - dev/beta3-history-native-tags-180\n',s)
-  for suffix in ['.ipa','.json']:self.assertIn('artifacts/Jerkgram-1.2.0-Build180-BETA3'+suffix,s)
+  for suffix in ['.ipa','.json']:self.assertIn('artifacts/Jerkgram-1.2.0-Build'+str(c['build_number'])+'-'+c['artifact_suffix']+suffix,s)
  def test_native_gate_refuses_missing_toolchain(self):
   r=subprocess.run([sys.executable,str(ROOT/'tests/run_jg132_beta3.py'),'--require-native'],env=dict(os.environ,PATH=''),capture_output=True,text=True)
   self.assertNotEqual(r.returncode,0);self.assertIn('Beta3 requires macOS',r.stdout+r.stderr)

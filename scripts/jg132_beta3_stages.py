@@ -163,9 +163,22 @@ def verify_source(source):
     if config['upstream_new_sha'] != UPSTREAM:
         raise RuntimeError('Beta3 configuration upstream mismatch')
     identity = (source / 'submodules/TelegramPresentationData/Sources/JerkgramStrings.swift').read_text()
-    for key, value in [('displayVersion', config['product_display_version']), ('technicalVersion', config['product_technical_version']), ('build', str(config['build_number'])), ('telegramBase', config['upstream_new_version'])]:
+    for key, value in build180_identity().items():
         if f'public static let {key} = "{value}"' not in identity:
             raise RuntimeError('Beta3 identity mismatch: ' + key)
     if f'<string>{config["bundle_short_version"]}</string>' not in (source / 'Telegram/BUILD').read_text():
         raise RuntimeError('Beta3 bundle version mismatch')
     print('Beta3 source successors and restored32-stage13.2 baseline VERIFIED; native/app/device separate', flush=True)
+
+
+def build180_identity():
+    """Read frozen GREEN metadata from its exact accepted identity delta."""
+    manifest('beta3-settings-ui')
+    text = (ROOT / 'patches/beta3-settings-ui.patch').read_text()
+    result = {}
+    for key in ('displayVersion', 'technicalVersion', 'build', 'telegramBase'):
+        values = re.findall(r'^\+    public static let ' + key + r' = "([^"\n]+)"$', text, re.M)
+        if len(values) != 1:
+            raise RuntimeError('Frozen Build180 identity seam changed: ' + key)
+        result[key] = values[0]
+    return result

@@ -1,0 +1,342 @@
+--- a/submodules/TelegramCore/Sources/State/AccountStateManager.swift
++++ b/submodules/TelegramCore/Sources/State/AccountStateManager.swift
+@@ -783,10 +783,7 @@
+             } |> deliverOn(self.queue)).start(next: { [weak self] prepared in
+                 guard let self = self, let (progress, live) = prepared, lifetime.isActive, self.botBridgeHistory == nil else { return }
+                 guard admit(progress.generation), lifetime.isActive else { return }
+-                let controller = BotBridgeHistoryController(queue: self.queue, postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, initialProgress: progress, removed: self.messagesRemovedContext, lifetime: lifetime, enqueue: { [weak self] signal in
+-                    guard let self = self else { return }
+-                    self.addOperation(.custom(self.getNextId(), signal), position: .last)
+-                }, event: event)
++                let controller = BotBridgeHistoryController(queue: self.queue, postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, initialProgress: progress, removed: self.messagesRemovedContext, lifetime: lifetime, event: event)
+                 self.botBridgeHistory = controller
+                 controller.observeLive(live)
+                 controller.start()
+--- a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+@@ -47,6 +47,9 @@
+     var candidate: BotBridgeCursor?
+     var next: BotBridgeCursor?
+     var softResetRecoveryVersion: Int32 = 0
++    var historyPolicyVersion: Int32 = JerkgramBotReplayPolicy.version
++    var historyWindow: Int32 = 0
++    var historyWindowStart: BotBridgeCursor?
+     var reservedState = false
+     var reservedPages = 0
+     var committedPages = 0
+@@ -84,6 +87,9 @@
+         case candidate
+         case next
+         case softResetRecoveryVersion
++        case historyPolicyVersion
++        case historyWindow
++        case historyWindowStart
+         case reservedState
+         case reservedPages
+         case committedPages
+@@ -114,6 +120,9 @@
+         candidate = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .candidate)
+         next = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .next)
+         softResetRecoveryVersion = try container.decodeIfPresent(Int32.self, forKey: .softResetRecoveryVersion) ?? 0
++        historyPolicyVersion = try container.decodeIfPresent(Int32.self, forKey: .historyPolicyVersion) ?? 1
++        historyWindow = try container.decodeIfPresent(Int32.self, forKey: .historyWindow) ?? 0
++        historyWindowStart = try container.decodeIfPresent(BotBridgeCursor.self, forKey: .historyWindowStart)
+         reservedState = try container.decode(Bool.self, forKey: .reservedState)
+         reservedPages = Int(try container.decode(Int32.self, forKey: .reservedPages))
+         committedPages = Int(try container.decode(Int32.self, forKey: .committedPages))
+@@ -163,6 +172,9 @@
+         try container.encodeIfPresent(candidate, forKey: .candidate)
+         try container.encodeIfPresent(next, forKey: .next)
+         try container.encode(softResetRecoveryVersion, forKey: .softResetRecoveryVersion)
++        try container.encode(historyPolicyVersion, forKey: .historyPolicyVersion)
++        try container.encode(historyWindow, forKey: .historyWindow)
++        try container.encodeIfPresent(historyWindowStart, forKey: .historyWindowStart)
+         try container.encode(reservedState, forKey: .reservedState)
+         try container.encode(try wireInt32(reservedPages, key: .reservedPages), forKey: .reservedPages)
+         try container.encode(try wireInt32(committedPages, key: .committedPages), forKey: .committedPages)
+@@ -192,9 +204,10 @@
+     }
+ 
+     var isValid: Bool {
+-        guard schema == 1, (0...1).contains(softResetRecoveryVersion), !generation.isEmpty, generation.utf8.count <= 64,
++        guard schema == 1, (1...2).contains(historyPolicyVersion), historyWindow >= 0,
++            (0...1).contains(softResetRecoveryVersion), !generation.isEmpty, generation.utf8.count <= 64,
+             reservedPages >= 0, reservedPages <= 32, committedPages >= 0, committedPages <= reservedPages,
+-            examined >= 0, examined <= 20000, inserted >= 0, inserted <= examined,
++            examined >= 0, examined <= historyMessageLimit, inserted >= 0, inserted <= examined,
+             insertedPeers >= 0, insertedPeers <= 320000, insertedUsers >= 0, insertedUsers <= 320000, insertedChats >= 0, insertedChats <= 320000, insertedUsers + insertedChats == insertedPeers,
+             deleteIdsObserved >= 0, deleteIdsObserved <= 640001,
+             skipped >= 0, skipped <= examined, unsupported >= 0, unsupported <= 800000,
+@@ -208,12 +221,17 @@
+         if let original = original {
+             guard original.isValid, reservedState else { return false }
+             if let candidate = candidate {
+-                guard candidate.isValid, candidate.pts >= 1, candidate.pts <= original.pts,
+-                    candidate.qts == original.qts, candidate.date == original.date, candidate.seq == original.seq,
++                guard candidate.isValid, candidate.pts >= (historyPolicyVersion == 2 ? 0 : 1), candidate.pts <= original.pts,
++                    historyPolicyVersion != 2 || candidate == JerkgramBotReplayPolicy.seed(original),
++                    historyPolicyVersion == 2 || (candidate.qts == original.qts && candidate.date == original.date && candidate.seq == original.seq),
+                     let next = next, next.isValid, next.pts >= candidate.pts,
+                     next.qts >= candidate.qts, next.date >= candidate.date, next.seq >= candidate.seq else { return false }
+             } else if next != nil || terminal != .noCandidate { return false }
+         } else if candidate != nil || next != nil || reservedPages != 0 || committedPages != 0 { return false }
++        if let start = historyWindowStart {
++            guard historyPolicyVersion == 2, start.isValid, let next,
++                next.pts >= start.pts, next.qts >= start.qts, next.date >= start.date, next.seq >= start.seq else { return false }
++        } else if historyWindow != 0 { return false }
+         return true
+     }
+ 
+@@ -229,6 +247,7 @@
+     // Called only inside the preference transaction, before subscribing to Network.
+     // A reservation survives a crash; page commits are a different counter.
+     mutating func reserve(now: Double) -> BotBridgeHistoryRequest? {
++        let _ = resumeHistoryWindow(now: now)
+         guard checkTime(now: now) else { return nil }
+         if original == nil {
+             guard !reservedState else { terminal = .interruptedState; return nil }
+@@ -250,14 +269,15 @@
+             return false
+         }
+         original = cursor
+-        candidate = cursor.candidate(unread: unread)
++        candidate = historyPolicyVersion == 2 ? JerkgramBotReplayPolicy.seed(cursor) : cursor.candidate(unread: unread)
++        historyWindowStart = historyPolicyVersion == 2 ? candidate : nil
+         next = candidate
+         if candidate == nil { terminal = .noCandidate }
+         return true
+     }
+ 
+-    static func withinPageBounds(messages: Int, peers: Int, updates: Int, examined: Int) -> Bool {
+-        return messages >= 0 && messages <= 5000 && peers >= 0 && peers <= 10000 && updates >= 0 && updates <= 10000 && examined >= 0 && examined <= 20000 && messages <= 20000 - examined
++    static func withinPageBounds(messages: Int, peers: Int, updates: Int, examined: Int, limit: Int = 20000) -> Bool {
++        return messages >= 0 && messages <= 5000 && peers >= 0 && peers <= 10000 && updates >= 0 && updates <= 10000 && examined >= 0 && examined <= limit && messages <= limit - examined
+     }
+ 
+     mutating func commit(next cursor: BotBridgeCursor, final: Bool, examined pageExamined: Int, inserted pageInserted: Int, peers: Int, users: Int = 0, skipped pageSkipped: Int, unsupported pageUnsupported: Int, deletions pageDeletions: Int, missing: Int, now: Double) -> Bool {
+@@ -267,7 +287,7 @@
+         }
+         guard cursor.isValid, cursor.pts >= previous.pts, cursor.qts >= previous.qts, cursor.date >= previous.date, cursor.seq >= previous.seq,
+             final || cursor.advances(previous) else { terminal = .nonadvancing; return false }
+-        guard Self.withinPageBounds(messages: pageExamined, peers: peers, updates: 0, examined: examined),
++        guard Self.withinPageBounds(messages: pageExamined, peers: peers, updates: 0, examined: examined, limit: historyMessageLimit),
+             pageInserted >= 0, pageInserted <= pageExamined, users >= 0, users <= peers, pageSkipped >= 0, pageSkipped <= pageExamined,
+             pageUnsupported >= 0, pageUnsupported <= 25000, pageDeletions >= 0, pageDeletions <= 10000,
+             missing >= 0, missing <= 100000 else { terminal = .limit; return false }
+@@ -391,7 +411,8 @@
+     guard lifetime.isActive, let authorized = transaction.getState() as? AuthorizedAccountState,
+         botBridgeValidatedAccount(transaction: transaction, accountPeerId: accountPeerId, testing: authorized.isTestingEnvironment) else { return nil }
+     let retained = botBridgeReadProgress(transaction: transaction, owner: owner, accountPeerId: accountPeerId, testing: authorized.isTestingEnvironment)
+-    let progress = botBridgeRecoverInitialSoftReset(retained, owner: owner, accountPeerId: accountPeerId.toInt64(), testing: authorized.isTestingEnvironment)
++    let recovered = botBridgeRecoverInitialSoftReset(retained, owner: owner, accountPeerId: accountPeerId.toInt64(), testing: authorized.isTestingEnvironment)
++    let progress = JerkgramBotReplayPolicy.upgrade(recovered, owner: owner, peer: accountPeerId.toInt64(), testing: authorized.isTestingEnvironment)
+     // Persist the one-time marker in this transaction before admission/dispatch.
+     botBridgeWriteProgress(progress, transaction: transaction)
+     return progress
+@@ -469,7 +490,7 @@
+         let current = transaction.getPreferencesEntry(key: botBridgeHistoryKey)?.get(BotBridgeHistoryProgress.self), current == expected else { return nil }
+     var progress = current
+     guard progress.checkTime(now: now) else { botBridgeWriteProgress(progress, transaction: transaction); return progress }
+-    guard BotBridgeHistoryProgress.withinPageBounds(messages: page.messages.count, peers: page.users.count + page.chats.count, updates: page.updates.count, examined: progress.examined), page.encryptedCount <= 10000 else {
++    guard BotBridgeHistoryProgress.withinPageBounds(messages: page.messages.count, peers: page.users.count + page.chats.count, updates: page.updates.count, examined: progress.examined, limit: progress.historyMessageLimit), page.encryptedCount <= 10000 else {
+         progress.terminal = .limit; botBridgeWriteProgress(progress, transaction: transaction); return progress
+     }
+     guard let previous = progress.next, page.cursor.isValid,
+@@ -619,7 +640,6 @@
+     private let testing: Bool
+     private let removed: MessagesRemovedContext
+     private let lifetime: BotBridgeLifetime
+-    private let enqueue: (Signal<Void, NoError>) -> Void
+     private let wall: () -> Double
+     private let monotonic: () -> Double
+     private let event: (BotBridgeHistoryEvent) -> Void
+@@ -629,11 +649,11 @@
+     private var monotonicDeadline: Double?
+     private let terminalWrite = MetaDisposable()
+ 
+-    init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId, initialProgress: BotBridgeHistoryProgress, removed: MessagesRemovedContext, lifetime: BotBridgeLifetime, enqueue: @escaping (Signal<Void, NoError>) -> Void, wall: @escaping () -> Double = { Date().timeIntervalSince1970 }, monotonic: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime }, event: @escaping (BotBridgeHistoryEvent) -> Void = { _ in }) {
++    init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId, initialProgress: BotBridgeHistoryProgress, removed: MessagesRemovedContext, lifetime: BotBridgeLifetime, wall: @escaping () -> Double = { Date().timeIntervalSince1970 }, monotonic: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime }, event: @escaping (BotBridgeHistoryEvent) -> Void = { _ in }) {
+         self.queue = queue; self.postbox = postbox; self.network = network
+         self.accountPeerId = accountPeerId; self.owner = initialProgress.owner; self.testing = initialProgress.testing
+         self.progress = initialProgress
+-        self.removed = removed; self.lifetime = lifetime; self.enqueue = enqueue
++        self.removed = removed; self.lifetime = lifetime
+         self.wall = wall; self.monotonic = monotonic; self.event = event
+     }
+ 
+@@ -644,8 +664,11 @@
+         guard !started, lifetime.isActive else { return }
+         started = true
+         if let progress = progress, progress.terminal != nil {
+-            emit(.restoredTerminal, progress: progress)
+-            return
++            var resumable = progress
++            if !resumable.resumeHistoryWindow(now: wall()) {
++                emit(.restoredTerminal, progress: progress)
++                return
++            }
+         }
+         if let progress = progress { emit(.started, progress: progress) }
+         schedulePage()
+@@ -681,33 +704,37 @@
+             guard let self = self, let (current, live) = result else { return }
+             self.observedLive = live
+             self.progress = current; self.emit(.terminal, progress: current); self.emit(.handoff, progress: current)
++            self.scheduleHistoryContinuation(current)
+         }))
+     }
+ 
++    private func scheduleHistoryContinuation(_ expected: BotBridgeHistoryProgress) {
++        var probe = expected
++        guard lifetime.isActive, probe.resumeHistoryWindow(now: wall()) else { return }
++        monotonicDeadline = nil
++        queue.after(1.0, { [weak self] in
++            guard let self, self.lifetime.isActive, self.active == nil, self.progress == expected else { return }
++            self.schedulePage()
++        })
++    }
++
+     private func schedulePage() {
+-        guard lifetime.isActive else { return }
+-        // Both the queued signal and its continuation retain only a weak owner.
+-        enqueue(Signal { [weak self] subscriber in
+-            guard let self = self, self.lifetime.isActive else { subscriber.putCompletion(); return EmptyDisposable }
+-            let lease = BotBridgePageLease(completion: { subscriber.putCompletion() })
+-            self.active = lease
+-            // Postbox may suspend a transaction indefinitely. The manager custom
+-            // operation is bounded independently of reservation or transport work.
+-            self.armWatchdog(lease)
+-            if lease.gate.isOpen { self.reserveAndDispatch(lease) }
+-            return ActionDisposable { [weak self, weak lease] in
+-                guard let self = self else { lease?.finish(); return }
+-                self.queue.async { lease?.finish() }
+-            }
+-        })
++        guard lifetime.isActive, active == nil else { return }
++        // Historical Network I/O must never occupy the live state manager's
++        // custom-operation slot. Postbox serializes each guarded storage commit.
++        let lease = BotBridgePageLease(completion: {})
++        active = lease
++        armWatchdog(lease)
++        if lease.gate.isOpen { reserveAndDispatch(lease) }
+     }
+ 
+     private func armWatchdog(_ lease: BotBridgePageLease) {
+         guard let progress = progress else { fail(.corrupt, lease: lease); return }
+         let now = wall()
+         var checked = progress
++        if checked.resumeHistoryWindow(now: now) { monotonicDeadline = nil }
+         guard checked.checkTime(now: now) else { fail(checked.terminal ?? .corrupt, lease: lease); return }
+-        let wallRemaining = (progress.deadline ?? (now + 120)) - now
++        let wallRemaining = (checked.deadline ?? (now + 120)) - now
+         if monotonicDeadline == nil {
+             monotonicDeadline = monotonic() + min(120, max(0, wallRemaining))
+         }
+@@ -740,7 +767,12 @@
+             guard let (progress, request, live) = result else { lease.finish(); return }
+             self.observedLive = live
+             self.progress = progress
+-            guard let request = request else { self.emit(.terminal, progress: progress); self.emit(.handoff, progress: progress); lease.finish(); return }
++            guard let request = request else {
++                self.emit(.terminal, progress: progress); self.emit(.handoff, progress: progress)
++                lease.finish(); self.active = nil
++                self.scheduleHistoryContinuation(progress)
++                return
++            }
+             self.emit(.reserved, progress: progress)
+             var dispatchProgress = progress
+             guard dispatchProgress.checkTime(now: self.wall()) else { self.fail(dispatchProgress.terminal ?? .corrupt, lease: lease); return }
+@@ -814,8 +846,8 @@
+         lease.finish()
+         active = nil
+         guard progress.terminal == nil else { return }
+-        // putCompletion has already been sent. Append one new operation on a later
+-        // manager queue turn, allowing current live operations to run between pages.
++        // Yield the account queue between historical pages; live polling stays
++        // independent while the next bounded request waits for Network.
+         queue.async { [weak self] in self?.schedulePage() }
+     }
+ 
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotReplayPolicy.swift
+@@ -0,0 +1,54 @@
++import Foundation
++
++// Historical retrieval is separate from AuthorizedAccountState. The zero seed
++// is sent only to the isolated bot difference request, never to the live poller.
++enum JerkgramBotReplayPolicy {
++    static let version: Int32 = 2
++    static let windowMessages = 160000
++
++    static func seed(_ live: BotBridgeCursor) -> BotBridgeCursor? {
++        guard live.isValid else { return nil }
++        return BotBridgeCursor(pts: 0, qts: 0, date: 0, seq: 0)
++    }
++
++    static func upgrade(_ previous: BotBridgeHistoryProgress, owner: Int64, peer: Int64, testing: Bool, now: Double = Date().timeIntervalSince1970) -> BotBridgeHistoryProgress {
++        guard previous.isValid, previous.owner == owner, previous.peer == peer,
++            previous.testing == testing,
++            previous.terminal != .corrupt, previous.terminal != .loggedOut,
++            previous.terminal != .replaced else { return previous }
++        if previous.historyPolicyVersion == 1 {
++            return BotBridgeHistoryProgress(owner: owner, peer: peer, testing: testing, generation: UUID().uuidString)
++        }
++        var resumed = previous
++        if resumed.resumeHistoryWindow(now: now, allowTransient: true) { return resumed }
++        let transient = previous.terminal == .cancelled || previous.terminal == .timeout || previous.terminal == .rpcError || previous.terminal == .interruptedState
++        if previous.original == nil, transient {
++            return BotBridgeHistoryProgress(owner: owner, peer: peer, testing: testing, generation: UUID().uuidString)
++        }
++        return previous
++    }
++}
++
++extension BotBridgeHistoryProgress {
++    var historyMessageLimit: Int { historyPolicyVersion == 2 ? JerkgramBotReplayPolicy.windowMessages : 20000 }
++
++    // Bound work per window, retain the server cursor between windows. Only
++    // successful advancing work can renew a window; errors never retry forever.
++    mutating func resumeHistoryWindow(now: Double, allowTransient: Bool = false) -> Bool {
++        let transient = allowTransient && (terminal == .cancelled || terminal == .timeout || terminal == .rpcError)
++        guard isValid, historyPolicyVersion == 2, now.isFinite,
++            terminal == .limit || terminal == .deadline || transient,
++            let next, let start = historyWindowStart ?? candidate,
++            transient || (committedPages > 0 && next.advances(start)),
++            historyWindow < Int32.max, let lastWall, now >= lastWall else { return false }
++        historyWindow += 1
++        terminal = nil
++        started = now; deadline = now + 120; self.lastWall = now
++        reservedPages = 0; committedPages = 0
++        examined = 0; inserted = 0; insertedPeers = 0; insertedUsers = 0; insertedChats = 0
++        deleteIdsObserved = 0; skipped = 0; unsupported = 0; deletions = 0; missingReferences = 0
++        // Each renewed window must advance from its own starting cursor.
++        self.historyWindowStart = next
++        return true
++    }
++}
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -979,9 +979,9 @@
+ }
+ 
+ public enum JerkgramReleaseIdentity {
+-    public static let displayVersion = "1.2.0 Beta 3"
+-    public static let technicalVersion = "1.2.0-beta.3"
+-    public static let build = "180"
++    public static let displayVersion = "1.2.0 Beta 2"
++    public static let technicalVersion = "1.2.0-beta.2"
++    public static let build = "181"
+     public static let telegramBase = "13.2"
+ 
+     public static var aboutText: String {
+--- a/submodules/TelegramUI/Components/Wallet/WalletScreen/Sources/WalletScreen.swift
++++ b/submodules/TelegramUI/Components/Wallet/WalletScreen/Sources/WalletScreen.swift
+@@ -3907,7 +3907,7 @@
+                     if self.emptyTransactionsSurfaceView.superview == nil {
+                         self.scrollView.insertSubview(self.emptyTransactionsSurfaceView, at: 0)
+                     }
+-                    surfaceTransition.setBackgroundColor(view: self.emptyTransactionsSurfaceView, color: UIColor(rgb: 0x1c1c1e))
++                    surfaceTransition.setBackgroundColor(view: self.emptyTransactionsSurfaceView, color: UIColor(rgb: 0x1c1c1e).withAlphaComponent(0.45))
+                     // Wallet empty surface frame
+                     surfaceTransition.setFrame(
+                         view: self.emptyTransactionsSurfaceView,

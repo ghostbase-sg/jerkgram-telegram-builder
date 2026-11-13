@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 3 / Telegram 13.2 / Build180 Common fixes
+name: Jerkgram 1.2.0 Beta 2 / Telegram 13.2 / Build181 History and appearance
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - docs/**
     branches:
+      - dev/beta2-history-appearance-followup
       - dev/beta3-history-native-tags-180
       - dev/beta2-local-premium-tags-179
       - dev/botbridge1-legacy-history-modern-write
@@ -57,7 +58,7 @@ jobs:
           bazelisk --version
       - name: Prepare clean pinned Official Telegram 13.2 source
         run: bash scripts/prepare_source_official.sh
-      - name: Build Jerkgram 1.2.0 Beta 3
+      - name: Build Jerkgram 1.2.0 Beta 2
         run: |
           set -euo pipefail
           mkdir -p artifacts
@@ -68,7 +69,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build180-BETA3-diagnostics
+          name: Jerkgram-1.2.0-Build181-BETA2-diagnostics
           path: |
             patches/jg131-saved-tags.patch
             patches/jg131-saved-tags.sha256.json
@@ -87,6 +88,12 @@ jobs:
             scripts/jg132_baseline.py
             scripts/jg132_beta3_stages.py
             scripts/materialize_jg132_beta3.py
+            patches/post180-*.patch
+            patches/post180-*.sha256.json
+            scripts/jg132_post180.py
+            scripts/materialize_jg132_post180.py
+            tests/run_jg132_post180.py
+            tests/fixtures/post180/
             patches/beta3-*.patch
             patches/beta3-*.sha256.json
             docs/migrations/telegram-13.2*.json
@@ -237,9 +244,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build180-BETA3
+          name: Jerkgram-1.2.0-Build181-BETA2
           path: |
-            artifacts/Jerkgram-1.2.0-Build180-BETA3.ipa
-            artifacts/Jerkgram-1.2.0-Build180-BETA3.json
+            artifacts/Jerkgram-1.2.0-Build181-BETA2.ipa
+            artifacts/Jerkgram-1.2.0-Build181-BETA2.json
           if-no-files-found: error
           retention-days: 90

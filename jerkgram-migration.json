@@ -11,10 +11,10 @@
   "upstream_new_version": "13.2",
   "product_name": "Jerkgram",
   "product_version": "1.2.0",
-  "product_display_version": "1.2.0 Beta 3",
-  "product_technical_version": "1.2.0-beta.3",
+  "product_display_version": "1.2.0 Beta 2",
+  "product_technical_version": "1.2.0-beta.2",
   "bundle_short_version": "13.2",
-  "build_number": 180,
+  "build_number": 181,
   "bundle_id": "com.jerkgram.ios",
   "source_snapshot_sha256": "6499b01ab4a5db475dde15ac7b773643a1d6188d2432b9746dab2adde2a18813",
   "dependency_overrides": {},
@@ -25,11 +25,20 @@
     "recorded_by_builder_commit": "950894f0a44fb8396dc172ceb4f6f4bf739ce8b5",
     "role": "historical source export; not a 13.1.2 archive claim; unused by current materializers"
   },
-  "artifact_suffix": "BETA3",
+  "artifact_suffix": "BETA2",
   "upstream_migration_evidence": {
     "chain": "docs/migrations/telegram-13.2-stage-chain.json",
     "guards": "docs/migrations/telegram-13.2-guard-proof.json",
     "scope": "32 reviewed historical feature boundaries; final Beta3 identity is a subsequent explicit stage",
     "rlottie": "removed in official13.2 submodules tree ceac64c2399296078dc70a42e16799d692c23fbf; obsolete fallback override removed"
+  },
+  "post180_stages": [
+    "post180-history-wallet"
+  ],
+  "build180_baseline_identity": {
+    "displayVersion": "1.2.0 Beta 3",
+    "technicalVersion": "1.2.0-beta.3",
+    "build": "180",
+    "telegramBase": "13.2"
   }
 }
