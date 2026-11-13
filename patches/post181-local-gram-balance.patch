@@ -1,0 +1,591 @@
+--- /dev/null
++++ b/submodules/AccountContext/Sources/JerkgramLocalGramBalance.swift
+@@ -0,0 +1,64 @@
++import Foundation
++
++// Uses the existing per-account Settings scope. GRAM overrides never enter WalletContext.
++public enum JerkgramLocalGramBalance {
++    public static let enabledKey = "jerkgram.Gram.LocalBalance.Enabled"
++    public static let amountKey = "jerkgram.Gram.LocalBalance.Amount"
++    public static let changed = Notification.Name("JerkgramLocalGramBalanceChanged")
++
++    public static func scopedKey(accountPeerId: Int64, key: String) -> String {
++        return "jerkgram.account.\(accountPeerId).setting.\(key)"
++    }
++
++    public static func sanitize(_ text: String) -> String {
++        return text.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: ".")
++    }
++
++    public static func savedAmount(_ text: String) -> String? {
++        let value = sanitize(text)
++        guard !value.isEmpty, value.count <= 20, !value.hasSuffix("."),
++            value.allSatisfy({ ("0"..."9").contains(String($0)) || $0 == "." }) else { return nil }
++        let parts = value.split(separator: ".", omittingEmptySubsequences: false)
++        guard parts.count <= 2, let whole = Int64(parts[0].isEmpty ? "0" : String(parts[0])), whole >= 0 else { return nil }
++        let result = String(whole) + (parts.count == 2 ? "." + String(parts[1].prefix(9)) : "")
++        guard nanotokens(result) != nil else { return nil }
++        return result
++    }
++
++    // Exact integer arithmetic: avoid Double rounding and reject native Int64 overflow.
++    public static func nanotokens(_ canonical: String) -> Int64? {
++        let parts = canonical.split(separator: ".", omittingEmptySubsequences: false)
++        guard parts.count <= 2, let whole = Int64(parts[0]), whole >= 0 else { return nil }
++        let fraction = parts.count == 2 ? String(parts[1]) : ""
++        guard fraction.count <= 9, fraction.allSatisfy({ ("0"..."9").contains(String($0)) }) else { return nil }
++        let fractional = Int64(fraction + String(repeating: "0", count: 9 - fraction.count)) ?? 0
++        let (base, productOverflow) = whole.multipliedReportingOverflow(by: 1_000_000_000)
++        let (result, sumOverflow) = base.addingReportingOverflow(fractional)
++        return productOverflow || sumOverflow ? nil : result
++    }
++
++    public static func enabled(accountPeerId: Int64, defaults: UserDefaults = .standard) -> Bool {
++        return defaults.bool(forKey: scopedKey(accountPeerId: accountPeerId, key: enabledKey))
++    }
++
++    public static func amount(accountPeerId: Int64, defaults: UserDefaults = .standard) -> String {
++        return defaults.string(forKey: scopedKey(accountPeerId: accountPeerId, key: amountKey)).flatMap(savedAmount) ?? "0"
++    }
++
++    public static func visualBalance(accountPeerId: Int64, defaults: UserDefaults = .standard) -> Int64? {
++        guard enabled(accountPeerId: accountPeerId, defaults: defaults) else { return nil }
++        return nanotokens(amount(accountPeerId: accountPeerId, defaults: defaults))
++    }
++
++    public static func commit(accountPeerId: Int64, enabled: Bool, amount: String, defaults: UserDefaults = .standard) {
++        guard let amount = savedAmount(amount) else { return }
++        defaults.set(enabled, forKey: scopedKey(accountPeerId: accountPeerId, key: enabledKey))
++        defaults.set(amount, forKey: scopedKey(accountPeerId: accountPeerId, key: amountKey))
++        // A closing editor from account A must never replace account B's compatibility aliases.
++        if (defaults.object(forKey: "jerkgram.Settings.ActiveProjectionAccount.V176") as? NSNumber)?.int64Value == accountPeerId {
++            defaults.set(enabled, forKey: enabledKey)
++            defaults.set(amount, forKey: amountKey)
++        }
++        NotificationCenter.default.post(name: changed, object: nil, userInfo: ["accountPeerId": NSNumber(value: accountPeerId)])
++    }
++}
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -117,6 +117,8 @@
+     static let oneTimeScreenRecording = "jerkgram.ProtectedContent.OneTimeScreenRecording"
+     static let oneTimeSave = "jerkgram.ProtectedContent.OneTimeSave"
+     static let storySave = "jerkgram.Stories.Save"
++    static let localGramEnabled = JerkgramLocalGramBalance.enabledKey
++    static let localGramAmount = JerkgramLocalGramBalance.amountKey
+     static let localStarsEnabled = "jerkgram.Stars.LocalBalance.Enabled"
+     static let localStarsAmount = "jerkgram.Stars.LocalBalance.Amount"
+     static let localStarsBaseAmount = "jerkgram.Stars.LocalBalance.BaseAmount"
+@@ -559,6 +561,8 @@
+         GhostBaseKey.oneTimeScreenRecording: .bool(state.oneTimeScreenRecording),
+         GhostBaseKey.oneTimeSave: .bool(state.oneTimeSave),
+         GhostBaseKey.storySave: .bool(state.storySave),
++        GhostBaseKey.localGramEnabled: .bool(state.localGramEnabled),
++        GhostBaseKey.localGramAmount: .string(state.localGramAmount),
+         GhostBaseKey.localStarsEnabled: .bool(state.localStarsEnabled),
+         GhostBaseKey.localStarsAmount: .string(state.localStarsAmount),
+         GhostBaseKey.localStarsBaseAmount: .string(state.localStarsBaseAmount)
+@@ -712,6 +716,8 @@
+     var oneTimeScreenRecording: Bool
+     var oneTimeSave: Bool
+     var storySave: Bool
++    var localGramEnabled: Bool
++    var localGramAmount: String
+     var localStarsEnabled: Bool
+     var localStarsAmount: String
+     var localStarsBaseAmount: String
+@@ -800,6 +806,8 @@
+             oneTimeScreenRecording: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeScreenRecording, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
+             oneTimeSave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.oneTimeSave, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
+             storySave: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.storySave, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
++            localGramEnabled: JerkgramLocalGramBalance.enabled(accountPeerId: accountPeerId),
++            localGramAmount: JerkgramLocalGramBalance.amount(accountPeerId: accountPeerId),
+             localStarsEnabled: jerkgramScopedBool(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsEnabled, defaultValue: false, allowLegacyFallback: allowLegacyFallback),
+             localStarsAmount: jerkgramScopedString(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsAmount, defaultValue: "0", allowLegacyFallback: allowLegacyFallback),
+             localStarsBaseAmount: jerkgramScopedString(accountPeerId: accountPeerId, key: GhostBaseKey.localStarsBaseAmount, defaultValue: "0", allowLegacyFallback: allowLegacyFallback)
+@@ -859,6 +867,7 @@
+     case dataAndBackup
+     case localPremium
+     case stars
++    case gram
+     case home
+     case ghostMode
+     case messages
+@@ -876,6 +885,8 @@
+             return "Data and Backup"
+         case .localPremium:
+             return "Local Premium"
++        case .gram:
++            return "GRAM"
+         case .stars:
+             return "Stars"
+         case .home:
+@@ -906,6 +917,8 @@
+             return strings.dataAndBackup
+         case .localPremium:
+             return strings.localPremium
++        case .gram:
++            return strings.gramBalance
+         case .stars:
+             return strings.starsBalance
+         case .home:
+@@ -2156,6 +2169,7 @@
+             .toggle(0, 4, GhostBaseKey.showRegistration, strings.registrationDate, state.showRegistration),
+             .header(1, strings.basicFunctions),
+             .valueDisclosure(1, 50, strings.starsBalance, strings.starsOverrideSummary(state.localStarsEnabled, balance), nil, .stars),
++            .valueDisclosure(1, 51, strings.gramBalance, strings.gramOverrideSummary(state.localGramEnabled, state.localGramAmount), "Item List/Icons/Gram", .gram),
+             .header(2, strings.backup),
+             .disclosure(2, 1, strings.dataAndBackup, "Item List/Icons/Stories", .dataAndBackup),
+             .disclosure(2, 2, strings.localPremium, "Item List/Icons/Gram", .localPremium)
+@@ -4003,6 +4017,8 @@
+     }, openPage: { selectedPage in
+         if selectedPage == .dataAndBackup {
+             pushController?(jerkgramDataAndBackupController(context: context))
++        } else if selectedPage == .gram {
++            pushController?(jerkgramGramEditorController(context: context))
+         } else if selectedPage == .stars {
+             pushController?(jerkgramStarsEditorController(context: context))
+ 
+--- a/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramArchiveFlowController.swift
+@@ -44,11 +44,13 @@
+     "jerkgram.ProtectedContent.OneTimeScreenRecording",
+     "jerkgram.ProtectedContent.OneTimeSave", "jerkgram.Stories.Save",
+     "jerkgram.Stars.LocalBalance.Enabled",
++    "jerkgram.Gram.LocalBalance.Enabled",
+ ]
+ 
+ private let jerkgramPortableStringKeys = [
+     "jerkgram.Messages.SendTextStyle",
+     "jerkgram.Stars.LocalBalance.Amount",
++    "jerkgram.Gram.LocalBalance.Amount",
+     "jerkgram.Stars.LocalBalance.BaseAmount",
+ ]
+ 
+@@ -70,7 +72,7 @@
+         let scoped = "jerkgram.account.\(accountPeerId).setting.\(key)"
+         if let value = UserDefaults.standard.object(forKey: scoped) as? Bool {
+             toggles[key] = value
+-        } else if let value = UserDefaults.standard.object(forKey: key) as? Bool {
++        } else if key != JerkgramLocalGramBalance.enabledKey, let value = UserDefaults.standard.object(forKey: key) as? Bool {
+             toggles[key] = value
+         }
+     }
+@@ -78,7 +80,7 @@
+         let scoped = "jerkgram.account.\(accountPeerId).setting.\(key)"
+         if let value = UserDefaults.standard.string(forKey: scoped) {
+             strings[key] = value
+-        } else if let value = UserDefaults.standard.string(forKey: key) {
++        } else if key != JerkgramLocalGramBalance.amountKey, let value = UserDefaults.standard.string(forKey: key) {
+             strings[key] = value
+         }
+     }
+--- /dev/null
++++ b/submodules/SettingsUI/Sources/Jerkgram/JerkgramGramEditorController.swift
+@@ -0,0 +1,225 @@
++import Foundation
++import UIKit
++import Dispatch
++import Display
++import SwiftSignalKit
++import TelegramPresentationData
++import ItemListUI
++import AccountContext
++
++private struct JerkgramGramDraftState: Equatable {
++    var enabled: Bool
++    var amount: String
++}
++
++private final class JerkgramGramEditorArguments {
++    let setEnabled: (Bool) -> Void
++    let setAmount: (String) -> Void
++    let applyPreset: (Int64) -> Void
++
++    init(setEnabled: @escaping (Bool) -> Void, setAmount: @escaping (String) -> Void, applyPreset: @escaping (Int64) -> Void) {
++        self.setEnabled = setEnabled
++        self.setAmount = setAmount
++        self.applyPreset = applyPreset
++    }
++}
++
++private enum JerkgramGramEditorEntry: ItemListNodeEntry {
++    case preview(Int32, String, String)
++    case toggle(Int32, String, Bool)
++    case input(Int32, String, String)
++    case preset(Int32, String, Int64)
++    case info(Int32, String)
++
++    var section: ItemListSectionId {
++        switch self {
++        case .preview: return 0
++        case .toggle, .input: return 1
++        case .preset: return 2
++        case .info: return 3
++        }
++    }
++
++    var stableId: Int32 {
++        switch self {
++        case let .preview(id, _, _), let .toggle(id, _, _), let .input(id, _, _), let .preset(id, _, _), let .info(id, _): return id
++        }
++    }
++
++    static func == (lhs: Self, rhs: Self) -> Bool {
++        return lhs.stableId == rhs.stableId && String(describing: lhs) == String(describing: rhs)
++    }
++    static func < (lhs: Self, rhs: Self) -> Bool { lhs.stableId < rhs.stableId }
++
++    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
++        let arguments = arguments as! JerkgramGramEditorArguments
++        switch self {
++        case let .preview(_, amount, status):
++            return ItemListDisclosureItem(
++                presentationData: presentationData, systemStyle: .glass,
++                icon: UIImage(bundleImageName: "Wallet/TopGram"),
++                title: amount, label: status, labelStyle: .text,
++                sectionId: self.section, style: .blocks,
++                disclosureStyle: .none, action: nil
++            )
++        case let .toggle(_, title, value):
++            return ItemListSwitchItem(
++                presentationData: presentationData, systemStyle: .glass, title: title, value: value,
++                sectionId: self.section, style: .blocks,
++                updated: { arguments.setEnabled($0) }
++            )
++        case let .input(_, title, value):
++            return ItemListSingleLineInputItem(
++                presentationData: presentationData,
++                title: NSAttributedString(string: title, textColor: presentationData.theme.list.itemPrimaryTextColor),
++                text: value, placeholder: "0", type: .regular(capitalization: false, autocorrection: false),
++                returnKeyType: .done, alignment: .right, spacing: 16.0,
++                clearType: .onFocus, maxLength: 20, selectAllOnFocus: true,
++                sectionId: self.section,
++                textUpdated: { arguments.setAmount(jerkgramSanitizeGramDraft($0)) },
++                shouldUpdateText: { jerkgramIsValidGramDraft($0) }, action: {}
++            )
++        case let .preset(_, title, value):
++            return ItemListActionItem(
++                presentationData: presentationData, title: title, kind: .generic,
++                alignment: .center, sectionId: self.section, style: .blocks,
++                action: { arguments.applyPreset(value) }
++            )
++        case let .info(_, text):
++            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
++        }
++    }
++}
++
++private func jerkgramIsValidGramDraft(_ text: String) -> Bool {
++    let value = text.replacingOccurrences(of: ",", with: ".")
++    guard value.count <= 20, value.filter({ $0 == "." }).count <= 1 else { return false }
++    return value.allSatisfy { ("0"..."9").contains(String($0)) || $0 == "." || $0 == " " || $0 == "\u{00a0}" }
++}
++
++private func jerkgramSanitizeGramDraft(_ text: String) -> String {
++    return text.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: ".")
++}
++
++private func jerkgramSavedGramAmount(_ text: String) -> String? {
++    return JerkgramLocalGramBalance.savedAmount(text)
++}
++
++private func jerkgramGramPreset(_ current: String, delta: Int64) -> String {
++    let whole = current.split(separator: ".", maxSplits: 1).first.flatMap { Int64($0) } ?? 0
++    let (next, overflow) = whole.addingReportingOverflow(delta)
++    return String(overflow ? 9_223_372_036 : min(9_223_372_036, max(0, next)))
++}
++
++private final class JerkgramGramAutosave {
++    private var saved: JerkgramGramDraftState
++    private var latest: JerkgramGramDraftState
++    private var cancelPending: (() -> Void)?
++    private var generation: UInt64 = 0
++    private let commit: (JerkgramGramDraftState) -> Void
++    private let schedule: (@escaping () -> Void) -> (() -> Void)
++
++    init(initial: JerkgramGramDraftState, commit: @escaping (JerkgramGramDraftState) -> Void, schedule: @escaping (@escaping () -> Void) -> (() -> Void) = { action in
++        let item = DispatchWorkItem(block: action)
++        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: item)
++        return { item.cancel() }
++    }) {
++        self.saved = initial
++        self.latest = initial
++        self.commit = commit
++        self.schedule = schedule
++    }
++
++    func update(_ draft: JerkgramGramDraftState) {
++        let next = JerkgramGramDraftState(enabled: draft.enabled, amount: jerkgramSavedGramAmount(draft.amount) ?? self.latest.amount)
++        guard next != self.latest else { return }
++        self.latest = next
++        self.generation &+= 1
++        self.cancelPending?()
++        self.cancelPending = nil
++        guard next != self.saved else { return }
++        let generation = self.generation
++        self.cancelPending = self.schedule { [weak self] in
++            guard let self, self.generation == generation else { return }
++            self.flush()
++        }
++    }
++
++    func flush() {
++        self.generation &+= 1
++        self.cancelPending?()
++        self.cancelPending = nil
++        guard self.latest != self.saved else { return }
++        self.saved = self.latest
++        self.commit(self.saved)
++    }
++
++    deinit {
++        self.flush()
++    }
++}
++
++private func jerkgramCommitGramDraft(accountPeerId: Int64, state: JerkgramGramDraftState) {
++    JerkgramLocalGramBalance.commit(accountPeerId: accountPeerId, enabled: state.enabled, amount: state.amount)
++}
++
++public func jerkgramGramEditorController(context: AccountContext) -> ViewController {
++    let accountPeerId = context.account.peerId.toInt64()
++    let initial = JerkgramGramDraftState(
++        enabled: JerkgramLocalGramBalance.enabled(accountPeerId: accountPeerId),
++        amount: JerkgramLocalGramBalance.amount(accountPeerId: accountPeerId)
++    )
++    let autosave = JerkgramGramAutosave(initial: initial, commit: { value in
++        jerkgramCommitGramDraft(accountPeerId: accountPeerId, state: value)
++    })
++    let stateValue = Atomic(value: initial)
++    let statePromise = ValuePromise(initial, ignoreRepeated: true)
++    var controller: ItemListController?
++
++    func update(_ transform: (inout JerkgramGramDraftState) -> Void) {
++        let value = stateValue.modify { current in
++            var current = current
++            transform(&current)
++            return current
++        }
++        statePromise.set(value)
++        autosave.update(value)
++    }
++
++    let arguments = JerkgramGramEditorArguments(
++        setEnabled: { value in update { $0.enabled = value } },
++        setAmount: { value in update { $0.amount = value } },
++        applyPreset: { value in update { $0.amount = jerkgramGramPreset($0.amount, delta: value) } }
++    )
++
++    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
++    |> deliverOnMainQueue
++    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
++        let strings = presentationData.strings.jerkgram
++        let amount = jerkgramSanitizeGramDraft(state.amount)
++        let status = strings.gramOverrideSummary(state.enabled, amount)
++        let entries: [JerkgramGramEditorEntry] = [
++            .preview(1, amount, status),
++            .toggle(2, strings.localGramBalance, state.enabled),
++            .input(3, strings.gramBalance, state.amount),
++            .preset(4, "+ 100 GRAM", 100),
++            .preset(5, "+ 1 000 GRAM", 1000),
++            .preset(6, "+ 10 000 GRAM", 10000),
++            .info(7, strings.gramEditorHint)
++        ]
++        return (
++            ItemListControllerState(
++                presentationData: ItemListPresentationData(presentationData), title: .text(strings.gramBalance),
++                leftNavigationButton: nil, rightNavigationButton: nil,
++                backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back)
++            ),
++            (ItemListNodeState(
++                presentationData: ItemListPresentationData(presentationData), entries: entries,
++                style: .blocks, animateChanges: false
++            ), arguments as Any)
++        )
++    }
++    controller = ItemListController(context: context, state: signal)
++    controller?.willDisappear = { _ in autosave.flush() }
++    return controller!
++}
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -743,6 +743,19 @@
+     var change: String {
+         self.languageCode == "ru" ? "Изменить" : "Change"
+     }
++    var localGramBalance: String { self.languageCode == "ru" ? "Локальный баланс GRAM" : "Local GRAM Balance" }
++    var gramBalance: String { self.languageCode == "ru" ? "Баланс GRAM" : "GRAM Balance" }
++    func gramOverrideSummary(_ enabled: Bool, _ balance: String) -> String {
++        if self.languageCode == "ru" {
++            return enabled ? "Локально · \(balance) GRAM" : "Выключено · \(balance) GRAM"
++        }
++        return enabled ? "Local · \(balance) GRAM" : "Off · \(balance) GRAM"
++    }
++    var gramEditorHint: String {
++        self.languageCode == "ru"
++            ? "Это только локальное отображение баланса GRAM. Реальный баланс, переводы и история не изменяются."
++            : "This changes only the local displayed GRAM balance. Your real balance, transfers and history are not modified."
++    }
+     func starsOverrideSummary(_ enabled: Bool, _ balance: String) -> String {
+         if self.languageCode == "ru" {
+             return enabled ? "Локально · \(balance) ⭐" : "Выключено · \(balance) ⭐"
+--- a/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
++++ b/submodules/TelegramUI/Components/Stars/StarsTransactionsScreen/Sources/StarsTransactionsScreen.swift
+@@ -211,6 +211,32 @@
+         private var revenueStateDisposable: Disposable?
+         private var revenueState: StarsRevenueStats?
+         
++        private var localGramVisualBalance: Int64?
++        private var localGramObservers: [NSObjectProtocol] = []
++
++        // Both the page header and native balance card share this presentation.
++        // Never pass local values to withdrawal, purchase or transaction owners.
++        private var displayBalance: StarsAmount {
++            guard let component = self.component else { return self.starsState?.balance ?? .zero }
++            if component.starsContext.ton {
++                return self.localGramVisualBalance.map { StarsAmount(value: $0, nanos: 0) } ?? self.starsState?.balance ?? .zero
++            }
++            return ghostBaseLocalStarsAmountForDisplay() ?? self.starsState?.balance ?? .zero
++        }
++
++        private func refreshLocalGramBalance(notification: Notification? = nil) {
++            guard let component = self.component else { self.localGramVisualBalance = nil; return }
++            let accountPeerId = component.context.account.peerId.toInt64()
++            if let notification, (notification.userInfo?["accountPeerId"] as? NSNumber)?.int64Value != accountPeerId { return }
++            let value: Int64?
++            if component.starsContext.ton, component.starsContext === component.context.tonContext {
++                value = JerkgramLocalGramBalance.visualBalance(accountPeerId: accountPeerId)
++            } else { value = nil }
++            guard value != self.localGramVisualBalance else { return }
++            self.localGramVisualBalance = value
++            if !self.isUpdating { self.state?.updated() }
++        }
++
+         private var previousBalance: StarsAmount?
+         
+         private var subscriptionsStateDisposable: Disposable?
+@@ -230,6 +256,12 @@
+             self.topEdgeEffectView = EdgeEffectView()
+                                     
+             super.init(frame: frame)
++            for name in [JerkgramLocalGramBalance.changed, Notification.Name("JerkgramSettingsDidImport")] {
++                self.localGramObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
++                    self?.refreshLocalGramBalance(notification: notification)
++                })
++            }
++
+             
+             self.scrollView.delaysContentTouches = true
+             self.scrollView.canCancelContentTouches = true
+@@ -274,6 +306,7 @@
+         }
+         
+         deinit {
++            for observer in self.localGramObservers { NotificationCenter.default.removeObserver(observer) }
+             self.stateDisposable?.dispose()
+             self.revenueStateDisposable?.dispose()
+             self.subscriptionsStateDisposable?.dispose()
+@@ -431,8 +464,10 @@
+                 self.isUpdating = false
+             }
+             
++            let localGramIdentityChanged = self.component?.context !== component.context || self.component?.starsContext !== component.starsContext
+             self.component = component
+             self.state = state
++            if localGramIdentityChanged { self.refreshLocalGramBalance() }
+             
+             var balanceUpdated = false
+             if let starsState = self.starsState {
+@@ -661,9 +696,9 @@
+             
+             let formattedBalance: String
+             if component.starsContext.ton {
+-                formattedBalance = formatTonAmountText(self.starsState?.balance.value ?? 0, dateTimeFormat: environment.dateTimeFormat)
++                formattedBalance = formatTonAmountText(self.displayBalance.value, dateTimeFormat: environment.dateTimeFormat)
+             } else {
+-                formattedBalance = formatStarsAmountText(ghostBaseLocalStarsAmountForDisplay() ?? self.starsState?.balance ?? StarsAmount.zero, dateTimeFormat: environment.dateTimeFormat)
++                formattedBalance = formatStarsAmountText(self.displayBalance, dateTimeFormat: environment.dateTimeFormat)
+             }
+             let smallLabelFont = Font.regular(11.0)
+             let labelFont = Font.semibold(14.0)
+@@ -862,7 +897,7 @@
+                             theme: environment.theme,
+                             strings: environment.strings,
+                             dateTimeFormat: environment.dateTimeFormat,
+-                            count: (component.starsContext.ton ? nil : ghostBaseLocalStarsAmountForDisplay()) ?? self.starsState?.balance ?? StarsAmount.zero,
++                            count: self.displayBalance,
+                             currency: component.starsContext.ton ? .ton : .stars,
+                             rate: nil,
+                             actionTitle: component.starsContext.ton ? environment.strings.Ton_WithdrawViaFragment : (withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy),
+--- a/submodules/TelegramUI/Components/Wallet/WalletScreen/Sources/WalletScreen.swift
++++ b/submodules/TelegramUI/Components/Wallet/WalletScreen/Sources/WalletScreen.swift
+@@ -809,6 +809,8 @@
+             backgroundColors: [UIColor(rgb: 0xff453a)]
+         )
+ 
++        private var localGramObservers: [NSObjectProtocol] = []
++        private var localGramVisualBalance: Int64?
+         private var component: WalletScreenComponent?
+         private var environment: EnvironmentType?
+         private var componentState: EmptyComponentState?
+@@ -941,6 +943,11 @@
+             self.transferMotionObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+                 self?.updatePendingTransferAnimations()
+             }
++            for name in [JerkgramLocalGramBalance.changed, Notification.Name("JerkgramSettingsDidImport")] {
++                self.localGramObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
++                    self?.refreshLocalGramBalance(notification: notification)
++                })
++            }
+             self.collectiblesSection.layer.anchorPoint = CGPoint(x: 0.5, y: 0.0)
+         }
+ 
+@@ -979,6 +986,7 @@
+         }
+ 
+         deinit {
++            for observer in self.localGramObservers { NotificationCenter.default.removeObserver(observer) }
+             self.transferDisplayLink?.invalidate()
+             self.transferForegroundDisposable.dispose()
+             if let observer = self.transferMotionObserver { NotificationCenter.default.removeObserver(observer) }
+@@ -1604,7 +1612,27 @@
+             })
+         }
+ 
++        private func refreshLocalGramBalance(notification: Notification? = nil) {
++            guard let component = self.component else {
++                self.localGramVisualBalance = nil
++                return
++            }
++            let accountPeerId = component.context.account.peerId.toInt64()
++            if let notification {
++                guard let changedAccountPeerId = notification.userInfo?["accountPeerId"] as? NSNumber,
++                    changedAccountPeerId.int64Value == accountPeerId else { return }
++            }
++            self.localGramVisualBalance = JerkgramLocalGramBalance.visualBalance(accountPeerId: accountPeerId)
++            if notification != nil {
++                self.componentState?.updated(transition: .immediate)
++            }
++        }
++
+         private var displayBalance: Int64? {
++            // Layout only reads this View's account-scoped presentation snapshot.
++            if let local = self.localGramVisualBalance {
++                return local
++            }
+             guard let balance = self.walletState?.balance.currentValue else {
+                 return nil
+             }
+@@ -3163,7 +3191,11 @@
+             if self.component == nil && component.opensCollectibles {
+                 self.pendingCollectiblesSection = true
+             }
++            let localGramIdentityChanged = self.component?.context !== component.context || self.component?.walletContext !== component.walletContext
+             self.component = component
++            if localGramIdentityChanged {
++                self.refreshLocalGramBalance()
++            }
+             self.environment = environment
+             self.componentState = state
+             let previousContentOffset = self.scrollView.contentOffset

@@ -1,0 +1,31 @@
+# Official Telegram-iOS 24638bc69bd083981b178dd1e7f921eebbf7fc46
+# submodules/ItemListUI/Sources/Items/ItemListDisclosureItem.swift
+    public init(
+        presentationData: ItemListPresentationData,
+        systemStyle: ItemListSystemStyle = .legacy,
+        icon: UIImage? = nil,
+        context: AccountContext? = nil,
+        iconPeer: EnginePeer? = nil,
+        title: String,
+        attributedTitle: NSAttributedString? = nil,
+        enabled: Bool = true,
+        titleColor: ItemListDisclosureItemTitleColor = .primary,
+        titleFont: ItemListDisclosureItemTitleFont = .regular,
+        titleIcon: UIImage? = nil,
+        titleBadge: String? = nil,
+        label: String,
+        attributedLabel: NSAttributedString? = nil,
+        labelStyle: ItemListDisclosureLabelStyle = .text,
+        additionalDetailLabel: String? = nil,
+        additionalDetailLabelColor: ItemListDisclosureItemDetailLabelColor = .generic,
+        sectionId: ItemListSectionId,
+        style: ItemListStyle,
+        disclosureStyle: ItemListDisclosureStyle = .arrow,
+        minimumLabelSpacing: CGFloat? = nil,
+        noInsets: Bool = false,
+        action: (() -> Void)?,
+        clearHighlightAutomatically: Bool = true,
+        tag: ItemListItemTag? = nil,
+        shimmeringIndex: Int? = nil
+    ) {
+
