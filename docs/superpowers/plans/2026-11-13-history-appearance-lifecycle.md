@@ -34,3 +34,7 @@
 - [ ] Publish the product candidate and run preflight/app build; observe startup only and retain artifact/run link. Device runtime remains pending.
 - [ ] On `perf/build180-wave2a2-request-lifecycle` from the same green baseline, prove up to2lifecycle defects; implement only proven fixes with before/after component counts and exact independent overlay.
 - [ ] Run the planned performance CI if a real fix exists; no automatic merge, release, or further waves.
+
+## Superseding user instruction
+
+User requested all changes in one build. Integrate reviewed Wave2A.2 as a new exact successor after native appearance; one product workflow/IPA. Cancel the two superseded runs. Prior independent-branch/no-auto-merge instruction is superseded by this explicit request. No further performance wave.

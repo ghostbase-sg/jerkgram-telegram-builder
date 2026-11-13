@@ -34,7 +34,8 @@
   },
   "post180_stages": [
     "post180-history-wallet",
-    "post180-local-appearance"
+    "post180-local-appearance",
+    "post180-performance-wave2a2"
   ],
   "build180_baseline_identity": {
     "displayVersion": "1.2.0 Beta 3",

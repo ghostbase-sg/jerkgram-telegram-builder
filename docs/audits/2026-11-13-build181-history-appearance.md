@@ -4,7 +4,7 @@
 
 - GREEN Build180: published `fbefb07215542ab2d453a62d03d30336a67b1668`, successful Actions43258189305, reconfirmed November13. Telegram13.2 `24638bc69bd083981b178dd1e7f921eebbf7fc46`.
 - Candidate branch `dev/beta2-history-appearance-followup`; visible release restored to **1.2.0 Beta 2**, build181.
-- Existing32baseline +4accepted successors remain byte-identical. Wave2A.1 stays integrated. Wave2A.2 remains an independent requested checkpoint.
+- Existing32baseline +4accepted successors remain byte-identical. Wave2A.1 stays integrated. Wave2A.2 is now integrated in the same Build181 candidate, per the user’s latest instruction.
 
 ## Changes and concrete owners
 
@@ -19,7 +19,7 @@
 
 ## Builder and regression gates
 
-New exact successors `post180-history-wallet` (5owners) and `post180-local-appearance` (17owners). Parent hashes, complete overlay hashes, deterministic apply/reapply, reverse to GREEN and corruption refusal are mandatory. Applying an existing exact prefix completes the remaining stages; all missing stages preflight on private owner copies before real writes.
+New exact successors `post180-history-wallet` (5owners), `post180-local-appearance` (17owners), and `post180-performance-wave2a2` (one Settings owner). Parent hashes, complete overlay hashes, deterministic apply/reapply, reverse to GREEN and corruption refusal are mandatory. Applying an existing exact prefix completes the remaining stages; all missing stages preflight on private owner copies before real writes.
 
 Local source projection verifies the accepted source boundary and both new overlays; it is **not a genuine full checkout**. Linux has no Swift/xcrun: native fixture execution and UIKit module compilation are explicitly pending. CI requires genuine upstream checkout, every historical gate, both optimization modes for actual codec/controller/store fragments, and full app compilation.
 
@@ -35,3 +35,11 @@ Appearance matrix: A enabled/B disabled/C different status/bot excluded; A→B�
 6. Typing/navigation and sustained use: previous Wave2A.1 remains, but device performance is **NOT VERIFIED**.
 
 Protocol reference: [updates.getDifference](https://core.telegram.org/method/updates.getDifference), errors DATE_EMPTY and PERSISTENT_TIMESTAMP_EMPTY. Server/device acceptance of historical coverage remains pending.
+
+## Combined candidate, per latest user instruction
+
+Wave2A.2 now ships in this same Beta2/Build181 workflow and IPA; no independent performance build. Previous product run43391055037 and standalone performance run43390383314 were cancelled before completion of app builds.
+
+Standalone performance preflight job131768602230 succeeded on macOS before cancellation. Actual native controller/feed fragments in -Onone and -O measured visible history/poll subscriptions2/2 before/after, hidden2/2→0/0, hidden callbacks2→0, max concurrent2 over20reopens, destroyed0; account ownership PASS. These are component counters, not device timings or actual network-RPC counts. The integrated fragments/harness are byte-identical to those native-verified fragments, pinned in `tests/fixtures/wave2a2/reviewed-component.sha256.json`.
+
+Integration adds a new third successor, leaving earlier history/appearance patches unchanged. Combined apply/reapply/reverse/corruption refusal, native-verified fragment parity and release metadata checks run in the one product preflight. Whole integrated app compile and user iPhone runtime remain pending.

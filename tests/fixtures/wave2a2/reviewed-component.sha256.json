@@ -1,0 +1,11 @@
+{
+  "before": "ec1eb8871748a10aa1f28df561f7af41bc505e2ca44f92e0869c7100aad54b75",
+  "after": "e802fb9054bf43cfeba86e27c7185f6a3cc32d00da6e6005a637472ecfa5ad97",
+  "verified_native_run": 43390383314,
+  "verified_native_job": 131768602230,
+  "optimization_modes": [
+    "-Onone",
+    "-O"
+  ],
+  "boundary_note": "Exact component fragments and harness; full integrated app and device separate."
+}

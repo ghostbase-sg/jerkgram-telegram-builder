@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Beta 2 / Telegram 13.2 / Build181 History and appearance
+name: Jerkgram 1.2.0 Beta 2 / Telegram 13.2 / Build181 History, appearance and performance
 
 on:
   workflow_dispatch:
@@ -91,6 +91,9 @@ jobs:
             patches/post180-*.patch
             patches/post180-*.sha256.json
             scripts/jg132_post180.py
+            scripts/jg132_post180_lifecycle.py
+            tests/test_jg132_post180_lifecycle.py
+            tests/fixtures/wave2a2/
             scripts/materialize_jg132_post180.py
             tests/run_jg132_post180.py
             tests/fixtures/post180/

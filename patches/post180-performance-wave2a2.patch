@@ -1,0 +1,78 @@
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -17,6 +17,7 @@
+ private final class JerkgramDiagnosticSettingsController: ItemListController {
+     var diagnosticRoute = "settingsSubpage"
+     var refreshSettingsOnAppearance: (() -> Void)?
++    var aboutVisibilityChanged: ((Bool) -> Void)?
+     override func viewWillAppear(_ animated: Bool) {
+         super.viewWillAppear(animated)
+         self.refreshSettingsOnAppearance?()
+@@ -24,12 +25,15 @@
+     }
+     override func viewDidAppear(_ animated: Bool) {
+         super.viewDidAppear(animated)
++        self.aboutVisibilityChanged?(true)
+         JerkgramPerformanceDiagnostics.shared.setVisibleRoute(self.diagnosticRoute, owner: self)
+     }
+     override func viewWillDisappear(_ animated: Bool) {
+         super.viewWillDisappear(animated)
++        self.aboutVisibilityChanged?(false)
+         JerkgramPerformanceDiagnostics.shared.clearVisibleRoute(owner: self)
+     }
++    deinit { self.aboutVisibilityChanged?(false) }
+ }
+ 
+ private final class JerkgramRefreshIntervalProbe: NSObject {
+@@ -1818,6 +1822,15 @@
+     case loading
+     case available(peer: EnginePeer, preview: String)
+     case unavailable
++}
++
++// Keep the initial list state ready before appearance. Hidden controllers retain
++// their last preview while mapToSignal disposes channel history and polling.
++private func jerkgramVisibleFeed<T>(visible: Signal<Bool, NoError>, initial: T, source: @escaping () -> Signal<T, NoError>) -> Signal<T, NoError> {
++    return .single(initial)
++    |> then(visible |> distinctUntilChanged |> mapToSignal { visible -> Signal<T, NoError> in
++        return visible ? source() : .never()
++    })
+ }
+ 
+ private func jerkgramAboutChannelState(
+@@ -3418,16 +3431,15 @@
+         ))
+     }
+ 
+-    let aboutChannelSignal = jerkgramAboutChannelState(
+-        context: context,
+-        enabled: page == .about,
+-        username: "JerkgramApp"
+-    )
+-    let aboutCommunitySignal = jerkgramAboutChannelState(
+-        context: context,
+-        enabled: page == .about,
+-        username: "JerkgramCommunity"
+-    )
++    let aboutVisibility = ValuePromise(false, ignoreRepeated: true)
++    func aboutFeed(_ username: String) -> Signal<JerkgramAboutChannelState, NoError> {
++        guard page == .about else { return .single(.unavailable) }
++        return jerkgramVisibleFeed(visible: aboutVisibility.get(), initial: .loading, source: {
++            jerkgramAboutChannelState(context: context, enabled: true, username: username)
++        })
++    }
++    let aboutChannelSignal = aboutFeed("JerkgramApp")
++    let aboutCommunitySignal = aboutFeed("JerkgramCommunity")
+     var openAboutChannelImpl: ((EnginePeer) -> Void)?
+     var sharePerformanceImpl: (() -> Void)?
+ 
+@@ -4044,6 +4056,9 @@
+         state: signal
+     )
+     controller.refreshSettingsOnAppearance = reloadSettings
++    if page == .about {
++        controller.aboutVisibilityChanged = { visible in aboutVisibility.set(visible) }
++    }
+     controller.diagnosticRoute = page == .about ? "about" : "settingsSubpage"
+     sharePerformanceImpl = { [weak controller] in
+         guard let root = controller?.view.window?.rootViewController else { return }
