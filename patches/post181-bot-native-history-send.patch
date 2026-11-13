@@ -1,0 +1,362 @@
+--- a/submodules/Postbox/Sources/MessageHistoryView.swift
++++ b/submodules/Postbox/Sources/MessageHistoryView.swift
+@@ -302,6 +302,23 @@
+     case unread
+ }
+ 
++// Sparse bot replay cannot prove server history coverage. This mode ignores holes
++// in this view only; stored holes, read states and ordinary history remain intact.
++private func locallyAvailableHistoryState(postbox: PostboxImpl, inputAnchor: HistoryViewInputAnchor, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, ignoreMessageIds: Set<MessageId>, halfLimit: Int, locations: MessageHistoryViewInput, includeAnchorWhileLoading: Bool = false, locallyAvailableOnly: Bool) -> HistoryViewState {
++    guard locallyAvailableOnly else {
++        return HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, halfLimit: halfLimit, locations: locations, includeAnchorWhileLoading: includeAnchorWhileLoading)
++    }
++    let anchor: HistoryViewAnchor
++    switch inputAnchor {
++    case .lowerBound: anchor = .lowerBound
++    case .upperBound, .unread: anchor = .upperBound
++    case let .index(index): anchor = .index(index)
++    case let .message(id):
++        anchor = postbox.messageHistoryIndexTable.getIndex(id).map { .index($0) } ?? .upperBound
++    }
++    return .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: [:])))
++}
++
+ final class MutableMessageHistoryView: MutablePostboxView {
+     private(set) var peerIds: MessageHistoryViewInput
+     private let ignoreMessagesInTimestampRange: ClosedRange<Int32>?
+@@ -312,6 +329,7 @@
+     private let orderStatistics: MessageHistoryViewOrderStatistics
+     private let clipHoles: Bool
+     private let trackHoles: Bool
++    private let locallyAvailableOnly: Bool
+     private let anchor: HistoryViewInputAnchor
+     private let includeAnchorWhileLoading: Bool
+     fileprivate var mapReadStatesFromThreads: Bool = false
+@@ -352,7 +370,8 @@
+         count: Int,
+         topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?],
+         additionalDatas: [AdditionalMessageHistoryViewDataEntry],
+-        includeAnchorWhileLoading: Bool = false
++        includeAnchorWhileLoading: Bool = false,
++        locallyAvailableOnly: Bool = false
+     ) {
+         self.anchor = inputAnchor
+         self.includeAnchorWhileLoading = includeAnchorWhileLoading
+@@ -360,6 +379,7 @@
+         self.orderStatistics = orderStatistics
+         self.clipHoles = clipHoles
+         self.trackHoles = trackHoles
++        self.locallyAvailableOnly = locallyAvailableOnly
+         self.peerIds = peerIds
+         self.ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange
+         self.ignoreMessageIds = ignoreMessageIds
+@@ -397,7 +417,7 @@
+             }
+         }
+         
+-        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: count + 1, locations: peerIds, includeAnchorWhileLoading: includeAnchorWhileLoading)
++        self.state = locallyAvailableHistoryState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: count + 1, locations: peerIds, includeAnchorWhileLoading: includeAnchorWhileLoading, locallyAvailableOnly: locallyAvailableOnly)
+         if case let .loading(loadingState) = self.state {
+             let sampledState = loadingState.checkAndSample(postbox: postbox)
+             switch sampledState {
+@@ -420,7 +440,7 @@
+     }
+     
+     private func reset(postbox: PostboxImpl) {
+-        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, appendMessagesFromTheSameGroup: self.appendMessagesFromTheSameGroup, namespaces: self.namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: self.fillCount + 1, locations: self.peerIds, includeAnchorWhileLoading: self.includeAnchorWhileLoading)
++        self.state = locallyAvailableHistoryState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, appendMessagesFromTheSameGroup: self.appendMessagesFromTheSameGroup, namespaces: self.namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: self.fillCount + 1, locations: self.peerIds, includeAnchorWhileLoading: self.includeAnchorWhileLoading, locallyAvailableOnly: self.locallyAvailableOnly)
+         if case let .loading(loadingState) = self.state {
+             let sampledState = loadingState.checkAndSample(postbox: postbox)
+             switch sampledState {
+@@ -553,6 +573,7 @@
+         switch self.state {
+         case let .loading(loadingState):
+             for (key, holeOperations) in transaction.currentPeerHoleOperations {
++                if self.locallyAvailableOnly { continue }
+                 var matchesSpace = false
+                 if !isExternal {
+                     switch key.space {
+@@ -742,6 +763,7 @@
+             }
+             
+             for (key, holeOperations) in transaction.currentPeerHoleOperations {
++                if self.locallyAvailableOnly { continue }
+                 if key.threadId != currentThreadId {
+                     continue
+                 }
+--- a/submodules/Postbox/Sources/Postbox.swift
++++ b/submodules/Postbox/Sources/Postbox.swift
+@@ -3722,14 +3722,14 @@
+         }
+     }
+     
+-    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, ignoreMessageIds: Set<MessageId>, anchor: HistoryViewInputAnchor, count: Int, trackHoles: Bool = true, clipHoles: Bool = true, ignoreRelatedChats: Bool = false, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
++    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, ignoreMessageIds: Set<MessageId>, anchor: HistoryViewInputAnchor, count: Int, trackHoles: Bool = true, clipHoles: Bool = true, ignoreRelatedChats: Bool = false, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false, locallyAvailableOnly: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+         return self.resolvedChatLocationInput(chatLocation: chatLocation)
+         |> mapToSignal { chatLocationData -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+             let (chatLocation, isHoleFill) = chatLocationData
+             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = self.transactionSignal { subscriber, transaction in
+                 let peerIds = self.peerIdsForLocation(chatLocation, ignoreRelatedChats: ignoreRelatedChats)
+                 
+-                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, trackHoles: trackHoles, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread)
++                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, trackHoles: trackHoles, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread, locallyAvailableOnly: locallyAvailableOnly)
+             }
+                 
+             return signal
+@@ -3779,7 +3779,8 @@
+         orderStatistics: MessageHistoryViewOrderStatistics,
+         additionalData: [AdditionalMessageHistoryViewData],
+         useRootInterfaceStateForThread: Bool,
+-        includeAnchorWhileLoading: Bool = false
++        includeAnchorWhileLoading: Bool = false,
++        locallyAvailableOnly: Bool = false
+     ) -> Disposable {
+         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
+         var mainPeerIdForTopTaggedMessages: (peerId: PeerId, threadId: Int64?)?
+@@ -3892,7 +3893,7 @@
+             readStates = transientReadStates
+         }
+         
+-        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, clipHoles: clipHoles, trackHoles: trackHoles, peerIds: peerIds, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, includeAnchorWhileLoading: includeAnchorWhileLoading)
++        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, clipHoles: clipHoles, trackHoles: trackHoles, peerIds: peerIds, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, includeAnchorWhileLoading: includeAnchorWhileLoading, locallyAvailableOnly: locallyAvailableOnly)
+         
+         let initialUpdateType: ViewUpdateType = .Initial
+         
+@@ -5089,7 +5090,8 @@
+         namespaces: MessageIdNamespaces,
+         orderStatistics: MessageHistoryViewOrderStatistics,
+         additionalData: [AdditionalMessageHistoryViewData] = [],
+-        useRootInterfaceStateForThread: Bool = false
++        useRootInterfaceStateForThread: Bool = false,
++        locallyAvailableOnly: Bool = false
+     ) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+         return Signal { subscriber in
+             let disposable = MetaDisposable()
+@@ -5111,7 +5113,8 @@
+                     namespaces: namespaces,
+                     orderStatistics: orderStatistics,
+                     additionalData: additionalData,
+-                    useRootInterfaceStateForThread: useRootInterfaceStateForThread
++                    useRootInterfaceStateForThread: useRootInterfaceStateForThread,
++                    locallyAvailableOnly: locallyAvailableOnly
+                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+             }
+ 
+--- a/submodules/TelegramCore/Sources/State/AccountViewTracker.swift
++++ b/submodules/TelegramCore/Sources/State/AccountViewTracker.swift
+@@ -2191,6 +2191,21 @@
+         return account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 20, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .just(Namespaces.Message.allWelcomeMessages), orderStatistics: [], additionalData: [])
+     }
+     
++    // Decide from this account's stored self peer, never a global bot flag or
++    // the destination's botInfo. The normal signal is retained for user accounts.
++    private func jerkgramBotHistoryView(_ chatLocation: ChatLocationInput, anchor: HistoryViewInputAnchor, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, ignoreMessageIds: Set<MessageId>, count: Int, ignoreRelatedChats: Bool, fixedCombinedReadStates: MessageHistoryViewReadState?, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData], useRootInterfaceStateForThread: Bool, native: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
++        guard let account = self.account else { return .never() }
++        return account.postbox.transaction { transaction -> Bool in
++            guard let user = transaction.getPeer(account.peerId) as? TelegramUser else { return false }
++            return user.botInfo != nil
++        }
++        |> mapToSignal { isBot -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
++            guard isBot else { return native }
++            let local = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: anchor, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, trackHoles: false, ignoreRelatedChats: ignoreRelatedChats, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData), useRootInterfaceStateForThread: useRootInterfaceStateForThread, locallyAvailableOnly: true)
++            return self.wrappedMessageHistorySignal(chatLocation: chatLocation, signal: local, fixedCombinedReadStates: fixedCombinedReadStates, addHoleIfNeeded: false)
++        }
++    }
++
+     public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, ignoreMessageIds: Set<MessageId> = Set(), count: Int, trackHoles: Bool = true, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+         if let account = self.account {
+             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
+@@ -2272,7 +2287,7 @@
+             } else {
+                 signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, trackHoles: trackHoles, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: orderStatistics, customUnreadMessageId: nil, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData), useRootInterfaceStateForThread: useRootInterfaceStateForThread)
+             }
+-            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, fixedCombinedReadStates: nil, addHoleIfNeeded: true)
++            return self.jerkgramBotHistoryView(chatLocation, anchor: .upperBound, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, ignoreRelatedChats: false, fixedCombinedReadStates: nil, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread, native: wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, fixedCombinedReadStates: nil, addHoleIfNeeded: true))
+         } else {
+             return .never()
+         }
+@@ -2281,7 +2296,7 @@
+     public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, ignoreMessageIds: Set<MessageId> = Set(), count: Int, trackHoles: Bool = true, ignoreRelatedChats: Bool, messageId: MessageId, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false, includeAnchorWhileLoading: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+         if let account = self.account {
+             let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, trackHoles: trackHoles, ignoreRelatedChats: ignoreRelatedChats, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData), useRootInterfaceStateForThread: useRootInterfaceStateForThread, includeAnchorWhileLoading: includeAnchorWhileLoading)
+-            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, fixedCombinedReadStates: nil, addHoleIfNeeded: false)
++            return self.jerkgramBotHistoryView(chatLocation, anchor: .message(messageId), ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, ignoreRelatedChats: ignoreRelatedChats, fixedCombinedReadStates: nil, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread, native: wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, fixedCombinedReadStates: nil, addHoleIfNeeded: false))
+         } else {
+             return .never()
+         }
+@@ -2299,7 +2314,7 @@
+                     inputAnchor = .index(index)
+             }
+             let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, clipHoles: clipHoles, ignoreRelatedChats: ignoreRelatedChats, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData), useRootInterfaceStateForThread: useRootInterfaceStateForThread)
+-            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, fixedCombinedReadStates: fixedCombinedReadStates, addHoleIfNeeded: false)
++            return self.jerkgramBotHistoryView(chatLocation, anchor: inputAnchor, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, ignoreRelatedChats: ignoreRelatedChats, fixedCombinedReadStates: fixedCombinedReadStates, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread, native: wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, fixedCombinedReadStates: fixedCombinedReadStates, addHoleIfNeeded: false))
+         } else {
+             return .never()
+         }
+--- a/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
++++ b/submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift
+@@ -482,6 +482,18 @@
+     return result
+ }
+ 
++// Replay is older than live peer metadata. Fill only a missing personal user
++// hash required by apiInputPeer; never copy old names, flags or permissions over
++// a current peer. Minimal/generic public hashes cannot authorize modern writes.
++func botBridgeMergeHistoricalPeer(_ current: Peer?, _ proposed: Peer) -> Peer {
++    guard let current else { return proposed }
++    guard current.id == proposed.id,
++        let currentUser = current as? TelegramUser, currentUser.accessHash == nil,
++        let proposedUser = proposed as? TelegramUser, let accessHash = proposedUser.accessHash,
++        case .personal = accessHash, accessHash.value != 0 else { return current }
++    return currentUser.withUpdatedAccessHash(accessHash)
++}
++
+ // This is storage-only. It neither constructs mutable live state nor replays updates.
+ // Progress and messages are committed by the same caller-owned Postbox transaction.
+ private func importBotBridgeHistoryPage(transaction: Transaction, page: BotBridgeHistoryPage, expected: BotBridgeHistoryProgress, accountPeerId: PeerId, removed: MessagesRemovedContext, now: Double, lifetime: BotBridgeLifetime, requestGate: BotBridgeOnceGate) -> BotBridgeHistoryProgress? {
+@@ -559,7 +571,9 @@
+         let peer = peerId.flatMap { transaction.getPeer($0) ?? responseChatsById[$0] }
+         let forum = (peer as? TelegramChannel)?.flags.contains(.isForum) ?? false
+         guard let message = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: forum),
+-            case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud else { unsupported += 1; continue }
++            case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud, id.id > 0 else { unsupported += 1; continue }
++        references.formUnion(peerIds)
++        references.insert(id.peerId)
+         guard seen.insert(id).inserted, !transaction.messageExists(id: id) else { skipped += 1; continue }
+         guard removed.synchronouslyIsMessageDeletedInteractively(ids: [id]).isEmpty,
+             removed.synchronouslyIsMessageDeletedRemotely(ids: [id]).isEmpty else { skipped += 1; continue }
+@@ -593,7 +607,12 @@
+     var provided = Set<PeerId>()
+     for user in page.users {
+         let peer = TelegramUser(user: user)
+-        if references.contains(peer.id), transaction.getPeer(peer.id) == nil, provided.insert(peer.id).inserted { peers.append(peer) }
++        if references.contains(peer.id), provided.insert(peer.id).inserted {
++            if let current = transaction.getPeer(peer.id) {
++                let merged = botBridgeMergeHistoricalPeer(current, peer)
++                if !merged.isEqual(current) { peers.append(merged) }
++            } else { peers.append(peer) }
++        }
+     }
+     for peer in responseChats {
+         if references.contains(peer.id), transaction.getPeer(peer.id) == nil, provided.insert(peer.id).inserted { peers.append(peer) }
+@@ -606,7 +625,7 @@
+         botBridgeWriteProgress(progress, transaction: transaction); return progress
+     }
+     guard lifetime.isActive, requestGate.isOpen else { return nil }
+-    transaction.updatePeersInternal(peers, update: { current, proposed in current ?? proposed })
++    transaction.updatePeersInternal(peers, update: { current, proposed in botBridgeMergeHistoricalPeer(current, proposed) })
+     let _ = transaction.addHistoricalMessagesWithoutInteractiveActions(candidates)
+     jerkgramIncludeBotMessagePeers(transaction: transaction, accountPeerId: accountPeerId, messages: candidates)
+     botBridgeWriteProgress(progress, transaction: transaction)
+--- a/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
++++ b/submodules/TelegramCore/Sources/State/PendingMessageManager.swift
+@@ -3,6 +3,27 @@
+ import SwiftSignalKit
+ internal import TelegramApi
+ import MtProtoKit
++
++// Bots use zero instead of a missing/min hash, per Telegram's peer contract.
++// Authorize this conversion from the actual self peer inside the send transaction;
++// user accounts retain the native conversion and all existing send requests.
++private func botBridgeInputPeerForSending(transaction: Transaction, accountPeerId: PeerId, peer: Peer) -> Api.InputPeer? {
++    guard let own = transaction.getPeer(accountPeerId) as? TelegramUser, own.botInfo != nil else {
++        return apiInputPeer(peer)
++    }
++    func fullHash(_ value: TelegramPeerAccessHash?) -> Int64 {
++        if let value, case let .personal(hash) = value { return hash }
++        return 0
++    }
++    if let user = peer as? TelegramUser {
++        return .inputPeerUser(.init(userId: user.id.id._internalGetInt64Value(), accessHash: fullHash(user.accessHash)))
++    } else if let channel = peer as? TelegramChannel {
++        return .inputPeerChannel(.init(channelId: channel.id.id._internalGetInt64Value(), accessHash: fullHash(channel.accessHash)))
++    } else if let community = peer as? TelegramCommunity {
++        return .inputPeerChannel(.init(channelId: community.id.id._internalGetInt64Value(), accessHash: fullHash(community.accessHash)))
++    }
++    return apiInputPeer(peer)
++}
+ 
+ public struct PendingMessageStatus: Equatable {
+     public struct Progress: Equatable {
+@@ -1206,7 +1227,7 @@
+                 }
+                 
+                 return .complete()
+-            } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
++            } else if let peer = transaction.getPeer(peerId), let inputPeer = botBridgeInputPeerForSending(transaction: transaction, accountPeerId: accountPeerId, peer: peer) {
+                 let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: messages[0].0.attributes, hasText: messages.contains { !$0.0.text.isEmpty })
+                 var isForward = false
+                 var hideSendersNames = false
+@@ -1707,7 +1728,7 @@
+             if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
+                 PendingMessageManager.sendSecretMessageContent(transaction: transaction, message: message, content: content)
+                 return .complete()
+-            } else if let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {
++            } else if let peer = transaction.getPeer(messageId.peerId), let inputPeer = botBridgeInputPeerForSending(transaction: transaction, accountPeerId: accountPeerId, peer: peer) {
+                 let botBridgeContext = botBridgeOperationContext(network: network, peer: peer, attributes: message.attributes, hasText: !message.text.isEmpty)
+                 var uniqueId: Int64 = 0
+                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+@@ -2028,7 +2049,7 @@
+                             flags |= 1 << 25
+                         }
+                     
+-                        if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
++                        if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = botBridgeInputPeerForSending(transaction: transaction, accountPeerId: accountPeerId, peer: sourcePeer) {
+                             sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag, diagnosticContext: botBridgeContext)
+                             |> map(NetworkRequestResult.result)
+                         } else {
+--- a/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramUser.swift
++++ b/submodules/TelegramCore/Sources/SyncCore/SyncCore_TelegramUser.swift
+@@ -552,6 +552,11 @@
+         return true
+     }
+     
++    // Preserve every current field while hydrating only a missing replay hash.
++    func withUpdatedAccessHash(_ accessHash: TelegramPeerAccessHash) -> TelegramUser {
++        return TelegramUser(id: self.id, accessHash: accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus, usernames: self.usernames, storiesHidden: self.storiesHidden, nameColor: self.nameColor, backgroundEmojiId: self.backgroundEmojiId, profileColor: self.profileColor, profileBackgroundEmojiId: self.profileBackgroundEmojiId, subscriberCount: self.subscriberCount, verificationIconFileId: self.verificationIconFileId, linkedCommunityId: self.linkedCommunityId)
++    }
++
+     public func withUpdatedUsername(_ username: String?) -> TelegramUser {
+         return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus, usernames: self.usernames, storiesHidden: self.storiesHidden, nameColor: self.nameColor, backgroundEmojiId: self.backgroundEmojiId, profileColor: self.profileColor, profileBackgroundEmojiId: self.profileBackgroundEmojiId, subscriberCount: self.subscriberCount, verificationIconFileId: self.verificationIconFileId, linkedCommunityId: self.linkedCommunityId)
+     }
+--- a/submodules/TelegramUI/Sources/ChatHistoryViewForLocation.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryViewForLocation.swift
+@@ -116,18 +116,26 @@
+             
+                 let isPossibleIntroLoaded: Signal<Bool, NoError>
+                 if case let .peer(id) = chatLocation, id.namespace == Namespaces.Peer.CloudUser {
+-                    isPossibleIntroLoaded = context.engine.data.subscribe(
+-                        TelegramEngine.EngineData.Item.Peer.BusinessIntro(id: id)
+-                    )
+-                    |> map { result -> Bool in
+-                        switch result {
+-                        case .known:
+-                            return true
+-                        case .unknown:
+-                            return false
+-                        }
+-                    }
+-                    |> distinctUntilChanged
++                    isPossibleIntroLoaded = account.postbox.transaction { transaction -> Bool in
++                        return (transaction.getPeer(account.peerId) as? TelegramUser)?.botInfo != nil
++                    }
++                    |> mapToSignal { isBot -> Signal<Bool, NoError> in
++                        // Bot full-user hydration is unavailable; an optional intro
++                        // must not keep already imported messages behind Loading.
++                        if isBot { return .single(true) }
++                        return context.engine.data.subscribe(
++                            TelegramEngine.EngineData.Item.Peer.BusinessIntro(id: id)
++                        )
++                        |> map { result -> Bool in
++                            switch result {
++                            case .known:
++                                return true
++                            case .unknown:
++                                return false
++                            }
++                        }
++                        |> distinctUntilChanged
++                    }
+                 } else {
+                     isPossibleIntroLoaded = .single(true)
+                 }

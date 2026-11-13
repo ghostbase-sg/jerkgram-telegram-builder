@@ -1,0 +1,7 @@
+{
+  "TelegramCore/Sources/State/JerkgramBotReplayPolicy.swift": "fa14c7c56e0e0db8bd0d5d78a96ac1e30d35d0f34e6b55feec48e6544228b467",
+  "TelegramCore/Sources/PendingMessages/EnqueueMessage.swift": "151c1baf8cb400b005dcf9a578d87cecf4884bf7426afb19e30fc377c56f0803",
+  "TelegramCore/Sources/ApiUtils/StoreMessage_Telegram.swift": "deef5a1a1d222247b3dc10df65aa3723cb48d182a228323ff2c5082b7f686248",
+  "TelegramCore/Sources/Authorization.swift": "92e8fc0730f5eae967dac8eb2fa061c18531d2f4bb134cf9552d722f1584795b",
+  "TelegramCore/Sources/Utils/CanSendMessagesToPeer.swift": "91452f40b7c86a4546e8b98cb8928de34cc7812277bcfd20dd23d8367172f6d2"
+}
