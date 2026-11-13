@@ -1,0 +1,1155 @@
+--- a/submodules/AccountContext/Sources/AccountContext.swift
++++ b/submodules/AccountContext/Sources/AccountContext.swift
+@@ -1804,7 +1804,6 @@
+         completion: @escaping (EnginePeer.Id?) -> Void
+     ) async -> ViewController?
+     func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController
+-    func makeJerkgramProfileAppearanceController(context: AccountContext) -> ViewController
+     
+     func navigateToCurrentCall()
+     var hasOngoingCall: ValuePromise<Bool> { get }
+--- a/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift
++++ b/submodules/ChatPresentationInterfaceState/Sources/ChatPresentationInterfaceState.swift
+@@ -435,6 +435,7 @@
+     }
+ 
+     public var hasLocalSavedTags: Bool {
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: self.accountPeerId.toInt64()) else { return false }
+         guard self.chatLocation.peerId == self.accountPeerId, self.chatLocation.threadId == nil else { return false }
+         switch self.subject {
+         case nil, .message: return true
+--- a/submodules/Postbox/Sources/LocalSavedTagsTable.swift
++++ b/submodules/Postbox/Sources/LocalSavedTagsTable.swift
+@@ -1,4 +1,53 @@
+ import Foundation
++
++// The existing Settings owner persists these values. This is a bounded runtime
++// projection shared with Postbox, not a second settings store. Known-account
++// reads do no I/O; notifications are emitted after releasing the lock.
++public enum JerkgramLocalPremiumPolicy {
++    public static let preferenceKey = "jerkgram.LocalPremium.Enabled"
++    public static let savedTagsKey = "jerkgram.LocalPremium.SavedTags"
++    public static let changed = Notification.Name("JerkgramLocalPremiumPolicyChanged")
++    private static let lock = NSLock()
++    private static var master = UserDefaults.standard.bool(forKey: preferenceKey)
++    private static var tags: [Int64: Bool] = [:]
++    private static var revision: UInt64 = 0
++    public static var enabled: Bool {
++        lock.lock(); defer { lock.unlock() }; return master
++    }
++    public static var generation: UInt64 {
++        lock.lock(); defer { lock.unlock() }; return revision
++    }
++    public static func effective(_ individual: Bool) -> Bool { enabled && individual }
++    public static func scopedTagsKey(accountPeerId: Int64) -> String {
++        "jerkgram.account.\(accountPeerId).setting.\(savedTagsKey)"
++    }
++    public static func storedTagsEnabled(accountPeerId: Int64) -> Bool {
++        lock.lock(); defer { lock.unlock() }
++        if let value = tags[accountPeerId] { return value }
++        let value = UserDefaults.standard.object(forKey: scopedTagsKey(accountPeerId: accountPeerId)) as? Bool ?? true
++        if tags.count >= 32 { tags.removeAll(keepingCapacity: true) }
++        tags[accountPeerId] = value
++        return value
++    }
++    public static func savedTagsEnabled(accountPeerId: Int64) -> Bool {
++        effective(storedTagsEnabled(accountPeerId: accountPeerId))
++    }
++    public static func update(masterEnabled: Bool) {
++        lock.lock()
++        guard master != masterEnabled else { lock.unlock(); return }
++        master = masterEnabled; revision &+= 1
++        lock.unlock()
++        NotificationCenter.default.post(name: changed, object: nil)
++    }
++    public static func invalidate() {
++        lock.lock(); revision &+= 1; lock.unlock()
++        NotificationCenter.default.post(name: changed, object: nil)
++    }
++    public static func updateTags(accountPeerId: Int64, enabled: Bool) {
++        lock.lock(); tags[accountPeerId] = enabled; revision &+= 1; lock.unlock()
++        NotificationCenter.default.post(name: changed, object: accountPeerId)
++    }
++}
+ 
+ // Account-local durable authority. No history/cache/reaction reads and no startup I/O.
+ public enum LocalSavedTagsError: Error, Equatable {
+--- a/submodules/Postbox/Sources/Postbox.swift
++++ b/submodules/Postbox/Sources/Postbox.swift
+@@ -68,25 +68,32 @@
+         }
+     }
+     public func localSavedTagsCatalogue(selfPeerId: PeerId) -> Result<LocalSavedTagsCatalogue, LocalSavedTagsError> {
+-        localSavedTagsRead { try $0.catalogue(selfPeerId: selfPeerId) }
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: selfPeerId.toInt64()) else { return .failure(.unavailable) }
++        return localSavedTagsRead { try $0.catalogue(selfPeerId: selfPeerId) }
+     }
+     public func localSavedTagsForMessage(selfPeerId: PeerId, messageId: MessageId) -> Result<[String], LocalSavedTagsError> {
+-        localSavedTagsRead { try $0.tags(selfPeerId: selfPeerId, messageId: messageId) }
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: selfPeerId.toInt64()) else { return .failure(.unavailable) }
++        return localSavedTagsRead { try $0.tags(selfPeerId: selfPeerId, messageId: messageId) }
+     }
+     public func localSavedTagsPage(selfPeerId: PeerId, tagId: String, cursor: LocalSavedTagsCursor?, direction: LocalSavedTagsDirection, limit: Int = 45) -> Result<LocalSavedTagsPage, LocalSavedTagsError> {
+-        localSavedTagsRead { try $0.page(selfPeerId: selfPeerId, tagId: tagId, cursor: cursor, direction: direction, limit: limit) }
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: selfPeerId.toInt64()) else { return .failure(.unavailable) }
++        return localSavedTagsRead { try $0.page(selfPeerId: selfPeerId, tagId: tagId, cursor: cursor, direction: direction, limit: limit) }
+     }
+     public func createLocalSavedTag(selfPeerId: PeerId, name: String) -> Result<LocalSavedTag, LocalSavedTagsError> {
+-        localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.create(selfPeerId: selfPeerId, name: name) }
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: selfPeerId.toInt64()) else { return .failure(.unavailable) }
++        return localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.create(selfPeerId: selfPeerId, name: name) }
+     }
+     public func renameLocalSavedTag(selfPeerId: PeerId, tagId: String, name: String) -> Result<Int64, LocalSavedTagsError> {
+-        localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.rename(selfPeerId: selfPeerId, tagId: tagId, name: name) }
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: selfPeerId.toInt64()) else { return .failure(.unavailable) }
++        return localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.rename(selfPeerId: selfPeerId, tagId: tagId, name: name) }
+     }
+     public func deleteLocalSavedTag(selfPeerId: PeerId, tagId: String) -> Result<Int64, LocalSavedTagsError> {
+-        localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.delete(selfPeerId: selfPeerId, tagId: tagId) }
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: selfPeerId.toInt64()) else { return .failure(.unavailable) }
++        return localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.delete(selfPeerId: selfPeerId, tagId: tagId) }
+     }
+     public func setLocalSavedTag(selfPeerId: PeerId, tagId: String, messages: [LocalSavedTagMessage], assigned: Bool) -> Result<Int64, LocalSavedTagsError> {
+-        localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.set(selfPeerId: selfPeerId, tagId: tagId, messages: messages, assigned: assigned) }
++        guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: selfPeerId.toInt64()) else { return .failure(.unavailable) }
++        return localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.set(selfPeerId: selfPeerId, tagId: tagId, messages: messages, assigned: assigned) }
+     }
+     public func updateLocalSavedTagsMetadata(selfPeerId: PeerId, messages: [LocalSavedTagMessage]) -> Result<Int64, LocalSavedTagsError> {
+         localSavedTagsWrite(selfPeerId: selfPeerId) { try $0.updateMetadata(selfPeerId: selfPeerId, messages: messages) }
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -858,7 +858,6 @@
+     case root
+     case dataAndBackup
+     case localPremium
+-    case localAppearance
+     case stars
+     case home
+     case ghostMode
+@@ -877,8 +876,6 @@
+             return "Data and Backup"
+         case .localPremium:
+             return "Local Premium"
+-        case .localAppearance:
+-            return "Profile Appearance"
+         case .stars:
+             return "Stars"
+         case .home:
+@@ -909,8 +906,6 @@
+             return strings.dataAndBackup
+         case .localPremium:
+             return strings.localPremium
+-        case .localAppearance:
+-            return strings.localProfileAppearance
+         case .stars:
+             return strings.starsBalance
+         case .home:
+@@ -1230,14 +1225,18 @@
+             )
+ 
+         case let .toggle(_, _, key, title, value):
++            let premiumKeys: Set<String> = [JerkgramAppIconAccess.preferenceKey, JerkgramSponsoredContentPolicy.preferenceKey, JerkgramTranslationSettings.preferenceKey, JerkgramLocalPremiumPolicy.savedTagsKey, "jerkgram.LocalPremium.EmojiStatus", "jerkgram.LocalPremium.ProfileColors"]
++            let enabled = !premiumKeys.contains(key) || JerkgramLocalPremiumPolicy.enabled
+             return ItemListSwitchItem(
+                 presentationData: presentationData,
+                 systemStyle: .glass,
+                 title: title,
+                 value: value,
++                enabled: enabled,
+                 sectionId: self.section,
+                 style: .blocks,
+                 updated: { updatedValue in
++                    guard enabled else { return }
+                     arguments.updateBool(key, updatedValue)
+                 }
+             )
+@@ -1261,7 +1260,7 @@
+         case let .downloadBoost(_, _, value):
+             let strings = presentationData.strings.jerkgram
+             let label = value == "maximum" ? strings.downloadBoostMaximum : (value == "medium" ? strings.downloadBoostMedium : strings.downloadBoostOff)
+-            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: strings.downloadBoost, label: label, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: { arguments.openDownloadBoost() })
++            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: strings.downloadBoost, enabled: JerkgramLocalPremiumPolicy.enabled, label: label, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: { arguments.openDownloadBoost() })
+ 
+         case let .selector(_, _, title, value):
+             return ItemListDisclosureItem(
+@@ -2164,19 +2163,25 @@
+     }
+ 
+     if page == .localPremium {
++        let ru = strings.languageCode.hasPrefix("ru")
++        let appearance = context.jerkgramLocalAppearance.snapshot
+         var result: [GhostBaseSettingsEntry] = [
+-            .header(0, strings.appearance),
+-            .toggle(0, 1, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
+-            .header(1, strings.localPremiumMedia),
+-            .downloadBoost(1, 1, state.downloadBoost),
+-            .info(1, strings.downloadBoostHint),
+-            .header(2, strings.messages),
+-            .toggle(2, 1, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
+-            .toggle(2, 2, JerkgramTranslationSettings.preferenceKey, strings.localTranslation, state.enhancedTranslation),
+-            .info(2, strings.localPremiumScopeHint)
++            .header(0, strings.localPremium),
++            .toggle(0, 1, JerkgramLocalPremiumPolicy.preferenceKey, ru ? "Разблокировать локальный Premium" : "Unlock Local Premium", JerkgramLocalPremiumPolicy.enabled),
++            .header(1, strings.appearance),
++            .toggle(1, 1, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.storedUnlockEnabled),
++            .header(2, strings.localPremiumMedia),
++            .downloadBoost(2, 1, state.downloadBoost),
++            .info(2, strings.downloadBoostHint),
++            .header(3, strings.messages),
++            .toggle(3, 1, JerkgramSponsoredContentPolicy.preferenceKey, strings.removeSponsored, state.removeSponsored),
++            .toggle(3, 2, JerkgramTranslationSettings.preferenceKey, strings.localTranslation, state.enhancedTranslation),
++            .toggle(3, 3, JerkgramLocalPremiumPolicy.savedTagsKey, ru ? "Локальные теги Избранного" : "Local Saved Messages Tags", JerkgramLocalPremiumPolicy.storedTagsEnabled(accountPeerId: context.account.peerId.toInt64())),
++            .info(3, strings.localPremiumScopeHint)
+         ]
+         if !isBotAccount {
+-            result.insert(.disclosure(0, 2, strings.localProfileAppearance, "Item List/Icons/Brush", .localAppearance), at: 2)
++            result.insert(.toggle(1, 2, "jerkgram.LocalPremium.EmojiStatus", ru ? "Emoji Status" : "Emoji Status", appearance.settings.emojiEnabled), at: 5)
++            result.insert(.toggle(1, 3, "jerkgram.LocalPremium.ProfileColors", ru ? "Цвета профиля, имени и фоновые эмодзи" : "Profile and name colors, background emoji", appearance.settings.colorsEnabled), at: 6)
+         }
+         return result
+     }
+@@ -3022,7 +3027,7 @@
+     // subscription without changing the arity or closure shape of whatever
+     // combineLatest the release chain already uses.
+     let jerkgramImportRefreshStateSignal = combineLatest(
+-        statePromise.get(),
++        combineLatest(statePromise.get(), context.jerkgramLocalAppearance.updates) |> map { state, _ in state },
+         jerkgramImportRefreshSignal
+     )
+     |> map { (state: GhostBaseSettingsState, _: Void) -> GhostBaseSettingsState in state }
+@@ -3820,10 +3825,25 @@
+             }
+         },
+         updateBool: { key, value in
++        let premiumKeys: Set<String> = [JerkgramAppIconAccess.preferenceKey, JerkgramSponsoredContentPolicy.preferenceKey, JerkgramTranslationSettings.preferenceKey, JerkgramLocalPremiumPolicy.savedTagsKey, "jerkgram.LocalPremium.EmojiStatus", "jerkgram.LocalPremium.ProfileColors"]
++        guard !premiumKeys.contains(key) || JerkgramLocalPremiumPolicy.enabled else { return }
+         updateState { state in
+             var updated = state
+ 
+             switch key {
++            case JerkgramLocalPremiumPolicy.preferenceKey:
++                UserDefaults.standard.set(value, forKey: JerkgramLocalPremiumPolicy.preferenceKey)
++                JerkgramLocalPremiumPolicy.update(masterEnabled: value)
++            case JerkgramLocalPremiumPolicy.savedTagsKey:
++                guard JerkgramLocalPremiumPolicy.enabled else { return updated }
++                UserDefaults.standard.set(value, forKey: JerkgramLocalPremiumPolicy.scopedTagsKey(accountPeerId: accountPeerId))
++                JerkgramLocalPremiumPolicy.updateTags(accountPeerId: accountPeerId, enabled: value)
++            case "jerkgram.LocalPremium.EmojiStatus":
++                guard JerkgramLocalPremiumPolicy.enabled else { return updated }
++                context.jerkgramLocalAppearance.update { $0.emojiEnabled = value }
++            case "jerkgram.LocalPremium.ProfileColors":
++                guard JerkgramLocalPremiumPolicy.enabled else { return updated }
++                context.jerkgramLocalAppearance.update { $0.colorsEnabled = value }
+             case JerkgramAppIconAccess.preferenceKey:
+                 UserDefaults.standard.set(value, forKey: JerkgramAppIconAccess.preferenceKey)
+             case JerkgramDefaultFolderSettings.preferenceKey:
+@@ -3985,8 +4005,7 @@
+             pushController?(jerkgramDataAndBackupController(context: context))
+         } else if selectedPage == .stars {
+             pushController?(jerkgramStarsEditorController(context: context))
+-        } else if selectedPage == .localAppearance {
+-            pushController?(context.sharedContext.makeJerkgramProfileAppearanceController(context: context))
++
+         } else {
+             pushController?(
+                 ghostBaseSettingsPageController(
+@@ -4088,7 +4107,9 @@
+     }
+ 
+     openDownloadBoostImpl = { [weak controller] in
++        guard JerkgramLocalPremiumPolicy.enabled else { return }
+         let picker = jerkgramDownloadBoostController(context: context, selected: stateValue.with { $0.downloadBoost }, select: { mode in
++            guard JerkgramLocalPremiumPolicy.enabled else { return }
+             updateState { current in
+                 var updated = current
+                 updated.downloadBoost = mode
+--- a/submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift
++++ b/submodules/SettingsUI/Sources/Themes/ThemeSettingsAppIconItem.swift
+@@ -4,6 +4,7 @@
+ import AsyncDisplayKit
+ import SwiftSignalKit
+ import TelegramCore
++import Postbox
+ import TelegramPresentationData
+ import ItemListUI
+ import PresentationDataUtils
+@@ -13,9 +14,8 @@
+ enum JerkgramAppIconAccess {
+     static let preferenceKey = "jerkgram.LocalPremium.AppIcons"
+ 
+-    static var unlockEnabled: Bool {
+-        return UserDefaults.standard.bool(forKey: self.preferenceKey)
+-    }
++    static var storedUnlockEnabled: Bool { UserDefaults.standard.bool(forKey: self.preferenceKey) }
++    static var unlockEnabled: Bool { JerkgramLocalPremiumPolicy.effective(storedUnlockEnabled) }
+ 
+     static func isLocked(iconIsPremium: Bool, accountIsPremium: Bool) -> Bool {
+         return iconIsPremium && !accountIsPremium && !self.unlockEnabled
+--- a/submodules/TelegramCore/Sources/Network/FetchV2.swift
++++ b/submodules/TelegramCore/Sources/Network/FetchV2.swift
+@@ -305,7 +305,7 @@
+         let maxPartSize: Int64
+         let partAlignment: Int64
+         let partDivision: Int64
+-        let maxPendingParts: Int
++        var maxPendingParts: Int
+         
+         var pendingParts: [PendingPart] = []
+         var completedRanges = RangeSet<Int64>()
+@@ -432,11 +432,12 @@
+         private var requiredRangesDisposable: Disposable?
+         private var requiredRanges: [RequiredRange] = []
+         
+-        private let defaultPartSize: Int64
+-        private let jerkgramBoost: JerkgramDownloadBoostPolicy.Parameters
++        private var defaultPartSize: Int64
++        private var jerkgramBoost: JerkgramDownloadBoostPolicy.Parameters
++        private let jerkgramBoostIsStory: Bool
+         private let cdnPartSize: Int64
+         private let fastDownloads: Bool
+-        private let masterPendingParts: Int
++        private var masterPendingParts: Int
+         private let cdnPendingParts: Int
+         private var cdnDisabled: Bool = false
+         private var cdnHashFailures: Int = 0
+@@ -505,6 +506,7 @@
+                 }
+             }
+             
++            self.jerkgramBoostIsStory = isStory
+             self.fastDownloads = network.engineKind == .rust
+             self.jerkgramBoost = JerkgramDownloadBoostPolicy.parameters(mode: JerkgramDownloadBoostSettings.mode(accountPeerId: accountPeerId.toInt64()), size: size, isStory: isStory, fastDownloads: self.fastDownloads, encrypted: encryptionKey != nil)
+             self.defaultPartSize = self.jerkgramBoost.partSize
+@@ -538,6 +540,17 @@
+         }
+         
+         private func update() {
++            let effectiveBoost = JerkgramDownloadBoostPolicy.parameters(mode: JerkgramDownloadBoostSettings.mode(accountPeerId: self.accountPeerId.toInt64()), size: self.size, isStory: self.jerkgramBoostIsStory, fastDownloads: self.fastDownloads, encrypted: self.encryptionKey != nil)
++            if effectiveBoost.mode != self.jerkgramBoost.mode {
++                self.jerkgramBoost = effectiveBoost
++                self.defaultPartSize = effectiveBoost.partSize
++                self.masterPendingParts = effectiveBoost.maxPendingParts
++                if case let .fetching(state)? = self.state, case .datacenter = state.fetchLocation {
++                    state.partSize = effectiveBoost.partSize
++                    state.maxPendingParts = effectiveBoost.maxPendingParts
++                    state.window = effectiveBoost.initialWindow
++                }
++            }
+             if self.state == nil {
+                 Logger.shared.log("FetchV2", "\(self.loggingIdentifier): initializing to .datacenter(\(self.datacenterId))")
+                 
+--- a/submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift
++++ b/submodules/TelegramCore/Sources/Network/JerkgramDownloadBoostPolicy.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import Postbox
+ 
+ public enum JerkgramDownloadBoostMode: String, CaseIterable {
+     case off
+@@ -31,6 +32,7 @@
+     }
+ 
+     public static func mode(accountPeerId: Int64) -> JerkgramDownloadBoostMode {
++        guard JerkgramLocalPremiumPolicy.enabled else { return .off }
+         self.lock.lock()
+         defer { self.lock.unlock() }
+         if let mode = self.modes[accountPeerId] { return mode }
+--- a/submodules/TelegramCore/Sources/Settings/JerkgramLocalAppearanceSettings.swift
++++ b/submodules/TelegramCore/Sources/Settings/JerkgramLocalAppearanceSettings.swift
+@@ -31,7 +31,7 @@
+     }
+ 
+     public func permits(recordId: Int64, ownPeerId: Int64, testing: Bool, active: Bool, ownIsBot: Bool?, displayedPeerId: Int64, displayedIsBot: Bool) -> Bool {
+-        return isValid && enabled && active && ownIsBot == false && !displayedIsBot
++        return isValid && active && ownIsBot == false && !displayedIsBot
+             && owner == recordId && peer == ownPeerId && self.testing == testing
+             && displayedPeerId == ownPeerId
+     }
+--- a/submodules/TelegramCore/Sources/Settings/JerkgramLocalAppearanceStore.swift
++++ b/submodules/TelegramCore/Sources/Settings/JerkgramLocalAppearanceStore.swift
+@@ -11,6 +11,9 @@
+ public struct JerkgramLocalAppearanceSnapshot: Equatable {
+     public var settings: JerkgramLocalAppearanceSettings
+     public var ownUser: TelegramUser?
++    public var masterEnabled = JerkgramLocalPremiumPolicy.enabled
++    public var emojiUnlocked: Bool { eligible && masterEnabled && settings.emojiEnabled }
++    public var colorsUnlocked: Bool { eligible && masterEnabled && settings.colorsEnabled }
+     public var active: Bool
+     public var activityGeneration: Int64 = 0
+     public var expiredAt: Int32 = 0
+@@ -18,7 +21,7 @@
+     public var appearanceUserWithoutEmoji: TelegramUser?
+     public var eligible: Bool { active && ownUser?.id.toInt64() == settings.peer && ownUser?.botInfo == nil && ownUser != nil }
+     public var renderToken: JerkgramLocalAppearanceRenderToken? {
+-        guard eligible, settings.enabled else { return nil }
++        guard eligible, masterEnabled, settings.emojiEnabled || settings.colorsEnabled else { return nil }
+         return JerkgramLocalAppearanceRenderToken(revision: settings.revision, generation: activityGeneration, expiredAt: expiredAt)
+     }
+ }
+@@ -36,6 +39,7 @@
+     private let observation = MetaDisposable()
+     private let write = MetaDisposable()
+     private var expiry: SwiftSignalKit.Timer?
++    private var masterObserver: NSObjectProtocol?
+     private static let key: ValueBoxKey = {
+         let key = ValueBoxKey(length: 4); key.setInt32(0, value: 0x4A470004); return key
+     }()
+@@ -49,6 +53,14 @@
+         self.peerId = account.peerId; self.testing = account.testingEnvironment
+         let initial = JerkgramLocalAppearanceSnapshot(settings: JerkgramLocalAppearanceSettings(owner: account.id.int64, peer: account.peerId.toInt64(), testing: account.testingEnvironment), ownUser: nil, active: false)
+         self.value = Atomic(value: initial); self.promise = ValuePromise(initial, ignoreRepeated: true)
++        self.masterObserver = NotificationCenter.default.addObserver(forName: JerkgramLocalPremiumPolicy.changed, object: nil, queue: .main) { [weak self] _ in
++            guard let self else { return }
++            var next = self.snapshot
++            next.masterEnabled = JerkgramLocalPremiumPolicy.enabled
++            // OFF/ON must not revive callbacks opened before the transition.
++            if next.activityGeneration < Int64.max { next.activityGeneration += 1 } else { next.active = false }
++            self.publish(next)
++        }
+         self.observation.set((combineLatest(
+             account.postbox.preferencesView(keys: [Self.key]),
+             TelegramEngine(account: account).data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
+@@ -76,8 +88,11 @@
+     private func publish(_ update: JerkgramLocalAppearanceSnapshot) {
+         precondition(Thread.isMainThread)
+         var next = update
++        if next.eligible != snapshot.eligible, next.activityGeneration == snapshot.activityGeneration {
++            if next.activityGeneration < Int64.max { next.activityGeneration += 1 } else { next.active = false }
++        }
+         next.appearanceUser = nil; next.appearanceUserWithoutEmoji = nil
+-        if next.eligible, next.settings.enabled, var user = next.ownUser {
++        if next.eligible, next.masterEnabled, var user = next.ownUser {
+             if next.settings.colorsEnabled {
+                 if let color = next.settings.nameColor.map({ PeerNameColor(rawValue: $0) }) { user = user.withUpdatedNameColor(.preset(color)) }
+                 user = user.withUpdatedProfileColor(next.settings.profileColor.map({ PeerNameColor(rawValue: $0) }))
+@@ -92,7 +107,7 @@
+         }
+         let _ = value.modify { _ in next }; promise.set(next)
+         expiry?.invalidate(); expiry = nil
+-        if next.eligible, next.settings.enabled, next.settings.emojiEnabled,
++        if next.eligible, next.masterEnabled, next.settings.emojiEnabled,
+             let expiration = next.settings.emojiExpiration,
+             Double(expiration) > clock() {
+             let timer = SwiftSignalKit.Timer(timeout: max(0.01, Double(expiration) - clock()), repeat: false, completion: { [weak self] in
+@@ -116,6 +131,10 @@
+         if next.settings == original { return true }
+         next.settings.revision = original.revision + 1
+         let stored = next.settings
++        if next.settings.emojiEnabled != original.emojiEnabled || next.settings.colorsEnabled != original.colorsEnabled {
++            guard next.activityGeneration < Int64.max else { return false }
++            next.activityGeneration += 1
++        }
+         publish(next)
+         let ownPeerId = peerId; let testing = self.testing
+         // Coalesced writes carry the complete latest record, so cancellation of
+@@ -138,6 +157,7 @@
+         let state = state ?? current
+         guard current.eligible, state.activityGeneration == current.activityGeneration,
+             state.settings.revision == current.settings.revision else { return peer }
++        guard state.masterEnabled else { return peer }
+         guard state.settings.permits(recordId: owner, ownPeerId: peerId.toInt64(), testing: testing,
+             active: state.active, ownIsBot: state.ownUser.map { $0.botInfo != nil }, displayedPeerId: user.id.toInt64(), displayedIsBot: user.botInfo != nil) else { return peer }
+         let timestamp = now ?? Int32(clamping: Int64(clock()))
+@@ -161,5 +181,5 @@
+         return message.author?.id == peerId ? result.withUpdatedAuthor(projected) : result
+     }
+ 
+-    deinit { expiry?.invalidate(); observation.dispose(); write.dispose() }
++    deinit { if let masterObserver { NotificationCenter.default.removeObserver(masterObserver) }; expiry?.invalidate(); observation.dispose(); write.dispose() }
+ }
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/AdMessages.swift
+@@ -317,7 +317,9 @@
+     private let account: Account
+     private let peerId: EnginePeer.Id
+     private let messageId: EngineMessage.Id?
+-    private let removeSponsored: Bool
++    private var removeSponsored: Bool
++    private var premiumObserver: NSObjectProtocol?
++    private var policyGeneration: UInt64 = 0
+ 
+     private let maskAsSeenDisposables = DisposableDict<Data>()
+ 
+@@ -454,6 +456,19 @@
+         self.removeSponsored = removeSponsored
+ 
+         self.stateValue = State(interPostInterval: nil, messages: [])
++        self.premiumObserver = NotificationCenter.default.addObserver(forName: JerkgramLocalPremiumPolicy.changed, object: nil, queue: nil) { [weak self] _ in
++            guard let self else { return }
++            self.queue.async { [weak self] in
++                guard let self else { return }
++                let enabled = JerkgramSponsoredContentPolicy.removeSponsored(accountPeerId: self.account.peerId.toInt64())
++                guard enabled != self.removeSponsored else { return }
++                self.removeSponsored = enabled
++                self.policyGeneration &+= 1
++                self.disposable.set(nil)
++                self.stateValue = State(interPostInterval: nil, messages: [])
++                if self.isActivated { self.isActivated = false; self.activate() }
++            }
++        }
+ 
+         if messageId == nil {
+             self.state.set(CachedState.getCached(postbox: account.postbox, peerId: peerId)
+@@ -461,7 +476,7 @@
+                 if let cachedState = cachedState, cachedState.timestamp >= Int32(Date().timeIntervalSince1970) - 5 * 60 {
+                     return account.postbox.transaction { transaction -> State in
+                         return State(interPostInterval: cachedState.interPostInterval, messages: cachedState.messages.compactMap { message -> Message? in
+-                            return message.toMessage(peerId: peerId, transaction: transaction, removeSponsored: removeSponsored)
++                            return message.toMessage(peerId: peerId, transaction: transaction, removeSponsored: JerkgramSponsoredContentPolicy.removeSponsored(accountPeerId: account.peerId.toInt64()))
+                         })
+                     }
+                 } else {
+@@ -476,6 +491,7 @@
+     }
+     
+     deinit {
++        if let premiumObserver { NotificationCenter.default.removeObserver(premiumObserver) }
+         self.disposable.dispose()
+         self.maskAsSeenDisposables.dispose()
+     }
+@@ -490,7 +506,7 @@
+         let accountPeerId = self.account.peerId
+         let account = self.account
+         let messageId = self.messageId
+-        let removeSponsored = self.removeSponsored
++        let policyGeneration = self.policyGeneration
+         
+         let signal: Signal<(interPostInterval: Int32?, startDelay: Int32?, betweenDelay: Int32?, messages: [Message]), NoError> = account.postbox.transaction { transaction -> Api.InputPeer? in
+             return transaction.getPeer(peerId).flatMap(apiInputPeer)
+@@ -576,7 +592,7 @@
+                         }
+                         
+                         return (postsBetween, startDelay, betweenDelay, parsedMessages.compactMap { message -> Message? in
+-                            return message.toMessage(peerId: peerId, transaction: transaction, removeSponsored: removeSponsored)
++                            return message.toMessage(peerId: peerId, transaction: transaction, removeSponsored: JerkgramSponsoredContentPolicy.removeSponsored(accountPeerId: account.peerId.toInt64()))
+                         })
+                     case .sponsoredMessagesEmpty:
+                         return (nil, nil, nil, [])
+@@ -587,7 +603,7 @@
+         
+         self.disposable.set((signal
+         |> deliverOn(self.queue)).start(next: { [weak self] interPostInterval, startDelay, betweenDelay, messages in
+-            guard let strongSelf = self else {
++            guard let strongSelf = self, strongSelf.policyGeneration == policyGeneration else {
+                 return
+             }
+             strongSelf.stateValue = State(interPostInterval: interPostInterval, startDelay: startDelay, betweenDelay: betweenDelay, messages: messages)
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/LocalSavedTagsService.swift
+@@ -75,6 +75,7 @@
+     fileprivate func bind<T>(_ signal: Signal<T, NoError>) -> Signal<T, NoError> {
+         return Signal { subscriber in
+             let id = UUID()
++            let policyGeneration = JerkgramLocalPremiumPolicy.generation
+             let disposable = MetaDisposable()
+             let generation: UInt64? = self.delivery.sync {
+                 guard !self.disposed else { return nil }
+@@ -87,7 +88,8 @@
+             }
+             disposable.set(signal.start(next: { value in
+                 self.delivery.async {
+-                    guard !self.disposed && self.generation == generation && self.subscriptions[id] != nil else { return }
++                    guard !self.disposed && self.generation == generation && self.subscriptions[id] != nil,
++                        JerkgramLocalPremiumPolicy.generation == policyGeneration else { return }
+                     subscriber.putNext(value)
+                 }
+             }, completed: {
+@@ -105,7 +107,7 @@
+     fileprivate func transaction<T>(_ body: @escaping (Transaction) -> Result<T, LocalSavedTagsError>) -> Signal<Result<T, LocalSavedTagsError>, NoError> {
+         return self.bind(self.account.postbox.transaction { transaction in
+             let active = self.delivery.sync { !self.disposed }
+-            guard active else { return .failure(.unavailable) }
++            guard active, JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: self.selfPeerId.toInt64()) else { return .failure(.unavailable) }
+             guard let state = transaction.getState() as? AuthorizedAccountState,
+                   state.peerId == self.selfPeerId, state.isTestingEnvironment == self.testingEnvironment else { return .failure(.wrongAccount) }
+             return body(transaction)
+@@ -116,12 +118,17 @@
+     }
+     public func catalogueUpdates() -> Signal<Result<LocalSavedTagsCatalogue, LocalSavedTagsError>, NoError> {
+         // Existing scalar preferences view is subscribed only by this cold signal.
+-        return self.bind(self.account.postbox.preferencesView(keys: [localSavedTagsRevisionKey()])
++        let policy: Signal<UInt64, NoError> = Signal { subscriber in
++            subscriber.putNext(JerkgramLocalPremiumPolicy.generation)
++            let observer = NotificationCenter.default.addObserver(forName: JerkgramLocalPremiumPolicy.changed, object: nil, queue: nil) { _ in subscriber.putNext(JerkgramLocalPremiumPolicy.generation) }
++            return ActionDisposable { NotificationCenter.default.removeObserver(observer) }
++        }
++        return combineLatest(policy, self.account.postbox.preferencesView(keys: [localSavedTagsRevisionKey()])
+         |> map { view -> Int64 in
+             return view.values[localSavedTagsRevisionKey()]?.get(LocalSavedTagsRevision.self)?.revision ?? 0
+         }
+-        |> distinctUntilChanged
+-        |> mapToSignal { _ in self.catalogue() })
++        |> distinctUntilChanged)
++        |> mapToSignal { _ in self.catalogue() }
+     }
+     public func tags(messageId: MessageId) -> Signal<Result<[String], LocalSavedTagsError>, NoError> {
+         return self.transaction { $0.localSavedTagsForMessage(selfPeerId: self.selfPeerId, messageId: messageId) }
+--- a/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
++++ b/submodules/TelegramCore/Sources/TelegramEngine/Messages/Translate.swift
+@@ -9,14 +9,28 @@
+ public enum JerkgramTranslationSettings {
+     public static let preferenceKey = "jerkgram.EnhancedTranslation"
+     public static let policyVersion: Int32 = 2
++    private static let masterObserver: NSObjectProtocol = NotificationCenter.default.addObserver(forName: JerkgramLocalPremiumPolicy.changed, object: nil, queue: nil) { _ in
++        lock.lock()
++        let accounts = Array(values.keys)
++        for account in accounts {
++            epoch &+= 1
++            values[account] = (values[account]!.0, epoch)
++            JerkgramTranslationAdmission.shared.cancel(accountPeerId: account)
++        }
++        lock.unlock()
++        DispatchQueue.main.async {
++            for account in accounts { NotificationCenter.default.post(name: Notification.Name("JerkgramTranslationPolicyChanged"), object: account) }
++        }
++    }
+     private static let lock = NSLock()
+     private static var values: [Int64: (Bool, UInt64)] = [:]
+     private static var order: [Int64] = []
+     private static var epoch: UInt64 = 1
+     public static func scopedKey(accountPeerId: Int64) -> String { return "jerkgram.account.\(accountPeerId).setting.\(preferenceKey)" }
+     public static func enabled(accountPeerId: Int64) -> Bool {
++        _ = masterObserver
+         lock.lock(); defer { lock.unlock() }
+-        return value(accountPeerId: accountPeerId).0
++        return JerkgramLocalPremiumPolicy.effective(value(accountPeerId: accountPeerId).0)
+     }
+     public static func generation(accountPeerId: Int64) -> UInt64 {
+         lock.lock(); defer { lock.unlock() }
+--- a/submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift
++++ b/submodules/TelegramCore/Sources/Utils/JerkgramSponsoredContentPolicy.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import Postbox
+ 
+ // A local per-account capability. Never modifies Telegram Premium or API flags.
+ public enum JerkgramSponsoredContentPolicy {
+@@ -16,6 +17,7 @@
+     }
+ 
+     public static func removeSponsored(accountPeerId: Int64) -> Bool {
++        guard JerkgramLocalPremiumPolicy.enabled else { return false }
+         self.lock.lock()
+         defer { self.lock.unlock() }
+         if let value = self.accounts[accountPeerId] { return value }
+@@ -27,9 +29,10 @@
+ 
+     public static func update(accountPeerId: Int64, enabled: Bool) {
+         self.lock.lock()
+-        defer { self.lock.unlock() }
+         if self.accounts.count >= 32 && self.accounts[accountPeerId] == nil { self.accounts.removeAll(keepingCapacity: true) }
+         self.accounts[accountPeerId] = enabled
++        self.lock.unlock()
++        JerkgramLocalPremiumPolicy.invalidate()
+     }
+ 
+     static func shouldDisplay(isSponsored: Bool, removeSponsored: Bool) -> Bool {
+--- a/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift
++++ b/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift
+@@ -1300,7 +1300,9 @@
+                             if let result, let previewItem = strongSelf.previewItem {
+                                 let expirationDate: Int32? = result.timestamp
+                                 if strongSelf.controller?.completeLocalSelection(file: previewItem.item.itemFile?._parse(), expirationDate: expirationDate) == true {
+-                                    strongSelf.controller?.dismiss()
++                                    if let destinationView = strongSelf.controller?.destinationItemView() {
++                                        strongSelf.animateOutToStatus(item: previewItem.item, sourceLayer: result.sourceView.layer, customEffectFile: nil, destinationView: destinationView, fromBackground: true)
++                                    } else { strongSelf.controller?.dismiss() }
+                                     return
+                                 }
+                                 if let itemGift = previewItem.item.itemGift {
+@@ -1420,12 +1422,9 @@
+                 self.refreshLayout(transition: .immediate)
+             } else {
+                 self.freezeUpdates = true
+-                if controller.completeLocalSelection(file: item?.itemFile?._parse(), expirationDate: nil) {
+-                    controller.dismiss()
+-                    return
+-                }
+-                
+-                if case .statusSelection = controller.mode, let item = item, let currentSelection = self.currentSelection, item.itemFile?.fileId.id == currentSelection {
++                let completedLocally = controller.completeLocalSelection(file: item?.itemFile?._parse(), expirationDate: nil)
++                
++                if !completedLocally, case .statusSelection = controller.mode, let item = item, let currentSelection = self.currentSelection, item.itemFile?.fileId.id == currentSelection {
+                     let _ = (self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil)
+                     |> deliverOnMainQueue).start()
+                     controller.dismiss()
+@@ -1442,6 +1441,7 @@
+                     animateOutToView = true
+                 }
+                                 
++                if !completedLocally {
+                 switch controller.mode {
+                 case .statusSelection:
+                     if let gift = item?.itemGift {
+@@ -1493,6 +1493,7 @@
+                     completion()
+                 }
+                 
++                }
+                 if animateOutToView, item != nil, let destinationView = controller.destinationItemView() {
+                     if let snapshotView = destinationView.snapshotView(afterScreenUpdates: false) {
+                         snapshotView.frame = destinationView.frame
+@@ -1565,6 +1566,7 @@
+     private let color: UIColor?
+     private let mode: Mode
+     private let localAppearance: Bool
++    private let localAppearanceGeneration: Int64?
+     private let destinationItemView: () -> UIView?
+         
+     fileprivate let _ready = Promise<Bool>()
+@@ -1581,9 +1583,10 @@
+     public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, color: UIColor? = nil, localAppearance: Bool = false, destinationItemView: @escaping () -> UIView?) {
+         self.context = context
+         switch mode {
+-        case .customStatusSelection, .backgroundSelection: self.localAppearance = localAppearance
++        case .statusSelection, .customStatusSelection, .backgroundSelection: self.localAppearance = localAppearance
+         default: self.localAppearance = false
+         }
++        self.localAppearanceGeneration = localAppearance ? context.jerkgramLocalAppearance.snapshot.activityGeneration : nil
+         self.mode = mode
+         self.sourceView = sourceView
+         self.emojiContent = emojiContent
+@@ -1602,6 +1605,16 @@
+     private func completeLocalSelection(file: TelegramMediaFile?, expirationDate: Int32?) -> Bool {
+         guard self.localAppearance else { return false }
+         switch self.mode {
++        case .statusSelection:
++            let store = self.context.jerkgramLocalAppearance
++            // Always consume a local session, including revoked/stale sessions.
++            // A rejected local save must never fall through to native API setters.
++            guard store.snapshot.emojiUnlocked else { return true }
++            store.update(expectedGeneration: self.localAppearanceGeneration) { settings in
++                let id = file?.fileId.id
++                settings.emojiFileId = id == self.currentSelection && expirationDate == nil ? nil : id
++                settings.emojiExpiration = settings.emojiFileId == nil ? nil : expirationDate
++            }
+         case let .customStatusSelection(completion): completion(file, expirationDate)
+         case let .backgroundSelection(completion): completion(file)
+         default: return false
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+@@ -733,7 +733,7 @@
+                 credibilityIcon = .scam
+             } else if let emojiStatus = peer.emojiStatus {
+                 statusIcon = .emojiStatus(emojiStatus)
+-            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings || self.isMyProfile) {
++            } else if ((peer.isPremium && !premiumConfiguration.isPremiumDisabled) || (peer.id == self.context.account.peerId && self.context.jerkgramLocalAppearance.snapshot.emojiUnlocked)) && (peer.id != self.context.account.peerId || self.isSettings || self.isMyProfile) {
+                 credibilityIcon = .premium
+             } else {
+                 credibilityIcon = .none
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -2437,9 +2437,11 @@
+                         areCustomEmojiEnabled: true,
+                         chatPeerId: strongSelf.context.account.peerId,
+                         selectedItems: selectedItems,
+-                        topStatusTitle: topStatusTitle
++                        topStatusTitle: topStatusTitle,
++                        forceHasPremium: strongSelf.context.jerkgramLocalAppearance.snapshot.emojiUnlocked
+                     ),
+                     currentSelection: currentSelectedFileId,
++                    localAppearance: strongSelf.context.jerkgramLocalAppearance.snapshot.emojiUnlocked,
+                     destinationItemView: { [weak sourceView] in
+                         return sourceView
+                     }
+@@ -2476,10 +2478,43 @@
+                 previousTimestamp = currentTimestamp
+                 
+                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+-                guard !premiumConfiguration.isPremiumDisabled else {
++                guard !premiumConfiguration.isPremiumDisabled || (peer.id == strongSelf.context.account.peerId && strongSelf.context.jerkgramLocalAppearance.snapshot.emojiUnlocked) else {
+                     return
+                 }
+                 
++                if peer.id == strongSelf.context.account.peerId, strongSelf.context.jerkgramLocalAppearance.snapshot.emojiUnlocked {
++                let emojiStatusSelectionController = EmojiStatusSelectionController(
++                    context: strongSelf.context,
++                    mode: .statusSelection,
++                    sourceView: sourceView,
++                    emojiContent: EmojiPagerContentComponent.emojiInputData(
++                        context: strongSelf.context,
++                        animationCache: strongSelf.context.animationCache,
++                        animationRenderer: strongSelf.context.animationRenderer,
++                        isStandalone: false,
++                        subject: .status,
++                        hasTrending: false,
++                        topReactionItems: [],
++                        areUnicodeEmojiEnabled: false,
++                        areCustomEmojiEnabled: true,
++                        chatPeerId: strongSelf.context.account.peerId,
++                        selectedItems: Set(peer.emojiStatus.map { [EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: $0.fileId)] } ?? []),
++                        topStatusTitle: nil,
++                        forceHasPremium: strongSelf.context.jerkgramLocalAppearance.snapshot.emojiUnlocked
++                    ),
++                    currentSelection: peer.emojiStatus?.fileId,
++                    localAppearance: strongSelf.context.jerkgramLocalAppearance.snapshot.emojiUnlocked,
++                    destinationItemView: { [weak sourceView] in
++                        return sourceView
++                    }
++                )
++                emojiStatusSelectionController.pushController = { [weak self] c in
++                    self?.controller?.push(c)
++                }
++                strongSelf.emojiStatusSelectionController = emojiStatusSelectionController
++                strongSelf.controller?.present(emojiStatusSelectionController, in: .window(.root))
++                    return
++                }
+                 let source: Signal<PremiumSource, NoError>
+                 if let peerStatus = peerStatus {
+                     source = emojiStatusFileAndPack
+@@ -4312,7 +4347,7 @@
+             return
+         }
+         if self.peerId == self.context.account.peerId {
+-            controller.push(UserAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData))
++            controller.push(UserAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, localAppearance: self.context.jerkgramLocalAppearance.snapshot.colorsUnlocked))
+         } else if case .channel = self.data?.peer {
+             controller.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, boostStatus: self.boostStatus))
+         }
+--- a/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift
++++ b/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift
+@@ -736,23 +736,21 @@
+             }
+             if component.localAppearance {
+                 let store = component.context.jerkgramLocalAppearance
+-                guard store.snapshot.eligible, store.snapshot.settings.enabled,
++                guard store.snapshot.colorsUnlocked,
+                     self.selectedProfileGift == nil, self.selectedNameGift == nil else { return }
+                 let nameColor: Int32?
+                 if case let .preset(color) = resolvedState.nameColor { nameColor = color.rawValue } else { nameColor = nil }
+                 let saved = store.update(expectedGeneration: component.localAppearanceGeneration) { settings in
+-                    settings.colorsEnabled = true
+                     settings.nameColor = nameColor
+                     settings.profileColor = resolvedState.profileColor?.rawValue
+                     settings.replyEmoji = resolvedState.replyFileId
+                     settings.profileEmoji = resolvedState.backgroundFileId
+-                    if resolvedState.changes.contains(.emojiStatus) {
++                    if store.snapshot.emojiUnlocked && resolvedState.changes.contains(.emojiStatus) {
+                         if case let .emoji(fileId)? = resolvedState.emojiStatus?.content {
+                             settings.emojiFileId = fileId
+                             settings.emojiExpiration = resolvedState.emojiStatus?.expirationDate
+-                            settings.emojiEnabled = true
+                         } else if resolvedState.emojiStatus == nil {
+-                            settings.emojiEnabled = false
++                            settings.emojiFileId = nil; settings.emojiExpiration = nil
+                         }
+                     }
+                 }
+@@ -823,7 +821,7 @@
+                     return .generic
+                 })
+             }
+-            if resolvedState.changes.contains(.emojiStatus) {
++            if store.snapshot.emojiUnlocked && resolvedState.changes.contains(.emojiStatus) {
+                 let signal: Signal<Never, NoError>
+                 if let emojiStatus = resolvedState.emojiStatus {
+                     switch emojiStatus.content {
+@@ -935,6 +933,7 @@
+                 selectedItems.insert(EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: currentFileId))
+             }
+             
++            if component.localAppearance, case .status = subject, !component.context.jerkgramLocalAppearance.snapshot.emojiUnlocked { return }
+             let mappedSubject: EmojiPagerContentComponent.Subject
+             switch subject {
+             case .reply, .profile:
+@@ -2054,6 +2053,7 @@
+         focusOnItemTag: UserAppearanceEntryTag? = nil,
+         localAppearance: Bool = false
+     ) {
++        let localAppearance = localAppearance || context.jerkgramLocalAppearance.snapshot.colorsUnlocked
+         self.context = context
+         self.focusOnItemTag = focusOnItemTag
+ 
+--- a/submodules/TelegramUI/Sources/ChatController.swift
++++ b/submodules/TelegramUI/Sources/ChatController.swift
+@@ -639,6 +639,7 @@
+     
+     weak var currentPaidMessageUndoController: UndoOverlayController?
+     
++    private var jerkgramPremiumObserver: NSObjectProtocol?
+     let initTimestamp: Double
+     
+     public var alwaysShowSearchResultsAsList: Bool = false {
+@@ -776,6 +777,15 @@
+         
+         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData)
+         
++        self.jerkgramPremiumObserver = NotificationCenter.default.addObserver(forName: JerkgramLocalPremiumPolicy.changed, object: nil, queue: .main) { [weak self] _ in
++            guard let self, self.isNodeLoaded else { return }
++            self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
++                if !state.hasLocalSavedTags, state.historyFilter?.localSavedTagId != nil {
++                    return state.updatedHistoryFilter(nil)
++                }
++                return state
++            })
++        }
+         self._hasGlassStyle = true
+         
+         self.automaticallyControlPresentationContextLayout = false
+@@ -7207,6 +7217,7 @@
+     }
+ 
+     deinit {
++        if let jerkgramPremiumObserver { NotificationCenter.default.removeObserver(jerkgramPremiumObserver) }
+         self.jerkgramArchiveVisitRequest?.cancel()
+         let _ = ChatControllerCount.modify { value in
+             return value - 1
+--- a/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift
+@@ -998,7 +998,7 @@
+ 
+         // Use current Saved IDs. Album context and an active batch retain every
+         // selected ID; never substitute an original forward or minimum album ID.
+-        if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId,
++        if JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: context.account.peerId.toInt64()), chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId,
+             chatPresentationInterfaceState.subject != .scheduledMessages {
+             let localTagIds = chatPresentationInterfaceState.interfaceState.selectionState.map { Array($0.selectedIds) }
+                 ?? (selectAll ? messages.map { $0.id } : [message.id])
+--- a/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
++++ b/submodules/TelegramUI/Sources/ChatInterfaceStateInputPanels.swift
+@@ -35,7 +35,7 @@
+     let strings = JerkgramSavedTagsStrings(state.strings)
+     panel.localTagsTitle = strings.title
+     panel.localTagsCaption = strings.text("Local", "Лок.")
+-    if state.chatLocation.peerId == context.account.peerId, state.subject != .scheduledMessages {
++    if JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: context.account.peerId.toInt64()), state.chatLocation.peerId == context.account.peerId, state.subject != .scheduledMessages {
+         panel.localTagsAction = { ids in
+             jerkgramPresentSavedTagsController(context: context, selectedMessageIds: ids)
+         }
+--- a/submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift
++++ b/submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift
+@@ -527,6 +527,9 @@
+             self.localService = service
+             self.localCatalogue.set((service.catalogueUpdates() |> deliverOnMainQueue).start(next: { [weak self] result in
+                 guard let self, self.localService != nil else { return }
++                if case .failure = result {
++                    self.localTags = []; self.localRevision = -1; self.update(transition: .immediate)
++                }
+                 if case let .success(catalogue) = result {
+                     self.localTags = catalogue.tags.map { (id: $0.id, name: $0.name, count: $0.count) }
+                     self.localRevision = catalogue.revision
+--- a/submodules/TelegramUI/Sources/JerkgramProfileAppearanceController.swift
++++ b/submodules/TelegramUI/Sources/JerkgramProfileAppearanceController.swift
+@@ -1,140 +1 @@
+-import Foundation
+-import UIKit
+-import Display
+-import SwiftSignalKit
+-import TelegramCore
+-import TelegramPresentationData
+-import AccountContext
+-import ItemListUI
+-import PeerNameColorScreen
+-import EmojiStatusSelectionComponent
+-import EntityKeyboard
+-
+-private enum JerkgramAppearanceAction: Equatable {
+-    case master, emoji, chooseEmoji, duration, clearEmoji, profile, background, name, reply, preview, reset
+-}
+-
+-private struct JerkgramAppearanceEntry: ItemListNodeEntry {
+-    let stableId: Int
+-    let section: ItemListSectionId
+-    let title: String
+-    let label: String
+-    let value: Bool?
+-    let action: JerkgramAppearanceAction?
+-    static func <(lhs: Self, rhs: Self) -> Bool { lhs.stableId < rhs.stableId }
+-    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
+-        let arguments = arguments as! JerkgramAppearanceArguments
+-        if let value, let action {
+-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: section, style: .blocks, updated: { [weak arguments] value in arguments?.perform(action, value: value) })
+-        } else if let action {
+-            return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: section, style: .blocks, action: { [weak arguments] in arguments?.perform(action) })
+-        } else {
+-            return ItemListTextItem(presentationData: presentationData, text: .plain(title), sectionId: section)
+-        }
+-    }
+-}
+-
+-private final class JerkgramAppearanceArguments {
+-    let context: AccountContext
+-    weak var controller: ItemListController?
+-    init(context: AccountContext) { self.context = context }
+-    func text(_ english: String, _ russian: String) -> String {
+-        context.sharedContext.currentPresentationData.with { $0.strings.jerkgram.languageCode.hasPrefix("ru") } ? russian : english
+-    }
+-    func perform(_ action: JerkgramAppearanceAction, value: Bool? = nil) {
+-        let store = context.jerkgramLocalAppearance
+-        guard controller != nil, store.snapshot.eligible else { return }
+-        switch action {
+-        case .master:
+-            store.update { $0.enabled = value ?? false }
+-        case .emoji:
+-            if value == true && store.snapshot.settings.emojiFileId == nil { perform(.chooseEmoji); return }
+-            store.update { $0.emojiEnabled = value ?? false }
+-        case .chooseEmoji:
+-            guard let controller, store.snapshot.settings.enabled else { return }
+-            let generation = store.snapshot.activityGeneration
+-            let selected = store.snapshot.settings.emojiFileId
+-            var selectedItems = Set<AnyHashable>()
+-            if let selected { selectedItems.insert(EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: selected)) }
+-            let picker = EmojiStatusSelectionController(context: context, mode: .customStatusSelection(completion: { [weak self] file, expiration in
+-                guard let self, self.controller != nil else { return }
+-                self.context.jerkgramLocalAppearance.update(expectedGeneration: generation) {
+-                    $0.emojiFileId = file?.fileId.id; $0.emojiExpiration = expiration
+-                    $0.emojiEnabled = file != nil
+-                }
+-            }), sourceView: controller.navigationBar?.view ?? controller.view,
+-            emojiContent: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: context.animationCache, animationRenderer: context.animationRenderer, isStandalone: false, subject: .status, hasTrending: false, topReactionItems: [], areUnicodeEmojiEnabled: false, areCustomEmojiEnabled: true, chatPeerId: context.account.peerId, selectedItems: selectedItems, topStatusTitle: nil, forceHasPremium: true), currentSelection: selected, localAppearance: true, destinationItemView: { nil })
+-            controller.present(picker, in: .window(.root))
+-        case .duration:
+-            guard let controller, store.snapshot.settings.enabled, store.snapshot.settings.emojiFileId != nil else { return }
+-            let presentation = context.sharedContext.currentPresentationData.with { $0 }
+-            let generation = store.snapshot.activityGeneration
+-            let sheet = ActionSheetController(presentationData: presentation)
+-            var items: [ActionSheetItem] = []
+-            for (title, seconds) in [(text("Permanent", "Постоянно"), Int32(0)), (text("1 hour", "1 час"), 3600), (text("8 hours", "8 часов"), 28800), (text("1 day", "1 день"), 86400)] {
+-                items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak self, weak sheet] in
+-                    sheet?.dismissAnimated()
+-                    guard let self, self.controller != nil else { return }
+-                    self.context.jerkgramLocalAppearance.update(expectedGeneration: generation) { settings in
+-                        settings.emojiExpiration = seconds == 0 ? nil : Int32(clamping: Int64(Date().timeIntervalSince1970) + Int64(seconds))
+-                    }
+-                }))
+-            }
+-            sheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentation.strings.Common_Cancel, color: .accent, action: { [weak sheet] in sheet?.dismissAnimated() })])])
+-            controller.present(sheet, in: .window(.root))
+-        case .clearEmoji:
+-            store.update { $0.emojiEnabled = false; $0.emojiFileId = nil; $0.emojiExpiration = nil }
+-        case .profile, .background, .name, .reply, .preview:
+-            guard store.snapshot.settings.enabled else { return }
+-            let tag: UserAppearanceEntryTag
+-            switch action {
+-            case .name: tag = .name
+-            case .reply: tag = .nameAddIcons
+-            case .background: tag = .profileAddIcons
+-            default: tag = .profile
+-            }
+-            controller?.push(UserAppearanceScreen(context: context, focusOnItemTag: tag, localAppearance: true))
+-        case .reset:
+-            store.update { settings in settings = JerkgramLocalAppearanceSettings(owner: settings.owner, peer: settings.peer, testing: settings.testing) }
+-        }
+-    }
+-}
+-
+-func jerkgramProfileAppearanceController(context: AccountContext) -> ViewController {
+-    let initial = context.sharedContext.currentPresentationData.with { $0 }
+-    let arguments = JerkgramAppearanceArguments(context: context)
+-    let signal = combineLatest(context.sharedContext.presentationData, context.jerkgramLocalAppearance.updates)
+-    |> deliverOnMainQueue
+-    |> map { presentation, snapshot -> (ItemListControllerState, (ItemListNodeState, Any)) in
+-        let ru = presentation.strings.jerkgram.languageCode.hasPrefix("ru")
+-        func text(_ en: String, _ ruText: String) -> String { ru ? ruText : en }
+-        var entries: [JerkgramAppearanceEntry] = []
+-        func add(_ section: Int32, _ title: String, label: String = "", value: Bool? = nil, action: JerkgramAppearanceAction? = nil) {
+-            entries.append(JerkgramAppearanceEntry(stableId: entries.count, section: section, title: title, label: label, value: value, action: action))
+-        }
+-        if snapshot.eligible {
+-            add(0, text("Local profile appearance", "Локальное оформление профиля"), value: snapshot.settings.enabled, action: .master)
+-            add(0, text("Visible only in Jerkgram for this account. Other users see your Telegram profile.", "Видно только в Jerkgram для этого аккаунта. Другие пользователи видят ваш профиль Telegram."))
+-            if snapshot.settings.enabled {
+-                add(1, text("Local Emoji Status", "Локальный Emoji Status"), value: snapshot.settings.emojiEnabled, action: .emoji)
+-                add(1, text("Choose emoji", "Выбор эмодзи"), label: snapshot.settings.emojiFileId == nil ? text("None", "Нет") : text("Selected", "Выбрано"), action: .chooseEmoji)
+-                let duration = snapshot.settings.emojiExpiration.map { DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double($0)), dateStyle: .short, timeStyle: .short) } ?? text("Permanent", "Постоянно")
+-                add(1, text("Duration", "Срок действия"), label: duration, action: snapshot.settings.emojiFileId == nil ? nil : .duration)
+-                if snapshot.settings.emojiFileId != nil { add(1, text("Remove local status", "Убрать локальный статус"), action: .clearEmoji) }
+-                add(2, text("Profile color", "Цвет профиля"), action: .profile)
+-                add(2, text("Profile background emoji", "Фоновый эмодзи профиля"), action: .background)
+-                add(2, text("Name color", "Цвет имени"), action: .name)
+-                add(2, text("Reply appearance", "Оформление ответов"), action: .reply)
+-                add(2, text("Native preview", "Предпросмотр"), action: .preview)
+-            }
+-            add(3, text("Restore standard appearance", "Восстановить стандартное оформление"), action: .reset)
+-            add(3, text("Stored in this account's local database. No cloud sync; not included in Jerkgram backups. Removing the account or reinstalling can lose these choices.", "Хранится в локальной базе этого аккаунта. Нет синхронизации с облаком; не входит в бэкапы Jerkgram. При удалении аккаунта или переустановке настройки могут быть потеряны."))
+-        } else {
+-            add(0, text("Available only for your active personal account. Bot accounts cannot use local profile appearance.", "Доступно только для активного личного аккаунта. Локальное оформление для ботов отключено."))
+-        }
+-        return (ItemListControllerState(presentationData: ItemListPresentationData(presentation), title: .text(text("Profile Appearance", "Оформление профиля")), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentation.strings.Common_Back)), (ItemListNodeState(presentationData: ItemListPresentationData(presentation), entries: entries, style: .blocks, animateChanges: false), arguments))
+-    }
+-    let controller = ItemListController(presentationData: ItemListPresentationData(initial), updatedPresentationData: context.sharedContext.presentationData |> map { ItemListPresentationData($0) }, state: signal, tabBarItem: nil)
+-    arguments.controller = controller
+-    return controller
+-}
++// Local Premium is configured in SettingsUI. Appearance uses native PeerInfo controls.
+--- a/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift
++++ b/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift
+@@ -108,7 +108,7 @@
+     }
+     deinit { self.stop() }
+     private func changed() { self.serial &+= 1; self.changes.set(self.serial) }
+-    var canEdit: Bool { return !self.mutating }
++    var canEdit: Bool { return !self.mutating && JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: self.context.account.peerId.toInt64()) }
+     private var strings: JerkgramSavedTagsStrings { return JerkgramSavedTagsStrings(self.presentation.strings) }
+     func start() {
+         guard !self.visible else { return }
+@@ -149,7 +149,11 @@
+         self.catalogueSubscription.set((service.catalogueUpdates() |> deliverOnMainQueue).start(next: { [weak self] result in
+             guard let self, self.visible, self.generation == generation else { return }
+             switch result {
+-            case let .failure(error): self.error = error
++            case let .failure(error):
++                self.error = error
++                if !JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: self.context.account.peerId.toInt64()) {
++                    self.tags = []; self.revision = nil; self.summary = nil
++                }
+             case let .success(catalogue):
+                 guard self.revision != catalogue.revision else { return }
+                 self.revision = catalogue.revision
+@@ -171,7 +175,11 @@
+             guard let self, self.visible, self.generation == generation, self.summaryGeneration == summaryGeneration else { return }
+             switch result {
+             case let .success(summary): self.summary = summary
+-            case let .failure(error): self.error = error
++            case let .failure(error):
++                self.error = error
++                if !JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: self.context.account.peerId.toInt64()) {
++                    self.tags = []; self.revision = nil; self.summary = nil
++                }
+             }
+             self.changed()
+         }))
+@@ -188,7 +196,11 @@
+             case .success:
+                 self.notice = self.strings.text("Saved locally.", "Сохранено локально.")
+                 success()
+-            case let .failure(error): self.error = error
++            case let .failure(error):
++                self.error = error
++                if !JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: self.context.account.peerId.toInt64()) {
++                    self.tags = []; self.revision = nil; self.summary = nil
++                }
+             }
+             self.changed()
+         }))
+@@ -327,6 +339,7 @@
+ }
+ 
+ func jerkgramPresentSavedTagsController(context: AccountContext, selectedMessageIds: [MessageId] = []) {
++    guard JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: context.account.peerId.toInt64()) else { return }
+     context.sharedContext.mainWindow?.present(jerkgramSavedTagsController(context: context, selectedMessageIds: selectedMessageIds), on: .root)
+ }
+ 
+@@ -412,6 +425,9 @@
+                 self.rowRequests.removeAll(); self.failedRequest = nil; self.unavailableRequest = nil
+                 self.request(cursor: nil, direction: .earlier)
+             case .failure:
++                if !JerkgramLocalPremiumPolicy.savedTagsEnabled(accountPeerId: self.context.account.peerId.toInt64()) {
++                    self.dispose(); DispatchQueue.main.async { [weak self] in self?.cleared() }; return
++                }
+                 self.status?(self.strings.text("Local tags unavailable. Clear the filter and retry.", "Локальные теги недоступны. Сбросьте фильтр и повторите."))
+             }
+         }))
+--- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
++++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+@@ -5283,10 +5283,6 @@
+         )
+     }
+     
+-    public func makeJerkgramProfileAppearanceController(context: AccountContext) -> ViewController {
+-        return jerkgramProfileAppearanceController(context: context)
+-    }
+-
+     public func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController {
+         return EmojiStatusSelectionController(
+             context: context,
