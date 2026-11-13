@@ -1,5 +1,16 @@
 do {
     let h = Host();h.seedToDifference()
+    h.reply(difference(101, slice: true, messages: [apiMessage(1)]))
+    h.clock.offset += 121
+    h.reply(difference(102, slice: true, messages: [apiMessage(2)]))
+    check(h.progress.terminal == .deadline && h.transaction.messages.count == 1, "commit-time deadline preserves earlier advancing page")
+    h.queue.advance(1)
+    check(h.progress.historyWindow == 1 && h.network.requests.last?.cursor?.pts == 101, "commit-time deadline continues from last committed cursor")
+    h.reply(difference(102, messages: [apiMessage(2)]));h.finished(.completed)
+    check(h.transaction.messages.count == 2, "continued deadline imports previously uncommitted page")
+}
+do {
+    let h = Host();h.seedToDifference()
     h.manager.modern();h.queue.drain()
     check(h.manager.modernRuns == 1 && h.manager.customStarts == 0, "live operation must finish while history RPC remains pending")
     h.queue.advance(10);h.finished(.timeout)

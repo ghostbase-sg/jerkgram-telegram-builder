@@ -1,0 +1,1019 @@
+--- a/submodules/AccountContext/Sources/AccountContext.swift
++++ b/submodules/AccountContext/Sources/AccountContext.swift
+@@ -1804,6 +1804,7 @@
+         completion: @escaping (EnginePeer.Id?) -> Void
+     ) async -> ViewController?
+     func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController
++    func makeJerkgramProfileAppearanceController(context: AccountContext) -> ViewController
+     
+     func navigateToCurrentCall()
+     var hasOngoingCall: ValuePromise<Bool> { get }
+@@ -1905,6 +1906,7 @@
+     var sharedContext: SharedAccountContext { get }
+     var account: Account { get }
+     var engine: TelegramEngine { get }
++    var jerkgramLocalAppearance: JerkgramLocalAppearanceStore { get }
+     var twoStepAuthData: Promise<TwoStepAuthData?> { get }
+     
+     var liveLocationManager: LiveLocationManager? { get }
+--- a/submodules/ChatListUI/Sources/ChatListController.swift
++++ b/submodules/ChatListUI/Sources/ChatListController.swift
+@@ -6966,8 +6966,9 @@
+         let peerStatus: Signal<NetworkStatusTitle.Status?, NoError>
+         switch self.location {
+         case .chatList(.root):
+-            peerStatus = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+-            |> map { peer -> NetworkStatusTitle.Status? in
++            peerStatus = context.jerkgramLocalAppearance.updates
++            |> map { snapshot -> NetworkStatusTitle.Status? in
++                let peer = context.jerkgramLocalAppearance.project(snapshot.ownUser.map(EnginePeer.user), snapshot: snapshot)
+                 guard case let .user(user) = peer else {
+                     return nil
+                 }
+--- a/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
++++ b/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+@@ -816,6 +816,8 @@
+     switch name {
+     case "Item List/Icons/Gram":
+         return PresentationResourcesSettings.ton
++    case "Item List/Icons/Brush":
++        return PresentationResourcesSettings.yourColor
+     case "Jerkgram/Settings/Airplane":
+         background = 0x53606A
+     case "Chat/Context Menu/Eye":
+@@ -852,6 +854,7 @@
+     case root
+     case dataAndBackup
+     case localPremium
++    case localAppearance
+     case stars
+     case home
+     case ghostMode
+@@ -870,6 +873,8 @@
+             return "Data and Backup"
+         case .localPremium:
+             return "Local Premium"
++        case .localAppearance:
++            return "Profile Appearance"
+         case .stars:
+             return "Stars"
+         case .home:
+@@ -900,6 +905,8 @@
+             return strings.dataAndBackup
+         case .localPremium:
+             return strings.localPremium
++        case .localAppearance:
++            return strings.localProfileAppearance
+         case .stars:
+             return strings.starsBalance
+         case .home:
+@@ -2144,7 +2151,7 @@
+     }
+ 
+     if page == .localPremium {
+-        return [
++        var result: [GhostBaseSettingsEntry] = [
+             .header(0, strings.appearance),
+             .toggle(0, 1, JerkgramAppIconAccess.preferenceKey, JerkgramAppIconAccess.title(languageCode: strings.languageCode), JerkgramAppIconAccess.unlockEnabled),
+             .header(1, strings.localPremiumMedia),
+@@ -2155,6 +2162,10 @@
+             .toggle(2, 2, JerkgramTranslationSettings.preferenceKey, strings.localTranslation, state.enhancedTranslation),
+             .info(2, strings.localPremiumScopeHint)
+         ]
++        if !isBotAccount {
++            result.insert(.disclosure(0, 2, strings.localProfileAppearance, "Item List/Icons/Brush", .localAppearance), at: 2)
++        }
++        return result
+     }
+ 
+     if page == .stars {
+@@ -3962,6 +3973,8 @@
+             pushController?(jerkgramDataAndBackupController(context: context))
+         } else if selectedPage == .stars {
+             pushController?(jerkgramStarsEditorController(context: context))
++        } else if selectedPage == .localAppearance {
++            pushController?(context.sharedContext.makeJerkgramProfileAppearanceController(context: context))
+         } else {
+             pushController?(
+                 ghostBaseSettingsPageController(
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/Settings/JerkgramLocalAppearanceSettings.swift
+@@ -0,0 +1,43 @@
++import Foundation
++
++public struct JerkgramLocalAppearanceSettings: Codable, Equatable {
++    public let schema: Int32
++    public let owner: Int64
++    public let peer: Int64
++    public let testing: Bool
++    public var revision: Int64 = 0
++    public var enabled = false
++    public var emojiEnabled = false
++    public var emojiFileId: Int64?
++    public var emojiExpiration: Int32?
++    public var colorsEnabled = false
++    public var nameColor: Int32?
++    public var profileColor: Int32?
++    public var replyEmoji: Int64?
++    public var profileEmoji: Int64?
++
++    public init(owner: Int64, peer: Int64, testing: Bool) {
++        self.schema = 1; self.owner = owner; self.peer = peer; self.testing = testing
++    }
++
++    public var isValid: Bool {
++        return schema == 1 && revision >= 0
++            && (emojiFileId.map { $0 > 0 } ?? true)
++            && (replyEmoji.map { $0 > 0 } ?? true)
++            && (profileEmoji.map { $0 > 0 } ?? true)
++            && (emojiExpiration.map { $0 >= 0 } ?? true)
++            && (nameColor.map { $0 >= 0 } ?? true)
++            && (profileColor.map { $0 >= 0 } ?? true)
++    }
++
++    public func permits(recordId: Int64, ownPeerId: Int64, testing: Bool, active: Bool, ownIsBot: Bool?, displayedPeerId: Int64, displayedIsBot: Bool) -> Bool {
++        return isValid && enabled && active && ownIsBot == false && !displayedIsBot
++            && owner == recordId && peer == ownPeerId && self.testing == testing
++            && displayedPeerId == ownPeerId
++    }
++
++    public func currentEmoji(at timestamp: Int32) -> Int64? {
++        guard emojiEnabled, let emojiFileId, emojiExpiration.map({ timestamp < $0 }) ?? true else { return nil }
++        return emojiFileId
++    }
++}
+--- /dev/null
++++ b/submodules/TelegramCore/Sources/Settings/JerkgramLocalAppearanceStore.swift
+@@ -0,0 +1,165 @@
++import Foundation
++import Postbox
++import SwiftSignalKit
++
++public struct JerkgramLocalAppearanceRenderToken: Equatable {
++    public let revision: Int64
++    public let generation: Int64
++    public let expiredAt: Int32
++}
++
++public struct JerkgramLocalAppearanceSnapshot: Equatable {
++    public var settings: JerkgramLocalAppearanceSettings
++    public var ownUser: TelegramUser?
++    public var active: Bool
++    public var activityGeneration: Int64 = 0
++    public var expiredAt: Int32 = 0
++    public var appearanceUser: TelegramUser?
++    public var appearanceUserWithoutEmoji: TelegramUser?
++    public var eligible: Bool { active && ownUser?.id.toInt64() == settings.peer && ownUser?.botInfo == nil && ownUser != nil }
++    public var renderToken: JerkgramLocalAppearanceRenderToken? {
++        guard eligible, settings.enabled else { return nil }
++        return JerkgramLocalAppearanceRenderToken(revision: settings.revision, generation: activityGeneration, expiredAt: expiredAt)
++    }
++}
++
++// One store per AccountContext, one account's Postbox. No global preferences,
++// peer writes, server setters, layout I/O or process-wide appearance cache.
++public final class JerkgramLocalAppearanceStore {
++    private let postbox: Postbox
++    private let owner: Int64
++    private let peerId: PeerId
++    private let testing: Bool
++    private let clock: () -> Double
++    private let value: Atomic<JerkgramLocalAppearanceSnapshot>
++    private let promise: ValuePromise<JerkgramLocalAppearanceSnapshot>
++    private let observation = MetaDisposable()
++    private let write = MetaDisposable()
++    private var expiry: SwiftSignalKit.Timer?
++    private static let key: ValueBoxKey = {
++        let key = ValueBoxKey(length: 4); key.setInt32(0, value: 0x4A470004); return key
++    }()
++
++    public var snapshot: JerkgramLocalAppearanceSnapshot { value.with { $0 } }
++    public var updates: Signal<JerkgramLocalAppearanceSnapshot, NoError> { promise.get() }
++
++    public init(account: Account, clock: @escaping () -> Double = { Date().timeIntervalSince1970 }) {
++        self.clock = clock
++        self.postbox = account.postbox; self.owner = account.id.int64
++        self.peerId = account.peerId; self.testing = account.testingEnvironment
++        let initial = JerkgramLocalAppearanceSnapshot(settings: JerkgramLocalAppearanceSettings(owner: account.id.int64, peer: account.peerId.toInt64(), testing: account.testingEnvironment), ownUser: nil, active: false)
++        self.value = Atomic(value: initial); self.promise = ValuePromise(initial, ignoreRepeated: true)
++        self.observation.set((combineLatest(
++            account.postbox.preferencesView(keys: [Self.key]),
++            TelegramEngine(account: account).data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
++        ) |> deliverOnMainQueue).start(next: { [weak self] preferences, peer in
++            guard let self else { return }
++            var next = self.snapshot
++            let stored = preferences.values[Self.key]?.get(JerkgramLocalAppearanceSettings.self)
++            if let stored, stored.isValid, stored.owner == self.owner, stored.peer == self.peerId.toInt64(), stored.testing == self.testing, stored.revision >= next.settings.revision {
++                next.settings = stored
++            }
++            if case let .user(user)? = peer { next.ownUser = user } else { next.ownUser = nil }
++            self.publish(next)
++        }))
++    }
++
++    public func setActive(_ active: Bool) {
++        precondition(Thread.isMainThread)
++        var next = snapshot
++        guard next.active != active else { return }
++        next.active = active
++        if next.activityGeneration < Int64.max { next.activityGeneration += 1 } else { next.active = false }
++        publish(next)
++    }
++
++    private func publish(_ update: JerkgramLocalAppearanceSnapshot) {
++        precondition(Thread.isMainThread)
++        var next = update
++        next.appearanceUser = nil; next.appearanceUserWithoutEmoji = nil
++        if next.eligible, next.settings.enabled, var user = next.ownUser {
++            if next.settings.colorsEnabled {
++                if let color = next.settings.nameColor.map({ PeerNameColor(rawValue: $0) }) { user = user.withUpdatedNameColor(.preset(color)) }
++                user = user.withUpdatedProfileColor(next.settings.profileColor.map({ PeerNameColor(rawValue: $0) }))
++                user = user.withUpdatedBackgroundEmojiId(next.settings.replyEmoji)
++                user = user.withUpdatedProfileBackgroundEmojiId(next.settings.profileEmoji)
++            }
++            next.appearanceUserWithoutEmoji = user
++            if next.settings.emojiEnabled, let fileId = next.settings.emojiFileId {
++                user = user.withUpdatedEmojiStatus(PeerEmojiStatus(content: .emoji(fileId: fileId), expirationDate: next.settings.emojiExpiration))
++            }
++            next.appearanceUser = user
++        }
++        let _ = value.modify { _ in next }; promise.set(next)
++        expiry?.invalidate(); expiry = nil
++        if next.eligible, next.settings.enabled, next.settings.emojiEnabled,
++            let expiration = next.settings.emojiExpiration,
++            Double(expiration) > clock() {
++            let timer = SwiftSignalKit.Timer(timeout: max(0.01, Double(expiration) - clock()), repeat: false, completion: { [weak self] in
++                guard let self else { return }
++                // Expiry is presentation-only; retain the user's other choices.
++                var next = self.snapshot
++                guard next.eligible, next.settings.emojiExpiration == expiration else { return }
++                next.expiredAt = expiration
++                self.publish(next)
++            }, queue: Queue.mainQueue())
++            expiry = timer; timer.start()
++        }
++    }
++
++    @discardableResult public func update(expectedGeneration: Int64? = nil, _ transform: (inout JerkgramLocalAppearanceSettings) -> Void) -> Bool {
++        precondition(Thread.isMainThread)
++        var next = snapshot
++        guard next.eligible, expectedGeneration.map({ $0 == next.activityGeneration }) ?? true, next.settings.revision < Int64.max else { return false }
++        let original = next.settings; transform(&next.settings)
++        guard next.settings.owner == owner, next.settings.peer == peerId.toInt64(), next.settings.testing == testing, next.settings.isValid else { return false }
++        if next.settings == original { return true }
++        next.settings.revision = original.revision + 1
++        let stored = next.settings
++        publish(next)
++        let ownPeerId = peerId; let testing = self.testing
++        // Coalesced writes carry the complete latest record, so cancellation of
++        // an earlier pending write cannot lose an earlier toggle or selection.
++        write.set(postbox.transaction { transaction -> Void in
++            guard let state = transaction.getState() as? AuthorizedAccountState,
++                state.peerId == ownPeerId, state.isTestingEnvironment == testing,
++                let user = transaction.getPeer(ownPeerId) as? TelegramUser, user.botInfo == nil else { return }
++            transaction.updatePreferencesEntry(key: Self.key, { current in
++                if let current = current?.get(JerkgramLocalAppearanceSettings.self), current.owner == stored.owner, current.revision > stored.revision { return PreferencesEntry(current) }
++                return PreferencesEntry(stored)
++            })
++        }.start())
++        return true
++    }
++
++    public func project(_ peer: EnginePeer?, snapshot state: JerkgramLocalAppearanceSnapshot? = nil, now: Int32? = nil) -> EnginePeer? {
++        guard case let .user(user)? = peer else { return peer }
++        let current = snapshot
++        let state = state ?? current
++        guard current.eligible, state.activityGeneration == current.activityGeneration,
++            state.settings.revision == current.settings.revision else { return peer }
++        guard state.settings.permits(recordId: owner, ownPeerId: peerId.toInt64(), testing: testing,
++            active: state.active, ownIsBot: state.ownUser.map { $0.botInfo != nil }, displayedPeerId: user.id.toInt64(), displayedIsBot: user.botInfo != nil) else { return peer }
++        let timestamp = now ?? Int32(clamping: Int64(clock()))
++        guard let result = state.settings.currentEmoji(at: timestamp) == nil ? current.appearanceUserWithoutEmoji : current.appearanceUser else { return peer }
++        return .user(result)
++    }
++
++    public func projectPeer(_ peer: Peer?) -> Peer? {
++        guard let peer, peer.id == peerId else { return peer }
++        return project(EnginePeer(peer))?._asPeer()
++    }
++
++    public func projectMessage(_ message: EngineRawMessage) -> EngineRawMessage {
++        let state = snapshot
++        guard state.renderToken != nil,
++            let user = (message.peers[peerId] as? TelegramUser) ?? (message.author as? TelegramUser),
++            case let .user(projected)? = project(.user(user), snapshot: state), projected != user else { return message }
++        var peers = message.peers
++        peers[peerId] = projected
++        let result = message.withUpdatedPeers(peers)
++        return message.author?.id == peerId ? result.withUpdatedAuthor(projected) : result
++    }
++
++    deinit { expiry?.invalidate(); observation.dispose(); write.dispose() }
++}
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -1041,3 +1041,7 @@
+             : "These local features do not grant Telegram Premium. App Icons apply to this device; the other settings apply to the current account."
+     }
+ }
++
++public extension JerkgramStrings {
++    var localProfileAppearance: String { languageCode.hasPrefix("ru") ? "Оформление профиля" : "Profile Appearance" }
++}
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
+@@ -18,6 +18,16 @@
+ import ChatMessageAnimatedStickerItemNode
+ import ChatMessageBubbleItemNode
+ 
++private func jerkgramAppearanceContent(_ content: ChatMessageItemContent, context: AccountContext) -> ChatMessageItemContent {
++    guard context.jerkgramLocalAppearance.snapshot.renderToken != nil else { return content }
++    switch content {
++    case let .message(message, read, selection, attributes, location):
++        return .message(message: context.jerkgramLocalAppearance.projectMessage(message), read: read, selection: selection, attributes: attributes, location: location)
++    case let .group(messages):
++        return .group(messages: messages.map { (context.jerkgramLocalAppearance.projectMessage($0.0), $0.1, $0.2, $0.3, $0.4) })
++    }
++}
++
+ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible {
+     public let presentationData: ChatPresentationData
+     public let context: AccountContext
+@@ -106,6 +116,7 @@
+     }
+     
+     public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
++        let content = jerkgramAppearanceContent(content, context: context)
+         self.presentationData = presentationData
+         self.context = context
+         self.chatLocation = chatLocation
+--- a/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
++++ b/submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode/Sources/ChatMessageReplyInfoNode.swift
+@@ -243,6 +243,7 @@
+             }
+             
+             var giftEmojiFileId: Int64?
++            author = arguments.context.jerkgramLocalAppearance.projectPeer(author)
+             switch author?.nameColor {
+             case let .preset(nameColor):
+                 let colors = arguments.context.peerNameColors.get(nameColor, dark: arguments.presentationData.theme.theme.overallDarkAppearance)
+--- a/submodules/TelegramUI/Components/ChatTitleView/Sources/ChatTitleView.swift
++++ b/submodules/TelegramUI/Components/ChatTitleView/Sources/ChatTitleView.swift
+@@ -192,6 +192,8 @@
+     /// An agent bot's chat shows its model under the title, and follows the composer's model chip.
+     private var agentSelectionPeerId: EnginePeer.Id?
+     private let agentSelectionDisposable = MetaDisposable()
++    private let jerkgramAppearanceDisposable = MetaDisposable()
++    private var jerkgramObservingAppearance = false
+     
+     private var theme: PresentationTheme
+     private var strings: PresentationStrings
+@@ -264,6 +266,7 @@
+     
+     public var titleContent: ChatTitleContent? {
+         didSet {
++            self.updateJerkgramAppearanceObservation()
+             if let titleContent = self.titleContent {
+                 let titleTheme = self.theme
+                 
+@@ -288,7 +291,7 @@
+                             }
+                             isEnabled = false
+                         } else {
+-                            if let peer = peerView.peer {
++                            if let peer = self.context.jerkgramLocalAppearance.projectPeer(peerView.peer) {
+                                 if let customTitle {
+                                     segments = [.text(0, NSAttributedString(string: customTitle, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                 } else if peerView.peerId == self.context.account.peerId {
+@@ -510,7 +513,7 @@
+         if let titleContent = self.titleContent {
+             switch titleContent {
+             case let .peer(peerView, _, _, _, isScheduledMessages, _, _, _, _):
+-                if let peer = peerView.peer {
++                if let peer = self.context.jerkgramLocalAppearance.projectPeer(peerView.peer) {
+                     if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isRepliesOrVerificationCodes {
+                         inputActivitiesAllowed = false
+                     }
+@@ -617,7 +620,7 @@
+                             } else if let customMessageCount = customMessageCount, customMessageCount != 0 {
+                                 let string = NSAttributedString(string: self.strings.Conversation_Messages(Int32(customMessageCount)), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                                 state = .info(string, .generic)
+-                            } else if let peer = peerView.peer {
++                            } else if let peer = self.context.jerkgramLocalAppearance.projectPeer(peerView.peer) {
+                                 let servicePeer = isServicePeer(peer)
+                                 if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isRepliesOrVerificationCodes {
+                                     let string = NSAttributedString(string: "", font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+@@ -648,7 +651,7 @@
+                                         
+                                         let string = NSAttributedString(string: statusText, font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                                         state = .info(string, .generic)
+-                                    } else if let peer = peerView.peer {
++                                    } else if let peer = self.context.jerkgramLocalAppearance.projectPeer(peerView.peer) {
+                                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                                         let userPresence: TelegramUserPresence
+                                         if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
+@@ -770,6 +773,25 @@
+     
+     deinit {
+         self.agentSelectionDisposable.dispose()
++        self.jerkgramAppearanceDisposable.dispose()
++    }
++
++    private func updateJerkgramAppearanceObservation() {
++        let needsAppearance: Bool
++        if case let .peer(peer, _, _, _, _, _, _, _, _)? = self.titleContent {
++            needsAppearance = peer.peerId == self.context.account.peerId
++        } else { needsAppearance = false }
++        guard needsAppearance != self.jerkgramObservingAppearance else { return }
++        self.jerkgramObservingAppearance = needsAppearance
++        guard needsAppearance else { self.jerkgramAppearanceDisposable.set(nil); return }
++        var seeded = false
++        self.jerkgramAppearanceDisposable.set((self.context.jerkgramLocalAppearance.updates
++        |> deliverOnMainQueue).start(next: { [weak self] _ in
++            guard seeded else { seeded = true; return }
++            guard let self else { return }
++            let content = self.titleContent
++            self.titleContent = content
++        }))
+     }
+     
+     private func observeAgentSelection(peerId: EnginePeer.Id) {
+--- a/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift
++++ b/submodules/TelegramUI/Components/EmojiStatusSelectionComponent/Sources/EmojiStatusSelectionComponent.swift
+@@ -551,14 +551,17 @@
+                                     }
+                                 }
+ 
+-                                let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+-                                |> map { peer -> Bool in
+-                                    guard case let .user(user) = peer else {
+-                                        return false
++                                let hasPremium: Signal<Bool, NoError>
++                                if self.controller?.localAppearance == true {
++                                    hasPremium = .single(true)
++                                } else {
++                                    hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
++                                    |> map { peer -> Bool in
++                                        guard case let .user(user) = peer else { return false }
++                                        return user.isPremium
+                                     }
+-                                    return user.isPremium
++                                    |> distinctUntilChanged
+                                 }
+-                                |> distinctUntilChanged
+ 
+                                 let resultSignal = combineLatest(
+                                     signal,
+@@ -1296,6 +1299,10 @@
+                             
+                             if let result, let previewItem = strongSelf.previewItem {
+                                 let expirationDate: Int32? = result.timestamp
++                                if strongSelf.controller?.completeLocalSelection(file: previewItem.item.itemFile?._parse(), expirationDate: expirationDate) == true {
++                                    strongSelf.controller?.dismiss()
++                                    return
++                                }
+                                 if let itemGift = previewItem.item.itemGift {
+                                     let _ = (strongSelf.context.engine.accountData.setStarGiftStatus(starGift: itemGift, expirationDate: expirationDate)
+                                     |> deliverOnMainQueue).start()
+@@ -1403,6 +1410,7 @@
+                 return
+             }
+             
++            if controller.localAppearance, item?.itemGift != nil { return }
+             if isPreview {
+                 guard let item = item else {
+                     return
+@@ -1412,6 +1420,10 @@
+                 self.refreshLayout(transition: .immediate)
+             } else {
+                 self.freezeUpdates = true
++                if controller.completeLocalSelection(file: item?.itemFile?._parse(), expirationDate: nil) {
++                    controller.dismiss()
++                    return
++                }
+                 
+                 if case .statusSelection = controller.mode, let item = item, let currentSelection = self.currentSelection, item.itemFile?.fileId.id == currentSelection {
+                     let _ = (self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil)
+@@ -1552,6 +1564,7 @@
+     private let currentSelection: Int64?
+     private let color: UIColor?
+     private let mode: Mode
++    private let localAppearance: Bool
+     private let destinationItemView: () -> UIView?
+         
+     fileprivate let _ready = Promise<Bool>()
+@@ -1565,8 +1578,12 @@
+     
+     public var pushController: ((ViewController) -> Void)?
+     
+-    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, color: UIColor? = nil, destinationItemView: @escaping () -> UIView?) {
++    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, color: UIColor? = nil, localAppearance: Bool = false, destinationItemView: @escaping () -> UIView?) {
+         self.context = context
++        switch mode {
++        case .customStatusSelection, .backgroundSelection: self.localAppearance = localAppearance
++        default: self.localAppearance = false
++        }
+         self.mode = mode
+         self.sourceView = sourceView
+         self.emojiContent = emojiContent
+@@ -1581,6 +1598,17 @@
+         self.statusBar.statusBarStyle = .Ignore
+     }
+     
++    // Local-only callback routing; all ordinary callers retain native behavior.
++    private func completeLocalSelection(file: TelegramMediaFile?, expirationDate: Int32?) -> Bool {
++        guard self.localAppearance else { return false }
++        switch self.mode {
++        case let .customStatusSelection(completion): completion(file, expirationDate)
++        case let .backgroundSelection(completion): completion(file)
++        default: return false
++        }
++        return true
++    }
++
+     required public init(coder: NSCoder) {
+         preconditionFailure()
+     }
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoData.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoData.swift
+@@ -509,6 +509,64 @@
+         }
+     }
+     
++    func withPresentationPeer(_ peer: EnginePeer?, chatPeer: EnginePeer?, savedMessagesPeer: EnginePeer?, isSettings: Bool) -> PeerInfoScreenData {
++        let result = PeerInfoScreenData(
++            peer: peer,
++            chatPeer: chatPeer,
++            savedMessagesPeer: savedMessagesPeer,
++            cachedData: self.cachedData,
++            firstWelcomeMessageText: self.firstWelcomeMessageText,
++            status: self.status,
++            peerNotificationSettings: self.peerNotificationSettings,
++            threadNotificationSettings: self.threadNotificationSettings,
++            globalNotificationSettings: self.globalNotificationSettings,
++            isContact: self._isContact,
++            availablePanes: self.availablePanes,
++            groupsInCommon: self.groupsInCommon,
++            linkedDiscussionPeer: self.linkedDiscussionPeer,
++            linkedMonoforumPeer: self.linkedMonoforumPeer,
++            linkedCommunityData: self.linkedCommunityData,
++            members: self.members,
++            storyListContext: self.storyListContext,
++            storyArchiveListContext: self.storyArchiveListContext,
++            botPreviewStoryListContext: self.botPreviewStoryListContext,
++            encryptionKeyFingerprint: self.encryptionKeyFingerprint,
++            globalSettings: self.globalSettings,
++            invitations: self.invitations,
++            requests: self.requests,
++            requestsContext: self.requestsContext,
++            threadData: self.threadData,
++            appConfiguration: self.appConfiguration,
++            isPowerSavingEnabled: self.isPowerSavingEnabled,
++            accountIsPremium: self.accountIsPremium,
++            hasSavedMessageTags: self.hasSavedMessageTags,
++            hasBotPreviewItems: self.hasBotPreviewItems,
++            isPremiumRequiredForStoryPosting: self.isPremiumRequiredForStoryPosting,
++            personalChannel: self.personalChannel,
++            starsState: self.starsState,
++            tonState: self.tonState,
++            starsRevenueStatsState: self.starsRevenueStatsState,
++            starsRevenueStatsContext: self.starsRevenueStatsContext,
++            revenueStatsState: self.revenueStatsState,
++            revenueStatsContext: self.revenueStatsContext,
++            profileGiftsContext: self.profileGiftsContext,
++            profileGiftsCollectionsContext: self.profileGiftsCollectionsContext,
++            premiumGiftOptions: self.premiumGiftOptions,
++            webAppPermissions: self.webAppPermissions,
++            savedMusicContext: self.savedMusicContext,
++            savedMusicState: self.savedMusicState,
++            managedByBot: self.managedByBot,
++            businessConnectedBot: self.businessConnectedBot,
++            sharedMediaPeer: self.sharedMediaPeer,
++            walletBalance: self.walletBalance,
++            agentSettingsContext: self.agentSettingsContext,
++            agentState: self.agentState,
++            isSettings: isSettings
++        )
++        result.forceIsContact = self.forceIsContact
++        return result
++    }
++
+     init(
+         peer: EnginePeer?,
+         chatPeer: EnginePeer?,
+--- a/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
++++ b/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+@@ -2696,9 +2696,25 @@
+             reactionSourceMessage = .single(nil)
+         }
+ 
++        let localPresentationData: Signal<PeerInfoScreenData, NoError>
++        if peerId == context.account.peerId {
++            localPresentationData = combineLatest(screenData, context.jerkgramLocalAppearance.updates)
++            |> map { [weak self] data, appearance -> PeerInfoScreenData in
++                guard let self else { return data }
++                let peer = context.jerkgramLocalAppearance.project(data.peer, snapshot: appearance)
++                let chatPeer = context.jerkgramLocalAppearance.project(data.chatPeer, snapshot: appearance)
++                let savedMessagesPeer = context.jerkgramLocalAppearance.project(data.savedMessagesPeer, snapshot: appearance)
++                guard peer != data.peer || chatPeer != data.chatPeer || savedMessagesPeer != data.savedMessagesPeer else { return data }
++                return data.withPresentationPeer(peer, chatPeer: chatPeer, savedMessagesPeer: savedMessagesPeer, isSettings: self.isSettings)
++            }
++
++        } else {
++            localPresentationData = screenData
++        }
++
+         self.dataDisposable = combineLatest(
+             queue: Queue.mainQueue(),
+-            screenData,
++            localPresentationData,
+             self.forceIsContactPromise.get(),
+             reactionSourceMessage
+         ).startStrict(next: { [weak self] data, forceIsContact, reactionSourceMessage in
+--- a/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift
++++ b/submodules/TelegramUI/Components/Settings/PeerNameColorScreen/Sources/UserApperanceScreen.swift
+@@ -64,15 +64,20 @@
+     }
+     
+     let context: AccountContext
++    let localAppearance: Bool
++    let localAppearanceGeneration: Int64?
+ 
+     init(
+-        context: AccountContext
++        context: AccountContext,
++        localAppearance: Bool
+     ) {
+         self.context = context
++        self.localAppearance = localAppearance
++        self.localAppearanceGeneration = localAppearance ? context.jerkgramLocalAppearance.snapshot.activityGeneration : nil
+     }
+ 
+     static func ==(lhs: UserAppearanceScreenComponent, rhs: UserAppearanceScreenComponent) -> Bool {
+-        return true
++        return lhs.context === rhs.context && lhs.localAppearance == rhs.localAppearance && lhs.localAppearanceGeneration == rhs.localAppearanceGeneration
+     }
+     
+     private final class ContentsData {
+@@ -90,7 +95,14 @@
+             self.starGifts = starGifts
+         }
+         
+-        static func get(context: AccountContext) -> Signal<ContentsData, NoError> {
++        static func get(context: AccountContext, localAppearance: Bool) -> Signal<ContentsData, NoError> {
++            if localAppearance {
++                return context.jerkgramLocalAppearance.updates
++                |> map { snapshot in
++                    let peer = snapshot.eligible ? context.jerkgramLocalAppearance.project(snapshot.ownUser.map(EnginePeer.user), snapshot: snapshot) : nil
++                    return ContentsData(peer: peer, gifts: [], starGifts: [])
++                }
++            }
+             return combineLatest(
+                 context.engine.data.subscribe(
+                     TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+@@ -722,6 +734,31 @@
+             if self.isApplyingSettings {
+                 return
+             }
++            if component.localAppearance {
++                let store = component.context.jerkgramLocalAppearance
++                guard store.snapshot.eligible, store.snapshot.settings.enabled,
++                    self.selectedProfileGift == nil, self.selectedNameGift == nil else { return }
++                let nameColor: Int32?
++                if case let .preset(color) = resolvedState.nameColor { nameColor = color.rawValue } else { nameColor = nil }
++                let saved = store.update(expectedGeneration: component.localAppearanceGeneration) { settings in
++                    settings.colorsEnabled = true
++                    settings.nameColor = nameColor
++                    settings.profileColor = resolvedState.profileColor?.rawValue
++                    settings.replyEmoji = resolvedState.replyFileId
++                    settings.profileEmoji = resolvedState.backgroundFileId
++                    if resolvedState.changes.contains(.emojiStatus) {
++                        if case let .emoji(fileId)? = resolvedState.emojiStatus?.content {
++                            settings.emojiFileId = fileId
++                            settings.emojiExpiration = resolvedState.emojiStatus?.expirationDate
++                            settings.emojiEnabled = true
++                        } else if resolvedState.emojiStatus == nil {
++                            settings.emojiEnabled = false
++                        }
++                    }
++                }
++                if saved { self.environment?.controller()?.dismiss() }
++                return
++            }
+             if resolvedState.changes.isEmpty {
+                 self.environment?.controller()?.dismiss()
+                 return
+@@ -979,10 +1016,12 @@
+                     chatPeerId: component.context.account.peerId,
+                     selectedItems: selectedItems,
+                     topStatusTitle: nil,
+-                    backgroundIconColor: color
++                    backgroundIconColor: color,
++                    forceHasPremium: component.localAppearance
+                 ),
+                 currentSelection: currentFileId,
+                 color: color,
++                localAppearance: component.localAppearance,
+                 destinationItemView: { [weak sourceView] in
+                     guard let sourceView else {
+                         return nil
+@@ -1084,7 +1123,7 @@
+             }
+             
+             if self.contentsDataDisposable == nil {
+-                self.contentsDataDisposable = (ContentsData.get(context: component.context)
++                self.contentsDataDisposable = (ContentsData.get(context: component.context, localAppearance: component.localAppearance)
+                 |> deliverOnMainQueue).start(next: { [weak self] contentsData in
+                     guard let self else {
+                         return
+@@ -1097,6 +1136,7 @@
+                     self.isReady.set(true)
+                 })
+                 
++                if !component.localAppearance {
+                 let starGiftsContext = ProfileGiftsContext(account: component.context.account, peerId: component.context.account.peerId, collectionId: nil, filter: .peerColor, limit: 30)
+                 self.starGiftsContext = starGiftsContext
+                 self.starGiftsDisposable = (starGiftsContext.state
+@@ -1116,6 +1156,7 @@
+                         self.state?.updated()
+                     }
+                 })
++                }
+             }
+             
+             guard let contentsData = self.contentsData, var peer = contentsData.peer, let resolvedState = self.resolveState() else {
+@@ -1452,6 +1493,7 @@
+                 }
+                 
+                 let listTransition = transition.withUserData(ListSectionComponent.TransitionHint(forceUpdate: forceGiftsUpdate))
++                if !component.localAppearance {
+                 let giftsSectionSize = self.profileGiftsSection.update(
+                     transition: listTransition,
+                     component: AnyComponent(ListSectionComponent(
+@@ -1547,6 +1589,7 @@
+                 }
+                 contentHeight += giftsSectionSize.height
+                 contentHeight += sectionSpacing
++                }
+             case .name:
+                 var transition = transition
+                 if self.namePreview.view == nil {
+@@ -1730,6 +1773,7 @@
+                 }
+                 
+                 let listTransition = transition.withUserData(ListSectionComponent.TransitionHint(forceUpdate: forceGiftsUpdate))
++                if !component.localAppearance {
+                 let giftsSectionSize = self.nameGiftsSection.update(
+                     transition: listTransition,
+                     component: AnyComponent(ListSectionComponent(
+@@ -1799,6 +1843,7 @@
+                 }
+                 contentHeight += giftsSectionSize.height
+                 contentHeight += sectionSpacing
++                }
+             }
+                     
+             contentHeight += bottomContentInset
+@@ -2006,7 +2051,8 @@
+     public init(
+         context: AccountContext,
+         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+-        focusOnItemTag: UserAppearanceEntryTag? = nil
++        focusOnItemTag: UserAppearanceEntryTag? = nil,
++        localAppearance: Bool = false
+     ) {
+         self.context = context
+         self.focusOnItemTag = focusOnItemTag
+@@ -2024,7 +2070,8 @@
+         )
+ 
+         super.init(context: context, component: UserAppearanceScreenComponent(
+-            context: context
++            context: context,
++            localAppearance: localAppearance
+         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
+ 
+         self.automaticallyControlPresentationContextLayout = false
+--- a/submodules/TelegramUI/Sources/AccountContext.swift
++++ b/submodules/TelegramUI/Sources/AccountContext.swift
+@@ -123,6 +123,8 @@
+     }
+     public let account: Account
+     public let engine: TelegramEngine
++    public let jerkgramLocalAppearance: JerkgramLocalAppearanceStore
++    private var jerkgramAppearanceActiveDisposable: Disposable?
+     private let jerkgramBlockedPeersObserver: JerkgramBlockedPeersObserver?
+     
+     public let fetchManager: FetchManager
+@@ -313,6 +315,7 @@
+         self.sharedContextImpl = sharedContext
+         self.account = account
+         self.engine = TelegramEngine(account: account)
++        self.jerkgramLocalAppearance = JerkgramLocalAppearanceStore(account: account)
+         self.jerkgramBlockedPeersObserver = sharedContext.applicationBindings.isMainApp && !temp
+             ? JerkgramBlockedPeersObserver(account: account)
+             : nil
+@@ -684,9 +687,17 @@
+                 return try await requestPasscodeAuthentication(context: self, scope: .resource(namespace: request.namespace), lifetime: request.lifetime, biometricReason: self.sharedContext.currentPresentationData.with { $0 }.strings.Wallet_AuthenticationReason, authenticateBiometrics: authenticateBiometrics)
+             }
+         }
++        if sharedContext.applicationBindings.isMainApp && !temp {
++            self.jerkgramAppearanceActiveDisposable = (sharedContext.activeAccountContexts
++            |> deliverOnMainQueue).start(next: { [weak self] primary, _, _ in
++                guard let self else { return }
++                self.jerkgramLocalAppearance.setActive(primary === self)
++            })
++        }
+     }
+ 
+     deinit {
++        self.jerkgramAppearanceActiveDisposable?.dispose()
+         if self.walletContext != nil {
+             self.account.walletTransferTasksRunning.set(.single(false))
+         }
+--- a/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
++++ b/submodules/TelegramUI/Sources/ChatHistoryListNode.swift
+@@ -2832,12 +2832,16 @@
+         }
+         
+         var didSetPresentationData = false
++        var previousAppearanceToken: JerkgramLocalAppearanceRenderToken?
+         self.presentationDataDisposable = (combineLatest(queue: .mainQueue(),
+             updated |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_beginPresentationDataManagement_updated"),
+-            appConfiguration |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_beginPresentationDataManagement_appConfiguration")
++            appConfiguration |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_beginPresentationDataManagement_appConfiguration"),
++            self.context.jerkgramLocalAppearance.updates |> map { $0.renderToken } |> distinctUntilChanged
+         )
+-        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, appConfiguration in
++        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, appConfiguration, appearanceToken in
+             if let strongSelf = self {
++                let appearanceChanged = previousAppearanceToken != appearanceToken
++                previousAppearanceToken = appearanceToken
+                 let previousTheme = strongSelf.currentPresentationData.theme
+                 let previousStrings = strongSelf.currentPresentationData.strings
+                 let previousWallpaper = strongSelf.currentPresentationData.theme.wallpaper
+@@ -2845,7 +2849,7 @@
+                 
+                 let animatedEmojiConfig = ChatHistoryAnimatedEmojiConfiguration.with(appConfiguration: appConfiguration)
+                 
+-                if !didSetPresentationData || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousAnimatedEmojiScale != animatedEmojiConfig.scale {
++                if appearanceChanged || !didSetPresentationData || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousAnimatedEmojiScale != animatedEmojiConfig.scale {
+                     didSetPresentationData = true
+                     
+                     let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
+--- /dev/null
++++ b/submodules/TelegramUI/Sources/JerkgramProfileAppearanceController.swift
+@@ -0,0 +1,140 @@
++import Foundation
++import UIKit
++import Display
++import SwiftSignalKit
++import TelegramCore
++import TelegramPresentationData
++import AccountContext
++import ItemListUI
++import PeerNameColorScreen
++import EmojiStatusSelectionComponent
++import EntityKeyboard
++
++private enum JerkgramAppearanceAction: Equatable {
++    case master, emoji, chooseEmoji, duration, clearEmoji, profile, background, name, reply, preview, reset
++}
++
++private struct JerkgramAppearanceEntry: ItemListNodeEntry {
++    let stableId: Int
++    let section: ItemListSectionId
++    let title: String
++    let label: String
++    let value: Bool?
++    let action: JerkgramAppearanceAction?
++    static func <(lhs: Self, rhs: Self) -> Bool { lhs.stableId < rhs.stableId }
++    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
++        let arguments = arguments as! JerkgramAppearanceArguments
++        if let value, let action {
++            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: section, style: .blocks, updated: { [weak arguments] value in arguments?.perform(action, value: value) })
++        } else if let action {
++            return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: section, style: .blocks, action: { [weak arguments] in arguments?.perform(action) })
++        } else {
++            return ItemListTextItem(presentationData: presentationData, text: .plain(title), sectionId: section)
++        }
++    }
++}
++
++private final class JerkgramAppearanceArguments {
++    let context: AccountContext
++    weak var controller: ItemListController?
++    init(context: AccountContext) { self.context = context }
++    func text(_ english: String, _ russian: String) -> String {
++        context.sharedContext.currentPresentationData.with { $0.strings.jerkgram.languageCode.hasPrefix("ru") } ? russian : english
++    }
++    func perform(_ action: JerkgramAppearanceAction, value: Bool? = nil) {
++        let store = context.jerkgramLocalAppearance
++        guard controller != nil, store.snapshot.eligible else { return }
++        switch action {
++        case .master:
++            store.update { $0.enabled = value ?? false }
++        case .emoji:
++            if value == true && store.snapshot.settings.emojiFileId == nil { perform(.chooseEmoji); return }
++            store.update { $0.emojiEnabled = value ?? false }
++        case .chooseEmoji:
++            guard let controller, store.snapshot.settings.enabled else { return }
++            let generation = store.snapshot.activityGeneration
++            let selected = store.snapshot.settings.emojiFileId
++            var selectedItems = Set<AnyHashable>()
++            if let selected { selectedItems.insert(EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: selected)) }
++            let picker = EmojiStatusSelectionController(context: context, mode: .customStatusSelection(completion: { [weak self] file, expiration in
++                guard let self, self.controller != nil else { return }
++                self.context.jerkgramLocalAppearance.update(expectedGeneration: generation) {
++                    $0.emojiFileId = file?.fileId.id; $0.emojiExpiration = expiration
++                    $0.emojiEnabled = file != nil
++                }
++            }), sourceView: controller.navigationBar?.view ?? controller.view,
++            emojiContent: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: context.animationCache, animationRenderer: context.animationRenderer, isStandalone: false, subject: .status, hasTrending: false, topReactionItems: [], areUnicodeEmojiEnabled: false, areCustomEmojiEnabled: true, chatPeerId: context.account.peerId, selectedItems: selectedItems, topStatusTitle: nil, forceHasPremium: true), currentSelection: selected, localAppearance: true, destinationItemView: { nil })
++            controller.present(picker, in: .window(.root))
++        case .duration:
++            guard let controller, store.snapshot.settings.enabled, store.snapshot.settings.emojiFileId != nil else { return }
++            let presentation = context.sharedContext.currentPresentationData.with { $0 }
++            let generation = store.snapshot.activityGeneration
++            let sheet = ActionSheetController(presentationData: presentation)
++            var items: [ActionSheetItem] = []
++            for (title, seconds) in [(text("Permanent", "Постоянно"), Int32(0)), (text("1 hour", "1 час"), 3600), (text("8 hours", "8 часов"), 28800), (text("1 day", "1 день"), 86400)] {
++                items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak self, weak sheet] in
++                    sheet?.dismissAnimated()
++                    guard let self, self.controller != nil else { return }
++                    self.context.jerkgramLocalAppearance.update(expectedGeneration: generation) { settings in
++                        settings.emojiExpiration = seconds == 0 ? nil : Int32(clamping: Int64(Date().timeIntervalSince1970) + Int64(seconds))
++                    }
++                }))
++            }
++            sheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentation.strings.Common_Cancel, color: .accent, action: { [weak sheet] in sheet?.dismissAnimated() })])])
++            controller.present(sheet, in: .window(.root))
++        case .clearEmoji:
++            store.update { $0.emojiEnabled = false; $0.emojiFileId = nil; $0.emojiExpiration = nil }
++        case .profile, .background, .name, .reply, .preview:
++            guard store.snapshot.settings.enabled else { return }
++            let tag: UserAppearanceEntryTag
++            switch action {
++            case .name: tag = .name
++            case .reply: tag = .nameAddIcons
++            case .background: tag = .profileAddIcons
++            default: tag = .profile
++            }
++            controller?.push(UserAppearanceScreen(context: context, focusOnItemTag: tag, localAppearance: true))
++        case .reset:
++            store.update { settings in settings = JerkgramLocalAppearanceSettings(owner: settings.owner, peer: settings.peer, testing: settings.testing) }
++        }
++    }
++}
++
++func jerkgramProfileAppearanceController(context: AccountContext) -> ViewController {
++    let initial = context.sharedContext.currentPresentationData.with { $0 }
++    let arguments = JerkgramAppearanceArguments(context: context)
++    let signal = combineLatest(context.sharedContext.presentationData, context.jerkgramLocalAppearance.updates)
++    |> deliverOnMainQueue
++    |> map { presentation, snapshot -> (ItemListControllerState, (ItemListNodeState, Any)) in
++        let ru = presentation.strings.jerkgram.languageCode.hasPrefix("ru")
++        func text(_ en: String, _ ruText: String) -> String { ru ? ruText : en }
++        var entries: [JerkgramAppearanceEntry] = []
++        func add(_ section: Int32, _ title: String, label: String = "", value: Bool? = nil, action: JerkgramAppearanceAction? = nil) {
++            entries.append(JerkgramAppearanceEntry(stableId: entries.count, section: section, title: title, label: label, value: value, action: action))
++        }
++        if snapshot.eligible {
++            add(0, text("Local profile appearance", "Локальное оформление профиля"), value: snapshot.settings.enabled, action: .master)
++            add(0, text("Visible only in Jerkgram for this account. Other users see your Telegram profile.", "Видно только в Jerkgram для этого аккаунта. Другие пользователи видят ваш профиль Telegram."))
++            if snapshot.settings.enabled {
++                add(1, text("Local Emoji Status", "Локальный Emoji Status"), value: snapshot.settings.emojiEnabled, action: .emoji)
++                add(1, text("Choose emoji", "Выбор эмодзи"), label: snapshot.settings.emojiFileId == nil ? text("None", "Нет") : text("Selected", "Выбрано"), action: .chooseEmoji)
++                let duration = snapshot.settings.emojiExpiration.map { DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double($0)), dateStyle: .short, timeStyle: .short) } ?? text("Permanent", "Постоянно")
++                add(1, text("Duration", "Срок действия"), label: duration, action: snapshot.settings.emojiFileId == nil ? nil : .duration)
++                if snapshot.settings.emojiFileId != nil { add(1, text("Remove local status", "Убрать локальный статус"), action: .clearEmoji) }
++                add(2, text("Profile color", "Цвет профиля"), action: .profile)
++                add(2, text("Profile background emoji", "Фоновый эмодзи профиля"), action: .background)
++                add(2, text("Name color", "Цвет имени"), action: .name)
++                add(2, text("Reply appearance", "Оформление ответов"), action: .reply)
++                add(2, text("Native preview", "Предпросмотр"), action: .preview)
++            }
++            add(3, text("Restore standard appearance", "Восстановить стандартное оформление"), action: .reset)
++            add(3, text("Stored in this account's local database. No cloud sync; not included in Jerkgram backups. Removing the account or reinstalling can lose these choices.", "Хранится в локальной базе этого аккаунта. Нет синхронизации с облаком; не входит в бэкапы Jerkgram. При удалении аккаунта или переустановке настройки могут быть потеряны."))
++        } else {
++            add(0, text("Available only for your active personal account. Bot accounts cannot use local profile appearance.", "Доступно только для активного личного аккаунта. Локальное оформление для ботов отключено."))
++        }
++        return (ItemListControllerState(presentationData: ItemListPresentationData(presentation), title: .text(text("Profile Appearance", "Оформление профиля")), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentation.strings.Common_Back)), (ItemListNodeState(presentationData: ItemListPresentationData(presentation), entries: entries, style: .blocks, animateChanges: false), arguments))
++    }
++    let controller = ItemListController(presentationData: ItemListPresentationData(initial), updatedPresentationData: context.sharedContext.presentationData |> map { ItemListPresentationData($0) }, state: signal, tabBarItem: nil)
++    arguments.controller = controller
++    return controller
++}
+--- a/submodules/TelegramUI/Sources/SharedAccountContext.swift
++++ b/submodules/TelegramUI/Sources/SharedAccountContext.swift
+@@ -5283,6 +5283,10 @@
+         )
+     }
+     
++    public func makeJerkgramProfileAppearanceController(context: AccountContext) -> ViewController {
++        return jerkgramProfileAppearanceController(context: context)
++    }
++
+     public func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController {
+         return EmojiStatusSelectionController(
+             context: context,

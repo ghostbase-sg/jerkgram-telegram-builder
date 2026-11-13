@@ -1,0 +1,88 @@
+func check(_ condition: @autoclosure () -> Bool, _ reason: String) { precondition(condition(), reason) }
+func emoji(_ store: JerkgramLocalAppearanceStore, _ user: TelegramUser, snapshot: JerkgramLocalAppearanceSnapshot? = nil) -> Int64? {
+    guard case let .user(result)? = store.project(.user(user), snapshot: snapshot), case let .emoji(id)? = result.emojiStatus?.content else { return nil }; return id
+}
+let a = Account(101, 1001), b = Account(102, 1002), c = Account(103, 1003), bot = Account(104, 1004, bot: true)
+var sa: JerkgramLocalAppearanceStore? = JerkgramLocalAppearanceStore(account: a, clock: { wall })
+let sb = JerkgramLocalAppearanceStore(account: b, clock: { wall }), sc = JerkgramLocalAppearanceStore(account: c, clock: { wall }), sx = JerkgramLocalAppearanceStore(account: bot, clock: { wall })
+sa!.setActive(true)
+check(sa!.update { $0.enabled = true; $0.emojiEnabled = true; $0.emojiFileId = 77; $0.emojiExpiration = 1060; $0.colorsEnabled = true; $0.nameColor = 4; $0.profileColor = 5; $0.replyEmoji = 8; $0.profileEmoji = 9 }, "A enabled")
+check(emoji(sa!, a.postbox.user) == 77, "A local status")
+check(a.postbox.user.emojiStatus == nil && a.postbox.user.nameColor == nil, "server peer immutable")
+let oldA = sa!.snapshot
+sa!.setActive(false); sb.setActive(true)
+check(emoji(sa!, a.postbox.user) == nil && emoji(sb, b.postbox.user) == nil, "A inactive and B disabled")
+check(!sa!.update { $0.emojiFileId = 999 }, "late inactive callback rejected")
+sb.setActive(false); sc.setActive(true)
+check(sc.update { $0.enabled = true; $0.emojiEnabled = true; $0.emojiFileId = 88; $0.emojiExpiration = 1120 }, "C enabled")
+check(emoji(sc, c.postbox.user) == 88 && emoji(sc, a.postbox.user) == nil, "C different status; foreign peer unchanged")
+sc.setActive(false); sa!.setActive(true)
+check(emoji(sa!, a.postbox.user, snapshot: oldA) == nil, "A-B-A rejects stale generation")
+check(emoji(sa!, a.postbox.user) == 77, "A-B-A current status retained")
+check(!sa!.update(expectedGeneration: oldA.activityGeneration) { $0.emojiFileId = 999 }, "old picker callback after A-B-A rejected")
+sa!.setActive(false); sx.setActive(true)
+check(!sx.snapshot.eligible && !sx.update { $0.enabled = true; $0.emojiFileId = 777 }, "real bot disabled")
+check(emoji(sx, bot.postbox.user) == nil, "bot appearance unchanged")
+sx.setActive(false); sa!.setActive(true)
+check(emoji(sa!, a.postbox.user) == 77, "A-bot-A")
+let foreignBot = TelegramUser(a.peerId.raw, bot: true)
+check(emoji(sa!, foreignBot) == nil, "displayed bot guard even with matching ID")
+a.postbox.peer.set(nil)
+check(!sa!.snapshot.eligible && !sa!.update { $0.enabled = false }, "unknown own peer fails closed")
+a.postbox.peer.set(.user(a.postbox.user))
+check(!sa!.snapshot.settings.permits(recordId: 101, ownPeerId: 1001, testing: true, active: true, ownIsBot: false, displayedPeerId: 1001, displayedIsBot: false), "environment isolation")
+let before = TelegramUser.copies, reads = a.postbox.reads
+for _ in 0..<10000 { _ = sa!.projectPeer(a.postbox.user) }
+check(TelegramUser.copies == before && a.postbox.reads == reads, "hot projection no allocation or I/O")
+let message = EngineRawMessage(id: 9, text: "preserved", peers: [a.peerId: a.postbox.user], author: a.postbox.user)
+let display = sa!.projectMessage(message)
+check(display.id == message.id && display.text == message.text && message.author === a.postbox.user, "presentation copy preserves history and identity")
+check((display.author as? TelegramUser)?.emojiStatus != nil && a.postbox.user.emojiStatus == nil, "only presentation peer changed")
+a.postbox.drain(); c.postbox.drain()
+check(a.postbox.writes == 1 && c.postbox.writes == 1 && b.postbox.writes == 0, "separate account writes")
+let saved = sa!.snapshot.settings
+check(saved.isValid, "valid record")
+guard let entry = PreferencesEntry(saved), let decoded = PreferencesEntry(data: entry.data).get(JerkgramLocalAppearanceSettings.self) else { fatalError("actual Postbox codec failed") }
+check(decoded == saved, "actual codec roundtrip all appearance fields")
+sa = nil
+check(a.postbox.preferences.observers.isEmpty && a.postbox.peer.observers.isEmpty, "deinit cancels observations")
+sa = JerkgramLocalAppearanceStore(account: a, clock: { wall }); sa!.setActive(true)
+check(emoji(sa!, a.postbox.user) == 77 && sa!.snapshot.settings == saved, "relaunch loads stored choices")
+a.postbox.user = a.postbox.user.withUpdatedEmojiStatus(PeerEmojiStatus(content: .emoji(fileId: 555), expirationDate: nil))
+a.postbox.peer.set(.user(a.postbox.user))
+check(emoji(sa!, a.postbox.user) == 77, "peer refresh retains local choice")
+let token = sa!.snapshot.renderToken
+SwiftSignalKit.Timer.advance(1060)
+check(emoji(sa!, a.postbox.user) == 555 && sa!.snapshot.renderToken != token, "expiry emits repaint and restores server status")
+check(sa!.snapshot.settings.nameColor == 4, "expiry retains colors")
+sa!.setActive(false); sc.setActive(true)
+check(emoji(sc, c.postbox.user) == 88, "C independent expiry")
+SwiftSignalKit.Timer.advance(1120)
+check(emoji(sc, c.postbox.user) == nil, "C own deadline")
+sc.setActive(false)
+// Foreign record under a different account's preferences cannot be inherited.
+var key = ValueBoxKey(length: 4); key.setInt32(0, value: 0x4A470004)
+b.postbox.preferences.set(PreferencesView(values: [key: entry]))
+sb.setActive(true)
+check(!sb.snapshot.settings.enabled && sb.snapshot.settings.owner == 102, "foreign stored account refused")
+// Logout while a legitimate write is queued: authorization guard cancels storage.
+check(sb.update { $0.enabled = true; $0.emojiEnabled = true; $0.emojiFileId = 99 }, "B pending write")
+b.postbox.state = nil; sb.setActive(false); b.postbox.drain()
+check(b.postbox.writes == 0, "logout discards queued write")
+sa!.setActive(true)
+check(sa!.update { $0.enabled = false }, "disable A")
+a.postbox.drain()
+check(emoji(sa!, a.postbox.user) == 555 && sc.snapshot.settings.enabled, "disable isolated")
+sa = nil
+check(SwiftSignalKit.Timer.live.isEmpty, "no inactive or expired timers")
+print("PASS actual appearance store + Postbox codec: A/B/C/bot, stale generation, foreign ID, expiry, relaunch, logout, 10k allocation/I-O-free projections")
+
+var pickedFile: TelegramMediaFile?, pickedExpiry: Int32?, calls = 0
+let picker = PickerHarness(true, .customStatusSelection(completion: { file, expiry in pickedFile = file; pickedExpiry = expiry; calls += 1 }))
+check(picker.run(TelegramMediaFile(id: 8), 9000) && pickedFile?.id == 8 && pickedExpiry == 9000 && calls == 1, "native preview duration routes to local callback")
+check(picker.run(nil, nil) && pickedFile == nil && calls == 2, "local clear")
+let ordinary = PickerHarness(false, .customStatusSelection(completion: { _, _ in calls += 1 }))
+check(!ordinary.run(TelegramMediaFile(id: 9), nil) && calls == 2, "ordinary native mode unchanged")
+let server = PickerHarness(true, .statusSelection)
+check(!server.run(TelegramMediaFile(id: 9), nil) && calls == 2, "server mode not intercepted")
+print("PASS actual native picker callback routing: preview expiry, clear, ordinary mode unchanged")

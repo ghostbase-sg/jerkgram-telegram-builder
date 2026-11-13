@@ -1,6 +1,6 @@
 {
   "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
-  "patch_sha256": "349016d3c0539b35887e0259cd1baa216465f7dbd49fef2c67f3df74d3c7238a",
+  "patch_sha256": "e6ddbd6c49aa6217b0c22108caca5e3cc93178881342628b29c2ea59b8ca06a0",
   "owners": {
     "submodules/TelegramCore/Sources/State/AccountStateManager.swift": {
       "before_sha256": "e7b6bad3af2702263075a8e4cd0a9e10aef3c9bb9f306d528936e566794c5961",
@@ -8,7 +8,7 @@
     },
     "submodules/TelegramCore/Sources/State/JerkgramBotBridgeHistory.swift": {
       "before_sha256": "f010394ae2479faa7f28453057efcabaf80b40b23784bca569dad8eaa2c2226a",
-      "after_sha256": "7b9b84aa0adb2fed6bcf1e4fa0ab96239e1a6a8eacf96119593b0cb29235c99c"
+      "after_sha256": "88a4886a0adddcc699a4a1a11fe3ff8f122b4963a176f2e06178604aa4328425"
     },
     "submodules/TelegramCore/Sources/State/JerkgramBotReplayPolicy.swift": {
       "before_sha256": null,

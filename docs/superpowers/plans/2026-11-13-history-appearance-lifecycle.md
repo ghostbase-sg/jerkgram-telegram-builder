@@ -12,7 +12,7 @@
 
 - Stable account record ID plus own Telegram peer ID and environment; fail closed for missing own user or botInfo.
 - Own active account only; temporary expiry per account; local store resides in that account's Postbox and cannot leak after logout.
-- No Premium spoof, server appearance setters, global hooks, network serialization changes, layout I/O, or new renderers.
+- No Premium spoof, server appearance setters, global hooks, live protocol/retry changes, layout I/O, or new renderers.
 - No user-account runtime operations; device testing belongs to user. Do not claim full history without server/device evidence.
 - Preserve Telegram/Xcode/Bazel/signing/BundleID. One planned build per completed independent candidate.
 
@@ -27,9 +27,9 @@
 ## Tasks
 
 - [x] Verify green baseline and reproduce its selected source hashes locally.
-- [ ] Audit old bot backfill vs Build180 request cursor, import, hole and terminal policies. Add behavioral fixtures before changing replay admission/resume.
-- [ ] Add a separate exact successor for history fixes and scoped translucent Wallet; preserve historical patches. Restore visible Beta2 identity consistently.
-- [ ] Audit current native appearance models, picker, palettes and render boundaries. Implement one account-local store with expiry and real bot guards; native pushed Settings controller and preview. Integrate only own-peer rendering with lifecycle-owned change subscriptions.
+- [x] Audit old bot backfill vs Build180 request cursor, import, hole and terminal policies. Add behavioral fixtures before changing replay admission/resume.
+- [x] Add a separate exact successor for history fixes and scoped translucent Wallet; preserve historical patches. Restore visible Beta2 identity consistently.
+- [x] Audit current native appearance models, picker, palettes and render boundaries. Implement one account-local store with expiry and real bot guards; native pushed Settings controller and preview. Integrate only own-peer rendering with lifecycle-owned change subscriptions.
 - [ ] Exercise isolation, migration, expiry, no server mutation, and the native API boundaries against current13.2 declarations. Verify apply/reapply/reverse/corrupt refusal.
 - [ ] Publish the product candidate and run preflight/app build; observe startup only and retain artifact/run link. Device runtime remains pending.
 - [ ] On `perf/build180-wave2a2-request-lifecycle` from the same green baseline, prove up to2lifecycle defects; implement only proven fixes with before/after component counts and exact independent overlay.

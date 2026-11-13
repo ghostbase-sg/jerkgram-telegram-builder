@@ -61,15 +61,18 @@ def compile_fixture(folder, optimization, old=False, main_override=None):
     # peer, message and cache subsystems into a standalone codec executable.
     media = (official / 'Postbox/Sources/MediaResource.swift').read_text()
     (folder / 'MediaResourceId.swift').write_text('import Foundation\n' + declaration(media, 'public struct MediaResourceId:'))
-    source = OWNER.read_text()
-    if old:
-        main = 'import Foundation\n' + (FIXTURE / 'old-policy.swift').read_text() + (FIXTURE / 'old-native.swift').read_text()
+    if main_override is not None:
+        main = main_override
     else:
-        storage = '\n'.join(declaration(source, anchor) for anchor in [
-            'private func botBridgeValidatedAccount(', 'private func botBridgeReadProgress(',
-            'func jerkgramPrepareBotBridgeHistory(', 'private func botBridgeWriteProgress('])
-        main = 'import Foundation\n' + policy(source) + (FIXTURE / 'native.swift').read_text().replace('/* REAL_STORAGE_BOUNDARY */', storage)
-    (folder / 'main.swift').write_text(main if main_override is None else main_override)
+        source = OWNER.read_text()
+        if old:
+            main = 'import Foundation\n' + (FIXTURE / 'old-policy.swift').read_text() + (FIXTURE / 'old-native.swift').read_text()
+        else:
+            storage = '\n'.join(declaration(source, anchor) for anchor in [
+                'private func botBridgeValidatedAccount(', 'private func botBridgeReadProgress(',
+                'func jerkgramPrepareBotBridgeHistory(', 'private func botBridgeWriteProgress('])
+            main = 'import Foundation\n' + policy(source) + (FIXTURE / 'native.swift').read_text().replace('/* REAL_STORAGE_BOUNDARY */', storage)
+    (folder / 'main.swift').write_text(main)
     sources = codec_sources()
     executable = folder / 'codec'
     command = [shutil.which('swiftc'), '-swift-version', '5', optimization, '-I', str(includes),

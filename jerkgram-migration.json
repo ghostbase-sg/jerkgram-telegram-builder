@@ -33,7 +33,8 @@
     "rlottie": "removed in official13.2 submodules tree ceac64c2399296078dc70a42e16799d692c23fbf; obsolete fallback override removed"
   },
   "post180_stages": [
-    "post180-history-wallet"
+    "post180-history-wallet",
+    "post180-local-appearance"
   ],
   "build180_baseline_identity": {
     "displayVersion": "1.2.0 Beta 3",

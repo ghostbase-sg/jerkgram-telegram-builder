@@ -246,12 +246,17 @@
              self.emit(.reserved, progress: progress)
              var dispatchProgress = progress
              guard dispatchProgress.checkTime(now: self.wall()) else { self.fail(dispatchProgress.terminal ?? .corrupt, lease: lease); return }
-@@ -814,8 +846,8 @@
+@@ -813,9 +845,12 @@
+         if progress.terminal != nil { emit(.handoff, progress: progress) }
          lease.finish()
          active = nil
-         guard progress.terminal == nil else { return }
+-        guard progress.terminal == nil else { return }
 -        // putCompletion has already been sent. Append one new operation on a later
 -        // manager queue turn, allowing current live operations to run between pages.
++        guard progress.terminal == nil else {
++            scheduleHistoryContinuation(progress)
++            return
++        }
 +        // Yield the account queue between historical pages; live polling stays
 +        // independent while the next bounded request waits for Network.
          queue.async { [weak self] in self?.schedulePage() }

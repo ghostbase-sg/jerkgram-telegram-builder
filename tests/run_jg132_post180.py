@@ -16,7 +16,7 @@ if __name__=='__main__':
     verify_source(source)
     env=dict(os.environ,JG_POST180_SOURCE=str(source))
     if required:env['JG_BETA3_REQUIRE_NATIVE']='1'
-    for name in ('test_jg132_post180_stages.py','test_jg132_post180_history.py'):
+    for name in ('test_jg132_post180_stages.py','test_jg132_post180_history.py','test_jg132_post180_appearance.py'):
         subprocess.run([sys.executable,str(ROOT/'tests'/name)],env=env,check=True)
     if shutil.which('xcrun'):
         for name in sorted({n for stage in stages() for n in manifest(stage)['owners'] if n.endswith('.swift')}):
