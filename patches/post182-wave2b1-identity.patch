@@ -1,0 +1,12 @@
+diff --git a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+--- a/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
++++ b/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+@@ -994,7 +994,7 @@
+ public enum JerkgramReleaseIdentity {
+     public static let displayVersion = "1.2.0 Stable"
+     public static let technicalVersion = "1.2.0"
+-    public static let build = "182"
++    public static let build = "183"
+     public static let telegramBase = "13.2"
+ 
+     public static var aboutText: String {

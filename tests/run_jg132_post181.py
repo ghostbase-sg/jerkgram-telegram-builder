@@ -23,11 +23,13 @@ if __name__=='__main__':
     source=Path(os.environ.get('JG_STABLE182_SOURCE',ROOT/'work/swiftgram-src')).resolve()
     if '--require-full-source' in sys.argv:verify_full_checkout(source,UPSTREAM)
     verify_source(source)
-    env=dict(os.environ,JG_STABLE182_SOURCE=str(source),JERKGRAM_STABLE_BOT_SOURCE=str(source),JG_STABLE182_PREMIUM_SOURCE=str(source))
+    env=dict(os.environ,JG_STABLE182_SOURCE=str(source),JERKGRAM_STABLE_BOT_SOURCE=str(source),JG_STABLE182_PREMIUM_SOURCE=str(source),JG_WAVE2B1_SOURCE=str(source))
     if required:env['JG_STABLE182_REQUIRE_NATIVE']='1'
     commands=[]
     for name in ['test_jg132_ci_recovery.py','test_jg132_post181_runner.py','test_jg132_post181_stages.py','test_jg132_post181_performance.py','test_jg132_stable_bot_history.py','test_jg132_stable_premium_master.py','test_jg132_stable_gram_balance.py','test_jg132_stable_gram_presentations.py']:
         commands.append((name,[sys.executable,str(ROOT/'tests'/name)]))
+    if 'post182-wave2b1-followup' in stages():
+        commands.append(('Wave2B.1', [sys.executable,str(ROOT/'tests/test_jg132_wave2b1.py')]))
     if shutil.which('xcrun'):
         for name in sorted({n for stage in stages() for n in manifest(stage)['owners'] if n.endswith('.swift')}):
             commands.append(('parse '+name,['xcrun','swiftc','-frontend','-parse',str(source/name)]))

@@ -1,0 +1,11 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "867ef53c5ff60fcb8fd9ce4e47f09fe169d0855154a713f98ba30968d733f062",
+  "owners": {
+    "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
+      "before_sha256": "8fa8389c878cf671bbd932aa76f9d5cf6d72ffc18abda527307c3520ccb258df",
+      "after_sha256": "3dac303aa5b5fa56ebe6acf29b7f1c5a688cd52704df7f088ab97d02e6a8b9b5"
+    }
+  },
+  "baseline_published_commit": "84412f4409878a4dccd34f6e84083c873e7457d0"
+}

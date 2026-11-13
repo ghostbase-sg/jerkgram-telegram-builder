@@ -48,7 +48,7 @@ class Recovery(unittest.TestCase):
             report = json.loads(raw[0].with_suffix('.json').read_text())
             self.assertEqual(report['status'], 'RAW COMPILED IPA; PACKAGING AND VERIFICATION NOT PASSED')
             self.assertEqual(report['ci_commit'], os.environ.get('GITHUB_SHA'))
-            self.assertFalse(any(p.name.endswith('STABLE.json') for p in (root / 'artifacts').glob('*.json')))
+            self.assertFalse(any(p.name.endswith(json.loads((root / 'jerkgram-migration.json').read_text())['artifact_suffix'] + '.json') for p in (root / 'artifacts').glob('*.json')))
 
     def test_final_verifier_failure_keeps_both_archives(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -64,8 +64,8 @@ class Recovery(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'final verify failed'): package.main()
             raw = next((root / 'artifacts').glob('*-RAW-UNVERIFIED.ipa'))
             self.assertEqual(raw.read_bytes(), original.read_bytes())
-            self.assertTrue(next((root / 'artifacts').glob('*-STABLE.ipa')).is_file())
-            self.assertFalse(list((root / 'artifacts').glob('*-STABLE.json')))
+            self.assertTrue(next((root / 'artifacts').glob('*-' + config['artifact_suffix'] + '.ipa')).is_file())
+            self.assertFalse(list((root / 'artifacts').glob('*-' + config['artifact_suffix'] + '.json')))
 
     def test_build_configuration_still_uses_existing_generator(self):
         import configure_jg13

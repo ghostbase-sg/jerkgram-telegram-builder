@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Stable / Telegram 13.2 / Build182
+name: Jerkgram 1.2.0 Stable / Telegram 13.2 / Build183
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - docs/**
     branches:
+      - perf/build182-wave2b1-ui-jank
       - dev/stable-master-gram-bot-182
       - dev/beta2-history-appearance-followup
       - dev/beta3-history-native-tags-180
@@ -65,7 +66,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build182-STABLE-diagnostics
+          name: Jerkgram-1.2.0-Build183-STABLE-diagnostics
           path: |
             artifacts/build.log
             artifacts/*-RAW-UNVERIFIED.json
@@ -86,6 +87,11 @@ jobs:
             scripts/jg132_baseline.py
             scripts/jg132_beta3_stages.py
             scripts/materialize_jg132_beta3.py
+            patches/post182-*.patch
+            patches/post182-*.sha256.json
+            work/swiftgram-src/submodules/SettingsUI/Sources/Jerkgram/JerkgramGramEditorController.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift
             patches/post181-*.patch
             patches/post181-*.sha256.json
             scripts/jg132_post181.py
@@ -252,7 +258,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build182-RAW-UNVERIFIED
+          name: Jerkgram-1.2.0-Build183-RAW-UNVERIFIED
           path: |
             artifacts/*-RAW-UNVERIFIED.ipa
             artifacts/*-RAW-UNVERIFIED.json
@@ -262,17 +268,17 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build182-PACKAGING-FAILED-UNVERIFIED
-          path: artifacts/Jerkgram-1.2.0-Build182-STABLE.ipa
+          name: Jerkgram-1.2.0-Build183-PACKAGING-FAILED-UNVERIFIED
+          path: artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa
           if-no-files-found: ignore
           retention-days: 90
       - name: Upload verified IPA
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build182-STABLE
+          name: Jerkgram-1.2.0-Build183-STABLE
           path: |
-            artifacts/Jerkgram-1.2.0-Build182-STABLE.ipa
-            artifacts/Jerkgram-1.2.0-Build182-STABLE.json
+            artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa
+            artifacts/Jerkgram-1.2.0-Build183-STABLE.json
           if-no-files-found: error
           retention-days: 90

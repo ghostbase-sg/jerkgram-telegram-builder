@@ -1,0 +1,31 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "patch_sha256": "2ea4fec716e7ef2ed4d91d21d05edd0c3a6cc133543d4ba5428286371bc6a6fd",
+  "owners": {
+    "submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift": {
+      "before_sha256": "2fb1fcd2b9bfe4944259d55fb7ac130a4485f805635df1ce91c853eed10379ae",
+      "after_sha256": "e81e6445c8d26999adc45def690740fd3ac4ea2ffb3ef336f571cef569107477"
+    },
+    "submodules/SettingsUI/Sources/Jerkgram/JerkgramGramEditorController.swift": {
+      "before_sha256": "f31dfb31e48d89d4a6a8ae8079608a86117e4962f01255ae7191ef7843f262a1",
+      "after_sha256": "685089acf981292f3e7dec5e1feb786e399e25612b869ad242693b11f7cfca39"
+    },
+    "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
+      "before_sha256": "c3a3a84dd443c34cdcb51a7a33255a9e28f088d7addd913ade215863230ca577",
+      "after_sha256": "8fa8389c878cf671bbd932aa76f9d5cf6d72ffc18abda527307c3520ccb258df"
+    },
+    "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/GhostBaseProfileFullscreenBackground.swift": {
+      "before_sha256": "0522623c2f3fe3603e0f45c49eeff332cb1e58bcd609369735ad3e7a251f2e94",
+      "after_sha256": "1310042ea34c9546b3b1aa4560189f79cf45b5b558b67f73c5cec23d7b2307f2"
+    },
+    "submodules/TelegramUI/Sources/ChatSearchTitleAccessoryPanelNode.swift": {
+      "before_sha256": "1eba7fd7608f7429bad7c92674d8fa4f70579508b6bd0722c3ebfdde12c99bd6",
+      "after_sha256": "7508231953d2c966b77cd85ce39fbbc21357b3f0b77acd1207ef4ecd476bf268"
+    },
+    "submodules/TelegramUI/Sources/JerkgramSavedTagsController.swift": {
+      "before_sha256": "be376b8f2c326e899bc762dad1d517871161dca2f7eeb0cae782af527749823f",
+      "after_sha256": "5e32af5dd29149082802872bbc6d0e234e5d0e6eda16025bc930186375a85685"
+    }
+  },
+  "baseline_published_commit": "84412f4409878a4dccd34f6e84083c873e7457d0"
+}

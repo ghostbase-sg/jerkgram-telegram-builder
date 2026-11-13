@@ -31,7 +31,7 @@ trap preserve_compiled_ipa EXIT
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=182 \
+  --define=buildNumber=183 \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 # Inspect retained build actions without a second build or target analysis.
