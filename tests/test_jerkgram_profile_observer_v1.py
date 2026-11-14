@@ -36,6 +36,7 @@ class ProfileObserverPatchTests(unittest.TestCase):
 
     def test_user_profile_open_enrolls_once(self):
         original = (
+            "    private(set) var data: PeerInfoScreenData?\n"
             "            ghostBaseRecordObservedProfileV11G(\n"
             "                accountPeerId: self.context.account.peerId,\n"
             "                peer: peer,\n"
@@ -44,6 +45,7 @@ class ProfileObserverPatchTests(unittest.TestCase):
         )
         patched = module.patch_profile_ui(original)
         self.assertEqual(patched.count("jerkgramProfileObserverBegin("), 1)
+        self.assertIn("jerkgramProfileObserverStartedPeerId != peer.id", patched)
         self.assertEqual(module.patch_profile_ui(patched), patched)
 
     def test_build_dep_is_idempotent(self):
