@@ -29,3 +29,13 @@ jobs:
           grep -q 'qos: .utility' scripts/jerkgram_profile_observer_v1_payload/JerkgramProfileObserver.swift
           grep -q 'CREATE TABLE IF NOT EXISTS snapshots' scripts/jerkgram_profile_observer_v1_payload/JerkgramProfileObserver.swift
           ! grep -q 'UserDefaults.standard' scripts/jerkgram_profile_observer_v1_payload/JerkgramProfileObserver.swift
+
+  swift-syntax:
+    runs-on: macos-26
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse observer Swift source
+        run: |
+          xcrun swiftc -frontend -parse \
+            scripts/jerkgram_profile_observer_v1_payload/JerkgramProfileObserver.swift
