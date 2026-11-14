@@ -25,6 +25,13 @@ check(store.page(peerId: 22, beforeSequence: events[0].sequence, limit: 10).coun
 check(store.observePresence(peerId: 22, status: "recently", isHidden: false, until: nil, lastActivity: 1, observedAtMs: 4000), "presence first")
 check(store.observePresence(peerId: 22, status: "recently", isHidden: false, until: 99, lastActivity: 10, observedAtMs: 5000), "presence duplicate")
 check(store.counts(peerId: 22)?.presence == 1, "presence ignores timestamps")
+final class ProfileObserverTrackingDefaults: UserDefaults {
+    var fullDomainReads = 0
+    override func dictionaryRepresentation() -> [String: Any] {
+        self.fullDomainReads += 1
+        return super.dictionaryRepresentation()
+    }
+}
 let suite = "profile-store-test-\(UUID().uuidString)"
 let defaults = UserDefaults(suiteName: suite)!
 defer { defaults.removePersistentDomain(forName: suite) }
@@ -34,6 +41,31 @@ defaults.set(legacy, forKey: legacyKey)
 defaults.set(Data([0xff, 0xfe]), forKey: "jerkgram.GiftHistory1.11.22")
 defaults.set("unparsed legacy text", forKey: "GhostBase.ProfileIntel2.11.22.History")
 defaults.set(legacy, forKey: "GhostBase.ProfileHistory.V11G.111.22")
+let trackedSuite = "profile-store-peer-test-\(UUID().uuidString)"
+let trackedDefaults = ProfileObserverTrackingDefaults(suiteName: trackedSuite)!
+defer { trackedDefaults.removePersistentDomain(forName: trackedSuite) }
+var expectedPeerValues: [String: Data] = [:]
+for prefix in ["GhostBase.", "jerkgram.", "Jerkgram."] {
+    let suffixes = ["ProfileHistory.V11G.11.99", "ProfileIntel3.PersonalChannel.11.99", "PresenceHistory1.11.99", "GiftHistory1.11.99", "PresenceGlobal1.KnownUser.11.99"] + ["Snapshot", "History", "Started", "SessionStart", "Updated"].map { "ProfileIntel2.11.99." + $0 }
+    for suffix in suffixes {
+        let key = prefix + suffix
+        let original = Data(("retained-original:" + key).utf8)
+        expectedPeerValues[key] = original
+        trackedDefaults.set(original, forKey: key)
+    }
+}
+trackedDefaults.set(Data(repeating: 7, count: 1024 * 1024), forKey: "unrelated.large.preference")
+trackedDefaults.set(Data([9]), forKey: "jerkgram.GiftHistory1.11.100")
+trackedDefaults.fullDomainReads = 0
+check(store.migrateLegacy(defaults: trackedDefaults, peerId: 99), "targeted peer migration")
+check(trackedDefaults.fullDomainReads == 0, "peer opening never copies the full settings domain")
+let peerArchives = store.legacyPage(peerId: 99, limit: 256)
+check(peerArchives.count == expectedPeerValues.count, "all exact source families and prefixes included")
+for entry in peerArchives {
+    let plist = try PropertyListSerialization.propertyList(from: entry.payload, options: [], format: nil) as! [String: Any]
+    check(plist["value"] as? Data == expectedPeerValues[entry.sourceKey], "targeted migration preserves original bytes")
+}
+check(store.counts(peerId: 100)?.legacySources == 0, "targeted migration excludes other peers")
 check(store.migrateLegacy(defaults: defaults), "legacy raw and parsed migration")
 let migrated = store.counts(peerId: 22)!
 check(migrated.legacySources == 3, "account isolation and all matching source families")

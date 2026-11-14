@@ -381,7 +381,27 @@ final class JerkgramProfileHistoryStore {
     // retain provenance; they never enroll a peer or overwrite current truth.
     @discardableResult func migrateLegacy(defaults: UserDefaults, peerId: Int64? = nil) -> Bool {
         guard self.open() else { return false }
-        let sources = defaults.dictionaryRepresentation()
+        let sources: [String: Any]
+        if let peerId {
+            // Profile openings inspect a fixed set of source keys. They never
+            // snapshot/copy unrelated settings or another peer's large archive.
+            var targeted: [String: Any] = [:]
+            let scoped = String(self.accountPeerId) + "." + String(peerId)
+            let families = ["ProfileHistory.V11G.", "ProfileIntel3.PersonalChannel.", "PresenceHistory1.", "GiftHistory1.", "PresenceGlobal1.KnownUser."]
+            for prefix in ["GhostBase.", "jerkgram.", "Jerkgram."] {
+                for family in families {
+                    let key = prefix + family + scoped
+                    if let value = defaults.object(forKey: key) { targeted[key] = value }
+                }
+                for suffix in ["Snapshot", "History", "Started", "SessionStart", "Updated"] {
+                    let key = prefix + "ProfileIntel2." + scoped + "." + suffix
+                    if let value = defaults.object(forKey: key) { targeted[key] = value }
+                }
+            }
+            sources = targeted
+        } else {
+            sources = defaults.dictionaryRepresentation()
+        }
         for key in sources.keys.sorted() {
             guard let owner = self.legacyOwner(key), peerId == nil || owner.peerId == peerId, let value = sources[key] else { continue }
             guard let payload = try? PropertyListSerialization.data(fromPropertyList: ["value": value], format: .binary, options: 0) else { return self.failure("legacy-value-unencodable") }
@@ -430,9 +450,12 @@ final class JerkgramProfileHistoryStore {
 
 
     @discardableResult func recordGap(droppedCount: Int, observedAtMs: Int64) -> Bool {
-        guard droppedCount > 0, self.open(), let statement = self.prepare("INSERT INTO gaps(observed_at_ms,dropped_count,reason) VALUES(?,?,'ingress-or-storage-unavailable')") else { return false }
-        defer { sqlite3_finalize(statement) }
-        return self.bind(observedAtMs, 1, statement) && self.bind(Int64(droppedCount), 2, statement) && self.finish(statement)
+        guard droppedCount > 0, self.open() else { return false }
+        return self.transaction {
+            guard let statement = self.prepare("INSERT INTO gaps(observed_at_ms,dropped_count,reason) VALUES(?,?,'ingress-or-storage-unavailable')") else { return false }
+            defer { sqlite3_finalize(statement) }
+            return self.bind(observedAtMs, 1, statement) && self.bind(Int64(droppedCount), 2, statement) && self.finish(statement) && self.protectFiles()
+        }
     }
 
     // Identity persists across changing UserDefaults source versions. An
