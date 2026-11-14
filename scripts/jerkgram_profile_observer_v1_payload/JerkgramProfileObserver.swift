@@ -91,7 +91,7 @@ private final class JerkgramProfileObserver {
 
     deinit {
         if let connection {
-            sqlite3_close(connection)
+            _ = sqlite3_close(connection)
         }
     }
 
@@ -117,17 +117,17 @@ private final class JerkgramProfileObserver {
     }
 
     private func bind(_ value: Int64, at index: Int32, in statement: OpaquePointer?) {
-        sqlite3_bind_int64(statement, index, value)
+        _ = sqlite3_bind_int64(statement, index, value)
     }
 
     private func bind(_ value: String, at index: Int32, in statement: OpaquePointer?) {
-        value.withCString { cString in
+        _ = value.withCString { cString in
             sqlite3_bind_text(statement, index, cString, -1, jerkgramProfileSQLiteTransient)
         }
     }
 
     private func bind(_ value: Data, at index: Int32, in statement: OpaquePointer?) {
-        value.withUnsafeBytes { bytes in
+        _ = value.withUnsafeBytes { bytes in
             sqlite3_bind_blob(
                 statement,
                 index,
@@ -170,7 +170,7 @@ private final class JerkgramProfileObserver {
         let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX
         guard sqlite3_open_v2(databaseURL.path, &opened, flags, nil) == SQLITE_OK,
               let opened else {
-            if let opened { sqlite3_close(opened) }
+            if let opened { _ = sqlite3_close(opened) }
             self.logStorageErrorOnce("open")
             return false
         }
@@ -179,7 +179,7 @@ private final class JerkgramProfileObserver {
             [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
             ofItemAtPath: databaseURL.path
         )
-        sqlite3_busy_timeout(opened, 2000)
+        _ = sqlite3_busy_timeout(opened, 2000)
         guard self.runSQL("PRAGMA journal_mode=WAL"),
               self.runSQL("PRAGMA synchronous=NORMAL"),
               self.runSQL("""
@@ -206,17 +206,17 @@ private final class JerkgramProfileObserver {
                   ON snapshots (account_id, peer_id, observed_at_ms, sequence)
                   """) else {
             self.logStorageErrorOnce("schema")
-            sqlite3_close(opened)
+            _ = sqlite3_close(opened)
             self.connection = nil
             return false
         }
 
         guard let statement = self.prepare("SELECT account_id, peer_id FROM watched") else {
             self.connection = nil
-            sqlite3_close(opened)
+            _ = sqlite3_close(opened)
             return false
         }
-        defer { sqlite3_finalize(statement) }
+        defer { _ = sqlite3_finalize(statement) }
         while sqlite3_step(statement) == SQLITE_ROW {
             self.watched.insert(
                 JerkgramProfileObserverKey(
@@ -233,7 +233,7 @@ private final class JerkgramProfileObserver {
         guard let statement = self.prepare(
             "SELECT state FROM watched WHERE account_id = ? AND peer_id = ?"
         ) else { return nil }
-        defer { sqlite3_finalize(statement) }
+        defer { _ = sqlite3_finalize(statement) }
         self.bind(key.accountPeerId, at: 1, in: statement)
         self.bind(key.peerId, at: 2, in: statement)
         guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
@@ -281,7 +281,7 @@ private final class JerkgramProfileObserver {
             self.bind(keys.joined(separator: ","), at: 4, in: snapshot)
             self.bind(encoded, at: 5, in: snapshot)
             success = sqlite3_step(snapshot) == SQLITE_DONE
-            sqlite3_finalize(snapshot)
+            _ = sqlite3_finalize(snapshot)
         }
         if success, let tracked = self.prepare("""
             INSERT INTO watched (account_id, peer_id, started_at_ms, state)
@@ -293,7 +293,7 @@ private final class JerkgramProfileObserver {
             self.bind(observedAtMs, at: 3, in: tracked)
             self.bind(encoded, at: 4, in: tracked)
             success = sqlite3_step(tracked) == SQLITE_DONE
-            sqlite3_finalize(tracked)
+            _ = sqlite3_finalize(tracked)
         } else {
             success = false
         }
@@ -328,7 +328,7 @@ private final class JerkgramProfileObserver {
             next.about = about
             next.aboutObserved = true
         }
-        if next == previous { return }
+        if let previous, next == previous { return }
         self.persist(key: key, new: next, old: previous, observedAtMs: observedAtMs)
     }
 
