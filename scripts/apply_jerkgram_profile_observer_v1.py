@@ -110,13 +110,23 @@ def patch_profile_ui(source: str) -> str:
     new = (
         old
         + "            " + UI_MARKER + "\n"
-        + "            jerkgramProfileObserverBegin(\n"
-        + "                accountPeerId: self.context.account.peerId,\n"
-        + "                peer: peer,\n"
-        + "                cachedData: data.cachedData\n"
-        + "            )\n"
+        + "            if self.jerkgramProfileObserverStartedPeerId != peer.id {\n"
+        + "                self.jerkgramProfileObserverStartedPeerId = peer.id\n"
+        + "                jerkgramProfileObserverBegin(\n"
+        + "                    accountPeerId: self.context.account.peerId,\n"
+        + "                    peer: peer,\n"
+        + "                    cachedData: data.cachedData\n"
+        + "                )\n"
+        + "            }\n"
     )
-    return replace_once(source, old, new, "profile first-open observation")
+    source = replace_once(source, old, new, "profile first-open observation")
+    return replace_once(
+        source,
+        "    private(set) var data: PeerInfoScreenData?\n",
+        "    private(set) var data: PeerInfoScreenData?\n"
+        "    private var jerkgramProfileObserverStartedPeerId: PeerId?\n",
+        "profile observer per-screen gate",
+    )
 
 
 def main() -> None:
