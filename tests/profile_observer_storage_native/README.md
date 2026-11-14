@@ -46,3 +46,26 @@ Real SQLCipher probe passed: encrypted header/WAL, global-default isolation, wro
 ```
 
 SQLCipher prints expected decryption errors during the wrong-key assertion.
+
+## Existing key owner and security limits
+
+The actual 13.2 source obtains these bytes in
+`submodules/BuildConfig/Sources/BuildConfig.m:368`:
+`deviceSpecificEncryptionParameters(rootPath, baseAppBundleId:)` reads or creates
+`rootPath/.tempkey`, containing a plaintext 32-byte key plus 16-byte salt. It uses
+`SecRandomCopyBytes` with an `arc4random_buf` fallback, writes atomically, and
+attempts an advisory cross-process lock with a bounded fallback. Its
+`.tempkeyEncrypted`/Secure Enclave wrapping block is commented out.
+`submodules/TelegramUI/Sources/AppDelegate.swift:1195` obtains those parameters;
+line 1210 constructs `ValueBoxEncryptionParameters` from them. The observer
+reuses that existing key and gives its separate database a random SQLCipher salt.
+
+`AccountManager.swift:262` places the root at the app group's `telegram-data`
+directory, and `performAppGroupUpgrades` attempts to exclude the root from backup.
+Neither that root setup nor the key owner sets an explicit file protection class
+for `.tempkey`; its actual inherited protection requires inspection on a device.
+The observer sets protection on its own directory/database/WAL/SHM, but this does
+not establish protection of the existing key file. These results demonstrate
+SQLCipher encryption and compatible key use, not Keychain/Secure Enclave backing
+or a complete device security assessment. The existing shared key owner is not
+modified by this work.

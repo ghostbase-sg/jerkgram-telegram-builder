@@ -66,6 +66,20 @@ for entry in peerArchives {
     check(plist["value"] as? Data == expectedPeerValues[entry.sourceKey], "targeted migration preserves original bytes")
 }
 check(store.counts(peerId: 100)?.legacySources == 0, "targeted migration excludes other peers")
+let undatedGift = Data("[{\"giftDate\":1700000000,\"title\":\"undated observed gift\"}]".utf8)
+let undatedKnownUser = Data("{\"peerId\":97,\"firstSeen\":1700000000,\"lastSeen\":1700000001}".utf8)
+trackedDefaults.set(undatedGift, forKey: "jerkgram.GiftHistory1.11.97")
+trackedDefaults.set(undatedKnownUser, forKey: "jerkgram.PresenceGlobal1.KnownUser.11.97")
+check(store.migrateLegacy(defaults: trackedDefaults, peerId: 97), "undated valid JSON archive")
+let undatedArchives = store.legacyPage(peerId: 97)
+check(undatedArchives.count == 2, "undated JSON sources preserved")
+check(undatedArchives.allSatisfy { $0.provenance == "legacy-observation-time-unknown" }, "missing observation time remains unknown")
+check(store.page(peerId: 97, beforeSequence: nil, limit: 256).isEmpty, "no invented epoch-zero event from undated sources")
+for entry in undatedArchives {
+    let plist = try PropertyListSerialization.propertyList(from: entry.payload, options: [], format: nil) as! [String: Any]
+    let expected = entry.sourceKey.contains("GiftHistory1") ? undatedGift : undatedKnownUser
+    check(plist["value"] as? Data == expected, "undated source bytes retained")
+}
 check(store.migrateLegacy(defaults: defaults), "legacy raw and parsed migration")
 let migrated = store.counts(peerId: 22)!
 check(migrated.legacySources == 3, "account isolation and all matching source families")

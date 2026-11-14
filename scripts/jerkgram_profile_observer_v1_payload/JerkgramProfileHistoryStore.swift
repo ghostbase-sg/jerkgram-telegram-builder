@@ -418,7 +418,14 @@ final class JerkgramProfileHistoryStore {
             guard code == SQLITE_ROW || code == SQLITE_DONE else { return self.failure("migration-read-failed", code) }
             if found { continue }
             let normalized = self.legacyEntries(value, family: owner.family)
-            let provenance = normalized == nil ? "legacy-unparsed-preserved" : "legacy-unverified-observation"
+            let provenance: String
+            if normalized != nil {
+                provenance = "legacy-unverified-observation"
+            } else if self.legacyHasUnknownObservationTime(value, family: owner.family) {
+                provenance = "legacy-observation-time-unknown"
+            } else {
+                provenance = "legacy-unparsed-preserved"
+            }
             guard self.transaction({
                 guard let insert = self.prepare("INSERT INTO legacy_sources(peer_id,source_key,fingerprint,payload,provenance) VALUES(?,?,?,?,?)") else { return false }
                 let bound = self.bind(owner.peerId, 1, insert) && self.bind(key, 2, insert) && self.bind(fingerprint, 3, insert) && self.bind(payload, 4, insert) && self.bind(provenance, 5, insert) && self.finish(insert)
@@ -433,7 +440,7 @@ final class JerkgramProfileHistoryStore {
                     let identityBase = key + ":" + self.fingerprint(encoded) + ":" + String(occurrence)
                     guard let identity = self.resolveLegacyIdentity(identityBase, payload: encoded, presence: owner.family == "presence") else { return false }
                     if identity.exists { continue }
-                    let seconds = (entry["observedAt"] as? NSNumber)?.int64Value ?? (entry["firstObservedAt"] as? NSNumber)?.int64Value ?? 0
+                    guard let seconds = self.legacyObservedSeconds(entry) else { return self.failure("legacy-observation-time-unknown") }
                     let timestamp = seconds.multipliedReportingOverflow(by: 1000)
                     guard !timestamp.overflow else { return self.failure("legacy-timestamp-overflow") }
                     if owner.family == "presence" {
@@ -632,11 +639,31 @@ final class JerkgramProfileHistoryStore {
         return nil
     }
 
+    private func legacyObservedSeconds(_ entry: [String: Any]) -> Int64? {
+        // Gift issuance date and known-user firstSeen are distinct semantics.
+        // Only an explicitly stored observation timestamp can date an event.
+        return (entry["observedAt"] as? NSNumber)?.int64Value ?? (entry["firstObservedAt"] as? NSNumber)?.int64Value
+    }
+
     private func validLegacyTimestamps(_ entries: [[String: Any]]) -> Bool {
         return entries.allSatisfy { entry in
-            let seconds = (entry["observedAt"] as? NSNumber)?.int64Value ?? (entry["firstObservedAt"] as? NSNumber)?.int64Value ?? 0
+            guard let seconds = self.legacyObservedSeconds(entry) else { return false }
             return !seconds.multipliedReportingOverflow(by: 1000).overflow
         }
+    }
+
+    private func legacyHasUnknownObservationTime(_ value: Any, family: String) -> Bool {
+        guard let bytes = value as? Data, let object = try? JSONSerialization.jsonObject(with: bytes) else { return false }
+        let entries: [[String: Any]]
+        if family == "profile" || family == "personal_channel" {
+            guard let history = object as? [String: Any], let events = history["events"] as? [[String: Any]], let current = history["current"] as? [String: Any] else { return false }
+            entries = events + [current]
+        } else if let array = object as? [[String: Any]] {
+            entries = array
+        } else if let entry = object as? [String: Any] {
+            entries = [entry]
+        } else { return false }
+        return entries.contains { self.legacyObservedSeconds($0) == nil }
     }
 
     private func fingerprint(_ bytes: Data) -> String {
