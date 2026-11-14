@@ -48,6 +48,10 @@ def materialize(source, *, baseline_only=False, require_native=False):
         manifest["baseline_native_gate"] = "passed"
         save()
     if not baseline_only:
+        # Exercise install/repeat/refusal/rollback against this exact product,
+        # before the successor changes any owners. No skipped product fixtures.
+        env = dict(os.environ, JERKGRAM_OBSERVER_PRODUCT_SOURCE=str(source))
+        subprocess.run([sys.executable, "-m", "unittest", "-v", "tests.test_jerkgram_profile_observer_v1"], cwd=ROOT, env=env, check=True)
         apply_observer(source)
         manifest["observer_materialized"] = True
         payload = ROOT / "scripts/jerkgram_profile_observer_v1_payload"

@@ -2,6 +2,11 @@ name: Profile Observer / Current Telegram 13.2 Integration
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - dev/profile-time-machine-13.2
+    paths-ignore:
+      - docs/**
 
 permissions:
   contents: read
@@ -38,7 +43,7 @@ jobs:
         env:
           JERKGRAM_PINNED_SOURCE_ROOT: ${{ github.workspace }}/work/swiftgram-src
         run: |
-          python3 -m unittest -v tests.test_profile_observer_materialization tests.test_jerkgram_profile_observer_v1 tests.test_jerkgram_profile_observer_requests
+          python3 -m unittest -v tests.test_profile_observer_materialization tests.test_jerkgram_profile_observer_requests
           python3 tests/profile_observer_admission_native/run.py
           python3 tests/profile_observer_storage_native/run.py --source-root "$GITHUB_WORKSPACE/work/swiftgram-src"
       - name: Current product materialization, required native baseline gate, observer successor and full app compile
