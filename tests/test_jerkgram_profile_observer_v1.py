@@ -66,6 +66,17 @@ class ProfileObserverPatchTests(unittest.TestCase):
         self.assertNotIn("Timer.scheduledTimer", swift)
         self.assertNotIn("maximumEvents", swift)
 
+    def test_first_bio_discovery_does_not_make_a_fake_snapshot(self):
+        swift = PAYLOAD.read_text(encoding="utf-8")
+        self.assertIn(
+            "if old.aboutObserved && self.aboutObserved && old.about != self.about",
+            swift,
+        )
+        # The stored last state still advances if the only change is from
+        # 'unknown' to 'known', without inserting a snapshot.
+        self.assertIn("if !keys.isEmpty {", swift)
+        self.assertIn("if success, let tracked = self.prepare(", swift)
+
     def test_anchors_fail_closed(self):
         with self.assertRaises(RuntimeError):
             module.patch_update_peers("func updatePeers() {}")
