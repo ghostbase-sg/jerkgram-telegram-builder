@@ -1,0 +1,65 @@
+name: Profile Observer / Current Telegram 13.2 Integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profile-observer-13.2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  observer-native-integration:
+    runs-on: xcode-27
+    timeout-minutes: 180
+    env:
+      USE_BAZEL_VERSION: 9.2.0
+      BAZEL_BIN: bazelisk
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      JERKGRAM_TELEGRAM_API_ID: ${{ secrets.JERKGRAM_TELEGRAM_API_ID }}
+      JERKGRAM_TELEGRAM_API_HASH: ${{ secrets.JERKGRAM_TELEGRAM_API_HASH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify unchanged current toolchain
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          test "$(xcodebuild -version | head -1)" = "Xcode 27.1"
+          xcrun --find swiftc
+          xcrun --sdk iphoneos --show-sdk-version
+          if ! command -v bazelisk >/dev/null 2>&1; then brew install bazelisk; fi
+          bazelisk --version
+          git rev-parse HEAD
+      - name: Checkout genuine pinned Telegram 13.2
+        run: bash scripts/prepare_source_official.sh
+      - name: Observer source contracts and native production components
+        env:
+          JERKGRAM_PINNED_SOURCE_ROOT: ${{ github.workspace }}/work/swiftgram-src
+        run: |
+          python3 -m unittest -v tests.test_profile_observer_materialization tests.test_jerkgram_profile_observer_v1 tests.test_jerkgram_profile_observer_requests
+          python3 tests/profile_observer_admission_native/run.py
+          python3 tests/profile_observer_storage_native/run.py --source-root "$GITHUB_WORKSPACE/work/swiftgram-src"
+      - name: Current product materialization, required native baseline gate, observer successor and full app compile
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash scripts/build_profile_observer_foundation.sh 2>&1 | tee artifacts/profile-observer-build.log
+      - name: Upload compile and source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-observer-13.2-integration-evidence
+          path: |
+            artifacts/profile-observer-build.log
+            artifacts/profile-observer-materialization.json
+            work/swiftgram-src/submodules/TelegramCore/BUILD
+            work/swiftgram-src/submodules/TelegramCore/Sources/JerkgramProfile*.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/UpdatePeers.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/Sync/PeerUpdate.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/State/Sync/StateReplay+Peers.swift
+            work/swiftgram-src/submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/AccountContext.swift
+            work/swiftgram-src/submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift
+          if-no-files-found: warn
