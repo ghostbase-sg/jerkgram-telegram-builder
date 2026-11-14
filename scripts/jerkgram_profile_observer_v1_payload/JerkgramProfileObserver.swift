@@ -338,10 +338,10 @@ private final class JerkgramProfileObserver {
             accountPeerId: accountPeerId.toInt64(),
             peerId: user.id.toInt64()
         )
-        let identity = JerkgramProfileObserverFields(user: user)
-        let knownAbout = cachedData as? CachedUserData
         let now = Int64(Date().timeIntervalSince1970 * 1000)
         self.queue.async {
+            let identity = JerkgramProfileObserverFields(user: user)
+            let knownAbout = cachedData as? CachedUserData
             self.apply(
                 key: key,
                 identity: identity,
