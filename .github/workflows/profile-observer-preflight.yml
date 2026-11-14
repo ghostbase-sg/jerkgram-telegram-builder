@@ -1,0 +1,31 @@
+name: Profile Observer v1 Preflight
+
+on:
+  push:
+    branches:
+      - dev/profile-time-machine-observer-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  observer-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax
+        run: |
+          python3 -m py_compile \
+            scripts/apply_jerkgram_profile_observer_v1.py \
+            scripts/verify_jerkgram_profile_observer_v1.py \
+            scripts/install_jerkgram_v12w_build133_probe_hook.py \
+            tests/test_jerkgram_profile_observer_v1.py
+      - name: Observer patch contracts
+        run: python3 -m unittest -v tests.test_jerkgram_profile_observer_v1
+      - name: Swift source invariants
+        run: |
+          grep -q 'qos: .utility' scripts/jerkgram_profile_observer_v1_payload/JerkgramProfileObserver.swift
+          grep -q 'CREATE TABLE IF NOT EXISTS snapshots' scripts/jerkgram_profile_observer_v1_payload/JerkgramProfileObserver.swift
+          ! grep -q 'UserDefaults.standard' scripts/jerkgram_profile_observer_v1_payload/JerkgramProfileObserver.swift
