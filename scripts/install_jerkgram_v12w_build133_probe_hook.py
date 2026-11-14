@@ -41,6 +41,8 @@ SOURCE_ORDERED = (
     "verify_jerkgram_v12zd_build137_performance1.py",
     "apply_jerkgram_build137_performance2.py",
     "verify_jerkgram_build137_performance2.py",
+    "apply_jerkgram_profile_observer_v1.py",
+    "verify_jerkgram_profile_observer_v1.py",
     "apply_jerkgram_v12w_build133_music_overlay1.py",
     "verify_jerkgram_v12w_build133_music_overlay1.py",
     "apply_jerkgram_push_click_bridge_v01.py",
@@ -133,6 +135,7 @@ def main() -> None:
     require(BASE_INSTALLER.is_file(), "base installer missing: " + str(BASE_INSTALLER))
     subprocess.check_call([sys.executable, "-m", "unittest", UNIT_TEST_MODULE], cwd=str(SCRIPT_DIR.parent))
     subprocess.check_call([sys.executable, "-m", "unittest", NO_ADS_TEST_MODULE], cwd=str(SCRIPT_DIR.parent))
+    subprocess.check_call([sys.executable, "-m", "unittest", "tests.test_jerkgram_profile_observer_v1"], cwd=str(SCRIPT_DIR.parent))
     subprocess.check_call([sys.executable, str(BASE_INSTALLER)])
     require(PROBE.is_file(), "probe missing: " + str(PROBE))
     PROBE.write_text(patch_probe(PROBE.read_text(encoding="utf-8")), encoding="utf-8")
