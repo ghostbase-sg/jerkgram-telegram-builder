@@ -161,9 +161,9 @@ final class JerkgramAnalyticsV3Core {
             // Validate persisted strings once; steady-state events already came
             // through append(). Normal lifecycle work avoids hundreds of date parses.
             let allowed = Set(["install_registered", "app_opened", "session_started", "session_engaged"])
-            decoded.events = decoded.events.suffix(500).filter {
-                Self.isV4($0.eventId) && allowed.contains($0.eventName) && $0.timestamp.isFinite
-                    && self.formatter.date(from: $0.occurredAt).map({ abs($0.timeIntervalSince1970 - $0.timestamp) <= 0.01 }) == true
+            decoded.events = decoded.events.suffix(500).filter { event in
+                Self.isV4(event.eventId) && allowed.contains(event.eventName) && event.timestamp.isFinite
+                    && self.formatter.date(from: event.occurredAt).map({ abs($0.timeIntervalSince1970 - event.timestamp) <= 0.01 }) == true
             }
             if let session = decoded.session,
                !session.foregroundSeconds.isFinite || session.foregroundSeconds < 0 || !session.lastSeenAt.isFinite {
