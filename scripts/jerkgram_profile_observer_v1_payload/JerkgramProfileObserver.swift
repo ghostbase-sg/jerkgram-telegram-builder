@@ -52,8 +52,11 @@ private struct JerkgramProfileObserverFields: Codable, Equatable {
         if old.displayName != self.displayName { result.append("displayName") }
         if old.username != self.username { result.append("username") }
         if old.usernames != self.usernames { result.append("usernames") }
-        if (old.aboutObserved != self.aboutObserved)
-            || (self.aboutObserved && old.about != self.about) { result.append("about") }
+        // First discovery of a previously unknown BIO is enrichment, not
+        // evidence that somebody changed it. It updates watched.state only.
+        if old.aboutObserved && self.aboutObserved && old.about != self.about {
+            result.append("about")
+        }
         if old.avatarResourceId != self.avatarResourceId { result.append("avatar") }
         if old.emojiStatus != self.emojiStatus { result.append("emojiStatus") }
         if old.premium != self.premium { result.append("premium") }
@@ -266,22 +269,25 @@ private final class JerkgramProfileObserver {
         observedAtMs: Int64
     ) {
         let keys = new.changedKeys(since: old)
-        guard !keys.isEmpty,
-              let encoded = try? self.encoder.encode(new),
+        guard let encoded = try? self.encoder.encode(new),
               self.runSQL("BEGIN IMMEDIATE") else { return }
 
-        var success = false
-        if let snapshot = self.prepare("""
-            INSERT INTO snapshots (account_id, peer_id, observed_at_ms, changed_keys, state)
-            VALUES (?, ?, ?, ?, ?)
-            """) {
-            self.bind(key.accountPeerId, at: 1, in: snapshot)
-            self.bind(key.peerId, at: 2, in: snapshot)
-            self.bind(observedAtMs, at: 3, in: snapshot)
-            self.bind(keys.joined(separator: ","), at: 4, in: snapshot)
-            self.bind(encoded, at: 5, in: snapshot)
-            success = sqlite3_step(snapshot) == SQLITE_DONE
-            _ = sqlite3_finalize(snapshot)
+        var success = true
+        if !keys.isEmpty {
+            if let snapshot = self.prepare("""
+                INSERT INTO snapshots (account_id, peer_id, observed_at_ms, changed_keys, state)
+                VALUES (?, ?, ?, ?, ?)
+                """) {
+                self.bind(key.accountPeerId, at: 1, in: snapshot)
+                self.bind(key.peerId, at: 2, in: snapshot)
+                self.bind(observedAtMs, at: 3, in: snapshot)
+                self.bind(keys.joined(separator: ","), at: 4, in: snapshot)
+                self.bind(encoded, at: 5, in: snapshot)
+                success = sqlite3_step(snapshot) == SQLITE_DONE
+                _ = sqlite3_finalize(snapshot)
+            } else {
+                success = false
+            }
         }
         if success, let tracked = self.prepare("""
             INSERT INTO watched (account_id, peer_id, started_at_ms, state)
