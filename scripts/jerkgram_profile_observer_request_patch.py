@@ -30,6 +30,16 @@ def patch_request_replay(source):
     if marker in source:
         if source.count(marker) != 1:
             raise RuntimeError('duplicate observer direct replay hook')
+        old_signature = '    func applyUpdatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?) {\n'
+        if old_signature in source:
+            source = _once(source, old_signature,
+                '    func applyUpdatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?, jerkgramObserverPublicName: JerkgramProfileObserverPublicName? = nil) {\n',
+                'upgrade atomic public name replay signature')
+        old_capture = 'jerkgramProfileObserverUpdatedUser(accountPeerId: accountPeerId, user: observedUser)'
+        if old_capture in source:
+            source = _once(source, old_capture,
+                'jerkgramProfileObserverUpdatedUser(accountPeerId: accountPeerId, user: observedUser, publicName: jerkgramObserverPublicName)',
+                'upgrade atomic public name replay capture')
         return source
     anchor = (
         '            updatePeersCustom(transaction: transaction, peers: [peer], accountPeerId: accountPeerId, update: { _, updated in\n'
@@ -38,14 +48,64 @@ def patch_request_replay(source):
     )
     if anchor not in source:
         anchor = anchor.replace(', accountPeerId: accountPeerId, update:', ', update:')
+    source = _once(source,
+        '    func applyUpdatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?) {\n',
+        '    func applyUpdatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?, jerkgramObserverPublicName: JerkgramProfileObserverPublicName? = nil) {\n',
+        'atomic public name replay signature')
     return _once(source, anchor, anchor +
         '            ' + marker + '\n'
         '            if let observedUser = transaction.getPeer(id) as? TelegramUser {\n'
-        '                jerkgramProfileObserverUpdatedUser(accountPeerId: accountPeerId, user: observedUser)\n'
+        '                jerkgramProfileObserverUpdatedUser(accountPeerId: accountPeerId, user: observedUser, publicName: jerkgramObserverPublicName)\n'
         '            }\n', '13.2 direct identity replay')
 
 
+def patch_request_public_name_interpreter(source):
+    marker = '// MARK: Jerkgram PROFILE_OBSERVER_ATOMIC_PUBLIC_NAME_V1'
+    if marker in source:
+        if source.count(marker) != 1:
+            raise RuntimeError('duplicate observer public name hook')
+        return source
+    # Restrict the closing anchor to applyUserName, leaving phone/emoji callers unchanged.
+    start = source.index('    mutating func applyUserName(') if '    mutating func applyUserName(' in source else -1
+    end = source.index('    mutating func applyUserPhone(', start) if start >= 0 else -1
+    if start < 0 or end < 0:
+        raise RuntimeError('missing 13.2 public name interpreter functions')
+    section = source[start:end]
+    section = _once(section, '        updatedState.updatePeer(', '        ' + marker + '\n        updatedState.updatePeer(', 'public name observation marker')
+    section = _once(section, '        })\n',
+        '        }, jerkgramObserverPublicName: JerkgramProfileObserverPublicName(firstName: updateUserNameData.firstName, lastName: updateUserNameData.lastName))\n',
+        'raw public name atomic metadata')
+    return source[:start] + section + source[end:]
+
+
+def patch_request_replay_dispatch(source):
+    marker = '// MARK: Jerkgram PROFILE_OBSERVER_PUBLIC_NAME_DISPATCH_V1'
+    if marker in source:
+        if source.count(marker) != 1:
+            raise RuntimeError('duplicate observer public name dispatch')
+        return source
+    return _once(source,
+        '                case let .UpdatePeer(id, f):\n'
+        '                    self.applyUpdatePeer(id, f)\n',
+        '                ' + marker + '\n'
+        '                case let .UpdatePeer(id, f, publicName):\n'
+        '                    self.applyUpdatePeer(id, f, jerkgramObserverPublicName: publicName)\n',
+        'atomic public name replay forwarding')
+
+
 def patch_request_intermediate_state(source):
+    name_marker = '// MARK: Jerkgram PROFILE_OBSERVER_PUBLIC_NAME_OPERATION_V1'
+    if name_marker not in source:
+        source = _once(source, '    case UpdatePeer(PeerId, (Peer?) -> Peer?)\n',
+            '    ' + name_marker + '\n'
+            '    case UpdatePeer(PeerId, (Peer?) -> Peer?, jerkgramObserverPublicName: JerkgramProfileObserverPublicName? = nil)\n', 'public name operation metadata')
+        source = _once(source,
+            '    mutating func updatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?) {\n'
+            '        self.addOperation(.UpdatePeer(id, f))\n',
+            '    mutating func updatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?, jerkgramObserverPublicName: JerkgramProfileObserverPublicName? = nil) {\n'
+            '        self.addOperation(.UpdatePeer(id, f, jerkgramObserverPublicName: jerkgramObserverPublicName))\n', 'public name operation constructor')
+        source = _once(source, '            case let .UpdatePeer(id, f):\n',
+            '            case let .UpdatePeer(id, f, _):\n', 'intermediate peer operation metadata pattern')
     marker = '// MARK: Jerkgram PROFILE_OBSERVER_INVALIDATION_STATE_V1'
     if marker in source:
         if source.count(marker) != 1:
@@ -163,6 +223,8 @@ def patch_request_account_context(source):
 
 REQUEST_PATCHES = {
     'submodules/TelegramCore/Sources/State/Sync/UpdateInterpreter.swift': patch_request_interpreter,
+    'submodules/TelegramCore/Sources/State/Sync/UpdateInterpreter+Peers.swift': patch_request_public_name_interpreter,
+    'submodules/TelegramCore/Sources/State/Sync/StateReplay.swift': patch_request_replay_dispatch,
     'submodules/TelegramCore/Sources/State/Sync/StateReplay+Peers.swift': patch_request_replay,
     'submodules/TelegramCore/Sources/Account/AccountIntermediateState.swift': patch_request_intermediate_state,
     'submodules/TelegramCore/Sources/State/AccountStateEventHub.swift': patch_request_event_hub,

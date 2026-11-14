@@ -121,6 +121,25 @@ struct JerkgramProfileRequestPolicy {
         return nil
     }
 }
+// Mutable only under the ingress Atomic lock until swap transfers exclusive
+// ownership to the draining queue. Reference storage avoids cloning a growing
+// Set for every incoming update batch.
+final class JerkgramProfileRequestIngress<Id: Hashable> {
+    private(set) var peers = Set<Id>()
+    private(set) var scheduled = false
+    private(set) var overflow = false
+
+    func insert(_ peerId: Id) -> Bool {
+        if self.peers.count < 4096 {
+            self.peers.insert(peerId)
+        } else if !self.peers.contains(peerId) {
+            self.overflow = true
+        }
+        guard !self.scheduled else { return false }
+        self.scheduled = true
+        return true
+    }
+}
 // END NATIVE REQUEST POLICY
 
 private final class JerkgramProfileObserverRequests {
@@ -129,12 +148,7 @@ private final class JerkgramProfileObserverRequests {
     private let queue = Queue(name: "Jerkgram.ProfileObserverRequests", qos: .utility)
     private let subscriptions = DisposableSet()
     private let request = MetaDisposable()
-    private struct Ingress {
-        var peers = Set<PeerId>()
-        var scheduled = false
-        var overflow = false
-    }
-    private let ingress = Atomic<Ingress>(value: Ingress())
+    private let ingress = Atomic<JerkgramProfileRequestIngress<PeerId>>(value: JerkgramProfileRequestIngress())
     private var wakeup: SwiftSignalKit.Timer?
     private var policy = JerkgramProfileRequestPolicy()
     private let cancelled = Atomic<Bool>(value: false)
@@ -166,19 +180,10 @@ private final class JerkgramProfileObserverRequests {
             guard let self, !self.cancelled.with({ $0 }), let account = self.account else { return }
             var schedule = false
             _ = self.ingress.modify { current in
-                var current = current
                 for peerId in peerIds where peerId.namespace == Namespaces.Peer.CloudUser && peerId != account.peerId {
                     // The registry admits potential watchers while loading.
                     guard jerkgramProfileObserverMightWatch(account: account, peerId: peerId) else { continue }
-                    if current.peers.count < 4096 {
-                        current.peers.insert(peerId)
-                    } else if !current.peers.contains(peerId) {
-                        current.overflow = true
-                    }
-                }
-                if (!current.peers.isEmpty || current.overflow) && !current.scheduled {
-                    current.scheduled = true
-                    schedule = true
+                    if current.insert(peerId) { schedule = true }
                 }
                 return current
             }
@@ -195,7 +200,7 @@ private final class JerkgramProfileObserverRequests {
     }
 
     private func drainInvalidations() {
-        let batch = self.ingress.swap(Ingress())
+        let batch = self.ingress.swap(JerkgramProfileRequestIngress())
         guard !self.isDisposed else { return }
         for peerId in batch.peers { self.enqueue(peerId) }
         if batch.overflow { self.reportOverflow() }
@@ -320,7 +325,7 @@ private final class JerkgramProfileObserverRequests {
         if self.cancelled.swap(true) { return }
         self.subscriptions.dispose()
         self.request.dispose()
-        _ = self.ingress.swap(Ingress())
+        _ = self.ingress.swap(JerkgramProfileRequestIngress())
         if let account = self.account {
             jerkgramProfileObserverStop(account: account)
         }

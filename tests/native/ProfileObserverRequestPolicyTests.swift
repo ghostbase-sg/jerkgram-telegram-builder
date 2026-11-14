@@ -61,4 +61,20 @@ expect(JerkgramProfileRequestPolicy.floodWait("FLOOD_PREMIUM_WAIT_12") == 12, "p
 expect(JerkgramProfileRequestPolicy.floodWait("USER_ID_INVALID") == nil, "permanent error isn't a cooldown")
 expect(JerkgramProfileRequestPolicy.floodWait("FLOOD_WAIT_nan") == nil, "invalid wait cannot reach timer")
 expect(JerkgramProfileRequestPolicy.floodWait("FLOOD_WAIT_1e300") == nil, "overflow cannot reach timer")
+// The Atomic owner mutates this same reference under its lock. A drain swaps
+// in a new reference before reading the old batch, so producers cannot mutate
+// a handed-off batch and incoming updates do not clone a growing Set.
+var ingressOwner = JerkgramProfileRequestIngress<Int64>()
+let originalIngress = ingressOwner
+expect(ingressOwner.insert(7), "first insert schedules one drain")
+expect(!ingressOwner.insert(7), "duplicate must not schedule another drain")
+for id in 0..<5000 { _ = ingressOwner.insert(Int64(id)) }
+expect(originalIngress === ingressOwner, "burst mutates one reference owner")
+expect(ingressOwner.peers.count == 4096 && ingressOwner.overflow, "ingress is bounded before queue admission")
+let drainedIngress = ingressOwner
+let drainedPeers = drainedIngress.peers
+// Dropping the Atomic's old reference transfers it to the consumer.
+ingressOwner = JerkgramProfileRequestIngress<Int64>()
+expect(ingressOwner.insert(6000), "new batch schedules its own drain")
+expect(drainedIngress.peers == drainedPeers && !drainedIngress.peers.contains(6000), "new producers cannot mutate drained batch")
 print("Profile observer request policy: all checks passed")

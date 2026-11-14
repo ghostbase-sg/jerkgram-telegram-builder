@@ -42,8 +42,14 @@ class ProfileObserverRequestsTests(unittest.TestCase):
         self.assertIn('case let .updateUser(updateUserData):', outputs['UpdateInterpreter.swift'])
         self.assertIn('jerkgramProfileObserverMightWatch(accountPeerId:', outputs['UpdateInterpreter.swift'])
         self.assertEqual(outputs['StateReplay+Peers.swift'].count('jerkgramProfileObserverUpdatedUser('), 1)
+        self.assertIn('publicName: jerkgramObserverPublicName', outputs['StateReplay+Peers.swift'])
+        self.assertIn('case let .UpdatePeer(id, f, publicName):', outputs['StateReplay.swift'])
+        self.assertIn('self.applyUpdatePeer(id, f, jerkgramObserverPublicName: publicName)', outputs['StateReplay.swift'])
+        self.assertIn('firstName: updateUserNameData.firstName, lastName: updateUserNameData.lastName', outputs['UpdateInterpreter+Peers.swift'])
         state = outputs['AccountIntermediateState.swift']
         self.assertIn('jerkgramObserverInvalidatedPeerIds.count < 4096', state)
+        self.assertIn('case let .UpdatePeer(id, f, _):', state)
+        self.assertIn('self.addOperation(.UpdatePeer(id, f, jerkgramObserverPublicName: jerkgramObserverPublicName))', state)
         self.assertIn('self.jerkgramObserverInvalidatedPeerIds = state.state.state.jerkgramObserverInvalidatedPeerIds', state)
         self.assertIn('jerkgramProfileObserverUnionInvalidations(', state)
         self.assertIn('self.jerkgramObserverInvalidatedPeerIds.isEmpty', state)
@@ -57,6 +63,13 @@ class ProfileObserverRequestsTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 patch('unsupported source')
 
+    def test_ingress_ownership_avoids_set_copy_per_batch(self):
+        source = PAYLOAD.read_text()
+        self.assertIn('final class JerkgramProfileRequestIngress<Id: Hashable>', source)
+        self.assertNotIn('struct Ingress', source)
+        self.assertNotIn('var current = current', source)
+        self.assertIn('self.ingress.swap(JerkgramProfileRequestIngress())', source)
+
     def test_request_is_narrow_and_cancellable(self):
         source = PAYLOAD.read_text()
         self.assertIn('automaticFloodWait: false', source)
@@ -68,6 +81,28 @@ class ProfileObserverRequestsTests(unittest.TestCase):
         self.assertIn('jerkgramProfileObserverReady', source)
         self.assertIn('jerkgramProfileObserverNewWatches', source)
         self.assertIn('DispatchTime.now().uptimeNanoseconds', source)
+
+    def test_native_public_name_operation_metadata(self):
+        if not shutil.which('swiftc'):
+            if os.environ.get('JERKGRAM_OBSERVER_SOURCE_ROOT') or os.environ.get('JERKGRAM_PINNED_SOURCE_ROOT'):
+                self.fail('native CI requires swiftc')
+            self.skipTest('native Swift compiler unavailable')
+        configured = os.environ.get('JERKGRAM_OBSERVER_SOURCE_ROOT') or os.environ.get('JERKGRAM_PINNED_SOURCE_ROOT')
+        source_root = Path(configured) if configured else ROOT.parent / 'release-1.2.0/source'
+        original = (source_root / 'submodules/TelegramCore/Sources/Account/AccountIntermediateState.swift').read_text()
+        patched = self.helper().patch_request_intermediate_state(original)
+        enum_case = next(line for line in patched.splitlines() if line.startswith('    case UpdatePeer('))
+        start = patched.index('    mutating func updatePeer(_ id:')
+        end = patched.index('\n    }\n', start) + len('\n    }\n')
+        method = patched[start:end]
+        fixture = (ROOT / 'tests/native/ProfileObserverPublicNameMetadataTests.swift').read_text()
+        fixture = fixture.replace('/* ENUM_CASE */', enum_case).replace('/* UPDATE_METHOD */', method)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'main.swift'
+            path.write_text(fixture)
+            binary = Path(directory) / 'public-name-tests'
+            subprocess.run(['swiftc', str(path), '-o', str(binary)], check=True)
+            subprocess.run([str(binary)], check=True)
 
     def test_native_policy(self):
         if not shutil.which('swiftc'):
