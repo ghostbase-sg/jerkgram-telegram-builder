@@ -1,0 +1,20 @@
+{
+  "upstream_sha": "24638bc69bd083981b178dd1e7f921eebbf7fc46",
+  "parent_builder_commit": "243e367a3d5fa7cf353e11bb58db677525df31cf",
+  "production_v3_delivery": false,
+  "owners": {
+    "submodules/TelegramUI/Sources/AppDelegate.swift": {
+      "before_sha256": "925b72fbb80fa60c973326b67b30687c5055634d5dc3e3f590562047bec8ec87",
+      "after_sha256": "6324199e69345f115410bd780ef8d58cf7856588d612356fa20615e59152b371"
+    },
+    "submodules/TelegramPresentationData/Sources/JerkgramStrings.swift": {
+      "before_sha256": "3dac303aa5b5fa56ebe6acf29b7f1c5a688cd52704df7f088ab97d02e6a8b9b5",
+      "after_sha256": "758d68e0fdd7616a700496d8c0bc12bfcd708dca91c00a1850cacf1dd1f31465"
+    }
+  },
+  "payloads": {
+    "JerkgramAnalyticsV3.swift": "7a08c0e96f744ca12f7a691cc6729f1b0afba0a43e25d56b051c20cf7db1eba8",
+    "JerkgramAnalyticsV3Bridge.swift": "4058c704c64d6db171e8bfe96298ba20aa3d400c9194ffc3116dab3bed12874f",
+    "JerkgramAnalyticsV3InstallationProbe.swift": "c51a1a4b3fc952cbb627890e775fdaf98babd692c5708af9d60af1b5f7d0860b"
+  }
+}

@@ -1,0 +1,84 @@
+name: Analytics v3 / Disabled Production Integration
+
+on:
+  push:
+    branches:
+      - dev/analytics-v3-13.2
+  workflow_dispatch:
+    inputs:
+      compile_app:
+        description: Compile the full current app after native tests (no IPA publication)
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: analytics-v3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-components:
+    runs-on: xcode-27
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      JERKGRAM_REQUIRE_NATIVE_SWIFT: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify current pinned compiler and execute real native components
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          test "$(xcodebuild -version | head -1)" = "Xcode 27.1"
+          xcrun --find swiftc
+          python3 -m unittest -v tests.test_jerkgram_analytics_v3_integration tests.test_analytics_v3_native
+          python3 tests/analytics_v3_integration_native/run.py
+      - name: Upload actual loopback payload and native mock results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-v3-native-loopback-evidence
+          path: artifacts/analytics-v3-native/*.json
+          if-no-files-found: warn
+
+  full-app-compile:
+    needs: native-components
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.compile_app }}
+    runs-on: xcode-27
+    timeout-minutes: 180
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      USE_BAZEL_VERSION: 9.2.0
+      BAZEL_BIN: bazelisk
+      JERKGRAM_TELEGRAM_API_ID: ${{ secrets.JERKGRAM_TELEGRAM_API_ID }}
+      JERKGRAM_TELEGRAM_API_HASH: ${{ secrets.JERKGRAM_TELEGRAM_API_HASH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify pinned current toolchain
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          test "$(xcodebuild -version | head -1)" = "Xcode 27.1"
+          if ! command -v bazelisk >/dev/null 2>&1; then brew install bazelisk; fi
+      - name: Prepare actual pinned Telegram 13.2 source
+        run: bash scripts/prepare_source_official.sh
+      - name: Current native product gate and v3 full app compile
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash scripts/build_jerkgram_analytics_v3.sh 2>&1 | tee artifacts/analytics-v3-build.log
+      - name: Upload source/compiler evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-v3-compile-evidence
+          path: |
+            artifacts/analytics-v3-build.log
+            patches/analytics-v3-integration.sha256.json
+            work/swiftgram-src/submodules/TelegramUI/Sources/JerkgramAnalyticsV3*.swift
+            work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift
+            work/swiftgram-src/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
+          if-no-files-found: warn
