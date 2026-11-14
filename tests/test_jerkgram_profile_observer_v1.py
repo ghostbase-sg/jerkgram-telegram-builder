@@ -57,7 +57,7 @@ class ProfileObserverPatchTests(unittest.TestCase):
         self.assertIn("guard enroll || self.watched.contains(key) else { return }", swift)
         self.assertIn("guard self.watched.contains(key) else { continue }", swift)
         self.assertIn('return ["baseline"]', swift)
-        self.assertIn("if next == previous { return }", swift)
+        self.assertIn("if let previous, next == previous { return }", swift)
         self.assertIn("qos: .utility", swift)
         self.assertNotIn("UserDefaults.standard", swift)
         self.assertNotIn("TelegramUserPresence", swift)
