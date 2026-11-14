@@ -306,8 +306,8 @@ final class JerkgramProfileHistoryStore {
         }
         if oldData != nil && changed.isEmpty && enriched.isEmpty { return true }
         guard !next.isEmpty, let payload = try? self.encoder.encode(next) else { return self.failure("empty-or-unencodable-observation") }
-        let kind = oldData == nil || !changed.isEmpty ? "snapshot" : "enrichment"
-        let keys = oldData == nil ? ["baseline"] : (kind == "enrichment" ? enriched.sorted() : changed.sorted())
+        let kind = old.isEmpty || !changed.isEmpty ? "snapshot" : "enrichment"
+        let keys = old.isEmpty ? ["baseline"] : (kind == "enrichment" ? enriched.sorted() : changed.sorted())
         return self.transaction {
             guard self.insertEvent(peerId: observation.peerId, observedAtMs: observation.observedAtMs, kind: kind, source: observation.source, payload: payload, changedFields: keys),
                   let update = self.prepare("INSERT INTO watched(peer_id,started_at_ms,state) VALUES(?,?,?) ON CONFLICT(peer_id) DO UPDATE SET state=excluded.state") else { return false }
@@ -530,7 +530,7 @@ final class JerkgramProfileHistoryStore {
                 let originalState = self.data(statement, 3)
                 let record: [String: Any] = ["table": table, "sequence": ordinal, "peer_id": peer, "account_id": self.accountPeerId, "observed_at_ms": timestamp, "state": originalState, "changed_keys": self.text(statement, 4)]
                 guard let payload = try? PropertyListSerialization.data(fromPropertyList: record, format: .binary, options: 0),
-                      self.archiveObserverRow(key: "observer-v1:" + sourcePath + ":" + table + ":" + String(ordinal), peerId: peer, timestamp: timestamp, payload: payload, state: originalState, kind: "legacy_observer_" + table) else {
+                      self.archiveObserverRow(key: "observer-v1:" + sourcePath + ":" + table + ":" + String(ordinal), peerId: peer, timestamp: timestamp, payload: payload, state: originalState, kind: "legacy_observer_" + table, enrollUnknown: table == "watched") else {
                     sqlite3_finalize(statement)
                     return false
                 }
@@ -542,13 +542,16 @@ final class JerkgramProfileHistoryStore {
         return true
     }
 
-    private func archiveObserverRow(key: String, peerId: Int64, timestamp: Int64, payload: Data, state: Data, kind: String) -> Bool {
+    private func archiveObserverRow(key: String, peerId: Int64, timestamp: Int64, payload: Data, state: Data, kind: String, enrollUnknown: Bool) -> Bool {
         let fingerprint = self.fingerprint(payload)
         guard let lookup = self.prepare("SELECT payload FROM legacy_sources WHERE source_key=? AND fingerprint=?") else { return false }
         guard self.bind(key, 1, lookup), self.bind(fingerprint, 2, lookup) else { sqlite3_finalize(lookup); return false }
         var code = sqlite3_step(lookup)
         while code == SQLITE_ROW {
-            if self.data(lookup, 0) == payload { sqlite3_finalize(lookup); return true }
+            if self.data(lookup, 0) == payload {
+                sqlite3_finalize(lookup)
+                return !enrollUnknown || self.transaction { self.restoreUnknownWatched(peerId: peerId, startedAtMs: timestamp) }
+            }
             code = sqlite3_step(lookup)
         }
         sqlite3_finalize(lookup)
@@ -558,8 +561,18 @@ final class JerkgramProfileHistoryStore {
             let success = self.bind(peerId, 1, insert) && self.bind(key, 2, insert) && self.bind(fingerprint, 3, insert) && self.bind(payload, 4, insert) && self.finish(insert)
             sqlite3_finalize(insert)
             guard success, let db = self.db else { return false }
-            return self.insertEvent(peerId: peerId, observedAtMs: timestamp, kind: kind, source: "legacy-observer-v1-unverified", payload: state, changedFields: [], legacySource: sqlite3_last_insert_rowid(db), ordinal: 0) && self.protectFiles()
+            guard self.insertEvent(peerId: peerId, observedAtMs: timestamp, kind: kind, source: "legacy-observer-v1-unverified", payload: state, changedFields: [], legacySource: sqlite3_last_insert_rowid(db), ordinal: 0) else { return false }
+            if enrollUnknown && !self.restoreUnknownWatched(peerId: peerId, startedAtMs: timestamp) { return false }
+            return self.protectFiles()
         }
+    }
+
+    private func restoreUnknownWatched(peerId: Int64, startedAtMs: Int64) -> Bool {
+        guard let statement = self.prepare("INSERT OR IGNORE INTO watched(peer_id,started_at_ms,state) VALUES(?,?,?)") else { return false }
+        defer { sqlite3_finalize(statement) }
+        // Preserve the opt-in, but no untrusted legacy values. This placeholder
+        // creates no event; its first actual observation supplies a new baseline.
+        return self.bind(peerId, 1, statement) && self.bind(startedAtMs, 2, statement) && self.bind(Data("{}".utf8), 3, statement) && self.finish(statement)
     }
 
     private func legacyOwner(_ key: String) -> (family: String, peerId: Int64)? {
