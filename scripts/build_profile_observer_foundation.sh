@@ -17,6 +17,7 @@ python3 ../../scripts/pin_jg13_dependencies.py --verify
 python3 ../../scripts/prepare_jg13_build_rules.py
 "${BAZEL_BIN:-bazelisk}" build \
   -c opt --ios_multi_cpus=arm64 --check_direct_dependencies=off \
+  --experimental_ui_max_stdouterr_bytes=10485760 \
   --//Telegram:disableExtensions=false --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing --define=buildNumber=183 //Telegram:Telegram
 cd ../..
