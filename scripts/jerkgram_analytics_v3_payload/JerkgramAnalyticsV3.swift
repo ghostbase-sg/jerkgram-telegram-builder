@@ -509,7 +509,7 @@ final class JerkgramAnalyticsV3FileStorage {
             #if os(iOS)
             try FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true,
                 attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], atPath: self.directory.path)
+            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: self.directory.path)
             #else
             try FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
             #endif
@@ -520,7 +520,7 @@ final class JerkgramAnalyticsV3FileStorage {
             var file = self.file
             try? file.setResourceValues(excluded)
             #if os(iOS)
-            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], atPath: self.file.path)
+            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: self.file.path)
             #endif
             // Only a previous v3-development blob is migrated. v1 is untouched.
             self.legacyDefaults?.removeObject(forKey: "jerkgram.analytics.v3.state")

@@ -13,6 +13,19 @@ ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD = ROOT / 'scripts/jerkgram_analytics_v3_payload/JerkgramAnalyticsV3.swift'
 
 class AnalyticsV3NativeTests(unittest.TestCase):
+    def test_actual_ios_sdk_typecheck(self):
+        if not shutil.which('xcrun'):
+            if os.environ.get('JERKGRAM_REQUIRE_NATIVE_SWIFT') == '1':
+                self.fail('Actual iOS SDK compiler required by native CI')
+            self.skipTest('Xcode iOS SDK unavailable')
+        sdk = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'], text=True).strip()
+        # Compile the real iOS-only storage/protection code before the full app.
+        # The desktop runtime fixture deliberately cannot exercise #if os(iOS).
+        subprocess.run(['xcrun', '--sdk', 'iphoneos', 'swiftc', '-sdk', sdk,
+                        '-target', 'arm64-apple-ios15.0', '-typecheck', str(PAYLOAD),
+                        str(PAYLOAD.with_name('JerkgramAnalyticsV3InstallationProbe.swift'))],
+                       check=True, timeout=180)
+
     def test_production_transport_stays_disabled(self):
         source = PAYLOAD.read_text()
         self.assertIn('static let productionTransportEnabled = false', source)
