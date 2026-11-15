@@ -467,6 +467,21 @@ final class JerkgramAnalyticsV3FileStorage {
     init(directory: URL, legacyDefaults: UserDefaults? = nil) {
         self.directory = directory; self.legacyDefaults = legacyDefaults
     }
+    static func isMissingFile(_ error: NSError) -> Bool {
+        // Foundation uses both Cocoa missing-file codes and direct ENOENT.
+        // A conflicting underlying error must never mint a replacement receipt.
+        let missing: (NSError) -> Bool = { value in
+            (value.domain == NSPOSIXErrorDomain && value.code == 2)
+                || (value.domain == NSCocoaErrorDomain
+                    && (value.code == CocoaError.fileNoSuchFile.rawValue
+                        || value.code == CocoaError.fileReadNoSuchFile.rawValue))
+        }
+        guard missing(error) else { return false }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            guard missing(underlying), underlying.userInfo[NSUnderlyingErrorKey] == nil else { return false }
+        }
+        return true
+    }
     func load() -> JerkgramAnalyticsV3Core.LoadResult {
         var isDirectory = ObjCBool(false)
         if FileManager.default.fileExists(atPath: self.directory.path, isDirectory: &isDirectory), !isDirectory.boolValue {
@@ -480,11 +495,7 @@ final class JerkgramAnalyticsV3FileStorage {
             return .data(bytes)
         } catch {
             let error = error as NSError
-            if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError,
-               underlying.domain == NSPOSIXErrorDomain, underlying.code != 2 {
-                return .unreadable
-            }
-            guard error.domain == NSCocoaErrorDomain && error.code == CocoaError.fileReadNoSuchFile.rawValue else {
+            guard Self.isMissingFile(error) else {
                 return .unreadable
             }
             if let legacy = self.legacyDefaults?.data(forKey: "jerkgram.analytics.v3.state") {

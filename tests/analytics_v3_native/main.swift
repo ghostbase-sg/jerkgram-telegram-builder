@@ -281,6 +281,15 @@ do {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     let store = JerkgramAnalyticsV3FileStorage(directory: directory)
     defer { try? FileManager.default.removeItem(at: directory) }
+    for code in [CocoaError.fileNoSuchFile.rawValue, CocoaError.fileReadNoSuchFile.rawValue] {
+        expect(JerkgramAnalyticsV3FileStorage.isMissingFile(NSError(domain: NSCocoaErrorDomain, code: code)), "Cocoa missing-file variants")
+        let denied = NSError(domain: NSPOSIXErrorDomain, code: 13)
+        expect(!JerkgramAnalyticsV3FileStorage.isMissingFile(NSError(domain: NSCocoaErrorDomain, code: code, userInfo: [NSUnderlyingErrorKey: denied])), "wrapped permission error is not missing")
+    }
+    expect(JerkgramAnalyticsV3FileStorage.isMissingFile(NSError(domain: NSPOSIXErrorDomain, code: 2)), "direct ENOENT")
+    for code in [13, 20, 5] {
+        expect(!JerkgramAnalyticsV3FileStorage.isMissingFile(NSError(domain: NSPOSIXErrorDomain, code: code)), "access, not-directory and I/O errors fail closed")
+    }
     if case .absent = store.load() {} else { preconditionFailure("fresh persistent store") }
     let bytes = Data("durable-state".utf8)
     expect(store.save(bytes), "atomic file write")
