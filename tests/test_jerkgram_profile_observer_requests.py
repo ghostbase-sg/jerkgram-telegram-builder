@@ -12,6 +12,20 @@ HELPER = ROOT / 'scripts/jerkgram_profile_observer_request_patch.py'
 
 
 class ProfileObserverRequestsTests(unittest.TestCase):
+    def test_observer_imports_match_telegram_core_access_policy(self):
+        # Swift's full-module compiler rejects mixed implicit/internal imports.
+        # Portable component fixtures cannot see the surrounding TelegramCore.
+        configured = os.environ.get('JERKGRAM_OBSERVER_SOURCE_ROOT') or os.environ.get('JERKGRAM_PINNED_SOURCE_ROOT')
+        source = Path(configured) if configured else ROOT.parent / 'release-1.2.0/source'
+        owner = source / 'submodules/TelegramCore/Sources/Account/Account.swift'
+        if not owner.exists():
+            self.fail('pinned TelegramCore import owner is required')
+        self.assertIn('internal import TelegramApi', owner.read_text())
+        for name in ('JerkgramProfileObserver.swift', 'JerkgramProfileObserverRequests.swift'):
+            imports = [line.strip() for line in (PAYLOAD.parent / name).read_text().splitlines()
+                       if line.strip().endswith('import TelegramApi')]
+            self.assertEqual(imports, ['internal import TelegramApi'], name)
+
     def helper(self):
         spec = importlib.util.spec_from_file_location('observer_request_patch', HELPER)
         module = importlib.util.module_from_spec(spec)

@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 // MARK: Jerkgram PROFILE_TIME_MACHINE_OBSERVER_V1
 // Foundation only: no UI/polling/notification/premium changes. Actual received
