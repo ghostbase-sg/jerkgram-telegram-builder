@@ -574,11 +574,17 @@ final class JerkgramProfileHistoryStore {
 
     private func archiveObserverRow(key: String, peerId: Int64, timestamp: Int64, payload: Data, state: Data, kind: String, enrollUnknown: Bool) -> Bool {
         let fingerprint = self.fingerprint(payload)
-        guard let lookup = self.prepare("SELECT payload FROM legacy_sources WHERE source_key=? AND fingerprint=?") else { return false }
-        guard self.bind(key, 1, lookup), self.bind(fingerprint, 2, lookup) else { sqlite3_finalize(lookup); return false }
+        // Binary plist dictionary order is not stable. The archived row still
+        // retains its exact state Data; wrapper byte order is not a new revision.
+        // Stream this source key's revisions, including older noncanonical ones.
+        guard let lookup = self.prepare("SELECT payload FROM legacy_sources WHERE source_key=?") else { return false }
+        guard self.bind(key, 1, lookup) else { sqlite3_finalize(lookup); return false }
+        let record = (try? PropertyListSerialization.propertyList(from: payload, options: [], format: nil)) as? NSDictionary
         var code = sqlite3_step(lookup)
         while code == SQLITE_ROW {
-            if self.data(lookup, 0) == payload {
+            let archived = self.data(lookup, 0)
+            let previous = (try? PropertyListSerialization.propertyList(from: archived, options: [], format: nil)) as? NSDictionary
+            if archived == payload || (record != nil && previous != nil && record!.isEqual(previous!)) {
                 sqlite3_finalize(lookup)
                 return !enrollUnknown || self.transaction { self.restoreUnknownWatched(peerId: peerId, startedAtMs: timestamp) }
             }
