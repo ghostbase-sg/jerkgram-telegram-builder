@@ -54,6 +54,13 @@ class InstallationTests(unittest.TestCase):
             ui = (root/'submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift').read_text()
             self.assertIn('ghostBaseRecordObservedProfileV11G(', ui)
             self.assertIn('jerkgramProfileObserverBegin(account: self.context.account, peerId: peer.id)', ui)
+            self.assertTrue('jerkgramProfileObserverStartedPeerId: EnginePeer.Id?' in ui,
+                            'Screen enrollment must use the TelegramCore-visible EnginePeer.Id')
+            self.assertTrue('jerkgramProfileObserverStartedPeerId: PeerId?' not in ui,
+                            'PeerInfoScreen does not import the Postbox PeerId type')
+            old_ui = ui.replace('jerkgramProfileObserverStartedPeerId: EnginePeer.Id?',
+                                'jerkgramProfileObserverStartedPeerId: PeerId?')
+            self.assertEqual(installer.patch_profile_ui(old_ui), ui)
 
     def test_bad_last_anchor_does_not_modify_any_owner(self):
         with tempfile.TemporaryDirectory() as directory:

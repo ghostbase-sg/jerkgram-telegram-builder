@@ -105,6 +105,12 @@ def patch_full_user(source):
 def patch_profile_ui(source):
     marker = '// MARK: Jerkgram PROFILE_OBSERVER_FIRST_OPEN_V1'
     if marked(source, marker, ['jerkgramProfileObserverBegin(', 'jerkgramProfileObserverStartedPeerId']):
+        if '    private var jerkgramProfileObserverStartedPeerId: PeerId?\n' in source:
+            return replace_once(source,
+                '    private var jerkgramProfileObserverStartedPeerId: PeerId?\n',
+                '    private var jerkgramProfileObserverStartedPeerId: EnginePeer.Id?\n', 'module-visible enrollment identity')
+        require('    private var jerkgramProfileObserverStartedPeerId: EnginePeer.Id?\n' in source,
+                'unsupported screen enrollment identity')
         return source
     anchor = ('            ghostBaseRecordObservedProfileV11G(\n'
               '                accountPeerId: self.context.account.peerId,\n'
@@ -117,7 +123,7 @@ def patch_profile_ui(source):
         '                jerkgramProfileObserverBegin(account: self.context.account, peerId: peer.id)\n'
         '            }\n', 'first-open enrollment')
     return replace_once(source, '    private(set) var data: PeerInfoScreenData?\n',
-        '    private(set) var data: PeerInfoScreenData?\n    private var jerkgramProfileObserverStartedPeerId: PeerId?\n', 'screen enrollment gate')
+        '    private(set) var data: PeerInfoScreenData?\n    private var jerkgramProfileObserverStartedPeerId: EnginePeer.Id?\n', 'screen enrollment gate')
 
 
 def patch_account(source):
