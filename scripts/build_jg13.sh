@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+product_build=$(python3 -c 'import json; print(json.load(open("jerkgram-migration.json"))["build_number"])')
 # One exact source projection and one current native/component gate.
 # Exhaustive historical suites remain in no-ads-native.yml (manual regression).
 python3 scripts/materialize_jg132_product.py
@@ -31,7 +32,7 @@ trap preserve_compiled_ipa EXIT
   --//Telegram:disableExtensions=false \
   --//Telegram:disableProvisioningProfiles=true \
   --features=disable_legacy_signing \
-  --define=buildNumber=183 \
+  --define=buildNumber="$product_build" \
   //Telegram:Telegram
 test -f bazel-bin/Telegram/Telegram.ipa
 # Inspect retained build actions without a second build or target analysis.

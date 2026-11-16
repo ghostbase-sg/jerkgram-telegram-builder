@@ -2,6 +2,7 @@
 # Experimental current product + v3 integration. Does not package/publish an IPA.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+product_build=$(python3 -c 'import json; print(json.load(open("jerkgram-migration.json"))["build_number"])')
 export DEVELOPER_DIR=/Applications/Xcode_27.1.app/Contents/Developer
 export USE_BAZEL_VERSION=9.2.0
 test "$(xcodebuild -version | head -1)" = "Xcode 27.1"
@@ -22,5 +23,5 @@ python3 ../../scripts/prepare_jg13_build_rules.py
   -c opt --ios_multi_cpus=arm64 --check_direct_dependencies=off \
   --experimental_ui_max_stdouterr_bytes=10485760 \
   --//Telegram:disableExtensions=false --//Telegram:disableProvisioningProfiles=true \
-  --features=disable_legacy_signing --define=buildNumber=183 //Telegram:Telegram
+  --features=disable_legacy_signing --define=buildNumber="$product_build" //Telegram:Telegram
 python3 ../../scripts/verify_jerkgram_analytics_v3.py

@@ -63,7 +63,7 @@ final class World {
                 let request = Request(data, completion); self.requests.append(request)
                 return JerkgramAnalyticsV3Cancellation { request.cancelled = true }
             })
-        return JerkgramAnalyticsV3Core(metadata: .init(appVersion: "1.3.1-beta.2", build: "183", osVersion: "27.1", osMajor: 27, deviceRegion: "RU", deviceModel: "iPhone18,1"), dependencies: dependencies, deliveryEnabled: delivery)
+        return JerkgramAnalyticsV3Core(metadata: .init(appVersion: "1.2.1", build: "184", osVersion: "27.1", osMajor: 27, deviceRegion: "RU", deviceModel: "iPhone18,1"), dependencies: dependencies, deliveryEnabled: delivery)
     }
     var persisted: [String: Any] { (try! JSONSerialization.jsonObject(with: bytes!)) as! [String: Any] }
     var events: [[String: Any]] { persisted["events"] as! [[String: Any]] }
@@ -101,7 +101,7 @@ if CommandLine.arguments.count == 3 {
             task.resume()
             return JerkgramAnalyticsV3Cancellation { task.cancel() }
         })
-    let core = JerkgramAnalyticsV3Core(metadata: .init(appVersion: "1.3.1-beta.2", build: "183", osVersion: "27.1", osMajor: 27), dependencies: dependencies, deliveryEnabled: scenario == "disabled" ? JerkgramAnalyticsV3.productionTransportEnabled : true)
+    let core = JerkgramAnalyticsV3Core(metadata: .init(appVersion: "1.2.1", build: "184", osVersion: "27.1", osMajor: 27), dependencies: dependencies, deliveryEnabled: scenario == "disabled" ? JerkgramAnalyticsV3.productionTransportEnabled : true)
     core.initialize(enabled: true, evidence: .fresh); core.didBecomeActive(); world.advance(60)
     if scenario == "disabled" {
         world.advance(600)
@@ -152,7 +152,7 @@ do {
     let first = w.requests[0]
     let body = try! JSONSerialization.jsonObject(with: first.data) as! [String: Any]
     expect(body["schema"] as? Int == 3 && body["platform"] as? String == "ios", "contract envelope")
-    expect(body["appVersion"] as? String == "1.3.1-beta.2", "Jerkgram release identity")
+    expect(body["appVersion"] as? String == "1.2.1", "Jerkgram release identity")
     expect(first.data.count <= 16 * 1024 && (body["events"] as! [Any]).count <= 20, "wire bounds")
     let expectedKeys = Set(["schema", "platform", "installationId", "appVersion", "build", "osVersion", "osMajor", "deviceRegion", "deviceModel", "events"])
     expect(Set(body.keys) == expectedKeys, "only contract fields are transmitted")

@@ -75,16 +75,16 @@ jobs:
           set -euo pipefail
           test -f work/swiftgram-src/bazel-bin/Telegram/Telegram.ipa
           python3 scripts/package_jg13.py work/swiftgram-src/bazel-bin/Telegram/Telegram.ipa
-          test -f artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa
-          cp artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa artifacts/Jerkgram-1.2.0-Build183-ANALYTICS-V3-TEST.ipa
+          test -f artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa
+          cp artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa artifacts/Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST.ipa
           printf '%s\n' 'Analytics v3 test build: production transport remains OFF, device runtime not yet tested' > artifacts/ANALYTICS-V3-TEST-README.txt
-          shasum -a 256 artifacts/Jerkgram-1.2.0-Build183-ANALYTICS-V3-TEST.ipa > artifacts/ANALYTICS-V3-TEST-SHA256.txt
+          shasum -a 256 artifacts/Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST.ipa > artifacts/ANALYTICS-V3-TEST-SHA256.txt
       - name: Upload verified Analytics v3 test IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build183-ANALYTICS-V3-TEST
+          name: Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST
           path: |
-            artifacts/Jerkgram-1.2.0-Build183-ANALYTICS-V3-TEST.ipa
+            artifacts/Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST.ipa
             artifacts/ANALYTICS-V3-TEST-README.txt
             artifacts/ANALYTICS-V3-TEST-SHA256.txt
           if-no-files-found: error

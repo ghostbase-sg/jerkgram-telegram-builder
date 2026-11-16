@@ -1,4 +1,4 @@
-name: Jerkgram 1.2.0 Stable / Telegram 13.2 / Build183
+name: Jerkgram 1.2.1 Stable / Telegram 13.2 / Build184
 
 on:
   workflow_dispatch:
@@ -57,7 +57,7 @@ jobs:
           bazelisk --version
       - name: Prepare clean pinned Official Telegram 13.2 source
         run: bash scripts/prepare_source_official.sh
-      - name: Build Jerkgram 1.2.0 Stable
+      - name: Build Jerkgram 1.2.1 Stable
         run: |
           set -euo pipefail
           mkdir -p artifacts
@@ -66,7 +66,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build183-STABLE-diagnostics
+          name: Jerkgram-1.2.1-Build184-STABLE-diagnostics
           path: |
             artifacts/build.log
             artifacts/*-RAW-UNVERIFIED.json
@@ -258,7 +258,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build183-RAW-UNVERIFIED
+          name: Jerkgram-1.2.1-Build184-RAW-UNVERIFIED
           path: |
             artifacts/*-RAW-UNVERIFIED.ipa
             artifacts/*-RAW-UNVERIFIED.json
@@ -268,17 +268,17 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build183-PACKAGING-FAILED-UNVERIFIED
-          path: artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa
+          name: Jerkgram-1.2.1-Build184-PACKAGING-FAILED-UNVERIFIED
+          path: artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa
           if-no-files-found: ignore
           retention-days: 90
       - name: Upload verified IPA
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.0-Build183-STABLE
+          name: Jerkgram-1.2.1-Build184-STABLE
           path: |
-            artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa
-            artifacts/Jerkgram-1.2.0-Build183-STABLE.json
+            artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa
+            artifacts/Jerkgram-1.2.1-Build184-STABLE.json
           if-no-files-found: error
           retention-days: 90
