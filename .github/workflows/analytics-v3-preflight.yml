@@ -34,7 +34,7 @@ jobs:
           xcodebuild -version
           test "$(xcodebuild -version | head -1)" = "Xcode 27.1"
           xcrun --find swiftc
-          python3 -m unittest -v tests.test_jerkgram_analytics_v3_integration tests.test_analytics_v3_native
+          python3 -m unittest -v tests.test_jerkgram_analytics_v3_integration tests.test_analytics_v3_native tests.test_jg13_package_digest tests.test_jg13_recovery_package
           python3 tests/analytics_v3_integration_native/run.py
       - name: Upload actual loopback payload and native mock results
         if: always()
@@ -129,3 +129,52 @@ jobs:
             work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift
             work/swiftgram-src/submodules/TelegramPresentationData/Sources/JerkgramStrings.swift
           if-no-files-found: warn
+
+  package-existing-ipa:
+    needs: native-components
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[package-existing-ipa]') }}
+    runs-on: xcode-27
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download preserved compiled IPA without rebuilding
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 43814501431
+          name: Jerkgram-1.2.1-Build184-RAW-UNVERIFIED
+          path: recovered-input
+      - name: Verify compiled provenance and package existing IPA
+        run: |
+          set -euo pipefail
+          python3 scripts/repackage_jg13_recovery.py --input recovered-input --source-run 43814501431 --source-commit 78a9a3432df47fbde4c21d5a7bcf022175577c42
+          cp artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa artifacts/Jerkgram-1.2.1-Build184-TEST.ipa
+          cp artifacts/Jerkgram-1.2.1-Build184-STABLE.json artifacts/Jerkgram-1.2.1-Build184-TEST.json
+          shasum -a 256 artifacts/Jerkgram-1.2.1-Build184-TEST.ipa > artifacts/Jerkgram-1.2.1-Build184-TEST-SHA256.txt
+      - name: Upload verified combined test IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.2.1-Build184-TEST
+          path: |
+            artifacts/Jerkgram-1.2.1-Build184-TEST.ipa
+            artifacts/Jerkgram-1.2.1-Build184-TEST.json
+            artifacts/Jerkgram-1.2.1-Build184-TEST-SHA256.txt
+          if-no-files-found: error
+          retention-days: 90
+      - name: Preserve packaging recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.2.1-Build184-PACKAGE-RECOVERY
+          path: |
+            recovered-input/*.json
+            artifacts/*-RAW-UNVERIFIED.ipa
+            artifacts/*-RAW-UNVERIFIED.json
+          if-no-files-found: warn
+          retention-days: 90

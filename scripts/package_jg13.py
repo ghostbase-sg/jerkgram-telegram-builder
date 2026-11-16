@@ -61,10 +61,31 @@ def verify(ipa, config):
 
 def preserve_raw_ipa(compiled, out, artifact_name, config):
     raw = out / (artifact_name + "-RAW-UNVERIFIED.ipa")
-    shutil.copy2(Path(compiled), raw)
-    raw_report = dict(config, ci_run_id=os.environ.get("GITHUB_RUN_ID"), ci_commit=os.environ.get("GITHUB_SHA"), ipa=raw.name, ipa_sha256=sha256_file(raw), status="RAW COMPILED IPA; PACKAGING AND VERIFICATION NOT PASSED")
-    raw.with_suffix(".json").write_text(json.dumps(raw_report, indent=2) + "\n")
+    compiled_digest = sha256_file(compiled)
+    if raw.exists():
+        require(sha256_file(raw) == compiled_digest, "Refusing to overwrite a different raw compiled archive")
+    else:
+        shutil.copy2(Path(compiled), raw)
+    report_path = raw.with_suffix(".json")
+    if report_path.exists():
+        require(json.loads(report_path.read_text())["ipa_sha256"] == compiled_digest, "Raw archive provenance digest mismatch")
+    else:
+        raw_report = dict(config, ci_run_id=os.environ.get("GITHUB_RUN_ID"), ci_commit=os.environ.get("GITHUB_SHA"), ipa=raw.name, ipa_sha256=compiled_digest, status="RAW COMPILED IPA; PACKAGING AND VERIFICATION NOT PASSED")
+        report_path.write_text(json.dumps(raw_report, indent=2) + "\n")
     return raw
+
+
+def writable_candidate(raw, ipa):
+    # Bazel outputs (and copy2 recovery files) can be 0444. Preserve that raw
+    # archive and atomically create a separate owner-writable packaging copy.
+    descriptor, name = tempfile.mkstemp(prefix=".jg13-candidate-", dir=ipa.parent)
+    os.close(descriptor)
+    temporary = Path(name)
+    try:
+        shutil.copyfile(raw, temporary)
+        temporary.replace(ipa)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def main():
@@ -78,7 +99,7 @@ def main():
     # Keep an untouched compiled archive before any packaging mutates the candidate.
     # Recovery is diagnostic only: it never bypasses verify() or marks a release valid.
     raw = preserve_raw_ipa(Path(sys.argv[1]), out, artifact_name, config)
-    shutil.copy2(raw, ipa)
+    writable_candidate(raw, ipa)
     # Same asset hashes and main-app-only packaging as the proven Build138.
     keychain.package_ipa(ipa)
     picker.package_file_picker(ipa)
