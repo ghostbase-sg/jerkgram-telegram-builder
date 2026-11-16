@@ -22,7 +22,10 @@ class RecoveryProvenanceTests(unittest.TestCase):
                             status='RAW COMPILED IPA; PACKAGING AND VERIFICATION NOT PASSED')
             report = root / 'test-RAW-UNVERIFIED.json'
             report.write_text(json.dumps(original))
-            self.assertEqual(verify_recovery(root, config, '123', 'source-commit')[0], archive)
+            self.assertEqual(verify_recovery(root, config, '123', 'source-commit')[0], archive.resolve())
+            alias = root / 'directory-alias'
+            alias.symlink_to(root.resolve(), target_is_directory=True)
+            self.assertEqual(verify_recovery(alias, config, '123', 'source-commit')[0], archive.resolve())
             for change in ({'ci_run_id': 'wrong'}, {'ci_commit': 'wrong'}, {'ipa_sha256': 'wrong'},
                            {'build_number': 0}, {'product_version': 'wrong'}, {'ipa': '../outside.ipa'}):
                 report.write_text(json.dumps(dict(original, **change)))
