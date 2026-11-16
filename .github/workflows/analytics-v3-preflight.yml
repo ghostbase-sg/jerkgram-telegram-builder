@@ -1,4 +1,4 @@
-name: Analytics v3 / Disabled Production Integration
+name: Jerkgram 1.2.1 / Analytics v3 + Profile Observer / Test IPA
 
 on:
   push:
@@ -65,29 +65,55 @@ jobs:
           if ! command -v bazelisk >/dev/null 2>&1; then brew install bazelisk; fi
       - name: Prepare actual pinned Telegram 13.2 source
         run: bash scripts/prepare_source_official.sh
+      - name: Verify Observer native storage and lifecycle components
+        env:
+          JERKGRAM_PINNED_SOURCE_ROOT: ${{ github.workspace }}/work/swiftgram-src
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests.test_jerkgram_profile_observer_requests
+          python3 tests/profile_observer_admission_native/run.py
+          python3 tests/profile_observer_storage_native/run.py --source-root "$GITHUB_WORKSPACE/work/swiftgram-src"
       - name: Current native product gate and v3 full app compile
         run: |
           set -euo pipefail
           mkdir -p artifacts
           bash scripts/build_jerkgram_analytics_v3.sh 2>&1 | tee artifacts/analytics-v3-build.log
-      - name: Package verified Analytics v3 test IPA
+      - name: Package verified combined test IPA
         run: |
           set -euo pipefail
           test -f work/swiftgram-src/bazel-bin/Telegram/Telegram.ipa
           python3 scripts/package_jg13.py work/swiftgram-src/bazel-bin/Telegram/Telegram.ipa
           test -f artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa
-          cp artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa artifacts/Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST.ipa
-          printf '%s\n' 'Analytics v3 test build: production transport remains OFF, device runtime not yet tested' > artifacts/ANALYTICS-V3-TEST-README.txt
-          shasum -a 256 artifacts/Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST.ipa > artifacts/ANALYTICS-V3-TEST-SHA256.txt
-      - name: Upload verified Analytics v3 test IPA
+          cp artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa artifacts/Jerkgram-1.2.1-Build184-TEST.ipa
+          printf '%s\n' 'Combined Analytics v3 + Profile Observer test build: production v3 transport OFF; device runtime not yet tested' > artifacts/ANALYTICS-V3-TEST-README.txt
+          shasum -a 256 artifacts/Jerkgram-1.2.1-Build184-TEST.ipa > artifacts/ANALYTICS-V3-TEST-SHA256.txt
+      - name: Upload verified combined test IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST
+          name: Jerkgram-1.2.1-Build184-TEST
           path: |
-            artifacts/Jerkgram-1.2.1-Build184-ANALYTICS-V3-TEST.ipa
+            artifacts/Jerkgram-1.2.1-Build184-TEST.ipa
             artifacts/ANALYTICS-V3-TEST-README.txt
             artifacts/ANALYTICS-V3-TEST-SHA256.txt
           if-no-files-found: error
+          retention-days: 90
+      - name: Upload recovery IPA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.2.1-Build184-RAW-UNVERIFIED
+          path: |
+            artifacts/*-RAW-UNVERIFIED.ipa
+            artifacts/*-RAW-UNVERIFIED.json
+          if-no-files-found: ignore
+          retention-days: 90
+      - name: Upload failed packaging candidate
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.2.1-Build184-PACKAGING-FAILED-UNVERIFIED
+          path: artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa
+          if-no-files-found: ignore
           retention-days: 90
       - name: Upload source/compiler evidence only
         if: always()
@@ -96,6 +122,8 @@ jobs:
           name: analytics-v3-compile-evidence
           path: |
             artifacts/analytics-v3-build.log
+            work/swiftgram-src/.jerkgram-profile-observer-install.json
+            work/swiftgram-src/submodules/TelegramCore/Sources/JerkgramProfile*.swift
             patches/analytics-v3-integration.sha256.json
             work/swiftgram-src/submodules/TelegramUI/Sources/JerkgramAnalyticsV3*.swift
             work/swiftgram-src/submodules/TelegramUI/Sources/AppDelegate.swift

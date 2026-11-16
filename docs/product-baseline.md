@@ -7,3 +7,5 @@ The current build184 reads its number from the shared configuration. Package met
 Production Analytics v3 remains disabled pending server readiness and separate approval. This baseline change is not a public release or a claim of device validation.
 
 Both the ordinary product build (`scripts/build_jg13.sh`) and the dedicated Analytics workflow apply and verify the same Analytics v3 source integration after the existing product gate. Future builds from this baseline therefore retain Analytics v3, not just its version number.
+
+The same1.2.1 baseline now includes the Profile Observer foundation from its successful full compile43752098737. Both normal and dedicated build routes install and verify it after Analytics v3. The dedicated workflow saves the combined test IPA and also uploads explicitly unverified raw/recovery files if later packaging fails. Combined device runtime remains unverified.
