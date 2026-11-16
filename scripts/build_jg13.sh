@@ -6,6 +6,8 @@ product_build=$(python3 -c 'import json; print(json.load(open("jerkgram-migratio
 # Exhaustive historical suites remain in no-ads-native.yml (manual regression).
 python3 scripts/materialize_jg132_product.py
 python3 tests/run_jg132_post181.py --require-native --require-full-source
+python3 scripts/apply_jerkgram_analytics_v3.py
+python3 scripts/verify_jerkgram_analytics_v3.py
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive
