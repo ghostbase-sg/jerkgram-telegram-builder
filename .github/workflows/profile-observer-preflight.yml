@@ -51,6 +51,33 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts
           bash scripts/build_profile_observer_foundation.sh 2>&1 | tee artifacts/profile-observer-build.log
+      - name: Package verified Observer test IPA
+        run: |
+          set -euo pipefail
+          test -f work/swiftgram-src/bazel-bin/Telegram/Telegram.ipa
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          e = json.loads(Path("artifacts/profile-observer-materialization.json").read_text())
+          assert e["observer_materialized"]
+          assert e["native_app_compile"] == "passed-full-app-Xcode27.1-Bazel9.2.0"
+          PY
+          python3 scripts/package_jg13.py work/swiftgram-src/bazel-bin/Telegram/Telegram.ipa
+          test -f artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa
+          cp artifacts/Jerkgram-1.2.0-Build183-STABLE.ipa artifacts/Jerkgram-1.2.0-Build183-PROFILE-OBSERVER-TEST.ipa
+          printf '%s\n' 'Profile Observer experimental test IPA, based on Jerkgram Build183. Internal version remains 13.2 (183). Compiled and package-verified, NOT device-runtime-tested. Not a Stable release.' > artifacts/PROFILE-OBSERVER-TEST-README.txt
+          shasum -a 256 artifacts/Jerkgram-1.2.0-Build183-PROFILE-OBSERVER-TEST.ipa > artifacts/PROFILE-OBSERVER-TEST-SHA256.txt
+      - name: Upload Observer test IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-1.2.0-Build183-PROFILE-OBSERVER-TEST
+          path: |
+            artifacts/Jerkgram-1.2.0-Build183-PROFILE-OBSERVER-TEST.ipa
+            artifacts/PROFILE-OBSERVER-TEST-README.txt
+            artifacts/PROFILE-OBSERVER-TEST-SHA256.txt
+            artifacts/profile-observer-materialization.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Upload compile and source evidence
         if: always()
         uses: actions/upload-artifact@v4
