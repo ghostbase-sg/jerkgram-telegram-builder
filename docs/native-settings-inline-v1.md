@@ -6,7 +6,7 @@ This stage only adds an optional chevron to the real Telegram ItemListSwitchItem
 
 ## First production-safe scenario: Profile Information
 
-On **Jerkgram → Основные функции** the existing "Показывать сведения" row becomes the parent. Its real account-scoped toggle is unchanged. A small downward chevron to the RIGHT of the switch reveals the existing Telegram ID, DC, and registration-date rows immediately beneath. Their original keys, toggles, order, account isolation and persistence remain unchanged. Closing the section does not change values.
+On **Jerkgram → Основные функции** the existing "Показывать сведения" row becomes the parent. Its real account-scoped toggle is unchanged. A small downward chevron to the RIGHT of the switch reveals the existing Telegram ID, DC, and registration-date rows immediately beneath. Their original keys, toggles, order, account isolation and persistence remain unchanged. The section starts **expanded** so the initial screen retains all existing Telegram rows; tapping the arrow collapses/expands them without changing values or persistence. Closing the section does not change values.
 
 The first v1 code is intentionally NOT a Ghost Mode master switch. Ghost Mode currently has independent runtime flags; inventing a global master without runtime gating and value preservation would be unsafe. That scope requires a separate source audit and implementation.
 
