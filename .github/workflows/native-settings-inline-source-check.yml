@@ -64,4 +64,6 @@ jobs:
           set -euo pipefail
           python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root work/swiftgram-src --apply
           python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root work/swiftgram-src --verify
-          echo 'CURRENT BUILD184 SOURCE PROJECTION PASSED; Swift compile and device runtime NOT claimed'
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift
+          xcrun swiftc -frontend -parse work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+          echo 'CURRENT BUILD184 SOURCE PROJECTION AND SWIFT SYNTAX PASSED; full compile/device runtime NOT claimed'
