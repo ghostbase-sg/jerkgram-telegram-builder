@@ -1,0 +1,71 @@
+name: Jerkgram Native Telegram Settings — Experimental IPA
+
+on:
+  push:
+    branches:
+      - design/native-telegram-settings-inline-v1
+    paths:
+      - .github/workflows/native-settings-full-compile.yml
+  workflow_dispatch:
+
+concurrency:
+  group: native-settings-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  native-device-candidate:
+    runs-on: xcode-27
+    timeout-minutes: 180
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      USE_BAZEL_VERSION: 9.2.0
+      BAZEL_BIN: bazelisk
+      JERKGRAM_TELEGRAM_API_ID: ${{ secrets.JERKGRAM_TELEGRAM_API_ID }}
+      JERKGRAM_TELEGRAM_API_HASH: ${{ secrets.JERKGRAM_TELEGRAM_API_HASH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact product toolchain
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          test "$(xcodebuild -version | head -1)" = "Xcode 27.1"
+          bazelisk version
+      - name: Prepare genuine pinned Telegram 13.2
+        run: bash scripts/prepare_source_official.sh
+      - name: Compile actual Jerkgram with native Telegram ItemList settings overlay
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash scripts/build_jg13.sh 2>&1 | tee artifacts/native-settings-compile.log
+      - name: Label candidate as EXPERIMENTAL (never Stable)
+        run: |
+          set -euo pipefail
+          test -s artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa
+          cp artifacts/Jerkgram-1.2.1-Build184-STABLE.ipa artifacts/Jerkgram-SettingsInline-EXPERIMENTAL.ipa
+          printf '%s\n' 'Experimental Telegram-native inline Settings candidate. NOT production. No device-runtime verification.' > artifacts/SETTINGS-INLINE-README.txt
+          shasum -a 256 artifacts/Jerkgram-SettingsInline-EXPERIMENTAL.ipa > artifacts/SETTINGS-INLINE-SHA256.txt
+      - name: Upload experimental candidate
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-SettingsInline-EXPERIMENTAL-Build184
+          path: |
+            artifacts/Jerkgram-SettingsInline-EXPERIMENTAL.ipa
+            artifacts/SETTINGS-INLINE-README.txt
+            artifacts/SETTINGS-INLINE-SHA256.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-SettingsInline-NATIVE-BUILD-FAILED-EVIDENCE
+          path: |
+            artifacts/native-settings-compile.log
+            work/swiftgram-src/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift
+            work/swiftgram-src/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift
+          if-no-files-found: warn
+          retention-days: 14
