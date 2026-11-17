@@ -15,6 +15,9 @@ python3 scripts/apply_jerkgram_analytics_v3.py
 python3 scripts/verify_jerkgram_analytics_v3.py
 JERKGRAM_SOURCE_ROOT="$PWD/work/swiftgram-src" python3 scripts/apply_jerkgram_profile_observer_v1.py
 JERKGRAM_SOURCE_ROOT="$PWD/work/swiftgram-src" python3 scripts/verify_jerkgram_profile_observer_v1.py
+# Development branch only: native Telegram ItemList inline disclosure, no new rendering engine.
+python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root "$PWD/work/swiftgram-src" --apply
+python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root "$PWD/work/swiftgram-src" --verify
 python3 scripts/pin_jg13_dependencies.py
 cd work/swiftgram-src
 git submodule sync --recursive
