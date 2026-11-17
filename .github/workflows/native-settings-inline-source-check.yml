@@ -46,6 +46,9 @@ jobs:
     needs: native-source-proof
     runs-on: xcode-27
     timeout-minutes: 45
+    env:
+      JERKGRAM_TELEGRAM_API_ID: ${{ secrets.JERKGRAM_TELEGRAM_API_ID }}
+      JERKGRAM_TELEGRAM_API_HASH: ${{ secrets.JERKGRAM_TELEGRAM_API_HASH }}
     steps:
       - uses: actions/checkout@v4
       - name: Restore pinned Telegram 13.2 source (no Bazel)
