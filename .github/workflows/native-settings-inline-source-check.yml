@@ -1,0 +1,43 @@
+name: Jerkgram Native Settings Inline — Source Check
+
+on:
+  push:
+    branches:
+      - design/native-telegram-settings-inline-v1
+    paths:
+      - scripts/apply_jerkgram_native_settings_inline_v1.py
+      - docs/native-settings-inline-v1.md
+      - .github/workflows/native-settings-inline-source-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-source-proof:
+    runs-on: macos-26
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify patcher syntax
+        run: python3 -m py_compile scripts/apply_jerkgram_native_settings_inline_v1.py
+      - name: Apply to exact public Jerkgram Build183 native sources
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/native-source"
+          mkdir -p "$DIR/submodules/ItemListUI/Sources/Items" "$DIR/submodules/SettingsUI/Sources/GhostBase"
+          PUB="https://raw.githubusercontent.com/jerkgram/Jerkgram-iOS/35662291f5b805d51cbe991a6ebb0117b53016d1"
+          curl -fL --retry 3 "$PUB/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift" -o "$DIR/submodules/ItemListUI/Sources/Items/ItemListSwitchItem.swift"
+          curl -fL --retry 3 "$PUB/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift" -o "$DIR/submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift"
+          python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root "$DIR" --apply
+          python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root "$DIR" --verify
+          python3 - "$DIR" <<'PY'
+          import pathlib,sys
+          root=pathlib.Path(sys.argv[1])
+          swift=(root/"submodules/SettingsUI/Sources/GhostBase/GhostBaseSettingsController.swift").read_text()
+          assert ".inlineToggle(0, 1, GhostBaseKey.profileEnabled" in swift
+          assert "if inlineExpanded.contains(GhostBaseKey.profileEnabled)" in swift
+          assert "systemStyle: .glass" in swift
+          assert "style: .blocks" in swift
+          print("PASS: source-native Telegram control, original profiles keys, inline entry animation")
+          PY
