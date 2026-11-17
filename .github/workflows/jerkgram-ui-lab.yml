@@ -55,8 +55,20 @@ jobs:
             shift
             xcrun simctl terminate "$SIM_ID" com.jerkgram.uilab >/dev/null 2>&1 || true
             xcrun simctl launch "$SIM_ID" com.jerkgram.uilab "$@"
-            sleep 3
-            xcrun simctl io "$SIM_ID" screenshot "ui-lab/captures/$name.png"
+            # First Simulator frames can be a black launch transition. Retry and
+            # reject suspiciously tiny screenshots instead of publishing them.
+            bytes=0
+            for attempt in 1 2 3; do
+              sleep 5
+              xcrun simctl io "$SIM_ID" screenshot "ui-lab/captures/$name.png"
+              bytes=$(stat -f%z "ui-lab/captures/$name.png")
+              if [ "$bytes" -gt 150000 ]; then break; fi
+              echo "Screenshot $name not yet rendered (attempt $attempt, $bytes bytes)"
+            done
+            if [ "$bytes" -le 150000 ]; then
+              echo "Screen $name remained blank after three attempts" >&2
+              return 1
+            fi
           }
           capture 01-home
           capture 02-ghost-collapsed -labGhost
