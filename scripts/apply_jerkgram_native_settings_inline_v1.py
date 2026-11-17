@@ -55,7 +55,7 @@ def switch_patch(src):
         // Attached to Telegram's existing item node, above its regular switch
         // hit area. Never replaces row backgrounds, masks or scroll ownership.
         let inlineButton = UIButton(type: .system)
-        inlineButton.setImage(UIImage(systemName: "chevron.down"), for: .normal)
+        // Use Telegram's own disclosure resource during item layout.
         inlineButton.addTarget(self, action: #selector(self.jerkgramInlineDisclosurePressed), for: .touchUpInside)
         inlineButton.isAccessibilityElement = true
         inlineButton.isHidden = true
@@ -84,9 +84,11 @@ def switch_patch(src):
                                 y: floor((contentSize.height - 36.0) / 2.0),
                                 width: 36.0, height: 36.0
                             )
+                            button.setImage(PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme), for: .normal)
                             button.tintColor = item.presentationData.theme.list.itemSecondaryTextColor
                             button.accessibilityLabel = item.inlineDisclosureAccessibilityLabel
-                            let rotation = CGAffineTransform(rotationAngle: item.inlineDisclosureExpanded ? CGFloat.pi : 0.0)
+                            // Telegram's native right arrow: down when closed, up when open.
+                            let rotation = CGAffineTransform(rotationAngle: item.inlineDisclosureExpanded ? -CGFloat.pi / 2.0 : CGFloat.pi / 2.0)
                             if animated && currentItem?.inlineDisclosureExpanded != item.inlineDisclosureExpanded {
                                 UIView.animate(withDuration: 0.28, delay: 0.0, options: [.curveEaseInOut]) {
                                     button.transform = rotation
