@@ -41,3 +41,24 @@ jobs:
           assert "style: .blocks" in swift
           print("PASS: source-native Telegram control, original profiles keys, inline entry animation")
           PY
+
+  final-build184-source:
+    needs: native-source-proof
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore pinned Telegram 13.2 source (no Bazel)
+        run: bash scripts/prepare_source_official.sh
+      - name: Project current Build184 sources without compiling
+        run: |
+          set -euo pipefail
+          python3 scripts/materialize_jg132_product.py
+          python3 scripts/apply_jerkgram_analytics_v3.py
+          JERKGRAM_SOURCE_ROOT="$PWD/work/swiftgram-src" python3 scripts/apply_jerkgram_profile_observer_v1.py
+      - name: Verify actual Telegram inline Settings overlay after all Build184 owners
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root work/swiftgram-src --apply
+          python3 scripts/apply_jerkgram_native_settings_inline_v1.py --source-root work/swiftgram-src --verify
+          echo 'CURRENT BUILD184 SOURCE PROJECTION PASSED; Swift compile and device runtime NOT claimed'
