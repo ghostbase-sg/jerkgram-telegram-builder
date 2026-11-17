@@ -1,0 +1,73 @@
+name: Jerkgram UI Lab Native SwiftUI
+
+on:
+  push:
+    branches:
+      - 'ui-lab/**'
+    paths:
+      - 'ui-lab/**'
+      - '.github/workflows/jerkgram-ui-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          if ! command -v xcodegen >/dev/null 2>&1; then brew install xcodegen; fi
+          cd ui-lab
+          xcodegen generate
+      - name: Select iPhone Simulator
+        run: |
+          set -euo pipefail
+          SIM_ID=$(python3 - <<'PY'
+          import json,subprocess
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))['devices']
+          phones=[x for group in d.values() for x in group if x.get('isAvailable',True) and 'iPhone' in x.get('name','')]
+          if not phones: raise SystemExit('No iPhone Simulator installed')
+          print(next((x for x in phones if 'iPhone 17 Pro' in x['name']),phones[0])['udid'])
+          PY
+          )
+          echo "SIM_ID=$SIM_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$SIM_ID" || true
+          xcrun simctl bootstatus "$SIM_ID" -b
+      - name: Build SwiftUI only
+        run: |
+          set -euo pipefail
+          xcodebuild -project ui-lab/JerkgramUILab.xcodeproj -scheme JerkgramUILab -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$SIM_ID" -derivedDataPath "$RUNNER_TEMP/ui-lab-build" CODE_SIGNING_ALLOWED=NO build
+      - name: Capture native previews
+        run: |
+          set -euo pipefail
+          xcrun simctl install "$SIM_ID" "$RUNNER_TEMP/ui-lab-build/Build/Products/Debug-iphonesimulator/JerkgramUILab.app"
+          xcrun simctl ui "$SIM_ID" appearance dark
+          xcrun simctl status_bar "$SIM_ID" override --time "9:41" --batteryLevel 100 || true
+          mkdir -p ui-lab/captures
+          capture() {
+            name="$1"
+            shift
+            xcrun simctl terminate "$SIM_ID" com.jerkgram.uilab >/dev/null 2>&1 || true
+            xcrun simctl launch "$SIM_ID" com.jerkgram.uilab "$@"
+            sleep 3
+            xcrun simctl io "$SIM_ID" screenshot "ui-lab/captures/$name.png"
+          }
+          capture 01-home
+          capture 02-ghost-collapsed -labGhost
+          capture 03-ghost-expanded -labGhost -labExpanded
+          capture 04-ghost-filters -labGhost -labFilters
+          capture 05-ghost-opaque -labGhost -labExpanded -labOpaque
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jerkgram-UI-Lab-SwiftUI-Screenshots
+          path: ui-lab/captures/*.png
+          if-no-files-found: warn
+          retention-days: 14
