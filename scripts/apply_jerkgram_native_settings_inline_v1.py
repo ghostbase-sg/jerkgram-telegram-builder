@@ -217,8 +217,10 @@ def settings_patch(src):
         "    let statePromise = ValuePromise(initialState, ignoreRepeated: false)\n",
         "    let statePromise = ValuePromise(initialState, ignoreRepeated: false)\n"
         "    // Transient per-screen UI state: no account storage or runtime policy changes.\n"
-        "    let inlineExpandedValue = Atomic(value: Set<String>())\n"
-        "    let inlineExpandedPromise = ValuePromise(Set<String>(), ignoreRepeated: true)\n",
+        "    // Default expanded: preserve all original visible Telegram settings rows.\n"
+        "    let initialInlineExpanded: Set<String> = [GhostBaseKey.profileEnabled]\n"
+        "    let inlineExpandedValue = Atomic(value: initialInlineExpanded)\n"
+        "    let inlineExpandedPromise = ValuePromise(initialInlineExpanded, ignoreRepeated: true)\n",
         "UI disclosure state")
     src = once(src,
         "    }, openSendTextStyle: {\n        openSendTextStyleImpl?()\n    })",
@@ -271,6 +273,12 @@ def verify_source(sw, st):
         raise RuntimeError("Inline action is not bound to SettingsUI")
     if "animateChanges: page == .home" not in st:
         raise RuntimeError("In-list transition is not enabled")
+    if "let initialInlineExpanded: Set<String> = [GhostBaseKey.profileEnabled]" not in st:
+        raise RuntimeError("Original Telegram rows must be visible when opening Settings")
+    if st.count("let inlineExpandedValue = Atomic(value: initialInlineExpanded)") != 1:
+        raise RuntimeError("Expandable UI initial state has changed")
+    if st.count("let inlineExpandedPromise = ValuePromise(initialInlineExpanded, ignoreRepeated: true)") != 1:
+        raise RuntimeError("Expandable UI publication state must match its initial state")
     for key in ("GhostBaseKey.profileEnabled", "GhostBaseKey.showIds", "GhostBaseKey.showDCs", "GhostBaseKey.showRegistration"):
         if key not in st:
             raise RuntimeError(f"Original settings key missing: {key}")
